@@ -9,6 +9,7 @@ import { BurialWizard } from '@/features/burial/BurialWizard';
 import { GraveDetail } from '@/features/graves/GraveDetail';
 import { DecorationPicker } from '@/features/decorations/DecorationPicker';
 import { DecorationSheet } from '@/features/decorations/DecorationSheet';
+import { FuneralScene } from '@/features/funeral/FuneralScene';
 import type { Decoration, Grave } from '@/shared/domain/types';
 
 export function CemeteryPage() {
@@ -22,6 +23,7 @@ export function CemeteryPage() {
   const [decorateCell, setDecorateCell] = useState<{ x: number; y: number } | null>(null);
   const [detailId, setDetailId] = useState<string | null>(null);
   const [decorationSel, setDecorationSel] = useState<Decoration | null>(null);
+  const [funeralGrave, setFuneralGrave] = useState<Grave | null>(null);
   const [toast, setToast] = useState<string | null>(null);
 
   useEffect(() => {
@@ -94,10 +96,9 @@ export function CemeteryPage() {
           gridX={burialCell.x}
           gridY={burialCell.y}
           onClose={() => setBurialCell(null)}
-          onBuried={() => {
+          onBuried={(grave) => {
             setBurialCell(null);
-            setToast('Sepoltura completata. Riposi in pace.');
-            setTimeout(() => setToast(null), 4000);
+            setFuneralGrave(grave);
           }}
         />
       )}
@@ -119,6 +120,17 @@ export function CemeteryPage() {
 
       {decorationSel && (
         <DecorationSheet decoration={decorationSel} onClose={() => setDecorationSel(null)} />
+      )}
+
+      {funeralGrave && (
+        <FuneralScene
+          grave={funeralGrave}
+          onDone={() => {
+            setFuneralGrave(null);
+            setToast('Sepoltura completata. Riposi in pace.');
+            setTimeout(() => setToast(null), 4000);
+          }}
+        />
       )}
 
       {toast && <div className="toast">{toast}</div>}

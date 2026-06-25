@@ -333,6 +333,109 @@ button {
   font-size: 14px;
 }
 
+/* Funeral animation */
+.funeral-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 80;
+  background: radial-gradient(120% 80% at 50% 20%, #1a1726 0%, #0d0b12 70%);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+.funeral-stage {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+}
+.funeral-ground {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 36%;
+  background: linear-gradient(180deg, #232a1c 0%, #181426 100%);
+  border-top: 2px solid #2a2640;
+}
+.funeral-grave {
+  position: absolute;
+  left: 50%;
+  bottom: 30%;
+  transform: translateX(-50%) translateY(8px);
+  opacity: 0;
+  transition: opacity 0.6s ease, transform 0.6s ease;
+}
+.funeral-grave.show {
+  opacity: 1;
+  transform: translateX(-50%) translateY(0);
+}
+.funeral-candle {
+  position: absolute;
+  left: 56%;
+  bottom: 28%;
+  opacity: 0;
+  transition: opacity 0.5s ease 0.3s;
+}
+.funeral-candle.show {
+  opacity: 1;
+}
+.funeral-figure {
+  position: absolute;
+  bottom: 28%;
+  transform: translateX(70vw);
+  transition: transform 1.5s cubic-bezier(0.4, 0, 0.2, 1);
+  will-change: transform;
+}
+.funeral-figure.in {
+  transform: translateX(0);
+}
+.funeral-bob {
+  transform-origin: bottom center;
+}
+.funeral-figure.walking .funeral-bob {
+  animation: fun-bob 0.5s ease-in-out infinite;
+}
+@keyframes fun-bob {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-5px);
+  }
+}
+.funeral-caption {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 10%;
+  text-align: center;
+  opacity: 0;
+  transition: opacity 0.6s ease 0.2s;
+}
+.funeral-caption.show {
+  opacity: 1;
+}
+.funeral-rip {
+  font-family: Georgia, serif;
+  font-size: 28px;
+  letter-spacing: 6px;
+  color: var(--accent);
+}
+.funeral-name {
+  font-family: Georgia, serif;
+  font-size: 18px;
+  color: var(--text-dim);
+  margin-top: 4px;
+}
+.funeral-skip {
+  text-align: center;
+  font-size: 12px;
+  color: var(--text-dim);
+  padding: 10px 0 calc(12px + var(--safe-bottom));
+  opacity: 0.7;
+}
+
 @media (prefers-reduced-motion: reduce) {
   * {
     animation: none !important;

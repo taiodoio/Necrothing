@@ -20,12 +20,13 @@ import {
   GRAVE_TYPE_LABELS,
 } from '@/shared/domain/enums';
 import { toIsoDate } from '@/shared/utils/date';
+import type { Grave } from '@/shared/domain/types';
 
 interface Props {
   gridX: number;
   gridY: number;
   onClose: () => void;
-  onBuried: () => void;
+  onBuried: (grave: Grave) => void;
 }
 
 const STEPS = ['Nome', 'Categoria', 'Date', 'Causa', 'Epitaffio', 'Foto', 'Lapide', 'Conferma'];
@@ -91,8 +92,8 @@ export function BurialWizard({ gridX, gridY, onClose, onBuried }: Props) {
         const photoId = await imageStorageService.save(photoFile);
         finalDraft = { ...draft, photoId };
       }
-      await bury(finalDraft);
-      onBuried();
+      const grave = await bury(finalDraft);
+      onBuried(grave);
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Errore durante la sepoltura.');
     } finally {

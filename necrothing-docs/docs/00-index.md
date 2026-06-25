@@ -13,6 +13,7 @@ Versione: `v0.1`
 - [Core Gameplay Loop](./game-design/02-core-gameplay-loop.md)
 - [Progression System](./game-design/03-progression-system.md)
 - [World Simulation](./game-design/04-world-simulation.md)
+- [Mappa, Economia e Meteo](./game-design/05-map-economy-weather.md)
 
 ## UX/UI
 

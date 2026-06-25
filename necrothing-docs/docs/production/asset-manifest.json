@@ -1,6 +1,14 @@
 {
-  "version": "0.2",
+  "version": "0.3",
   "format": "svg",
+  "mapModel": {
+    "type": "navigable-tilemap",
+    "cols": 24,
+    "rows": 32,
+    "tilePx": 40,
+    "footprints": { "grave": "2x2", "mausoleum": "3x3", "willow": "2x2", "wisp": "1x1", "structure": "1x1", "decoration": "1x1" },
+    "note": "Mappa erbosa scrollabile a griglia fitta; ogni elemento occupa un footprint di celle."
+  },
   "palette": {
     "bg": "#0d0b12",
     "surface": "#16131f",
@@ -119,6 +127,8 @@
     { "id": "fx_blessing_light", "category": "fx", "priority": "P2", "animations": ["rays"], "mapsTo": "BlessingFX" },
     { "id": "fx_xp_sparkle", "category": "fx", "priority": "P1", "animations": ["burst"], "mapsTo": "XpSparkle" },
     { "id": "fx_soul", "category": "fx", "priority": "P2", "animations": ["rise","fade"], "mapsTo": "SoulSprite" },
+
+    { "id": "currency_wisp", "category": "currency", "priority": "P0", "viewBox": "0 0 40 40", "footprint": "1x1", "states": ["idle"], "animations": ["bob","glow"], "mapsTo": "WispSprite", "done": true },
 
     { "id": "cat_electronics", "category": "categoryIcon", "priority": "P1", "viewBox": "0 0 24 24", "mapsTo": "CategoryIcon" },
     { "id": "cat_plants", "category": "categoryIcon", "priority": "P1", "viewBox": "0 0 24 24", "mapsTo": "CategoryIcon" },

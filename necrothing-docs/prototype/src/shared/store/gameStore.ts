@@ -3,6 +3,7 @@
 
 import { create } from 'zustand';
 import type {
+  Achievement,
   Grave,
   GraveMemoryEvent,
   NotificationPreferences,
@@ -15,6 +16,8 @@ import { simulationService } from '@/shared/services/simulationService';
 import { addXp, canBuryAbstract, computePrestige } from '@/shared/services/progressionService';
 import { createNotificationService } from '@/shared/services/notificationService';
 import { webNotificationAdapter } from '@/shared/services/platform/webNotificationAdapter';
+import { evaluateAchievements } from '@/shared/services/achievementService';
+import { achievementsRepository } from '@/shared/repositories/achievementsRepository';
 import { worldRepository } from '@/shared/repositories/worldRepository';
 import { progressionRepository } from '@/shared/repositories/progressionRepository';
 import { settingsRepository } from '@/shared/repositories/settingsRepository';
@@ -31,11 +34,14 @@ interface GameState {
   world: WorldState | null;
   progression: UserProgression;
   notificationPrefs: NotificationPreferences;
+  achievements: Achievement[];
+  lastUnlockedAchievement: string | null;
   lastSimMessage: string | null;
 
   // lifecycle
   init: () => Promise<void>;
   simulate: () => Promise<void>;
+  refreshAchievements: () => Promise<void>;
 
   // use cases
   bury: (draft: BurialDraft) => Promise<Grave>;
@@ -67,6 +73,8 @@ export const useGameStore = create<GameState>((set, get) => ({
     lastShareDate: null,
   },
   notificationPrefs: DEFAULT_NOTIFICATION_PREFERENCES,
+  achievements: [],
+  lastUnlockedAchievement: null,
   lastSimMessage: null,
 
   async init() {
@@ -98,9 +106,27 @@ export const useGameStore = create<GameState>((set, get) => ({
     }
 
     const graves = await graveService.listGraves();
-    set({ world, progression, notificationPrefs, graves, ready: true });
+    const achievements = await achievementsRepository.getAll();
+    set({ world, progression, notificationPrefs, graves, achievements, ready: true });
 
     await get().simulate();
+    await get().refreshAchievements();
+  },
+
+  async refreshAchievements() {
+    const unlocked = new Set(get().achievements.map((a) => a.id));
+    const newly = evaluateAchievements(
+      { graves: get().graves, progression: get().progression },
+      unlocked,
+    );
+    if (newly.length === 0) return;
+    const now = clock.nowIso();
+    const added: Achievement[] = newly.map((a) => ({ id: a.id, unlockedAt: now }));
+    for (const a of added) await achievementsRepository.add(a);
+    set({
+      achievements: [...get().achievements, ...added],
+      lastUnlockedAchievement: newly[0].name,
+    });
   },
 
   async simulate() {
@@ -142,6 +168,7 @@ export const useGameStore = create<GameState>((set, get) => ({
 
     set({ world: result.world, graves, progression, lastSimMessage: message });
     await notificationService.rescheduleAll();
+    await get().refreshAchievements();
   },
 
   async bury(draft) {
@@ -160,6 +187,7 @@ export const useGameStore = create<GameState>((set, get) => ({
     const graves = await graveService.listGraves();
     set({ graves, progression });
     await notificationService.rescheduleAll();
+    await get().refreshAchievements();
     return grave;
   },
 
@@ -169,6 +197,7 @@ export const useGameStore = create<GameState>((set, get) => ({
     if (xpAwarded > 0) await persistProgression(progression);
     const graves = await graveService.listGraves();
     set({ graves, progression });
+    await get().refreshAchievements();
   },
 
   async cleanWeeds(graveId) {
@@ -178,6 +207,7 @@ export const useGameStore = create<GameState>((set, get) => ({
     const graves = await graveService.listGraves();
     set({ graves, progression });
     await notificationService.rescheduleAll();
+    await get().refreshAchievements();
   },
 
   async loadEvents(graveId) {

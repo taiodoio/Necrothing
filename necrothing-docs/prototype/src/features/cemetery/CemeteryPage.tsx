@@ -11,6 +11,7 @@ import type { Grave } from '@/shared/domain/types';
 export function CemeteryPage() {
   const graves = useGameStore((s) => s.graves);
   const lastSimMessage = useGameStore((s) => s.lastSimMessage);
+  const lastUnlockedAchievement = useGameStore((s) => s.lastUnlockedAchievement);
 
   const [burialCell, setBurialCell] = useState<{ x: number; y: number } | null>(null);
   const [detailId, setDetailId] = useState<string | null>(null);
@@ -23,6 +24,14 @@ export function CemeteryPage() {
       return () => clearTimeout(t);
     }
   }, [lastSimMessage]);
+
+  useEffect(() => {
+    if (lastUnlockedAchievement) {
+      setToast(`🏆 Achievement sbloccato: ${lastUnlockedAchievement}`);
+      const t = setTimeout(() => setToast(null), 4000);
+      return () => clearTimeout(t);
+    }
+  }, [lastUnlockedAchievement]);
 
   return (
     <div className="app-shell">

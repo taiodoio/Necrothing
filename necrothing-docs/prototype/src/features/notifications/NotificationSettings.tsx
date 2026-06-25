@@ -59,8 +59,12 @@ export function NotificationSettings() {
   return (
     <div className="app-shell">
       <header className="topbar">
-        <button className="btn btn--ghost" onClick={() => navigate('/')} aria-label="Indietro">
-          ← Cimitero
+        <button
+          className="btn btn--ghost"
+          onClick={() => navigate('/settings')}
+          aria-label="Indietro"
+        >
+          ← Impostazioni
         </button>
         <strong style={{ marginLeft: 8 }}>Notifiche</strong>
       </header>

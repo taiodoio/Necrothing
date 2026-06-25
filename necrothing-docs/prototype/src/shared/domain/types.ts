@@ -76,6 +76,16 @@ export interface Settings {
   notifications: NotificationPreferences;
 }
 
+export interface Achievement {
+  id: string;
+  unlockedAt: string; // ISO datetime
+}
+
+export interface StoredImage {
+  id: string;
+  blob: Blob;
+}
+
 export const DEFAULT_NOTIFICATION_PREFERENCES: NotificationPreferences = {
   enabled: false,
   anniversaries: true,

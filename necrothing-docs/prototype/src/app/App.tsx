@@ -3,6 +3,9 @@ import { Route, Routes } from 'react-router-dom';
 import { useGameStore } from '@/shared/store/gameStore';
 import { CemeteryPage } from '@/features/cemetery/CemeteryPage';
 import { NotificationSettings } from '@/features/notifications/NotificationSettings';
+import { SettingsHub } from '@/features/settings/SettingsHub';
+import { AboutPage } from '@/features/settings/AboutPage';
+import { AchievementsPage } from '@/features/achievements/AchievementsPage';
 
 export function App() {
   const ready = useGameStore((s) => s.ready);
@@ -45,7 +48,10 @@ export function App() {
   return (
     <Routes>
       <Route path="/" element={<CemeteryPage />} />
-      <Route path="/settings" element={<NotificationSettings />} />
+      <Route path="/settings" element={<SettingsHub />} />
+      <Route path="/settings/notifications" element={<NotificationSettings />} />
+      <Route path="/settings/about" element={<AboutPage />} />
+      <Route path="/achievements" element={<AchievementsPage />} />
     </Routes>
   );
 }

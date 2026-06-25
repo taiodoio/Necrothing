@@ -10,7 +10,8 @@ Versione: `v0.1`
 | Native wrapper | Capacitor |
 | Frontend | React + TypeScript |
 | Bundler | Vite |
-| Rendering 2D | PixiJS |
+| Rendering 2D | SVG/DOM + React (vedi ADR 0002) |
+| PWA | vite-plugin-pwa (Workbox) |
 | State | Zustand |
 | Routing | React Router |
 | Native DB | SQLite via Capacitor plugin |
@@ -64,5 +65,5 @@ flowchart TD
     Services --> Repositories[Repositories]
     Repositories --> DB[(SQLite / IndexedDB)]
     Services --> Native[Capacitor Plugins]
-    UI --> Pixi[PixiJS Renderer]
+    UI --> Svg[SVG Scene Renderer]
 ```

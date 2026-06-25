@@ -23,6 +23,8 @@ Versione: `v0.1`
 - [Technical Architecture](./technical/01-technical-architecture.md)
 - [PWA + Capacitor](./technical/02-pwa-capacitor.md)
 - [Notifications](./technical/03-notifications.md)
+- [Implementation Plan (PWA mobile-first)](./technical/04-implementation-plan.md)
+- [PWA Manifest & Service Worker](./technical/05-pwa-manifest-sw.md)
 
 ## Production
 
@@ -37,6 +39,7 @@ Versione: `v0.1`
 ## ADR
 
 - [ADR 0001: PWA + Capacitor](../adr/0001-pwa-capacitor.md)
+- [ADR 0002: Rendering SVG/DOM](../adr/0002-svg-rendering.md)
 
 ## Prompts
 

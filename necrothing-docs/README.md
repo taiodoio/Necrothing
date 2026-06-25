@@ -33,9 +33,9 @@ necrothing-docs/
 - React
 - TypeScript
 - Vite
-- PWA
+- PWA (vite-plugin-pwa / Workbox)
 - Capacitor
-- PixiJS
+- Rendering SVG/DOM (vedi ADR 0002)
 - Zustand
 - SQLite locale su native
 - IndexedDB fallback su web

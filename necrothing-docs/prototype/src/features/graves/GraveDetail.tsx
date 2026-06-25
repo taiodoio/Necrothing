@@ -5,6 +5,7 @@ import { Sheet } from '@/shared/components/Sheet';
 import { useGameStore } from '@/shared/store/gameStore';
 import { GraveSprite } from '@/shared/assets/GraveSprite';
 import { imageStorageService } from '@/shared/services/imageStorageService';
+import { shareOrDownloadCard } from '@/shared/services/shareService';
 import type { Grave, GraveMemoryEvent } from '@/shared/domain/types';
 import { CATEGORY_LABELS, DEATH_CAUSE_LABELS } from '@/shared/domain/enums';
 import type { DeathCause } from '@/shared/domain/enums';
@@ -32,6 +33,7 @@ export function GraveDetail({ graveId, onClose }: Props) {
   const grave = useGameStore((s) => s.graves.find((g) => g.id === graveId)) as Grave | undefined;
   const bringFlowers = useGameStore((s) => s.bringFlowers);
   const cleanWeeds = useGameStore((s) => s.cleanWeeds);
+  const shareGrave = useGameStore((s) => s.shareGrave);
   const loadEvents = useGameStore((s) => s.loadEvents);
   const [events, setEvents] = useState<GraveMemoryEvent[]>([]);
   const [busy, setBusy] = useState(false);
@@ -125,6 +127,21 @@ export function GraveDetail({ graveId, onClose }: Props) {
             🌿 Pulisci erbacce
           </button>
         )}
+      </div>
+
+      <div className="wizard-nav">
+        <button
+          className="btn"
+          disabled={busy}
+          onClick={() =>
+            doAction(async () => {
+              await shareOrDownloadCard(grave);
+              await shareGrave(grave.id);
+            })
+          }
+        >
+          📜 Condividi certificato
+        </button>
       </div>
 
       <h3 style={{ marginTop: 18 }}>Memoria della tomba</h3>

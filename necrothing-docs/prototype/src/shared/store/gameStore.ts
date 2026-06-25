@@ -13,7 +13,13 @@ import type {
 import { DEFAULT_NOTIFICATION_PREFERENCES } from '@/shared/domain/types';
 import { graveService } from '@/shared/services/graveService';
 import { simulationService } from '@/shared/services/simulationService';
-import { addXp, canBuryAbstract, computePrestige } from '@/shared/services/progressionService';
+import {
+  addXp,
+  canBuryAbstract,
+  canShareForXp,
+  computePrestige,
+  XP_VALUES,
+} from '@/shared/services/progressionService';
 import { createNotificationService } from '@/shared/services/notificationService';
 import { webNotificationAdapter } from '@/shared/services/platform/webNotificationAdapter';
 import { evaluateAchievements } from '@/shared/services/achievementService';
@@ -47,6 +53,7 @@ interface GameState {
   bury: (draft: BurialDraft) => Promise<Grave>;
   bringFlowers: (graveId: string) => Promise<void>;
   cleanWeeds: (graveId: string) => Promise<void>;
+  shareGrave: (graveId: string) => Promise<{ xpAwarded: number }>;
   loadEvents: (graveId: string) => Promise<GraveMemoryEvent[]>;
 
   // notifiche
@@ -208,6 +215,19 @@ export const useGameStore = create<GameState>((set, get) => ({
     set({ graves, progression });
     await notificationService.rescheduleAll();
     await get().refreshAchievements();
+  },
+
+  async shareGrave(_graveId) {
+    const today = clock.todayIso();
+    if (!canShareForXp(get().progression, today)) return { xpAwarded: 0 };
+    const progression = {
+      ...addXp(get().progression, XP_VALUES.share),
+      lastShareDate: today,
+    };
+    await persistProgression(progression);
+    set({ progression });
+    await get().refreshAchievements();
+    return { xpAwarded: XP_VALUES.share };
   },
 
   async loadEvents(graveId) {

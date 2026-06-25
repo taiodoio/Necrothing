@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { Sheet } from '@/shared/components/Sheet';
 import { useGameStore } from '@/shared/store/gameStore';
 import { GraveSprite } from '@/shared/assets/GraveSprite';
+import { imageStorageService } from '@/shared/services/imageStorageService';
 import type { Grave, GraveMemoryEvent } from '@/shared/domain/types';
 import { CATEGORY_LABELS, DEATH_CAUSE_LABELS } from '@/shared/domain/enums';
 import type { DeathCause } from '@/shared/domain/enums';
@@ -34,6 +35,7 @@ export function GraveDetail({ graveId, onClose }: Props) {
   const loadEvents = useGameStore((s) => s.loadEvents);
   const [events, setEvents] = useState<GraveMemoryEvent[]>([]);
   const [busy, setBusy] = useState(false);
+  const [photoUrl, setPhotoUrl] = useState<string | null>(null);
 
   useEffect(() => {
     let active = true;
@@ -42,6 +44,26 @@ export function GraveDetail({ graveId, onClose }: Props) {
       active = false;
     };
   }, [graveId, loadEvents, grave?.updatedAt]);
+
+  const photoId = grave?.photoId ?? null;
+  useEffect(() => {
+    let url: string | null = null;
+    let active = true;
+    if (photoId) {
+      imageStorageService.getBlob(photoId).then((blob) => {
+        if (active && blob) {
+          url = URL.createObjectURL(blob);
+          setPhotoUrl(url);
+        }
+      });
+    } else {
+      setPhotoUrl(null);
+    }
+    return () => {
+      active = false;
+      if (url) URL.revokeObjectURL(url);
+    };
+  }, [photoId]);
 
   if (!grave) {
     onClose();
@@ -73,6 +95,14 @@ export function GraveDetail({ graveId, onClose }: Props) {
           <div>Causa: {deathCauseLabel(grave.deathCause)}</div>
         </div>
       </div>
+
+      {photoUrl && (
+        <img
+          src={photoUrl}
+          alt={`Foto di ${grave.name}`}
+          style={{ width: '100%', maxHeight: 240, objectFit: 'cover', borderRadius: 12, marginTop: 12 }}
+        />
+      )}
 
       {grave.epitaph && (
         <p style={{ fontStyle: 'italic', marginTop: 12 }}>&laquo;{grave.epitaph}&raquo;</p>

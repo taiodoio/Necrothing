@@ -1,8 +1,9 @@
 // Burial Wizard (FEATURE-001). Flusso a step, mobile-first, validazione inline.
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Sheet } from '@/shared/components/Sheet';
 import { useGameStore } from '@/shared/store/gameStore';
+import { imageStorageService } from '@/shared/services/imageStorageService';
 import {
   emptyDraft,
   validateDates,
@@ -27,13 +28,25 @@ interface Props {
   onBuried: () => void;
 }
 
-const STEPS = ['Nome', 'Categoria', 'Date', 'Causa', 'Epitaffio', 'Lapide', 'Conferma'];
+const STEPS = ['Nome', 'Categoria', 'Date', 'Causa', 'Epitaffio', 'Foto', 'Lapide', 'Conferma'];
 
 export function BurialWizard({ gridX, gridY, onClose, onBuried }: Props) {
   const bury = useGameStore((s) => s.bury);
   const [step, setStep] = useState(0);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [photoFile, setPhotoFile] = useState<File | null>(null);
+  const [photoPreview, setPhotoPreview] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!photoFile) {
+      setPhotoPreview(null);
+      return;
+    }
+    const url = URL.createObjectURL(photoFile);
+    setPhotoPreview(url);
+    return () => URL.revokeObjectURL(url);
+  }, [photoFile]);
   const [draft, setDraft] = useState<BurialDraft>(() => ({
     ...emptyDraft(),
     gridX,
@@ -59,6 +72,8 @@ export function BurialWizard({ gridX, gridY, onClose, onBuried }: Props) {
       case 4:
         return !validateEpitaph(draft.epitaph);
       case 5:
+        return true; // foto opzionale
+      case 6:
         return !!draft.graveType;
       default:
         return true;
@@ -71,7 +86,12 @@ export function BurialWizard({ gridX, gridY, onClose, onBuried }: Props) {
     setBusy(true);
     setError(null);
     try {
-      await bury(draft);
+      let finalDraft = draft;
+      if (photoFile) {
+        const photoId = await imageStorageService.save(photoFile);
+        finalDraft = { ...draft, photoId };
+      }
+      await bury(finalDraft);
       onBuried();
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Errore durante la sepoltura.');
@@ -198,6 +218,40 @@ export function BurialWizard({ gridX, gridY, onClose, onBuried }: Props) {
 
       {step === 5 && (
         <div className="field">
+          <label>Foto (opzionale)</label>
+          {photoPreview ? (
+            <div style={{ textAlign: 'center' }}>
+              <img
+                src={photoPreview}
+                alt="Anteprima foto"
+                style={{ maxWidth: '100%', maxHeight: 220, borderRadius: 12 }}
+              />
+              <div style={{ marginTop: 10 }}>
+                <button className="btn btn--ghost" onClick={() => setPhotoFile(null)}>
+                  Rimuovi foto
+                </button>
+              </div>
+            </div>
+          ) : (
+            <label
+              className="btn"
+              style={{ display: 'inline-flex', cursor: 'pointer' }}
+            >
+              📷 Scegli o scatta una foto
+              <input
+                type="file"
+                accept="image/*"
+                capture="environment"
+                style={{ display: 'none' }}
+                onChange={(e) => setPhotoFile(e.target.files?.[0] ?? null)}
+              />
+            </label>
+          )}
+        </div>
+      )}
+
+      {step === 6 && (
+        <div className="field">
           <label>Tipo di lapide</label>
           <div className="chips">
             {GRAVE_TYPES.map((t) => (
@@ -214,7 +268,7 @@ export function BurialWizard({ gridX, gridY, onClose, onBuried }: Props) {
         </div>
       )}
 
-      {step === 6 && (
+      {step === 7 && (
         <div>
           <h3>Riepilogo</h3>
           <p>

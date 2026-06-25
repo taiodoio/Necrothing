@@ -6,6 +6,7 @@ import { NotificationSettings } from '@/features/notifications/NotificationSetti
 import { SettingsHub } from '@/features/settings/SettingsHub';
 import { AboutPage } from '@/features/settings/AboutPage';
 import { AchievementsPage } from '@/features/achievements/AchievementsPage';
+import { BackupPage } from '@/features/backup/BackupPage';
 
 export function App() {
   const ready = useGameStore((s) => s.ready);
@@ -51,6 +52,7 @@ export function App() {
       <Route path="/settings" element={<SettingsHub />} />
       <Route path="/settings/notifications" element={<NotificationSettings />} />
       <Route path="/settings/about" element={<AboutPage />} />
+      <Route path="/settings/backup" element={<BackupPage />} />
       <Route path="/achievements" element={<AchievementsPage />} />
     </Routes>
   );

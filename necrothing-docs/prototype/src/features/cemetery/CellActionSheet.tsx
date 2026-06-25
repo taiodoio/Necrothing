@@ -17,7 +17,7 @@ export function CellActionSheet({ onClose, onBury, onDecorate }: Props) {
           ⚰️ Seppellisci qui
         </button>
         <button className="btn" onClick={onDecorate}>
-          🪦 Decora qui
+          🪴 Decora / Costruisci
         </button>
       </div>
     </Sheet>

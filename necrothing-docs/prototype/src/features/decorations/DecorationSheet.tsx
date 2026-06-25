@@ -1,8 +1,8 @@
 import { useState } from 'react';
 import { Sheet } from '@/shared/components/Sheet';
 import { useGameStore } from '@/shared/store/gameStore';
-import { DecorationSprite } from '@/shared/assets/DecorationSprite';
-import { DECORATION_LABELS } from '@/shared/domain/enums';
+import { PlaceableSprite } from '@/shared/assets/PlaceableSprite';
+import { PLACEABLES } from '@/shared/domain/placeables';
 import type { Decoration } from '@/shared/domain/types';
 
 interface Props {
@@ -13,12 +13,17 @@ interface Props {
 export function DecorationSheet({ decoration, onClose }: Props) {
   const remove = useGameStore((s) => s.removeDecoration);
   const [busy, setBusy] = useState(false);
+  const def = PLACEABLES[decoration.type];
 
   return (
-    <Sheet title={DECORATION_LABELS[decoration.type]} onClose={onClose}>
+    <Sheet title={def.label} onClose={onClose}>
       <div style={{ display: 'flex', justifyContent: 'center', padding: '8px 0' }}>
-        <DecorationSprite type={decoration.type} size={96} />
+        <PlaceableSprite type={decoration.type} size={96} />
       </div>
+      <p className="muted" style={{ fontSize: 13, textAlign: 'center' }}>
+        {def.kind === 'structure' ? 'Struttura' : 'Decorazione'} · {def.footprint[0]}×
+        {def.footprint[1]}
+      </p>
       <div className="wizard-nav">
         <button className="btn btn--ghost" onClick={onClose} disabled={busy}>
           Chiudi

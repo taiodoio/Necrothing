@@ -18,8 +18,17 @@ export function TopBar() {
         </div>
         <div style={{ marginTop: 6, maxWidth: 220 }}>
           <XpBar xp={progression.xp} />
-          <div className="muted" style={{ fontSize: 11, marginTop: 3 }}>
-            {progression.xp} Punti Necro
+          <div
+            style={{
+              display: 'flex',
+              gap: 10,
+              marginTop: 3,
+              fontSize: 11,
+              alignItems: 'center',
+            }}
+          >
+            <span className="muted">{progression.xp} Punti Necro</span>
+            <span className="wisp-counter">✦ {progression.wisps} fuochi fatui</span>
           </div>
         </div>
       </div>

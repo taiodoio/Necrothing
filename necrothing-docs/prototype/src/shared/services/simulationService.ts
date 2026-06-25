@@ -3,14 +3,19 @@
 // Vedi docs/game-design/04-world-simulation.md
 
 import { WEATHER, type MemoryEventType, type Weather } from '@/shared/domain/enums';
-import type { Grave, GraveMemoryEvent, WorldState } from '@/shared/domain/types';
+import type { Grave, GraveMemoryEvent, LooseWisp, WorldState } from '@/shared/domain/types';
+import { MAP_COLS, MAP_ROWS } from '@/shared/domain/types';
+import { buildOccupancy } from '@/shared/domain/placeables';
 import { graveRepository, memoryEventRepository } from '@/shared/repositories/graveRepository';
+import { decorationsRepository } from '@/shared/repositories/decorationsRepository';
 import { worldRepository } from '@/shared/repositories/worldRepository';
 import { dayPhaseForHour, daysBetween, seasonForMonth } from '@/shared/utils/date';
 import { createRng, randomSeed } from '@/shared/utils/rng';
 import { XP_VALUES } from './progressionService';
 import { newId } from '@/shared/utils/id';
 import type { ClockService } from '@/shared/utils/clock';
+
+const WISP_CAP = 8;
 
 function makeEvent(
   graveId: string,
@@ -67,6 +72,7 @@ export const simulationService = {
       currentSeason: seasonForMonth(now.getMonth()),
       currentDayPhase: dayPhaseForHour(now.getHours()),
       seed: randomSeed(),
+      looseWisps: [],
     };
   },
 
@@ -85,6 +91,7 @@ export const simulationService = {
     const rng = createRng(`${world.seed}:${now.toISOString().slice(0, 13)}`);
 
     const graves = await graveRepository.getAll();
+    const placeables = await decorationsRepository.getAll();
     const updatedGraves: Grave[] = [];
     const anniversaries: AnniversaryHit[] = [];
     let newWeeds = 0;
@@ -154,12 +161,31 @@ export const simulationService = {
       xpGained += XP_VALUES.blessing;
     }
 
+    // Spawn di fuochi fatui (moneta) su celle libere, fino a un tetto.
+    const looseWisps: LooseWisp[] = [...(world.looseWisps ?? [])];
+    const occ = buildOccupancy(graves, placeables);
+    const taken = new Set([...occ, ...looseWisps.map((w) => `${w.gridX},${w.gridY}`)]);
+    const toSpawn = Math.min(WISP_CAP - looseWisps.length, 1 + rng.int(3));
+    let attempts = 0;
+    let spawned = 0;
+    while (spawned < toSpawn && attempts < 60) {
+      attempts++;
+      const x = rng.int(MAP_COLS);
+      const y = rng.int(MAP_ROWS);
+      const key = `${x},${y}`;
+      if (taken.has(key)) continue;
+      taken.add(key);
+      looseWisps.push({ id: newId(), gridX: x, gridY: y });
+      spawned++;
+    }
+
     const nextWorld: WorldState = {
       ...world,
       lastSimulationAt: clock.nowIso(),
       currentDayPhase: phase,
       currentSeason: seasonForMonth(now.getMonth()),
       currentWeather: pickWeather(rng, isNight),
+      looseWisps,
     };
     await worldRepository.save(nextWorld);
 

@@ -27,6 +27,16 @@ export const XP_VALUES = {
   blessing: 20,
 } as const;
 
+// Fuochi fatui (moneta) guadagnati dalle azioni.
+export const WISP_VALUES = {
+  burial: 5,
+  flowers: 1,
+  weedCleaned: 3,
+  anniversary: 5,
+  blessing: 3,
+  collect: 1, // raccolta di un fuoco fatuo sulla mappa
+} as const;
+
 export function rankForXp(xp: number): Rank {
   let current = RANKS[0];
   for (const r of RANKS) {

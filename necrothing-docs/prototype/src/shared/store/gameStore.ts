@@ -20,11 +20,13 @@ import {
   canShareForXp,
   computePrestige,
   rankForXp,
+  WISP_VALUES,
   XP_VALUES,
 } from '@/shared/services/progressionService';
 import { decorationService } from '@/shared/services/decorationService';
 import { decorationsRepository } from '@/shared/repositories/decorationsRepository';
-import type { DecorationType } from '@/shared/domain/enums';
+import { PLACEABLES } from '@/shared/domain/placeables';
+import type { PlaceableType } from '@/shared/domain/enums';
 import { createNotificationService } from '@/shared/services/notificationService';
 import { webNotificationAdapter } from '@/shared/services/platform/webNotificationAdapter';
 import { evaluateAchievements } from '@/shared/services/achievementService';
@@ -60,8 +62,9 @@ interface GameState {
   bringFlowers: (graveId: string) => Promise<void>;
   cleanWeeds: (graveId: string) => Promise<void>;
   shareGrave: (graveId: string) => Promise<{ xpAwarded: number }>;
-  placeDecoration: (type: DecorationType, gridX: number, gridY: number) => Promise<void>;
+  placeDecoration: (type: PlaceableType, gridX: number, gridY: number) => Promise<void>;
   removeDecoration: (id: string) => Promise<void>;
+  collectWisp: (id: string) => Promise<void>;
   loadEvents: (graveId: string) => Promise<GraveMemoryEvent[]>;
 
   // notifiche
@@ -85,6 +88,7 @@ export const useGameStore = create<GameState>((set, get) => ({
     id: 'singleton',
     xp: 0,
     prestige: 0,
+    wisps: 0,
     lastAbstractBurialDate: null,
     lastShareDate: null,
   },
@@ -99,6 +103,9 @@ export const useGameStore = create<GameState>((set, get) => ({
     if (!world) {
       world = simulationService.initialWorld(clock);
       await worldRepository.save(world);
+    } else if (!world.looseWisps) {
+      world = { ...world, looseWisps: [] };
+      await worldRepository.save(world);
     }
 
     // Progression
@@ -108,9 +115,14 @@ export const useGameStore = create<GameState>((set, get) => ({
         id: 'singleton',
         xp: 0,
         prestige: 0,
+        wisps: 0,
         lastAbstractBurialDate: null,
         lastShareDate: null,
       };
+      await progressionRepository.save(progression);
+    } else if (progression.wisps == null) {
+      // migrazione: vecchi salvataggi senza moneta
+      progression = { ...progression, wisps: 0 };
       await progressionRepository.save(progression);
     }
 
@@ -152,10 +164,14 @@ export const useGameStore = create<GameState>((set, get) => ({
     const result = await simulationService.run(world, clock);
     const graves = await graveService.listGraves();
 
-    // XP maturato da anniversari/benedizioni durante la simulazione.
+    // XP e fuochi fatui maturati da anniversari/benedizioni.
     let progression = get().progression;
-    if (result.xpGained > 0) {
+    const wispsGained =
+      result.anniversaries.length * WISP_VALUES.anniversary +
+      (result.blessingGraveName ? WISP_VALUES.blessing : 0);
+    if (result.xpGained > 0 || wispsGained > 0) {
       progression = addXp(progression, result.xpGained);
+      progression = { ...progression, wisps: progression.wisps + wispsGained };
       await persistProgression(progression);
     }
 
@@ -197,6 +213,7 @@ export const useGameStore = create<GameState>((set, get) => ({
 
     const { grave, xpAwarded } = await graveService.bury(draft, clock);
     let progression = addXp(get().progression, xpAwarded);
+    progression = { ...progression, wisps: progression.wisps + WISP_VALUES.burial };
     if (grave.category === 'abstract') {
       progression = { ...progression, lastAbstractBurialDate: today };
     }
@@ -210,8 +227,12 @@ export const useGameStore = create<GameState>((set, get) => ({
 
   async bringFlowers(graveId) {
     const { xpAwarded } = await graveService.bringFlowers(graveId, clock);
-    const progression = xpAwarded > 0 ? addXp(get().progression, xpAwarded) : get().progression;
-    if (xpAwarded > 0) await persistProgression(progression);
+    let progression = get().progression;
+    if (xpAwarded > 0) {
+      progression = addXp(progression, xpAwarded);
+      progression = { ...progression, wisps: progression.wisps + WISP_VALUES.flowers };
+      await persistProgression(progression);
+    }
     const graves = await graveService.listGraves();
     set({ graves, progression });
     await get().refreshAchievements();
@@ -219,8 +240,12 @@ export const useGameStore = create<GameState>((set, get) => ({
 
   async cleanWeeds(graveId) {
     const { xpAwarded } = await graveService.cleanWeeds(graveId, clock);
-    const progression = xpAwarded > 0 ? addXp(get().progression, xpAwarded) : get().progression;
-    if (xpAwarded > 0) await persistProgression(progression);
+    let progression = get().progression;
+    if (xpAwarded > 0) {
+      progression = addXp(progression, xpAwarded);
+      progression = { ...progression, wisps: progression.wisps + WISP_VALUES.weedCleaned };
+      await persistProgression(progression);
+    }
     const graves = await graveService.listGraves();
     set({ graves, progression });
     await notificationService.rescheduleAll();
@@ -241,16 +266,38 @@ export const useGameStore = create<GameState>((set, get) => ({
   },
 
   async placeDecoration(type, gridX, gridY) {
-    const rankLevel = rankForXp(get().progression.xp).level;
+    const def = PLACEABLES[type];
+    const prog = get().progression;
+    if (prog.wisps < def.cost) {
+      throw new Error(`Servono ${def.cost} fuochi fatui (ne hai ${prog.wisps}).`);
+    }
+    const rankLevel = rankForXp(prog.xp).level;
     await decorationService.place(type, gridX, gridY, rankLevel, clock);
+    const progression = { ...prog, wisps: prog.wisps - def.cost };
+    await persistProgression(progression);
     const decorations = await decorationService.list();
-    set({ decorations });
+    set({ decorations, progression });
   },
 
   async removeDecoration(id) {
     await decorationService.remove(id);
     const decorations = await decorationService.list();
     set({ decorations });
+  },
+
+  async collectWisp(id) {
+    const world = get().world;
+    if (!world) return;
+    const list = world.looseWisps ?? [];
+    if (!list.some((w) => w.id === id)) return;
+    const nextWorld = { ...world, looseWisps: list.filter((w) => w.id !== id) };
+    await worldRepository.save(nextWorld);
+    const progression = {
+      ...get().progression,
+      wisps: get().progression.wisps + WISP_VALUES.collect,
+    };
+    await persistProgression(progression);
+    set({ world: nextWorld, progression });
   },
 
   async loadEvents(graveId) {

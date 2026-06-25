@@ -103,6 +103,7 @@ export const DECORATION_TYPES = [
   'dead_tree',
   'skull',
   'lantern',
+  'willow',
 ] as const;
 export type DecorationType = (typeof DECORATION_TYPES)[number];
 
@@ -113,6 +114,7 @@ export const DECORATION_LABELS: Record<DecorationType, string> = {
   dead_tree: 'Albero secco',
   skull: 'Teschio',
   lantern: 'Lanterna',
+  willow: 'Salice piangente',
 };
 
 /** Rango minimo richiesto per sbloccare ogni decorazione. */
@@ -123,7 +125,32 @@ export const DECORATION_MIN_RANK: Record<DecorationType, number> = {
   dead_tree: 2,
   skull: 3,
   lantern: 3,
+  willow: 2,
 };
+
+// Elementi struttura piazzabili sulla mappa.
+export const STRUCTURE_TYPES = [
+  'path_dirt',
+  'path_stone',
+  'fence_wood',
+  'fence_iron',
+  'wall_stone',
+  'lamp_post',
+] as const;
+export type StructureType = (typeof STRUCTURE_TYPES)[number];
+
+export const STRUCTURE_LABELS: Record<StructureType, string> = {
+  path_dirt: 'Sentiero in terra',
+  path_stone: 'Sentiero in pietra',
+  fence_wood: 'Staccionata in legno',
+  fence_iron: 'Recinzione in ferro',
+  wall_stone: 'Muretto in pietra',
+  lamp_post: 'Lampione',
+};
+
+// Tipo unificato di oggetto piazzabile (decorazione o struttura).
+export type PlaceableType = DecorationType | StructureType;
+export const PLACEABLE_TYPES: PlaceableType[] = [...DECORATION_TYPES, ...STRUCTURE_TYPES];
 
 export const MEMORY_EVENT_TYPES = [
   'burial',

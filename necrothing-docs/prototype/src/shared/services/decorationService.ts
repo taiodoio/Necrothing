@@ -1,11 +1,11 @@
-// Servizio decorazioni: posizionamento su celle libere, sblocco per rango.
+// Servizio placeable: posizionamento di decorazioni e strutture sulla mappa.
+// Gestisce sblocco per rango e occupazione multi-cella. Il costo in fuochi
+// fatui è dichiarato nel registry e la spesa è applicata dallo store.
 
-import {
-  DECORATION_MIN_RANK,
-  DECORATION_TYPES,
-  type DecorationType,
-} from '@/shared/domain/enums';
+import { PLACEABLE_TYPES, type PlaceableType } from '@/shared/domain/enums';
 import type { Decoration } from '@/shared/domain/types';
+import { MAP_COLS, MAP_ROWS } from '@/shared/domain/types';
+import { PLACEABLES, buildOccupancy, canPlace } from '@/shared/domain/placeables';
 import { decorationsRepository } from '@/shared/repositories/decorationsRepository';
 import { graveRepository } from '@/shared/repositories/graveRepository';
 import { newId } from '@/shared/utils/id';
@@ -13,9 +13,9 @@ import type { ClockService } from '@/shared/utils/clock';
 
 export class DecorationError extends Error {}
 
-/** Decorazioni sbloccate per un dato rango. */
-export function unlockedDecorations(rankLevel: number): DecorationType[] {
-  return DECORATION_TYPES.filter((t) => DECORATION_MIN_RANK[t] <= rankLevel);
+/** Placeable sbloccati per un dato rango. */
+export function unlockedPlaceables(rankLevel: number): PlaceableType[] {
+  return PLACEABLE_TYPES.filter((t) => PLACEABLES[t].minRank <= rankLevel);
 }
 
 export const decorationService = {
@@ -24,28 +24,23 @@ export const decorationService = {
   },
 
   async place(
-    type: DecorationType,
+    type: PlaceableType,
     gridX: number,
     gridY: number,
     rankLevel: number,
     clock: ClockService,
   ): Promise<Decoration> {
-    if (DECORATION_MIN_RANK[type] > rankLevel) {
-      throw new DecorationError('Decorazione non ancora sbloccata.');
+    const def = PLACEABLES[type];
+    if (def.minRank > rankLevel) {
+      throw new DecorationError('Elemento non ancora sbloccato.');
     }
-    if (await graveRepository.getByCell(gridX, gridY)) {
-      throw new DecorationError('La cella è occupata da una tomba.');
+    const graves = await graveRepository.getAll();
+    const placeables = await decorationsRepository.getAll();
+    const occupancy = buildOccupancy(graves, placeables);
+    if (!canPlace(gridX, gridY, def.footprint, occupancy, MAP_COLS, MAP_ROWS)) {
+      throw new DecorationError('Spazio non disponibile per questo elemento.');
     }
-    if (await decorationsRepository.getByCell(gridX, gridY)) {
-      throw new DecorationError('La cella ha già una decorazione.');
-    }
-    const decoration: Decoration = {
-      id: newId(),
-      type,
-      gridX,
-      gridY,
-      createdAt: clock.nowIso(),
-    };
+    const decoration: Decoration = { id: newId(), type, gridX, gridY, createdAt: clock.nowIso() };
     await decorationsRepository.create(decoration);
     return decoration;
   },

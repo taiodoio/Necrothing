@@ -14,6 +14,7 @@ const baseProgression: UserProgression = {
   id: 'singleton',
   xp: 0,
   prestige: 0,
+  wisps: 0,
   lastAbstractBurialDate: null,
   lastShareDate: null,
 };

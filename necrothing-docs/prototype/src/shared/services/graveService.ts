@@ -3,7 +3,10 @@
 // dal livello use-case (store) per evitare dipendenze circolari.
 
 import { graveRepository, memoryEventRepository } from '@/shared/repositories/graveRepository';
+import { decorationsRepository } from '@/shared/repositories/decorationsRepository';
+import { GRAVE_FOOTPRINT, MAP_COLS, MAP_ROWS } from '@/shared/domain/types';
 import type { Grave, GraveMemoryEvent } from '@/shared/domain/types';
+import { buildOccupancy, canPlace } from '@/shared/domain/placeables';
 import type { BurialDraft } from '@/features/burial/validation';
 import { validateBurial } from '@/features/burial/validation';
 import { XP_VALUES } from './progressionService';
@@ -39,9 +42,11 @@ export const graveService = {
     if (Object.keys(errors).length > 0) {
       throw new BurialError('Dati sepoltura non validi.');
     }
-    const occupied = await graveRepository.getByCell(draft.gridX!, draft.gridY!);
-    if (occupied) {
-      throw new BurialError('La cella è già occupata.');
+    const graves = await graveRepository.getAll();
+    const placeables = await decorationsRepository.getAll();
+    const occupancy = buildOccupancy(graves, placeables);
+    if (!canPlace(draft.gridX!, draft.gridY!, GRAVE_FOOTPRINT, occupancy, MAP_COLS, MAP_ROWS)) {
+      throw new BurialError('Spazio non disponibile: servono 2×2 celle libere.');
     }
 
     const now = clock.nowIso();

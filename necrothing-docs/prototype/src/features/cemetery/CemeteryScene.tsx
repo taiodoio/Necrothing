@@ -1,93 +1,141 @@
-// Scena cimitero: griglia di celle SVG, mobile-first. Tap su cella.
+// Mappa navigabile a griglia fitta, scrollabile (stile GBA). Oggetti con
+// footprint multi-cella posizionati in pixel; meteo come overlay sul viewport.
 
-import { useMemo } from 'react';
-import { GRID_COLS, GRID_ROWS, type Decoration, type Grave } from '@/shared/domain/types';
+import { useRef, type CSSProperties } from 'react';
+import {
+  MAP_COLS,
+  MAP_ROWS,
+  TILE_SIZE,
+  GRAVE_FOOTPRINT,
+  type Decoration,
+  type Grave,
+  type LooseWisp,
+} from '@/shared/domain/types';
+import { PLACEABLES } from '@/shared/domain/placeables';
 import { GraveSprite } from '@/shared/assets/GraveSprite';
-import { EmptyPlotSprite } from '@/shared/assets/EmptyPlotSprite';
-import { DecorationSprite } from '@/shared/assets/DecorationSprite';
-import { DECORATION_LABELS } from '@/shared/domain/enums';
+import { PlaceableSprite } from '@/shared/assets/PlaceableSprite';
+import { WispSprite } from '@/shared/assets/WispSprite';
+import { WeatherOverlay } from './WeatherOverlay';
+import type { DayPhase, Weather } from '@/shared/domain/enums';
 
 interface Props {
   graves: Grave[];
-  decorations: Decoration[];
+  placeables: Decoration[];
+  looseWisps: LooseWisp[];
+  weather: Weather;
+  dayPhase: DayPhase;
   onSelectEmpty: (gridX: number, gridY: number) => void;
   onSelectGrave: (grave: Grave) => void;
-  onSelectDecoration: (decoration: Decoration) => void;
+  onSelectPlaceable: (placeable: Decoration) => void;
+  onCollectWisp: (id: string) => void;
 }
 
 export function CemeteryScene({
   graves,
-  decorations,
+  placeables,
+  looseWisps,
+  weather,
+  dayPhase,
   onSelectEmpty,
   onSelectGrave,
-  onSelectDecoration,
+  onSelectPlaceable,
+  onCollectWisp,
 }: Props) {
-  const byCell = useMemo(() => {
-    const map = new Map<string, Grave>();
-    for (const g of graves) map.set(`${g.gridX},${g.gridY}`, g);
-    return map;
-  }, [graves]);
+  const mapRef = useRef<HTMLDivElement>(null);
 
-  const decoByCell = useMemo(() => {
-    const map = new Map<string, Decoration>();
-    for (const d of decorations) map.set(`${d.gridX},${d.gridY}`, d);
-    return map;
-  }, [decorations]);
+  const handleMapClick = (e: React.MouseEvent) => {
+    const el = mapRef.current;
+    if (!el) return;
+    const rect = el.getBoundingClientRect();
+    const x = Math.floor((e.clientX - rect.left) / TILE_SIZE);
+    const y = Math.floor((e.clientY - rect.top) / TILE_SIZE);
+    if (x < 0 || y < 0 || x >= MAP_COLS || y >= MAP_ROWS) return;
+    onSelectEmpty(x, y);
+  };
 
-  const cells = [];
-  for (let y = 0; y < GRID_ROWS; y++) {
-    for (let x = 0; x < GRID_COLS; x++) {
-      const grave = byCell.get(`${x},${y}`);
-      const deco = decoByCell.get(`${x},${y}`);
-      const label = grave
-        ? `Tomba di ${grave.name}`
-        : deco
-          ? `Decorazione: ${DECORATION_LABELS[deco.type]}`
-          : `Zolla libera ${x + 1},${y + 1}`;
-      cells.push(
-        <button
-          key={`${x},${y}`}
-          className="cell"
-          onClick={() =>
-            grave
-              ? onSelectGrave(grave)
-              : deco
-                ? onSelectDecoration(deco)
-                : onSelectEmpty(x, y)
-          }
-          aria-label={label}
-        >
-          {grave ? (
-            <>
-              <GraveSprite
-                type={grave.graveType}
-                hasFlowers={grave.hasFlowers}
-                hasWeeds={grave.hasWeeds}
-                size={52}
-                title={grave.name}
-              />
-              {grave.hasWeeds && <span className="badge" title="Erbacce">🌿</span>}
-              {grave.hasFlowers && <span className="badge" title="Fiori">💐</span>}
-              <span className="grave-name">{grave.name}</span>
-            </>
-          ) : deco ? (
-            <DecorationSprite type={deco.type} size={46} title={DECORATION_LABELS[deco.type]} />
-          ) : (
-            <EmptyPlotSprite size={48} />
-          )}
-        </button>,
-      );
-    }
-  }
+  const mapStyle: CSSProperties = {
+    width: MAP_COLS * TILE_SIZE,
+    height: MAP_ROWS * TILE_SIZE,
+    ['--tile' as string]: `${TILE_SIZE}px`,
+  };
+
+  const cell = (x: number, y: number, w: number, h: number): CSSProperties => ({
+    position: 'absolute',
+    left: x * TILE_SIZE,
+    top: y * TILE_SIZE,
+    width: w * TILE_SIZE,
+    height: h * TILE_SIZE,
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+  });
 
   return (
-    <div className="scene-wrap">
-      <div
-        className="cemetery-grid"
-        style={{ gridTemplateColumns: `repeat(${GRID_COLS}, minmax(0, 1fr))` }}
-      >
-        {cells}
+    <div className="map-wrap">
+      <div className="map-scroll">
+        <div className="map" ref={mapRef} style={mapStyle} onClick={handleMapClick}>
+          {/* Tombe (2×2) */}
+          {graves.map((g) => (
+            <button
+              key={g.id}
+              className="map-object"
+              style={cell(g.gridX, g.gridY, GRAVE_FOOTPRINT[0], GRAVE_FOOTPRINT[1])}
+              aria-label={`Tomba di ${g.name}`}
+              onClick={(e) => {
+                e.stopPropagation();
+                onSelectGrave(g);
+              }}
+            >
+              <GraveSprite
+                type={g.graveType}
+                hasFlowers={g.hasFlowers}
+                hasWeeds={g.hasWeeds}
+                size={TILE_SIZE * 2 * 0.92}
+                title={g.name}
+              />
+              {g.hasWeeds && <span className="badge badge-tl">🌿</span>}
+              {g.hasFlowers && <span className="badge badge-tr">💐</span>}
+            </button>
+          ))}
+
+          {/* Placeable (decorazioni + strutture) */}
+          {placeables.map((p) => {
+            const [w, h] = PLACEABLES[p.type].footprint;
+            return (
+              <button
+                key={p.id}
+                className="map-object"
+                style={cell(p.gridX, p.gridY, w, h)}
+                aria-label={PLACEABLES[p.type].label}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onSelectPlaceable(p);
+                }}
+              >
+                <PlaceableSprite type={p.type} size={Math.min(w, h) * TILE_SIZE * 0.96} />
+              </button>
+            );
+          })}
+
+          {/* Fuochi fatui raccoglibili */}
+          {looseWisps.map((wsp) => (
+            <button
+              key={wsp.id}
+              className="map-object wisp"
+              style={cell(wsp.gridX, wsp.gridY, 1, 1)}
+              aria-label="Raccogli fuoco fatuo"
+              onClick={(e) => {
+                e.stopPropagation();
+                onCollectWisp(wsp.id);
+              }}
+            >
+              <WispSprite size={TILE_SIZE * 0.8} />
+            </button>
+          ))}
+        </div>
       </div>
+
+      <WeatherOverlay weather={weather} dayPhase={dayPhase} />
     </div>
   );
 }

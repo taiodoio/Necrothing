@@ -38,6 +38,7 @@ function world(): WorldState {
     currentSeason: 'summer',
     currentDayPhase: 'day',
     seed: 'test-seed',
+    looseWisps: [],
   };
 }
 

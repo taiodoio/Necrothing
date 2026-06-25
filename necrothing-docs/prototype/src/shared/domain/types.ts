@@ -4,9 +4,9 @@ import type {
   Category,
   DayPhase,
   DeathCause,
-  DecorationType,
   GraveType,
   MemoryEventType,
+  PlaceableType,
   Season,
   Weather,
 } from './enums';
@@ -48,15 +48,24 @@ export interface WorldState {
   currentSeason: Season;
   currentDayPhase: DayPhase;
   seed: string;
+  looseWisps: LooseWisp[]; // fuochi fatui presenti sulla mappa
 }
 
 export interface UserProgression {
   id: 'singleton';
   xp: number;
   prestige: number;
+  wisps: number; // moneta: fuochi fatui
   // limiti giornalieri / contatori
   lastAbstractBurialDate: string | null; // ISO date
   lastShareDate: string | null;
+}
+
+/** Fuoco fatuo raccoglibile sulla mappa (moneta). Effimero, in WorldState. */
+export interface LooseWisp {
+  id: string;
+  gridX: number;
+  gridY: number;
 }
 
 export interface NotificationPreferences {
@@ -89,7 +98,7 @@ export interface StoredImage {
 
 export interface Decoration {
   id: string;
-  type: DecorationType;
+  type: PlaceableType;
   gridX: number;
   gridY: number;
   createdAt: string;
@@ -108,6 +117,10 @@ export const DEFAULT_NOTIFICATION_PREFERENCES: NotificationPreferences = {
   quietHoursEnd: '08:00',
 };
 
-// Dimensione griglia cimitero (MVP)
-export const GRID_COLS = 6;
-export const GRID_ROWS = 8;
+// Mappa navigabile a griglia fitta (scrollabile). Tile in px.
+export const MAP_COLS = 24;
+export const MAP_ROWS = 32;
+export const TILE_SIZE = 40;
+
+// Footprint (larghezza×altezza in celle) per categoria di oggetto.
+export const GRAVE_FOOTPRINT: [number, number] = [2, 2];

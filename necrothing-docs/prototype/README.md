@@ -25,11 +25,18 @@ npm run typecheck  # type-check
 - Scaffold PWA installabile (manifest + service worker offline via `vite-plugin-pwa`).
 - Persistenza locale su IndexedDB (`idb`) dietro repository.
 - Scena cimitero SVG con griglia (mobile-first).
-- Burial flow completo (FEATURE-001) con validazioni.
+- Burial flow completo (FEATURE-001) con validazioni e **foto** opzionale.
 - Progressione: Punti Necro (XP), ranghi, prestigio.
 - Commemorazione (porta fiori) e manutenzione (pulizia erbacce).
-- World simulation engine deterministico (erbacce, fiori appassiti, meteo, fantasmi).
+- World simulation engine deterministico (erbacce, fiori appassiti, meteo, fantasmi,
+  **anniversari**, **benedizione del prete**).
+- **Limite giornaliero** sepolture astratte.
+- **Achievement** (engine + pagina) con toast di sblocco.
+- **Decorazioni** posizionabili sulle zolle, sbloccate per rango.
+- **Backup/Import `.necro`** (export/import dell'intero stato, privacy-first).
+- **Condivisione**: certificato di morte come immagine (Web Share API / download).
 - Notifiche locali narrative con preferenze e quiet hours (adapter web).
+- Impostazioni: hub con Notifiche, Achievement, Backup, Info.
 
 ## Architettura
 

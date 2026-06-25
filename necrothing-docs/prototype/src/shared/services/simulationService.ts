@@ -2,13 +2,28 @@
 // Deterministico (seed salvato) e idempotente rispetto al delta temporale.
 // Vedi docs/game-design/04-world-simulation.md
 
-import { WEATHER, type Weather } from '@/shared/domain/enums';
-import type { Grave, WorldState } from '@/shared/domain/types';
-import { graveRepository } from '@/shared/repositories/graveRepository';
+import { WEATHER, type MemoryEventType, type Weather } from '@/shared/domain/enums';
+import type { Grave, GraveMemoryEvent, WorldState } from '@/shared/domain/types';
+import { graveRepository, memoryEventRepository } from '@/shared/repositories/graveRepository';
 import { worldRepository } from '@/shared/repositories/worldRepository';
 import { dayPhaseForHour, daysBetween, seasonForMonth } from '@/shared/utils/date';
 import { createRng, randomSeed } from '@/shared/utils/rng';
+import { XP_VALUES } from './progressionService';
+import { newId } from '@/shared/utils/id';
 import type { ClockService } from '@/shared/utils/clock';
+
+function makeEvent(
+  graveId: string,
+  type: MemoryEventType,
+  clock: ClockService,
+): GraveMemoryEvent {
+  return { id: newId(), graveId, type, occurredAt: clock.nowIso(), payloadJson: null };
+}
+
+export interface AnniversaryHit {
+  graveId: string;
+  name: string;
+}
 
 export interface SimulationResult {
   world: WorldState;
@@ -16,6 +31,23 @@ export interface SimulationResult {
   newWeeds: number;
   witheredFlowers: number;
   ghostGraveId: string | null;
+  ghostGraveName: string | null;
+  blessingGraveId: string | null;
+  blessingGraveName: string | null;
+  anniversaries: AnniversaryHit[];
+  /** XP totale maturato durante la simulazione (anniversari + benedizioni). */
+  xpGained: number;
+}
+
+/** Vero se oggi ricorre l'anniversario annuale della morte (anni successivi). */
+function isAnniversaryToday(grave: Grave, now: Date): boolean {
+  const death = new Date(grave.deathDate);
+  return (
+    now.getMonth() === death.getMonth() &&
+    now.getDate() === death.getDate() &&
+    now.getFullYear() > death.getFullYear() &&
+    grave.lastAnniversaryYear !== now.getFullYear()
+  );
 }
 
 function pickWeather(rng: ReturnType<typeof createRng>, isNight: boolean): Weather {
@@ -54,12 +86,23 @@ export const simulationService = {
 
     const graves = await graveRepository.getAll();
     const updatedGraves: Grave[] = [];
+    const anniversaries: AnniversaryHit[] = [];
     let newWeeds = 0;
     let witheredFlowers = 0;
+    let xpGained = 0;
 
     for (const grave of graves) {
       let changed = false;
       const next = { ...grave };
+
+      // Anniversario annuale della morte.
+      if (isAnniversaryToday(next, now)) {
+        next.lastAnniversaryYear = now.getFullYear();
+        changed = true;
+        await memoryEventRepository.add(makeEvent(next.id, 'anniversary', clock));
+        anniversaries.push({ graveId: next.id, name: next.name });
+        xpGained += XP_VALUES.anniversary;
+      }
 
       // Erbacce: probabilità cumulativa con i giorni trascorsi.
       if (!next.hasWeeds && elapsedDays > 0) {
@@ -90,11 +133,25 @@ export const simulationService = {
 
     // Evento fantasma raro, più probabile di notte.
     let ghostGraveId: string | null = null;
+    let ghostGraveName: string | null = null;
     if (graves.length > 0) {
       const ghostChance = isNight ? 0.08 : 0.02;
       if (rng.chance(ghostChance)) {
-        ghostGraveId = rng.pick(graves).id;
+        const ghost = rng.pick(graves);
+        ghostGraveId = ghost.id;
+        ghostGraveName = ghost.name;
       }
+    }
+
+    // Benedizione del prete: evento casuale che premia una tomba.
+    let blessingGraveId: string | null = null;
+    let blessingGraveName: string | null = null;
+    if (graves.length > 0 && rng.chance(0.05)) {
+      const blessed = rng.pick(graves);
+      blessingGraveId = blessed.id;
+      blessingGraveName = blessed.name;
+      await memoryEventRepository.add(makeEvent(blessed.id, 'blessing', clock));
+      xpGained += XP_VALUES.blessing;
     }
 
     const nextWorld: WorldState = {
@@ -106,6 +163,17 @@ export const simulationService = {
     };
     await worldRepository.save(nextWorld);
 
-    return { world: nextWorld, updatedGraves, newWeeds, witheredFlowers, ghostGraveId };
+    return {
+      world: nextWorld,
+      updatedGraves,
+      newWeeds,
+      witheredFlowers,
+      ghostGraveId,
+      ghostGraveName,
+      blessingGraveId,
+      blessingGraveName,
+      anniversaries,
+      xpGained,
+    };
   },
 };

@@ -12,7 +12,7 @@ import type {
 import { DEFAULT_NOTIFICATION_PREFERENCES } from '@/shared/domain/types';
 import { graveService } from '@/shared/services/graveService';
 import { simulationService } from '@/shared/services/simulationService';
-import { addXp, computePrestige } from '@/shared/services/progressionService';
+import { addXp, canBuryAbstract, computePrestige } from '@/shared/services/progressionService';
 import { createNotificationService } from '@/shared/services/notificationService';
 import { webNotificationAdapter } from '@/shared/services/platform/webNotificationAdapter';
 import { worldRepository } from '@/shared/repositories/worldRepository';
@@ -109,8 +109,26 @@ export const useGameStore = create<GameState>((set, get) => ({
     const result = await simulationService.run(world, clock);
     const graves = await graveService.listGraves();
 
+    // XP maturato da anniversari/benedizioni durante la simulazione.
+    let progression = get().progression;
+    if (result.xpGained > 0) {
+      progression = addXp(progression, result.xpGained);
+      await persistProgression(progression);
+    }
+
+    // Messaggio narrativo: priorità agli eventi più significativi.
     let message: string | null = null;
-    if (result.newWeeds > 0) {
+    if (result.anniversaries.length > 0) {
+      const first = result.anniversaries[0];
+      message =
+        result.anniversaries.length === 1
+          ? `Oggi ricorre l'anniversario di ${first.name}.`
+          : `Oggi ricorrono ${result.anniversaries.length} anniversari funebri.`;
+    } else if (result.blessingGraveName) {
+      message = `Il prete ha benedetto ${result.blessingGraveName}.`;
+    } else if (result.ghostGraveName) {
+      message = `Stanotte qualcuno è tornato vicino a ${result.ghostGraveName}.`;
+    } else if (result.newWeeds > 0) {
       message = `Sono spuntate erbacce su ${result.newWeeds} ${
         result.newWeeds === 1 ? 'tomba' : 'tombe'
       }.`;
@@ -118,21 +136,26 @@ export const useGameStore = create<GameState>((set, get) => ({
       message = 'Alcuni fiori sono ormai cenere.';
     }
 
-    if (result.ghostGraveId) {
-      const ghost = graves.find((g) => g.id === result.ghostGraveId);
-      if (ghost) {
-        message = `Stanotte qualcuno è tornato vicino a ${ghost.name}.`;
-        await notificationService.notifyGhost(ghost.name);
-      }
+    if (result.ghostGraveName) {
+      await notificationService.notifyGhost(result.ghostGraveName);
     }
 
-    set({ world: result.world, graves, lastSimMessage: message });
+    set({ world: result.world, graves, progression, lastSimMessage: message });
     await notificationService.rescheduleAll();
   },
 
   async bury(draft) {
+    // Limite: una sola sepoltura di oggetto astratto al giorno.
+    const today = clock.todayIso();
+    if (draft.category === 'abstract' && !canBuryAbstract(get().progression, today)) {
+      throw new Error('Hai già seppellito un oggetto astratto oggi. Torna domani.');
+    }
+
     const { grave, xpAwarded } = await graveService.bury(draft, clock);
-    const progression = addXp(get().progression, xpAwarded);
+    let progression = addXp(get().progression, xpAwarded);
+    if (grave.category === 'abstract') {
+      progression = { ...progression, lastAbstractBurialDate: today };
+    }
     await persistProgression(progression);
     const graves = await graveService.listGraves();
     set({ graves, progression });

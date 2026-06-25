@@ -60,6 +60,7 @@ export const graveService = {
       hasFlowers: false,
       flowersUpdatedAt: null,
       hasWeeds: false,
+      lastAnniversaryYear: null,
       createdAt: now,
       updatedAt: now,
     };

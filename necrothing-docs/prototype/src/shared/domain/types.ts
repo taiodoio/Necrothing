@@ -26,6 +26,8 @@ export interface Grave {
   hasFlowers: boolean;
   flowersUpdatedAt: string | null; // ISO datetime
   hasWeeds: boolean;
+  // Anno dell'ultimo anniversario già celebrato (per evitare doppioni).
+  lastAnniversaryYear: number | null;
   createdAt: string; // ISO datetime
   updatedAt: string; // ISO datetime
 }

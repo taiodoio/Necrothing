@@ -60,3 +60,13 @@ export function computePrestige(graves: Grave[]): number {
 export function addXp(progression: UserProgression, amount: number): UserProgression {
   return { ...progression, xp: progression.xp + amount };
 }
+
+/** Limite: una sola sepoltura di oggetto astratto al giorno. */
+export function canBuryAbstract(progression: UserProgression, todayIso: string): boolean {
+  return progression.lastAbstractBurialDate !== todayIso;
+}
+
+/** Limite: una sola condivisione premiata al giorno. */
+export function canShareForXp(progression: UserProgression, todayIso: string): boolean {
+  return progression.lastShareDate !== todayIso;
+}

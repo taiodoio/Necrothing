@@ -4,6 +4,7 @@
 import { openDB, type DBSchema, type IDBPDatabase } from 'idb';
 import type {
   Achievement,
+  Decoration,
   Grave,
   GraveMemoryEvent,
   Settings,
@@ -13,7 +14,7 @@ import type {
 } from '@/shared/domain/types';
 
 export const DB_NAME = 'necrothing';
-export const DB_VERSION = 2;
+export const DB_VERSION = 3;
 
 export interface NecrothingDB extends DBSchema {
   graves: {
@@ -46,6 +47,11 @@ export interface NecrothingDB extends DBSchema {
     key: string;
     value: StoredImage;
   };
+  decorations: {
+    key: string;
+    value: Decoration;
+    indexes: { byCell: [number, number] };
+  };
 }
 
 let dbPromise: Promise<IDBPDatabase<NecrothingDB>> | null = null;
@@ -69,6 +75,10 @@ export function getDb(): Promise<IDBPDatabase<NecrothingDB>> {
         if (oldVersion < 2) {
           db.createObjectStore('achievements', { keyPath: 'id' });
           db.createObjectStore('images', { keyPath: 'id' });
+        }
+        if (oldVersion < 3) {
+          const deco = db.createObjectStore('decorations', { keyPath: 'id' });
+          deco.createIndex('byCell', ['gridX', 'gridY'], { unique: true });
         }
       },
     });

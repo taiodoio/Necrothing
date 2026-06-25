@@ -4,6 +4,7 @@
 import { create } from 'zustand';
 import type {
   Achievement,
+  Decoration,
   Grave,
   GraveMemoryEvent,
   NotificationPreferences,
@@ -18,8 +19,12 @@ import {
   canBuryAbstract,
   canShareForXp,
   computePrestige,
+  rankForXp,
   XP_VALUES,
 } from '@/shared/services/progressionService';
+import { decorationService } from '@/shared/services/decorationService';
+import { decorationsRepository } from '@/shared/repositories/decorationsRepository';
+import type { DecorationType } from '@/shared/domain/enums';
 import { createNotificationService } from '@/shared/services/notificationService';
 import { webNotificationAdapter } from '@/shared/services/platform/webNotificationAdapter';
 import { evaluateAchievements } from '@/shared/services/achievementService';
@@ -37,6 +42,7 @@ const notificationService = createNotificationService(webNotificationAdapter, cl
 interface GameState {
   ready: boolean;
   graves: Grave[];
+  decorations: Decoration[];
   world: WorldState | null;
   progression: UserProgression;
   notificationPrefs: NotificationPreferences;
@@ -54,6 +60,8 @@ interface GameState {
   bringFlowers: (graveId: string) => Promise<void>;
   cleanWeeds: (graveId: string) => Promise<void>;
   shareGrave: (graveId: string) => Promise<{ xpAwarded: number }>;
+  placeDecoration: (type: DecorationType, gridX: number, gridY: number) => Promise<void>;
+  removeDecoration: (id: string) => Promise<void>;
   loadEvents: (graveId: string) => Promise<GraveMemoryEvent[]>;
 
   // notifiche
@@ -71,6 +79,7 @@ async function persistProgression(p: UserProgression): Promise<void> {
 export const useGameStore = create<GameState>((set, get) => ({
   ready: false,
   graves: [],
+  decorations: [],
   world: null,
   progression: {
     id: 'singleton',
@@ -114,7 +123,8 @@ export const useGameStore = create<GameState>((set, get) => ({
 
     const graves = await graveService.listGraves();
     const achievements = await achievementsRepository.getAll();
-    set({ world, progression, notificationPrefs, graves, achievements, ready: true });
+    const decorations = await decorationsRepository.getAll();
+    set({ world, progression, notificationPrefs, graves, decorations, achievements, ready: true });
 
     await get().simulate();
     await get().refreshAchievements();
@@ -230,6 +240,19 @@ export const useGameStore = create<GameState>((set, get) => ({
     return { xpAwarded: XP_VALUES.share };
   },
 
+  async placeDecoration(type, gridX, gridY) {
+    const rankLevel = rankForXp(get().progression.xp).level;
+    await decorationService.place(type, gridX, gridY, rankLevel, clock);
+    const decorations = await decorationService.list();
+    set({ decorations });
+  },
+
+  async removeDecoration(id) {
+    await decorationService.remove(id);
+    const decorations = await decorationService.list();
+    set({ decorations });
+  },
+
   async loadEvents(graveId) {
     return graveService.listEvents(graveId);
   },
@@ -245,6 +268,6 @@ export const useGameStore = create<GameState>((set, get) => ({
   },
 
   prestige() {
-    return computePrestige(get().graves);
+    return computePrestige(get().graves, get().decorations.length);
   },
 }));

@@ -49,12 +49,13 @@ export function rankProgress(xp: number): number {
 }
 
 /** Prestigio qualitativo del cimitero. */
-export function computePrestige(graves: Grave[]): number {
+export function computePrestige(graves: Grave[], decorationCount = 0): number {
   const count = graves.length;
-  const decorationScore = graves.filter((g) => g.hasFlowers).length * 2;
+  const flowerScore = graves.filter((g) => g.hasFlowers).length * 2;
+  const decorationScore = decorationCount * 2;
   const cleanlinessScore = graves.filter((g) => !g.hasWeeds).length;
   const variety = new Set(graves.map((g) => g.category)).size * 3;
-  return count * 2 + decorationScore + cleanlinessScore + variety;
+  return count * 2 + flowerScore + decorationScore + cleanlinessScore + variety;
 }
 
 export function addXp(progression: UserProgression, amount: number): UserProgression {

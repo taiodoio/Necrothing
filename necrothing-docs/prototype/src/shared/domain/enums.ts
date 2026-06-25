@@ -96,6 +96,35 @@ export type Season = (typeof SEASONS)[number];
 export const DAY_PHASES = ['dawn', 'day', 'dusk', 'night'] as const;
 export type DayPhase = (typeof DAY_PHASES)[number];
 
+export const DECORATION_TYPES = [
+  'candle',
+  'wreath',
+  'mushroom',
+  'dead_tree',
+  'skull',
+  'lantern',
+] as const;
+export type DecorationType = (typeof DECORATION_TYPES)[number];
+
+export const DECORATION_LABELS: Record<DecorationType, string> = {
+  candle: 'Candela',
+  wreath: 'Corona funebre',
+  mushroom: 'Funghi',
+  dead_tree: 'Albero secco',
+  skull: 'Teschio',
+  lantern: 'Lanterna',
+};
+
+/** Rango minimo richiesto per sbloccare ogni decorazione. */
+export const DECORATION_MIN_RANK: Record<DecorationType, number> = {
+  candle: 1,
+  wreath: 1,
+  mushroom: 2,
+  dead_tree: 2,
+  skull: 3,
+  lantern: 3,
+};
+
 export const MEMORY_EVENT_TYPES = [
   'burial',
   'flower',

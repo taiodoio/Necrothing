@@ -5,6 +5,7 @@
 import { getDb } from '@/shared/db/schema';
 import type {
   Achievement,
+  Decoration,
   Grave,
   GraveMemoryEvent,
   Settings,
@@ -33,6 +34,7 @@ export interface BackupFile {
     progression: UserProgression[];
     settings: Settings[];
     achievements: Achievement[];
+    decorations: Decoration[];
     images: BackupImage[];
   };
 }
@@ -56,16 +58,25 @@ export const backupService = {
   /** Serializza l'intero stato in una stringa JSON `.necro`. */
   async exportToString(clock: ClockService): Promise<string> {
     const db = await getDb();
-    const [graves, memoryEvents, world, progression, settings, achievements, rawImages] =
-      await Promise.all([
-        db.getAll('graves'),
-        db.getAll('memoryEvents'),
-        db.getAll('world'),
-        db.getAll('progression'),
-        db.getAll('settings'),
-        db.getAll('achievements'),
-        db.getAll('images'),
-      ]);
+    const [
+      graves,
+      memoryEvents,
+      world,
+      progression,
+      settings,
+      achievements,
+      decorations,
+      rawImages,
+    ] = await Promise.all([
+      db.getAll('graves'),
+      db.getAll('memoryEvents'),
+      db.getAll('world'),
+      db.getAll('progression'),
+      db.getAll('settings'),
+      db.getAll('achievements'),
+      db.getAll('decorations'),
+      db.getAll('images'),
+    ]);
 
     const images: BackupImage[] = [];
     for (const img of rawImages) {
@@ -77,7 +88,16 @@ export const backupService = {
       format: BACKUP_FORMAT,
       version: BACKUP_VERSION,
       exportedAt: clock.nowIso(),
-      data: { graves, memoryEvents, world, progression, settings, achievements, images },
+      data: {
+        graves,
+        memoryEvents,
+        world,
+        progression,
+        settings,
+        achievements,
+        decorations,
+        images,
+      },
     };
     return JSON.stringify(file, null, 2);
   },
@@ -100,7 +120,16 @@ export const backupService = {
     const d = parsed.data;
     const db = await getDb();
     const tx = db.transaction(
-      ['graves', 'memoryEvents', 'world', 'progression', 'settings', 'achievements', 'images'],
+      [
+        'graves',
+        'memoryEvents',
+        'world',
+        'progression',
+        'settings',
+        'achievements',
+        'decorations',
+        'images',
+      ],
       'readwrite',
     );
 
@@ -111,6 +140,7 @@ export const backupService = {
       tx.objectStore('progression').clear(),
       tx.objectStore('settings').clear(),
       tx.objectStore('achievements').clear(),
+      tx.objectStore('decorations').clear(),
       tx.objectStore('images').clear(),
     ]);
 
@@ -120,6 +150,7 @@ export const backupService = {
     for (const p of d.progression ?? []) tx.objectStore('progression').put(p);
     for (const s of d.settings ?? []) tx.objectStore('settings').put(s);
     for (const a of d.achievements ?? []) tx.objectStore('achievements').put(a);
+    for (const deco of d.decorations ?? []) tx.objectStore('decorations').put(deco);
     for (const img of d.images ?? []) {
       const bytes = base64ToBytes(img.b64);
       const blob = new Blob([bytes.buffer as ArrayBuffer], { type: img.mime });

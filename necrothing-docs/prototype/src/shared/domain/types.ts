@@ -4,6 +4,7 @@ import type {
   Category,
   DayPhase,
   DeathCause,
+  DecorationType,
   GraveType,
   MemoryEventType,
   Season,
@@ -84,6 +85,14 @@ export interface Achievement {
 export interface StoredImage {
   id: string;
   blob: Blob;
+}
+
+export interface Decoration {
+  id: string;
+  type: DecorationType;
+  gridX: number;
+  gridY: number;
+  createdAt: string;
 }
 
 export const DEFAULT_NOTIFICATION_PREFERENCES: NotificationPreferences = {

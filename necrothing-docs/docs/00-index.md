@@ -29,6 +29,8 @@ Versione: `v0.1`
 ## Production
 
 - [Asset Bible](./production/01-asset-bible.md)
+- [Asset List completa (generation-ready)](./production/02-asset-list.md)
+- [Asset Manifest (JSON)](./production/asset-manifest.json)
 
 ## Specs
 

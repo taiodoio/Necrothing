@@ -1,10 +1,19 @@
 // Placeholder SVG di una persona in lutto. Varianti per piccole differenze.
 
+import { spriteUrl, SpriteImg } from './Sprite';
+
 interface Props {
   size?: number;
   variant?: 'a' | 'b' | 'child' | 'widow';
   mourning?: boolean;
 }
+
+const VARIANT_ASSET: Record<NonNullable<Props['variant']>, string> = {
+  a: 'npc_mourner_a',
+  b: 'npc_mourner_b',
+  child: 'npc_mourner_child',
+  widow: 'npc_widow',
+};
 
 const COAT: Record<NonNullable<Props['variant']>, string> = {
   a: '#1b1828',
@@ -14,6 +23,9 @@ const COAT: Record<NonNullable<Props['variant']>, string> = {
 };
 
 export function MournerSprite({ size = 76, variant = 'a', mourning = false }: Props) {
+  const png = spriteUrl(VARIANT_ASSET[variant], mourning ? 'mourn' : undefined);
+  if (png) return <SpriteImg url={png} size={size} title="Persona in lutto" />;
+
   const scale = variant === 'child' ? 0.78 : 1;
   const h = size * scale;
   const coat = COAT[variant];

@@ -1,6 +1,8 @@
 // Placeholder SVG delle strutture piazzabili (riempiono la cella).
 
 import type { StructureType } from '@/shared/domain/enums';
+import { spriteUrl, SpriteImg } from './Sprite';
+import { structureAssetId } from './assetKeys';
 
 interface Props {
   type: StructureType;
@@ -73,6 +75,8 @@ function Shape({ type }: { type: StructureType }) {
 }
 
 export function StructureSprite({ type, size = 40 }: Props) {
+  const png = spriteUrl(structureAssetId(type));
+  if (png) return <SpriteImg url={png} size={size} />;
   return (
     <svg viewBox="0 0 100 100" width={size} height={size} role="img" aria-label="Struttura">
       <Shape type={type} />

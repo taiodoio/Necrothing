@@ -1,10 +1,15 @@
 // Fuoco fatuo (moneta) raccoglibile. SVG con alone pulsante.
 
+import { spriteUrl, SpriteImg } from './Sprite';
+import { WISP_ASSET_ID } from './assetKeys';
+
 interface Props {
   size?: number;
 }
 
 export function WispSprite({ size = 32 }: Props) {
+  const png = spriteUrl(WISP_ASSET_ID);
+  if (png) return <SpriteImg url={png} size={size} title="Fuoco fatuo" />;
   return (
     <svg viewBox="0 0 40 40" width={size} height={size} role="img" aria-label="Fuoco fatuo">
       <circle cx="20" cy="20" r="14" fill="#5fe3c0" opacity="0.18" />

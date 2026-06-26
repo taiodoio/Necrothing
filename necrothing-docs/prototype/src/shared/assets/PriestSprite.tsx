@@ -1,11 +1,15 @@
 // Placeholder SVG del prete. Sostituibile con SVG animato.
 
+import { spriteUrl, SpriteImg } from './Sprite';
+
 interface Props {
   size?: number;
   blessing?: boolean;
 }
 
 export function PriestSprite({ size = 80, blessing = false }: Props) {
+  const png = spriteUrl('npc_priest', blessing ? 'bless' : undefined);
+  if (png) return <SpriteImg url={png} size={size} title="Prete" />;
   return (
     <svg viewBox="0 0 64 96" width={(size * 64) / 96} height={size} role="img" aria-label="Prete">
       <ellipse cx="32" cy="92" rx="15" ry="4" fill="#000" opacity="0.3" />

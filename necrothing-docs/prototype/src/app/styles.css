@@ -467,6 +467,12 @@ button {
   padding: 0;
   cursor: pointer;
 }
+.pixel-sprite {
+  image-rendering: pixelated;
+  display: block;
+  user-select: none;
+  -webkit-user-drag: none;
+}
 .map-object .badge {
   position: absolute;
   font-size: 12px;

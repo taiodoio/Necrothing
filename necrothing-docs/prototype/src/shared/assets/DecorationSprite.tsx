@@ -1,6 +1,8 @@
 // Placeholder SVG delle decorazioni. Sostituibili con SVG animati.
 
 import type { DecorationType } from '@/shared/domain/enums';
+import { spriteUrl, SpriteImg } from './Sprite';
+import { decorationAssetId } from './assetKeys';
 
 interface Props {
   type: DecorationType;
@@ -68,6 +70,8 @@ function Shape({ type }: { type: DecorationType }) {
 }
 
 export function DecorationSprite({ type, size = 48, title }: Props) {
+  const png = spriteUrl(decorationAssetId(type));
+  if (png) return <SpriteImg url={png} size={size} title={title} />;
   return (
     <svg viewBox="0 0 100 100" width={size} height={size} role="img" aria-label={title ?? 'Decorazione'}>
       <ellipse cx="50" cy="86" rx="30" ry="8" fill="#241f1a" />

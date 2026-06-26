@@ -32,6 +32,7 @@ Versione: `v0.1`
 - [Asset Bible](./production/01-asset-bible.md)
 - [Asset List completa (generation-ready)](./production/02-asset-list.md)
 - [Asset Manifest (JSON)](./production/asset-manifest.json)
+- [Asset Pipeline con PixelLab](./production/03-asset-pipeline-pixellab.md)
 
 ## Specs
 
@@ -43,6 +44,7 @@ Versione: `v0.1`
 
 - [ADR 0001: PWA + Capacitor](../adr/0001-pwa-capacitor.md)
 - [ADR 0002: Rendering SVG/DOM](../adr/0002-svg-rendering.md)
+- [ADR 0003: Pixel-art via PixelLab](../adr/0003-pixel-art-pixellab.md)
 
 ## Prompts
 

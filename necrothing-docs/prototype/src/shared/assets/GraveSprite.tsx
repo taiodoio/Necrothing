@@ -2,6 +2,8 @@
 // Riceve il tipo di lapide e gli stati (fiori, erbacce) come props.
 
 import type { GraveType } from '@/shared/domain/enums';
+import { spriteUrl, SpriteImg } from './Sprite';
+import { graveAssetId } from './assetKeys';
 
 interface Props {
   type: GraveType;
@@ -49,6 +51,14 @@ function Shape({ type }: { type: GraveType }) {
 }
 
 export function GraveSprite({ type, hasFlowers, hasWeeds, size = 64, title }: Props) {
+  const png = spriteUrl(
+    graveAssetId(type),
+    hasFlowers && hasWeeds ? 'flowers_weeds' : undefined,
+    hasFlowers ? 'flowers' : undefined,
+    hasWeeds ? 'weeds' : undefined,
+  );
+  if (png) return <SpriteImg url={png} size={size} title={title} />;
+
   return (
     <svg
       viewBox="0 0 100 100"

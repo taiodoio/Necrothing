@@ -15,6 +15,8 @@ import { PLACEABLES } from '@/shared/domain/placeables';
 import { GraveSprite } from '@/shared/assets/GraveSprite';
 import { PlaceableSprite } from '@/shared/assets/PlaceableSprite';
 import { WispSprite } from '@/shared/assets/WispSprite';
+import { spriteUrl } from '@/shared/assets/Sprite';
+import { TILE_GRASS_ASSET_ID } from '@/shared/assets/assetKeys';
 import { WeatherOverlay } from './WeatherOverlay';
 import type { DayPhase, Weather } from '@/shared/domain/enums';
 
@@ -84,10 +86,18 @@ export function CemeteryScene({
     onSelectEmpty(x, y);
   };
 
+  const grassUrl = spriteUrl(TILE_GRASS_ASSET_ID);
   const mapStyle: CSSProperties = {
     width: MAP_COLS * TILE_SIZE,
     height: MAP_ROWS * TILE_SIZE,
     ['--tile' as string]: `${TILE_SIZE}px`,
+    ...(grassUrl
+      ? {
+          backgroundImage: `url(${grassUrl})`,
+          backgroundSize: `${TILE_SIZE}px ${TILE_SIZE}px`,
+          imageRendering: 'pixelated',
+        }
+      : null),
   };
 
   const cell = (x: number, y: number, w: number, h: number): CSSProperties => ({

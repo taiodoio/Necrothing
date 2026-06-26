@@ -64,6 +64,9 @@ interface GameState {
   shareGrave: (graveId: string) => Promise<{ xpAwarded: number }>;
   placeDecoration: (type: PlaceableType, gridX: number, gridY: number) => Promise<void>;
   removeDecoration: (id: string) => Promise<void>;
+  movePlaceable: (id: string, gridX: number, gridY: number) => Promise<void>;
+  rotatePlaceable: (id: string) => Promise<void>;
+  changePlaceable: (id: string, newType: PlaceableType) => Promise<void>;
   collectWisp: (id: string) => Promise<void>;
   loadEvents: (graveId: string) => Promise<GraveMemoryEvent[]>;
 
@@ -283,6 +286,21 @@ export const useGameStore = create<GameState>((set, get) => ({
     await decorationService.remove(id);
     const decorations = await decorationService.list();
     set({ decorations });
+  },
+
+  async movePlaceable(id, gridX, gridY) {
+    await decorationService.move(id, gridX, gridY);
+    set({ decorations: await decorationService.list() });
+  },
+
+  async rotatePlaceable(id) {
+    await decorationService.rotate(id);
+    set({ decorations: await decorationService.list() });
+  },
+
+  async changePlaceable(id, newType) {
+    await decorationService.changeType(id, newType);
+    set({ decorations: await decorationService.list() });
   },
 
   async collectWisp(id) {

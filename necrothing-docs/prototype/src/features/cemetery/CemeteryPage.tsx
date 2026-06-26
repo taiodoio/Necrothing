@@ -10,14 +10,16 @@ import { GraveDetail } from '@/features/graves/GraveDetail';
 import { PlaceablePicker } from '@/features/decorations/PlaceablePicker';
 import { DecorationSheet } from '@/features/decorations/DecorationSheet';
 import { FuneralScene } from '@/features/funeral/FuneralScene';
-import { GRAVE_FOOTPRINT, MAP_COLS, MAP_ROWS, type Decoration, type Grave } from '@/shared/domain/types';
-import { buildOccupancy, canPlace } from '@/shared/domain/placeables';
+import { GRAVE_FOOTPRINT, MAP_COLS, MAP_ROWS, type Grave } from '@/shared/domain/types';
+import { buildOccupancy, canPlace, PLACEABLES } from '@/shared/domain/placeables';
 
 export function CemeteryPage() {
   const graves = useGameStore((s) => s.graves);
   const decorations = useGameStore((s) => s.decorations);
   const world = useGameStore((s) => s.world);
   const collectWisp = useGameStore((s) => s.collectWisp);
+  const movePlaceable = useGameStore((s) => s.movePlaceable);
+  const changePlaceable = useGameStore((s) => s.changePlaceable);
   const lastSimMessage = useGameStore((s) => s.lastSimMessage);
   const lastUnlockedAchievement = useGameStore((s) => s.lastUnlockedAchievement);
 
@@ -25,9 +27,16 @@ export function CemeteryPage() {
   const [burialCell, setBurialCell] = useState<{ x: number; y: number } | null>(null);
   const [decorateCell, setDecorateCell] = useState<{ x: number; y: number } | null>(null);
   const [detailId, setDetailId] = useState<string | null>(null);
-  const [decorationSel, setDecorationSel] = useState<Decoration | null>(null);
+  const [decorationSelId, setDecorationSelId] = useState<string | null>(null);
+  const [movingId, setMovingId] = useState<string | null>(null);
+  const [replaceTarget, setReplaceTarget] = useState<{ id: string; footprint: [number, number] } | null>(null);
   const [funeralGrave, setFuneralGrave] = useState<Grave | null>(null);
   const [toast, setToast] = useState<string | null>(null);
+
+  const showToast = (msg: string) => {
+    setToast(msg);
+    setTimeout(() => setToast(null), 4000);
+  };
 
   useEffect(() => {
     if (lastSimMessage) {
@@ -55,9 +64,24 @@ export function CemeteryPage() {
         looseWisps={world?.looseWisps ?? []}
         weather={world?.currentWeather ?? 'gloomy_clear'}
         dayPhase={world?.currentDayPhase ?? 'day'}
-        onSelectEmpty={(x, y) => setActionCell({ x, y })}
+        movingId={movingId}
+        onSelectEmpty={(x, y) => {
+          if (movingId) {
+            movePlaceable(movingId, x, y)
+              .then(() => {
+                setMovingId(null);
+                showToast('Elemento spostato.');
+              })
+              .catch((e) => showToast(e instanceof Error ? e.message : 'Errore.'));
+            return;
+          }
+          setActionCell({ x, y });
+        }}
         onSelectGrave={(g: Grave) => setDetailId(g.id)}
-        onSelectPlaceable={(d: Decoration) => setDecorationSel(d)}
+        onSelectPlaceable={(d) => {
+          if (movingId) return;
+          setDecorationSelId(d.id);
+        }}
         onCollectWisp={(id) => collectWisp(id)}
       />
 
@@ -122,8 +146,36 @@ export function CemeteryPage() {
 
       {detailId && <GraveDetail graveId={detailId} onClose={() => setDetailId(null)} />}
 
-      {decorationSel && (
-        <DecorationSheet decoration={decorationSel} onClose={() => setDecorationSel(null)} />
+      {decorationSelId && (
+        <DecorationSheet
+          id={decorationSelId}
+          onClose={() => setDecorationSelId(null)}
+          onMove={(id) => {
+            setDecorationSelId(null);
+            setMovingId(id);
+          }}
+          onChange={(id) => {
+            const p = decorations.find((d) => d.id === id);
+            if (!p) return;
+            setDecorationSelId(null);
+            setReplaceTarget({ id, footprint: PLACEABLES[p.type].footprint });
+          }}
+        />
+      )}
+
+      {replaceTarget && (
+        <PlaceablePicker
+          gridX={0}
+          gridY={0}
+          replaceMode
+          footprintFilter={replaceTarget.footprint}
+          onReplace={(type) => changePlaceable(replaceTarget.id, type)}
+          onClose={() => setReplaceTarget(null)}
+          onPlaced={() => {
+            setReplaceTarget(null);
+            showToast('Elemento cambiato.');
+          }}
+        />
       )}
 
       {funeralGrave && (
@@ -135,6 +187,15 @@ export function CemeteryPage() {
             setTimeout(() => setToast(null), 4000);
           }}
         />
+      )}
+
+      {movingId && (
+        <div className="move-banner">
+          ✋ Tocca la cella di destinazione
+          <button className="btn btn--ghost" onClick={() => setMovingId(null)}>
+            Annulla
+          </button>
+        </div>
       )}
 
       {toast && <div className="toast">{toast}</div>}

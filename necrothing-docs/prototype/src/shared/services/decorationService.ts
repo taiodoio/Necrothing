@@ -48,4 +48,45 @@ export const decorationService = {
   async remove(id: string): Promise<void> {
     await decorationsRepository.remove(id);
   },
+
+  /** Sposta un placeable su una nuova posizione (footprint invariato). */
+  async move(id: string, gridX: number, gridY: number): Promise<Decoration> {
+    const current = await decorationsRepository.get(id);
+    if (!current) throw new DecorationError('Elemento inesistente.');
+    const def = PLACEABLES[current.type];
+    const graves = await graveRepository.getAll();
+    const others = (await decorationsRepository.getAll()).filter((p) => p.id !== id);
+    const occupancy = buildOccupancy(graves, others);
+    if (!canPlace(gridX, gridY, def.footprint, occupancy, MAP_COLS, MAP_ROWS)) {
+      throw new DecorationError('Spazio non disponibile.');
+    }
+    const moved: Decoration = { ...current, gridX, gridY };
+    await decorationsRepository.update(moved);
+    return moved;
+  },
+
+  /** Ruota di 90° un placeable (toggle 0/90). */
+  async rotate(id: string): Promise<Decoration> {
+    const current = await decorationsRepository.get(id);
+    if (!current) throw new DecorationError('Elemento inesistente.');
+    const rotated: Decoration = { ...current, rotation: current.rotation === 90 ? 0 : 90 };
+    await decorationsRepository.update(rotated);
+    return rotated;
+  },
+
+  /** Cambia il tipo di un placeable (richiede footprint compatibile, gratis). */
+  async changeType(id: string, newType: PlaceableType): Promise<Decoration> {
+    const current = await decorationsRepository.get(id);
+    if (!current) throw new DecorationError('Elemento inesistente.');
+    const def = PLACEABLES[newType];
+    const graves = await graveRepository.getAll();
+    const others = (await decorationsRepository.getAll()).filter((p) => p.id !== id);
+    const occupancy = buildOccupancy(graves, others);
+    if (!canPlace(current.gridX, current.gridY, def.footprint, occupancy, MAP_COLS, MAP_ROWS)) {
+      throw new DecorationError('Il nuovo elemento non entra in questo spazio.');
+    }
+    const changed: Decoration = { ...current, type: newType };
+    await decorationsRepository.update(changed);
+    return changed;
+  },
 };

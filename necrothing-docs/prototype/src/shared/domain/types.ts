@@ -101,6 +101,7 @@ export interface Decoration {
   type: PlaceableType;
   gridX: number;
   gridY: number;
+  rotation?: 0 | 90; // rotazione (es. staccionata verticale)
   createdAt: string;
 }
 

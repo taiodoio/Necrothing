@@ -2,38 +2,73 @@ import { useState } from 'react';
 import { Sheet } from '@/shared/components/Sheet';
 import { useGameStore } from '@/shared/store/gameStore';
 import { PlaceableSprite } from '@/shared/assets/PlaceableSprite';
-import { PLACEABLES } from '@/shared/domain/placeables';
-import type { Decoration } from '@/shared/domain/types';
+import { PLACEABLES, isRotatable } from '@/shared/domain/placeables';
 
 interface Props {
-  decoration: Decoration;
+  id: string;
   onClose: () => void;
+  onMove: (id: string) => void;
+  onChange: (id: string) => void;
 }
 
-export function DecorationSheet({ decoration, onClose }: Props) {
+export function DecorationSheet({ id, onClose, onMove, onChange }: Props) {
+  const placeable = useGameStore((s) => s.decorations.find((d) => d.id === id));
   const remove = useGameStore((s) => s.removeDecoration);
+  const rotate = useGameStore((s) => s.rotatePlaceable);
   const [busy, setBusy] = useState(false);
-  const def = PLACEABLES[decoration.type];
+
+  if (!placeable) {
+    onClose();
+    return null;
+  }
+  const def = PLACEABLES[placeable.type];
 
   return (
     <Sheet title={def.label} onClose={onClose}>
       <div style={{ display: 'flex', justifyContent: 'center', padding: '8px 0' }}>
-        <PlaceableSprite type={decoration.type} size={96} />
+        <span
+          style={{
+            display: 'flex',
+            transform: placeable.rotation ? `rotate(${placeable.rotation}deg)` : undefined,
+          }}
+        >
+          <PlaceableSprite type={placeable.type} size={96} />
+        </span>
       </div>
       <p className="muted" style={{ fontSize: 13, textAlign: 'center' }}>
         {def.kind === 'structure' ? 'Struttura' : 'Decorazione'} · {def.footprint[0]}×
         {def.footprint[1]}
+        {placeable.rotation === 90 ? ' · ruotata' : ''}
       </p>
+
       <div className="wizard-nav">
-        <button className="btn btn--ghost" onClick={onClose} disabled={busy}>
-          Chiudi
+        <button className="btn" disabled={busy} onClick={() => onMove(placeable.id)}>
+          ✋ Sposta
+        </button>
+        {isRotatable(placeable.type) && (
+          <button
+            className="btn"
+            disabled={busy}
+            onClick={async () => {
+              setBusy(true);
+              await rotate(placeable.id);
+              setBusy(false);
+            }}
+          >
+            ⟳ Ruota
+          </button>
+        )}
+      </div>
+      <div className="wizard-nav">
+        <button className="btn" disabled={busy} onClick={() => onChange(placeable.id)}>
+          🔁 Cambia
         </button>
         <button
           className="btn btn--danger"
           disabled={busy}
           onClick={async () => {
             setBusy(true);
-            await remove(decoration.id);
+            await remove(placeable.id);
             onClose();
           }}
         >

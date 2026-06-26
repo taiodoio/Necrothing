@@ -63,4 +63,32 @@ describe('decorationService', () => {
       DecorationError,
     );
   });
+
+  it('sposta un elemento su una cella libera', async () => {
+    const d = await decorationService.place('candle', 0, 0, 1, clock);
+    const moved = await decorationService.move(d.id, 5, 5);
+    expect(moved.gridX).toBe(5);
+    expect(moved.gridY).toBe(5);
+  });
+
+  it('rifiuta lo spostamento su cella occupata', async () => {
+    const a = await decorationService.place('candle', 0, 0, 1, clock);
+    await decorationService.place('wreath', 1, 0, 1, clock);
+    await expect(decorationService.move(a.id, 1, 0)).rejects.toBeInstanceOf(DecorationError);
+  });
+
+  it('ruota un elemento (toggle 0/90)', async () => {
+    const d = await decorationService.place('fence_wood', 2, 0, 1, clock);
+    const r1 = await decorationService.rotate(d.id);
+    expect(r1.rotation).toBe(90);
+    const r2 = await decorationService.rotate(d.id);
+    expect(r2.rotation).toBe(0);
+  });
+
+  it('cambia il tipo mantenendo il footprint', async () => {
+    const d = await decorationService.place('candle', 0, 0, 1, clock);
+    const changed = await decorationService.changeType(d.id, 'wreath');
+    expect(changed.type).toBe('wreath');
+    expect(changed.gridX).toBe(0);
+  });
 });

@@ -72,6 +72,17 @@ export function placeableDef(type: PlaceableType): PlaceableDef {
   return PLACEABLES[type];
 }
 
+/** Tipi che ha senso ruotare di 90° (elementi lineari). */
+export const ROTATABLE: ReadonlySet<PlaceableType> = new Set<PlaceableType>([
+  'fence_wood',
+  'fence_iron',
+  'wall_stone',
+]);
+
+export function isRotatable(type: PlaceableType): boolean {
+  return ROTATABLE.has(type);
+}
+
 // ---- Occupazione griglia ----
 
 export function footprintCells(x: number, y: number, [w, h]: Footprint): string[] {

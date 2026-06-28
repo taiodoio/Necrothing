@@ -26,6 +26,7 @@ import {
 } from '@/shared/services/progressionService';
 import { decorationService } from '@/shared/services/decorationService';
 import { inventoryService, sellPrice, type InventoryMap } from '@/shared/services/inventoryService';
+import { galleryService, type PhotoMeta } from '@/shared/services/galleryService';
 import { imageStorageService } from '@/shared/services/imageStorageService';
 import { graveRepository } from '@/shared/repositories/graveRepository';
 import { decorationsRepository } from '@/shared/repositories/decorationsRepository';
@@ -56,6 +57,7 @@ interface GameState {
   graves: Grave[];
   decorations: Decoration[];
   inventory: InventoryMap;
+  photos: PhotoMeta[];
   zones: Zone[];
   world: WorldState | null;
   progression: UserProgression;
@@ -96,6 +98,8 @@ interface GameState {
   changePlaceable: (id: string, newType: PlaceableType) => Promise<void>;
   setPlaceableText: (id: string, text: string) => Promise<void>;
   collectWisp: (id: string) => Promise<void>;
+  addPhoto: (blob: Blob) => Promise<void>;
+  removePhoto: (id: string) => Promise<void>;
   loadEvents: (graveId: string) => Promise<GraveMemoryEvent[]>;
 
   // notifiche
@@ -123,6 +127,7 @@ export const useGameStore = create<GameState>((set, get) => ({
   graves: [],
   decorations: [],
   inventory: {},
+  photos: [],
   zones: [],
   world: null,
   progression: {
@@ -188,8 +193,9 @@ export const useGameStore = create<GameState>((set, get) => ({
     const achievements = await achievementsRepository.getAll();
     const decorations = await decorationsRepository.getAll();
     const inventory = await inventoryService.getMap();
+    const photos = await galleryService.listMeta();
     const zones = detectDistricts(graves);
-    set({ world, progression, notificationPrefs, playerName, editIntroSeen, graves, decorations, inventory, zones, achievements, ready: true });
+    set({ world, progression, notificationPrefs, playerName, editIntroSeen, graves, decorations, inventory, photos, zones, achievements, ready: true });
 
     await get().simulate();
     await get().refreshAchievements();
@@ -556,6 +562,16 @@ export const useGameStore = create<GameState>((set, get) => ({
     };
     await persistProgression(progression);
     set({ world: nextWorld, progression });
+  },
+
+  async addPhoto(blob) {
+    await galleryService.add(blob, clock);
+    set({ photos: await galleryService.listMeta() });
+  },
+
+  async removePhoto(id) {
+    await galleryService.remove(id);
+    set({ photos: await galleryService.listMeta() });
   },
 
   async loadEvents(graveId) {

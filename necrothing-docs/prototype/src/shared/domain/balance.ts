@@ -28,13 +28,42 @@ export const SIM = {
   wispSpawnMax: 3, // 1 + rng.int(wispSpawnMax)
 } as const;
 
-/** Probabilità di comparsa delle entità erranti per esecuzione. */
-export const SPAWN_CHANCE: Record<'cat' | 'crowDay' | 'priest' | 'ratNight', number> = {
+/** Probabilità base di comparsa delle entità erranti per esecuzione. */
+export const SPAWN_CHANCE: Record<
+  'cat' | 'crowDay' | 'priest' | 'ratNight' | 'gravedigger' | 'ghostObject',
+  number
+> = {
   cat: 0.06,
   crowDay: 0.1,
   priest: 0.04,
   ratNight: 0.06,
+  gravedigger: 0.05,
+  // Fantasma-oggetto (più raro del fantasma generico, ma premia di più).
+  ghostObject: 0.03,
 };
+
+/**
+ * Modificatori di spawn dati dagli edifici piazzati (Fase G). Gli edifici
+ * rendono gli NPC una meccanica: alterano le probabilità di comparsa.
+ */
+export const SPAWN_MODIFIERS = {
+  /** Ogni mausoleo aumenta gli eventi soprannaturali (moltiplicativo). */
+  mausoleumEventBonus: 0.1, // +10% per mausoleo (fantasma/prete)
+  /** Ogni casa del becchino aumenta la prob. di comparsa del becchino. */
+  gravediggerHouseBonus: 0.12,
+  /** Ogni santuario aumenta la prob. di comparsa del prete. */
+  shrinePriestBonus: 0.06,
+  /** Ogni bara aperta (tomba dissotterrata) attira gli zombie. */
+  zombiePerOpenCoffin: 0.05,
+  /** Tetto alla probabilità di zombie. */
+  zombieChanceMax: 0.5,
+} as const;
+
+/** Becchino interattivo (Fase G). */
+export const GRAVEDIGGER = {
+  /** Raggio (Chebyshev, in celle) entro cui pulisce gratis le tombe. */
+  cleanRadius: 4,
+} as const;
 
 export type RoamingBehavior = 'wander' | 'perch' | 'path' | 'skitter';
 
@@ -56,6 +85,8 @@ export const ROAMING_DEFS: Record<RoamingKind, RoamingDef> = {
   gravedigger: { behavior: 'path', lifespanMs: 34_000, speed: 1.0 },
   priest: { behavior: 'path', lifespanMs: 36_000, speed: 0.8 },
   rat: { behavior: 'skitter', lifespanMs: 15_000, speed: 1.9 },
+  // Lo zombie barcolla lento: più lungo da catturare, più redditizio.
+  zombie: { behavior: 'wander', lifespanMs: 30_000, speed: 0.6 },
 };
 
 /** Bonus prestigio del mausoleo centrale. */

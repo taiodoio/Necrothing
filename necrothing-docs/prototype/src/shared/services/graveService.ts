@@ -16,6 +16,23 @@ import type { Category, DeathCause, GraveType } from '@/shared/domain/enums';
 
 export class BurialError extends Error {}
 
+/**
+ * Tombe entro un raggio (Chebyshev) da una cella, considerando il footprint
+ * 2×2. Pura: usata dal becchino per la pulizia ad area (Fase G).
+ */
+export function gravesWithinRadius(
+  graves: Grave[],
+  x: number,
+  y: number,
+  radius: number,
+): Grave[] {
+  return graves.filter((g) => {
+    const dx = Math.max(g.gridX - x, 0, x - (g.gridX + GRAVE_FOOTPRINT[0] - 1));
+    const dy = Math.max(g.gridY - y, 0, y - (g.gridY + GRAVE_FOOTPRINT[1] - 1));
+    return Math.max(dx, dy) <= radius;
+  });
+}
+
 export interface BuryResult {
   grave: Grave;
   xpAwarded: number;
@@ -137,6 +154,35 @@ export const graveService = {
     await graveRepository.update(updated);
     await memoryEventRepository.add(memoryEvent(graveId, 'weed_cleaned', clock));
     return updated;
+  },
+
+  /**
+   * Pulizia ad area del becchino: pulisce gratis tutte le tombe vicine (con
+   * erbacce o sporche, non rotte) entro `radius`. Ritorna il numero di tombe
+   * effettivamente ripulite.
+   */
+  async cleanNearby(
+    x: number,
+    y: number,
+    radius: number,
+    clock: ClockService,
+  ): Promise<number> {
+    const graves = await graveRepository.getAll();
+    const near = gravesWithinRadius(graves, x, y, radius).filter(
+      (g) => !g.broken && (g.hasWeeds || g.isDirty),
+    );
+    for (const g of near) {
+      const updated: Grave = {
+        ...g,
+        hasWeeds: false,
+        isDirty: false,
+        dirtySince: null,
+        updatedAt: clock.nowIso(),
+      };
+      await graveRepository.update(updated);
+      await memoryEventRepository.add(memoryEvent(g.id, 'weed_cleaned', clock));
+    }
+    return near.length;
   },
 
   /** Registra un evento qualunque sulla timeline della tomba. */

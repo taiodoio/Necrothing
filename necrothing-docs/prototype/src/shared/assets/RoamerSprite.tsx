@@ -7,6 +7,7 @@ import { CrowSprite } from './CrowSprite';
 import { RatSprite } from './RatSprite';
 import { GravediggerSprite } from './GravediggerSprite';
 import { PriestSprite } from './PriestSprite';
+import { ZombieSprite } from './ZombieSprite';
 
 interface Props {
   kind: RoamingKind;
@@ -28,6 +29,8 @@ export function RoamerSprite({ kind, size, facing = 1 }: Props) {
       return <GravediggerSprite size={size} facing={facing} />;
     case 'priest':
       return <PriestSprite size={size} />;
+    case 'zombie':
+      return <ZombieSprite size={size} facing={facing} />;
     default:
       return <GhostSprite size={size} />;
   }

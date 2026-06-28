@@ -25,7 +25,10 @@ export const XP_VALUES = {
   share: 25,
   anniversary: 30,
   ghost: 40,
+  ghostObject: 70, // fantasma-oggetto raro
   blessing: 20,
+  gravediggerPerGrave: 6, // per ogni tomba ripulita dal becchino
+  zombie: 25, // zombie ricacciato nella fossa
 } as const;
 
 // Fuochi fatui (moneta) guadagnati dalle azioni.
@@ -37,8 +40,12 @@ export const WISP_VALUES = {
   blessing: 3,
   collect: 1, // raccolta di un fuoco fatuo sulla mappa
   ghost: 2, // fantasma scacciato/avvistato
+  ghostObject: 5, // fantasma-oggetto raro
   cat: 2, // gatto nero accarezzato
   rat: 1, // topo scacciato
+  crow: 1, // corvo (prima solo atmosfera)
+  zombie: 4, // zombie ricacciato nella fossa
+  gravediggerPerGrave: 1, // per ogni tomba ripulita dal becchino
 } as const;
 
 export function rankForXp(xp: number): Rank {

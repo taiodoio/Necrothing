@@ -2,7 +2,13 @@ import { useState } from 'react';
 import { Sheet } from '@/shared/components/Sheet';
 import { useGameStore } from '@/shared/store/gameStore';
 import { PlaceableSprite } from '@/shared/assets/PlaceableSprite';
-import { DECORATION_TYPES, STRUCTURE_TYPES, type PlaceableType } from '@/shared/domain/enums';
+import {
+  PLACEABLE_TYPES,
+  PLACEABLE_CATEGORIES,
+  PLACEABLE_CATEGORY_LABELS,
+  isSeasonallyAvailable,
+  type PlaceableType,
+} from '@/shared/domain/enums';
 import { PLACEABLES } from '@/shared/domain/placeables';
 import { rankForXp } from '@/shared/services/progressionService';
 
@@ -31,7 +37,10 @@ export function BottegaSheet({ onClose }: Props) {
     }
   };
 
-  const group = (title: string, types: readonly PlaceableType[]) => (
+  const month = new Date().getMonth();
+  const group = (title: string, types: readonly PlaceableType[]) => {
+    if (types.length === 0) return null;
+    return (
     <>
       <h3 style={{ marginTop: 14 }}>{title}</h3>
       <div className="chips" style={{ gap: 10 }}>
@@ -71,7 +80,8 @@ export function BottegaSheet({ onClose }: Props) {
         })}
       </div>
     </>
-  );
+    );
+  };
 
   return (
     <Sheet title="Bottega" onClose={onClose}>
@@ -79,8 +89,16 @@ export function BottegaSheet({ onClose }: Props) {
         Hai <span style={{ color: '#9af5dd' }}>✦ {wisps}</span> fuochi fatui. Compri una volta →
         l'oggetto va in <strong>Inventario</strong>, poi lo posizioni da lì.
       </p>
-      {group('Decorazioni', DECORATION_TYPES)}
-      {group('Strutture', STRUCTURE_TYPES)}
+      {PLACEABLE_CATEGORIES.map((cat) => (
+        <div key={cat}>
+          {group(
+            PLACEABLE_CATEGORY_LABELS[cat],
+            PLACEABLE_TYPES.filter(
+              (t) => PLACEABLES[t].category === cat && isSeasonallyAvailable(t, month),
+            ),
+          )}
+        </div>
+      ))}
       {error && (
         <div className="error" style={{ marginTop: 10 }}>
           {error}

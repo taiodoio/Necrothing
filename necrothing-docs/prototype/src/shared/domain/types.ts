@@ -123,6 +123,7 @@ export interface Decoration {
   gridX: number;
   gridY: number;
   rotation?: 0 | 90; // rotazione (es. staccionata verticale)
+  text?: string; // testo personalizzato (es. cartello)
   createdAt: string;
 }
 

@@ -15,13 +15,16 @@ export function DecorationSheet({ id, onClose, onMove, onChange }: Props) {
   const placeable = useGameStore((s) => s.decorations.find((d) => d.id === id));
   const remove = useGameStore((s) => s.removeDecoration);
   const rotate = useGameStore((s) => s.rotatePlaceable);
+  const setText = useGameStore((s) => s.setPlaceableText);
   const [busy, setBusy] = useState(false);
+  const [text, setTextLocal] = useState(placeable?.text ?? '');
 
   if (!placeable) {
     onClose();
     return null;
   }
   const def = PLACEABLES[placeable.type];
+  const isSign = placeable.type === 'sign';
 
   return (
     <Sheet title={def.label} onClose={onClose}>
@@ -40,6 +43,23 @@ export function DecorationSheet({ id, onClose, onMove, onChange }: Props) {
         {def.footprint[1]}
         {placeable.rotation === 90 ? ' · ruotata' : ''}
       </p>
+
+      {isSign && (
+        <div className="field">
+          <label htmlFor="sign-text">Testo del cartello</label>
+          <input
+            id="sign-text"
+            value={text}
+            maxLength={60}
+            placeholder="Es. Qui giace…"
+            onChange={(e) => setTextLocal(e.target.value)}
+            onBlur={() => setText(placeable.id, text)}
+          />
+        </div>
+      )}
+      {!isSign && placeable.text && (
+        <p style={{ fontStyle: 'italic', textAlign: 'center' }}>«{placeable.text}»</p>
+      )}
 
       <div className="wizard-nav">
         <button className="btn" disabled={busy} onClick={() => onMove(placeable.id)}>

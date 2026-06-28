@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useGameStore } from '@/shared/store/gameStore';
 import { rankForXp } from '@/shared/services/progressionService';
+import { expansionFor } from '@/shared/services/expansionService';
 import {
   ACHIEVEMENTS,
   type AchievementContext,
@@ -15,6 +16,11 @@ function PlayerCard() {
   const prestige = useGameStore((s) => s.prestige());
   const [name, setName] = useState(playerName);
   const rank = rankForXp(progression.xp);
+  const exp = expansionFor(prestige);
+  const expProgress =
+    exp.next && exp.next.minPrestige > 0
+      ? Math.min(1, prestige / exp.next.minPrestige)
+      : 1;
 
   return (
     <section className="player-card">
@@ -34,6 +40,18 @@ function PlayerCard() {
         <span>{progression.xp} Punti Necro</span>
         <span className="wisp-counter">✦ {progression.wisps}</span>
         <span>Prestigio {prestige}</span>
+      </div>
+      <div className="muted expansion-line" style={{ fontSize: 13 }}>
+        🏚️ Cimitero: <strong>{exp.label}</strong>
+        {exp.next ? (
+          <> — prossima area “{exp.next.label}” a {exp.next.minPrestige} prestigio
+            (mancano {exp.toNext})</>
+        ) : (
+          <> — interamente consacrato</>
+        )}
+      </div>
+      <div className="expansion-bar" aria-hidden>
+        <span style={{ width: `${Math.round(expProgress * 100)}%` }} />
       </div>
     </section>
   );

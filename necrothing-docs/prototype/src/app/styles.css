@@ -1097,3 +1097,47 @@ button {
   height: 100%;
   object-fit: cover;
 }
+
+/* ── FASE H: frontiera di espansione (terreno bloccato) ── */
+.map-locked {
+  position: absolute;
+  left: 0;
+  z-index: 1;
+  pointer-events: none;
+  background:
+    repeating-linear-gradient(
+      45deg,
+      rgba(10, 8, 16, 0.55),
+      rgba(10, 8, 16, 0.55) 12px,
+      rgba(20, 16, 30, 0.55) 12px,
+      rgba(20, 16, 30, 0.55) 24px
+    );
+  border-top: 2px dashed var(--accent);
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+}
+.map-locked-label {
+  margin-top: 10px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: rgba(10, 8, 16, 0.8);
+  color: var(--text);
+  font-size: 12px;
+  white-space: nowrap;
+}
+.expansion-line {
+  margin-top: 6px;
+}
+.expansion-bar {
+  margin-top: 4px;
+  height: 6px;
+  border-radius: 999px;
+  background: #221c33;
+  overflow: hidden;
+}
+.expansion-bar > span {
+  display: block;
+  height: 100%;
+  background: var(--accent);
+}

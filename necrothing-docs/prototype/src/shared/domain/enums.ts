@@ -136,6 +136,7 @@ export const STRUCTURE_TYPES = [
   'fence_iron',
   'wall_stone',
   'lamp_post',
+  'mausoleum',
 ] as const;
 export type StructureType = (typeof STRUCTURE_TYPES)[number];
 
@@ -146,6 +147,17 @@ export const STRUCTURE_LABELS: Record<StructureType, string> = {
   fence_iron: 'Recinzione in ferro',
   wall_stone: 'Muretto in pietra',
   lamp_post: 'Lampione',
+  mausoleum: 'Mausoleo centrale',
+};
+
+// Temi delle zone tematiche del cimitero.
+export const ZONE_THEMES = ['gothic', 'natural', 'tech'] as const;
+export type ZoneTheme = (typeof ZONE_THEMES)[number];
+
+export const ZONE_THEME_LABELS: Record<ZoneTheme, string> = {
+  gothic: 'Quartiere Gotico',
+  natural: 'Boschetto Naturale',
+  tech: 'Settore Tecnologico',
 };
 
 // Tipo unificato di oggetto piazzabile (decorazione o struttura).

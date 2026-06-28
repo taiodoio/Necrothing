@@ -19,6 +19,7 @@ export const STRUCTURE_ASSET_ID: Record<StructureType, string> = {
   fence_iron: 'env_fence_iron',
   wall_stone: 'env_wall_stone',
   lamp_post: 'env_lamp_post',
+  mausoleum: 'env_mausoleum',
 };
 
 export function structureAssetId(type: StructureType): string {

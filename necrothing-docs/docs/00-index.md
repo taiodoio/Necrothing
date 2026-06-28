@@ -14,6 +14,8 @@ Versione: `v0.1`
 - [Progression System](./game-design/03-progression-system.md)
 - [World Simulation](./game-design/04-world-simulation.md)
 - [Mappa, Economia e Meteo](./game-design/05-map-economy-weather.md)
+- [Gameplay Roadmap (Post-MVP)](./game-design/06-gameplay-roadmap.md)
+- [Feature & Gameplay Registry](./game-design/07-feature-registry.md)
 
 ## UX/UI
 

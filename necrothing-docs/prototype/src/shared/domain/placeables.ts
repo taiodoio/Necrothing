@@ -32,7 +32,9 @@ const DECO_COST: Record<string, number> = {
   lantern: 7,
   willow: 12,
 };
-const STRUCT_FOOTPRINT: Record<string, Footprint> = {};
+const STRUCT_FOOTPRINT: Record<string, Footprint> = {
+  mausoleum: [3, 3],
+};
 const STRUCT_COST: Record<string, number> = {
   path_dirt: 2,
   path_stone: 4,
@@ -40,6 +42,7 @@ const STRUCT_COST: Record<string, number> = {
   fence_iron: 5,
   wall_stone: 6,
   lamp_post: 8,
+  mausoleum: 40,
 };
 const STRUCT_MIN_RANK: Record<string, number> = {
   path_dirt: 1,
@@ -48,6 +51,7 @@ const STRUCT_MIN_RANK: Record<string, number> = {
   fence_iron: 2,
   wall_stone: 2,
   lamp_post: 3,
+  mausoleum: 5,
 };
 
 export const PLACEABLES: Record<PlaceableType, PlaceableDef> = {
@@ -66,7 +70,11 @@ export const PLACEABLES: Record<PlaceableType, PlaceableDef> = {
   fence_iron: { kind: 'structure', label: STRUCTURE_LABELS.fence_iron, footprint: [1, 1], cost: STRUCT_COST.fence_iron, minRank: STRUCT_MIN_RANK.fence_iron },
   wall_stone: { kind: 'structure', label: STRUCTURE_LABELS.wall_stone, footprint: [1, 1], cost: STRUCT_COST.wall_stone, minRank: STRUCT_MIN_RANK.wall_stone },
   lamp_post: { kind: 'structure', label: STRUCTURE_LABELS.lamp_post, footprint: [1, 1], cost: STRUCT_COST.lamp_post, minRank: STRUCT_MIN_RANK.lamp_post },
+  mausoleum: { kind: 'structure', label: STRUCTURE_LABELS.mausoleum, footprint: STRUCT_FOOTPRINT.mausoleum, cost: STRUCT_COST.mausoleum, minRank: STRUCT_MIN_RANK.mausoleum },
 };
+
+/** Strutture uniche: ne può esistere al massimo una per cimitero. */
+export const UNIQUE_PLACEABLES: ReadonlySet<PlaceableType> = new Set<PlaceableType>(['mausoleum']);
 
 export function placeableDef(type: PlaceableType): PlaceableDef {
   return PLACEABLES[type];

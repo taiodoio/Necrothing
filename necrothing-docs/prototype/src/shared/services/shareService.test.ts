@@ -18,6 +18,7 @@ function grave(over: Partial<Grave>): Grave {
     hasFlowers: false,
     flowersUpdatedAt: null,
     hasWeeds: false,
+    isDirty: false,
     lastAnniversaryYear: null,
     createdAt: '2026-06-24T00:00:00Z',
     updatedAt: '2026-06-24T00:00:00Z',

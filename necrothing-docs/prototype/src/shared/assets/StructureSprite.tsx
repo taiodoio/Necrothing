@@ -69,6 +69,25 @@ function Shape({ type }: { type: StructureType }) {
           <path d="M50 22 q6 5 0 9 q-6 -4 0 -9" fill="#fff1c2" />
         </g>
       );
+    case 'mausoleum':
+      return (
+        <g>
+          {/* basamento */}
+          <rect x="14" y="58" width="72" height="34" fill="#4a4658" stroke="#2a2640" strokeWidth="2" />
+          {/* colonne */}
+          <rect x="20" y="60" width="8" height="30" fill="#615c74" />
+          <rect x="72" y="60" width="8" height="30" fill="#615c74" />
+          <rect x="38" y="60" width="8" height="30" fill="#565169" />
+          <rect x="54" y="60" width="8" height="30" fill="#565169" />
+          {/* architrave + frontone */}
+          <rect x="12" y="50" width="76" height="10" fill="#6b6580" />
+          <path d="M50 24 L90 52 L10 52 Z" fill="#565169" stroke="#2a2640" strokeWidth="2" />
+          {/* porta */}
+          <rect x="42" y="68" width="16" height="24" rx="7" fill="#1c1830" />
+          {/* croce sul frontone */}
+          <path d="M50 30 v12 M44 35 h12" stroke="#cbb98f" strokeWidth="2.5" />
+        </g>
+      );
     default:
       return null;
   }

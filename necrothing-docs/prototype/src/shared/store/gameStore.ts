@@ -10,6 +10,7 @@ import type {
   NotificationPreferences,
   UserProgression,
   WorldState,
+  Zone,
 } from '@/shared/domain/types';
 import { DEFAULT_NOTIFICATION_PREFERENCES } from '@/shared/domain/types';
 import { graveService } from '@/shared/services/graveService';
@@ -24,9 +25,16 @@ import {
   XP_VALUES,
 } from '@/shared/services/progressionService';
 import { decorationService } from '@/shared/services/decorationService';
+import { imageStorageService } from '@/shared/services/imageStorageService';
+import { graveRepository } from '@/shared/repositories/graveRepository';
 import { decorationsRepository } from '@/shared/repositories/decorationsRepository';
 import { PLACEABLES } from '@/shared/domain/placeables';
-import type { PlaceableType } from '@/shared/domain/enums';
+import type { PlaceableType, Weather } from '@/shared/domain/enums';
+import type { RoamingSpawn } from '@/shared/domain/roaming';
+import { detectDistricts, zoneScore } from '@/shared/services/zoneService';
+import { newId } from '@/shared/utils/id';
+import { buildOccupancy } from '@/shared/domain/placeables';
+import { MAP_COLS, MAP_ROWS } from '@/shared/domain/types';
 import { createNotificationService } from '@/shared/services/notificationService';
 import { webNotificationAdapter } from '@/shared/services/platform/webNotificationAdapter';
 import { evaluateAchievements } from '@/shared/services/achievementService';
@@ -45,12 +53,15 @@ interface GameState {
   ready: boolean;
   graves: Grave[];
   decorations: Decoration[];
+  zones: Zone[];
   world: WorldState | null;
   progression: UserProgression;
   notificationPrefs: NotificationPreferences;
   achievements: Achievement[];
   lastUnlockedAchievement: string | null;
   lastSimMessage: string | null;
+  // Segnale per la UI: entità erranti da far comparire dopo la simulazione.
+  pendingSpawns: RoamingSpawn[];
 
   // lifecycle
   init: () => Promise<void>;
@@ -61,8 +72,15 @@ interface GameState {
   bury: (draft: BurialDraft) => Promise<Grave>;
   bringFlowers: (graveId: string) => Promise<void>;
   cleanWeeds: (graveId: string) => Promise<void>;
+  moveGrave: (graveId: string, gridX: number, gridY: number) => Promise<void>;
+  removeGrave: (graveId: string) => Promise<void>;
+  witnessGhost: (graveId: string | null) => Promise<void>;
+  petCat: () => Promise<void>;
+  blessFromPriest: (graveId: string | null) => Promise<void>;
+  shooRat: () => Promise<void>;
+  consumeSpawns: () => void;
   shareGrave: (graveId: string) => Promise<{ xpAwarded: number }>;
-  placeDecoration: (type: PlaceableType, gridX: number, gridY: number) => Promise<void>;
+  placeDecoration: (type: PlaceableType, gridX: number, gridY: number) => Promise<Decoration>;
   removeDecoration: (id: string) => Promise<void>;
   movePlaceable: (id: string, gridX: number, gridY: number) => Promise<void>;
   rotatePlaceable: (id: string) => Promise<void>;
@@ -73,6 +91,12 @@ interface GameState {
   // notifiche
   updateNotificationPrefs: (prefs: NotificationPreferences) => Promise<void>;
   requestNotificationPermission: () => Promise<void>;
+
+  // strumenti di sviluppo (solo dev)
+  devSpawnWisp: () => Promise<void>;
+  devDirtyRandomGrave: () => Promise<void>;
+  devSetWeather: (weather: Weather) => Promise<void>;
+  devBlessing: () => Promise<void>;
 
   // selettori derivati
   prestige: () => number;
@@ -86,6 +110,7 @@ export const useGameStore = create<GameState>((set, get) => ({
   ready: false,
   graves: [],
   decorations: [],
+  zones: [],
   world: null,
   progression: {
     id: 'singleton',
@@ -99,6 +124,7 @@ export const useGameStore = create<GameState>((set, get) => ({
   achievements: [],
   lastUnlockedAchievement: null,
   lastSimMessage: null,
+  pendingSpawns: [],
 
   async init() {
     // World
@@ -139,7 +165,8 @@ export const useGameStore = create<GameState>((set, get) => ({
     const graves = await graveService.listGraves();
     const achievements = await achievementsRepository.getAll();
     const decorations = await decorationsRepository.getAll();
-    set({ world, progression, notificationPrefs, graves, decorations, achievements, ready: true });
+    const zones = detectDistricts(graves);
+    set({ world, progression, notificationPrefs, graves, decorations, zones, achievements, ready: true });
 
     await get().simulate();
     await get().refreshAchievements();
@@ -148,7 +175,12 @@ export const useGameStore = create<GameState>((set, get) => ({
   async refreshAchievements() {
     const unlocked = new Set(get().achievements.map((a) => a.id));
     const newly = evaluateAchievements(
-      { graves: get().graves, progression: get().progression },
+      {
+        graves: get().graves,
+        progression: get().progression,
+        decorations: get().decorations,
+        zones: get().zones,
+      },
       unlocked,
     );
     if (newly.length === 0) return;
@@ -194,6 +226,10 @@ export const useGameStore = create<GameState>((set, get) => ({
       message = `Sono spuntate erbacce su ${result.newWeeds} ${
         result.newWeeds === 1 ? 'tomba' : 'tombe'
       }.`;
+    } else if (result.newDirt > 0) {
+      message = `${result.newDirt} ${
+        result.newDirt === 1 ? 'lapide si è sporcata' : 'lapidi si sono sporcate'
+      }: serve una pulita.`;
     } else if (result.witheredFlowers > 0) {
       message = 'Alcuni fiori sono ormai cenere.';
     }
@@ -202,7 +238,13 @@ export const useGameStore = create<GameState>((set, get) => ({
       await notificationService.notifyGhost(result.ghostGraveName);
     }
 
-    set({ world: result.world, graves, progression, lastSimMessage: message });
+    set({
+      world: result.world,
+      graves,
+      progression,
+      lastSimMessage: message,
+      pendingSpawns: result.spawns.length > 0 ? result.spawns : get().pendingSpawns,
+    });
     await notificationService.rescheduleAll();
     await get().refreshAchievements();
   },
@@ -222,7 +264,7 @@ export const useGameStore = create<GameState>((set, get) => ({
     }
     await persistProgression(progression);
     const graves = await graveService.listGraves();
-    set({ graves, progression });
+    set({ graves, progression, zones: detectDistricts(graves) });
     await notificationService.rescheduleAll();
     await get().refreshAchievements();
     return grave;
@@ -233,7 +275,11 @@ export const useGameStore = create<GameState>((set, get) => ({
     let progression = get().progression;
     if (xpAwarded > 0) {
       progression = addXp(progression, xpAwarded);
-      progression = { ...progression, wisps: progression.wisps + WISP_VALUES.flowers };
+      progression = {
+        ...progression,
+        wisps: progression.wisps + WISP_VALUES.flowers,
+        flowersBrought: (progression.flowersBrought ?? 0) + 1,
+      };
       await persistProgression(progression);
     }
     const graves = await graveService.listGraves();
@@ -246,13 +292,102 @@ export const useGameStore = create<GameState>((set, get) => ({
     let progression = get().progression;
     if (xpAwarded > 0) {
       progression = addXp(progression, xpAwarded);
-      progression = { ...progression, wisps: progression.wisps + WISP_VALUES.weedCleaned };
+      progression = {
+        ...progression,
+        wisps: progression.wisps + WISP_VALUES.weedCleaned,
+        cleanups: (progression.cleanups ?? 0) + 1,
+      };
       await persistProgression(progression);
     }
     const graves = await graveService.listGraves();
     set({ graves, progression });
     await notificationService.rescheduleAll();
     await get().refreshAchievements();
+  },
+
+  async moveGrave(graveId, gridX, gridY) {
+    await graveService.move(graveId, gridX, gridY, clock);
+    const graves = await graveService.listGraves();
+    set({ graves, zones: detectDistricts(graves) });
+    await get().refreshAchievements();
+  },
+
+  async removeGrave(graveId) {
+    const grave = get().graves.find((g) => g.id === graveId);
+    await graveService.remove(graveId);
+    if (grave?.photoId) {
+      await imageStorageService.remove(grave.photoId).catch(() => undefined);
+    }
+    const graves = await graveService.listGraves();
+    set({ graves, zones: detectDistricts(graves) });
+    await notificationService.rescheduleAll();
+    await get().refreshAchievements();
+  },
+
+  async witnessGhost(graveId) {
+    const graves = get().graves;
+    const target = graveId
+      ? graves.find((g) => g.id === graveId)
+      : graves[Math.floor(Math.random() * graves.length)];
+    if (target) {
+      await graveService.recordEvent(target.id, 'ghost', clock);
+    }
+    let progression = addXp(get().progression, XP_VALUES.ghost);
+    progression = {
+      ...progression,
+      wisps: progression.wisps + WISP_VALUES.ghost,
+      ghostsWitnessed: (progression.ghostsWitnessed ?? 0) + 1,
+    };
+    await persistProgression(progression);
+    set({ progression });
+    await get().refreshAchievements();
+  },
+
+  async petCat() {
+    const cur = get().progression;
+    const progression = {
+      ...cur,
+      wisps: cur.wisps + WISP_VALUES.cat,
+      npcEncountered: (cur.npcEncountered ?? 0) + 1,
+    };
+    await persistProgression(progression);
+    set({ progression });
+    await get().refreshAchievements();
+  },
+
+  async blessFromPriest(graveId) {
+    const graves = get().graves;
+    const target = graveId
+      ? graves.find((g) => g.id === graveId)
+      : graves[Math.floor(Math.random() * graves.length)];
+    if (target) {
+      await graveService.recordEvent(target.id, 'blessing', clock);
+    }
+    let progression = addXp(get().progression, XP_VALUES.blessing);
+    progression = {
+      ...progression,
+      wisps: progression.wisps + WISP_VALUES.blessing,
+      npcEncountered: (progression.npcEncountered ?? 0) + 1,
+    };
+    await persistProgression(progression);
+    set({ progression });
+    await get().refreshAchievements();
+  },
+
+  async shooRat() {
+    const cur = get().progression;
+    const progression = {
+      ...cur,
+      wisps: cur.wisps + WISP_VALUES.rat,
+      npcEncountered: (cur.npcEncountered ?? 0) + 1,
+    };
+    await persistProgression(progression);
+    set({ progression });
+    await get().refreshAchievements();
+  },
+
+  consumeSpawns() {
+    set({ pendingSpawns: [] });
   },
 
   async shareGrave(_graveId) {
@@ -275,11 +410,18 @@ export const useGameStore = create<GameState>((set, get) => ({
       throw new Error(`Servono ${def.cost} fuochi fatui (ne hai ${prog.wisps}).`);
     }
     const rankLevel = rankForXp(prog.xp).level;
-    await decorationService.place(type, gridX, gridY, rankLevel, clock);
-    const progression = { ...prog, wisps: prog.wisps - def.cost };
+    const created = await decorationService.place(type, gridX, gridY, rankLevel, clock);
+    const progression = {
+      ...prog,
+      wisps: prog.wisps - def.cost,
+      wispsSpent: (prog.wispsSpent ?? 0) + def.cost,
+      decorationsPlaced: (prog.decorationsPlaced ?? 0) + 1,
+    };
     await persistProgression(progression);
     const decorations = await decorationService.list();
     set({ decorations, progression });
+    await get().refreshAchievements();
+    return created;
   },
 
   async removeDecoration(id) {
@@ -332,7 +474,61 @@ export const useGameStore = create<GameState>((set, get) => ({
     await notificationService.rescheduleAll();
   },
 
+  async devSpawnWisp() {
+    const world = get().world;
+    if (!world) return;
+    const occ = buildOccupancy(get().graves, get().decorations);
+    const wisps = world.looseWisps ?? [];
+    const taken = new Set([...occ, ...wisps.map((w) => `${w.gridX},${w.gridY}`)]);
+    let cell: { x: number; y: number } | null = null;
+    for (let i = 0; i < 80 && !cell; i++) {
+      const x = Math.floor(Math.random() * MAP_COLS);
+      const y = Math.floor(Math.random() * MAP_ROWS);
+      if (!taken.has(`${x},${y}`)) cell = { x, y };
+    }
+    if (!cell) return;
+    const nextWorld = {
+      ...world,
+      looseWisps: [...wisps, { id: newId(), gridX: cell.x, gridY: cell.y }],
+    };
+    await worldRepository.save(nextWorld);
+    set({ world: nextWorld });
+  },
+
+  async devDirtyRandomGrave() {
+    const graves = get().graves;
+    if (graves.length === 0) return;
+    const g = graves[Math.floor(Math.random() * graves.length)];
+    const updated = { ...g, hasWeeds: true, isDirty: true, updatedAt: clock.nowIso() };
+    await graveRepository.update(updated);
+    set({ graves: await graveService.listGraves() });
+  },
+
+  async devSetWeather(weather) {
+    const world = get().world;
+    if (!world) return;
+    const nextWorld = { ...world, currentWeather: weather };
+    await worldRepository.save(nextWorld);
+    set({ world: nextWorld });
+  },
+
+  async devBlessing() {
+    const graves = get().graves;
+    if (graves.length === 0) return;
+    const g = graves[Math.floor(Math.random() * graves.length)];
+    await graveService.recordEvent(g.id, 'blessing', clock);
+    let progression = addXp(get().progression, XP_VALUES.blessing);
+    progression = { ...progression, wisps: progression.wisps + WISP_VALUES.blessing };
+    await persistProgression(progression);
+    set({ progression, lastSimMessage: `Il prete ha benedetto ${g.name}.` });
+    await get().refreshAchievements();
+  },
+
   prestige() {
-    return computePrestige(get().graves, get().decorations.length);
+    const decorations = get().decorations;
+    return computePrestige(get().graves, decorations.length, {
+      hasMausoleum: decorations.some((d) => d.type === 'mausoleum'),
+      zoneScore: zoneScore(get().zones),
+    });
   },
 }));

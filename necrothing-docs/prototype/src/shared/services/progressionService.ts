@@ -1,6 +1,7 @@
 // Logica di progressione: XP, ranghi, prestigio. Vedi docs/game-design/03.
 
 import type { Grave, UserProgression } from '@/shared/domain/types';
+import { MAUSOLEUM_PRESTIGE } from '@/shared/domain/balance';
 
 export interface Rank {
   level: number;
@@ -35,6 +36,9 @@ export const WISP_VALUES = {
   anniversary: 5,
   blessing: 3,
   collect: 1, // raccolta di un fuoco fatuo sulla mappa
+  ghost: 2, // fantasma scacciato/avvistato
+  cat: 2, // gatto nero accarezzato
+  rat: 1, // topo scacciato
 } as const;
 
 export function rankForXp(xp: number): Rank {
@@ -59,13 +63,21 @@ export function rankProgress(xp: number): number {
 }
 
 /** Prestigio qualitativo del cimitero. */
-export function computePrestige(graves: Grave[], decorationCount = 0): number {
+export function computePrestige(
+  graves: Grave[],
+  decorationCount = 0,
+  extra: { hasMausoleum?: boolean; zoneScore?: number } = {},
+): number {
   const count = graves.length;
   const flowerScore = graves.filter((g) => g.hasFlowers).length * 2;
   const decorationScore = decorationCount * 2;
-  const cleanlinessScore = graves.filter((g) => !g.hasWeeds).length;
+  const cleanlinessScore = graves.filter((g) => !g.hasWeeds && !g.isDirty).length;
   const variety = new Set(graves.map((g) => g.category)).size * 3;
-  return count * 2 + flowerScore + decorationScore + cleanlinessScore + variety;
+  const mausoleumScore = extra.hasMausoleum ? MAUSOLEUM_PRESTIGE : 0;
+  const zoneScore = extra.zoneScore ?? 0;
+  return (
+    count * 2 + flowerScore + decorationScore + cleanlinessScore + variety + mausoleumScore + zoneScore
+  );
 }
 
 export function addXp(progression: UserProgression, amount: number): UserProgression {

@@ -9,6 +9,7 @@ interface Props {
   type: GraveType;
   hasFlowers?: boolean;
   hasWeeds?: boolean;
+  isDirty?: boolean;
   size?: number;
   title?: string;
 }
@@ -50,10 +51,11 @@ function Shape({ type }: { type: GraveType }) {
   }
 }
 
-export function GraveSprite({ type, hasFlowers, hasWeeds, size = 64, title }: Props) {
+export function GraveSprite({ type, hasFlowers, hasWeeds, isDirty, size = 64, title }: Props) {
   const png = spriteUrl(
     graveAssetId(type),
     hasFlowers && hasWeeds ? 'flowers_weeds' : undefined,
+    isDirty ? 'dirty' : undefined,
     hasFlowers ? 'flowers' : undefined,
     hasWeeds ? 'weeds' : undefined,
   );
@@ -70,6 +72,15 @@ export function GraveSprite({ type, hasFlowers, hasWeeds, size = 64, title }: Pr
       {/* zolla */}
       <ellipse cx="50" cy="86" rx="34" ry="9" fill="#2b2a1f" />
       <Shape type={type} />
+      {isDirty && (
+        <g fill="#6f6a55" opacity="0.5">
+          {/* chiazze di muschio/polvere */}
+          <circle cx="40" cy="58" r="5" />
+          <circle cx="58" cy="66" r="6" />
+          <circle cx="48" cy="72" r="4" />
+          <circle cx="62" cy="52" r="3.5" />
+        </g>
+      )}
       {hasWeeds && (
         <g stroke="#4f6b3a" strokeWidth="2.5" strokeLinecap="round" fill="none">
           <path d="M24 86 q-3 -10 2 -16" />

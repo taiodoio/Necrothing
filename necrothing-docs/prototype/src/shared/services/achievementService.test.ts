@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { evaluateAchievements } from './achievementService';
+import { evaluateAchievements, ACHIEVEMENTS } from './achievementService';
 import type { Grave, UserProgression } from '@/shared/domain/types';
 
 function grave(over: Partial<Grave>): Grave {
@@ -18,6 +18,7 @@ function grave(over: Partial<Grave>): Grave {
     hasFlowers: false,
     flowersUpdatedAt: null,
     hasWeeds: false,
+    isDirty: false,
     lastAnniversaryYear: null,
     createdAt: '2026-01-01T00:00:00Z',
     updatedAt: '2026-01-01T00:00:00Z',
@@ -62,5 +63,45 @@ describe('evaluateAchievements', () => {
       new Set(),
     ).map((a) => a.id);
     expect(ids).toContain('rank_3');
+  });
+
+  it('sblocca achievement a soglia dai contatori cumulativi', () => {
+    const ids = evaluateAchievements(
+      {
+        graves: [grave({})],
+        progression: { ...progression, flowersBrought: 10, cleanups: 15, wispsSpent: 50 },
+      },
+      new Set(),
+    ).map((a) => a.id);
+    expect(ids).toContain('green_thumb');
+    expect(ids).toContain('caretaker_silver');
+    expect(ids).toContain('spender');
+  });
+
+  it('calcola il progresso parziale verso una soglia', () => {
+    const def = ACHIEVEMENTS.find((a) => a.id === 'green_thumb')!;
+    const p = def.progress!({ graves: [], progression: { ...progression, flowersBrought: 5 } });
+    expect(p).toBeCloseTo(0.5);
+  });
+
+  it('sblocca achievement di mausoleo e distretti dal context esteso', () => {
+    const ids = evaluateAchievements(
+      {
+        graves: [grave({})],
+        progression,
+        decorations: [
+          { id: 'd1', type: 'mausoleum', gridX: 0, gridY: 0, createdAt: '2026-01-01T00:00:00Z' },
+        ],
+        zones: [
+          { id: 'z1', theme: 'gothic', gridX: 0, gridY: 0, w: 4, h: 4, createdAt: '' },
+          { id: 'z2', theme: 'natural', gridX: 6, gridY: 0, w: 4, h: 4, createdAt: '' },
+          { id: 'z3', theme: 'tech', gridX: 12, gridY: 0, w: 4, h: 4, createdAt: '' },
+        ],
+      },
+      new Set(),
+    ).map((a) => a.id);
+    expect(ids).toContain('mausoleum_built');
+    expect(ids).toContain('district_gothic');
+    expect(ids).toContain('master_planner');
   });
 });

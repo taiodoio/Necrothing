@@ -9,6 +9,7 @@ import type {
   PlaceableType,
   Season,
   Weather,
+  ZoneTheme,
 } from './enums';
 
 export interface Grave {
@@ -27,6 +28,8 @@ export interface Grave {
   hasFlowers: boolean;
   flowersUpdatedAt: string | null; // ISO datetime
   hasWeeds: boolean;
+  // Sporcizia accumulata (polvere/muschio): da pulire periodicamente.
+  isDirty: boolean;
   // Anno dell'ultimo anniversario già celebrato (per evitare doppioni).
   lastAnniversaryYear: number | null;
   createdAt: string; // ISO datetime
@@ -59,6 +62,14 @@ export interface UserProgression {
   // limiti giornalieri / contatori
   lastAbstractBurialDate: string | null; // ISO date
   lastShareDate: string | null;
+  // Contatori cumulativi per gli achievement (opzionali: default 0 sui
+  // salvataggi precedenti, vedi migrazione in gameStore.init).
+  flowersBrought?: number;
+  cleanups?: number;
+  ghostsWitnessed?: number;
+  npcEncountered?: number;
+  wispsSpent?: number;
+  decorationsPlaced?: number;
 }
 
 /** Fuoco fatuo raccoglibile sulla mappa (moneta). Effimero, in WorldState. */
@@ -102,6 +113,17 @@ export interface Decoration {
   gridX: number;
   gridY: number;
   rotation?: 0 | 90; // rotazione (es. staccionata verticale)
+  createdAt: string;
+}
+
+/** Zona tematica: regione rettangolare della mappa con un tema. */
+export interface Zone {
+  id: string;
+  theme: ZoneTheme;
+  gridX: number;
+  gridY: number;
+  w: number; // larghezza in celle
+  h: number; // altezza in celle
   createdAt: string;
 }
 

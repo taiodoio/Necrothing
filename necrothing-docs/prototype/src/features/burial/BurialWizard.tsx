@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { Sheet } from '@/shared/components/Sheet';
 import { useGameStore } from '@/shared/store/gameStore';
 import { imageStorageService } from '@/shared/services/imageStorageService';
+import { pixelateGrayscale } from '@/shared/utils/image';
 import {
   emptyDraft,
   validateDates,
@@ -89,7 +90,8 @@ export function BurialWizard({ gridX, gridY, onClose, onBuried }: Props) {
     try {
       let finalDraft = draft;
       if (photoFile) {
-        const photoId = await imageStorageService.save(photoFile);
+        const processed = await pixelateGrayscale(photoFile);
+        const photoId = await imageStorageService.save(processed);
         finalDraft = { ...draft, photoId };
       }
       const grave = await bury(finalDraft);
@@ -225,8 +227,17 @@ export function BurialWizard({ gridX, gridY, onClose, onBuried }: Props) {
               <img
                 src={photoPreview}
                 alt="Anteprima foto"
-                style={{ maxWidth: '100%', maxHeight: 220, borderRadius: 12 }}
+                style={{
+                  maxWidth: '100%',
+                  maxHeight: 220,
+                  borderRadius: 12,
+                  filter: 'grayscale(1) contrast(1.1)',
+                  imageRendering: 'pixelated',
+                }}
               />
+              <div className="muted" style={{ fontSize: 12, marginTop: 6 }}>
+                La foto verrà salvata pixelata e in bianco e nero.
+              </div>
               <div style={{ marginTop: 10 }}>
                 <button className="btn btn--ghost" onClick={() => setPhotoFile(null)}>
                   Rimuovi foto

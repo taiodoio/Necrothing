@@ -4,6 +4,8 @@
 
 import { WEATHER, type MemoryEventType, type Weather } from '@/shared/domain/enums';
 import type { Grave, GraveMemoryEvent, LooseWisp, WorldState } from '@/shared/domain/types';
+import type { RoamingSpawn } from '@/shared/domain/roaming';
+import { SIM, SPAWN_CHANCE } from '@/shared/domain/balance';
 import { MAP_COLS, MAP_ROWS } from '@/shared/domain/types';
 import { buildOccupancy } from '@/shared/domain/placeables';
 import { graveRepository, memoryEventRepository } from '@/shared/repositories/graveRepository';
@@ -14,8 +16,6 @@ import { createRng, randomSeed } from '@/shared/utils/rng';
 import { XP_VALUES } from './progressionService';
 import { newId } from '@/shared/utils/id';
 import type { ClockService } from '@/shared/utils/clock';
-
-const WISP_CAP = 8;
 
 function makeEvent(
   graveId: string,
@@ -34,11 +34,14 @@ export interface SimulationResult {
   world: WorldState;
   updatedGraves: Grave[];
   newWeeds: number;
+  newDirt: number;
   witheredFlowers: number;
   ghostGraveId: string | null;
   ghostGraveName: string | null;
   blessingGraveId: string | null;
   blessingGraveName: string | null;
+  /** Entità erranti da far comparire sulla mappa (consumate dalla UI). */
+  spawns: RoamingSpawn[];
   anniversaries: AnniversaryHit[];
   /** XP totale maturato durante la simulazione (anniversari + benedizioni). */
   xpGained: number;
@@ -56,7 +59,7 @@ function isAnniversaryToday(grave: Grave, now: Date): boolean {
 }
 
 function pickWeather(rng: ReturnType<typeof createRng>, isNight: boolean): Weather {
-  if (isNight && rng.chance(0.15)) return 'full_moon';
+  if (isNight && rng.chance(SIM.fullMoonChance)) return 'full_moon';
   const dayWeather = WEATHER.filter((w) => w !== 'full_moon');
   return rng.pick(dayWeather);
 }
@@ -95,6 +98,7 @@ export const simulationService = {
     const updatedGraves: Grave[] = [];
     const anniversaries: AnniversaryHit[] = [];
     let newWeeds = 0;
+    let newDirt = 0;
     let witheredFlowers = 0;
     let xpGained = 0;
 
@@ -113,7 +117,7 @@ export const simulationService = {
 
       // Erbacce: probabilità cumulativa con i giorni trascorsi.
       if (!next.hasWeeds && elapsedDays > 0) {
-        const p = Math.min(0.8, 0.12 * elapsedDays);
+        const p = Math.min(SIM.weedProbMax, SIM.weedProbPerDay * elapsedDays);
         if (rng.chance(p)) {
           next.hasWeeds = true;
           changed = true;
@@ -121,10 +125,20 @@ export const simulationService = {
         }
       }
 
+      // Sporcizia (polvere/muschio): si accumula più lentamente delle erbacce.
+      if (!next.isDirty && elapsedDays > 0) {
+        const p = Math.min(SIM.dirtProbMax, SIM.dirtProbPerDay * elapsedDays);
+        if (rng.chance(p)) {
+          next.isDirty = true;
+          changed = true;
+          newDirt++;
+        }
+      }
+
       // Fiori: appassiscono dopo ~3 giorni.
       if (next.hasFlowers && next.flowersUpdatedAt) {
         const flowerAge = daysBetween(new Date(next.flowersUpdatedAt), now);
-        if (flowerAge >= 3) {
+        if (flowerAge >= SIM.flowerWitherDays) {
           next.hasFlowers = false;
           changed = true;
           witheredFlowers++;
@@ -142,7 +156,7 @@ export const simulationService = {
     let ghostGraveId: string | null = null;
     let ghostGraveName: string | null = null;
     if (graves.length > 0) {
-      const ghostChance = isNight ? 0.08 : 0.02;
+      const ghostChance = isNight ? SIM.ghostChanceNight : SIM.ghostChanceDay;
       if (rng.chance(ghostChance)) {
         const ghost = rng.pick(graves);
         ghostGraveId = ghost.id;
@@ -153,7 +167,7 @@ export const simulationService = {
     // Benedizione del prete: evento casuale che premia una tomba.
     let blessingGraveId: string | null = null;
     let blessingGraveName: string | null = null;
-    if (graves.length > 0 && rng.chance(0.05)) {
+    if (graves.length > 0 && rng.chance(SIM.blessingChance)) {
       const blessed = rng.pick(graves);
       blessingGraveId = blessed.id;
       blessingGraveName = blessed.name;
@@ -161,11 +175,21 @@ export const simulationService = {
       xpGained += XP_VALUES.blessing;
     }
 
+    // Entità erranti: comparse probabilistiche legate a fascia oraria.
+    const spawns: RoamingSpawn[] = [];
+    if (ghostGraveId) spawns.push({ kind: 'ghost', graveId: ghostGraveId });
+    if (rng.chance(SPAWN_CHANCE.cat)) spawns.push({ kind: 'cat' });
+    if (!isNight && rng.chance(SPAWN_CHANCE.crowDay)) spawns.push({ kind: 'crow' });
+    if (graves.length > 0 && rng.chance(SPAWN_CHANCE.priest)) {
+      spawns.push({ kind: 'priest', graveId: rng.pick(graves).id });
+    }
+    if (isNight && rng.chance(SPAWN_CHANCE.ratNight)) spawns.push({ kind: 'rat' });
+
     // Spawn di fuochi fatui (moneta) su celle libere, fino a un tetto.
     const looseWisps: LooseWisp[] = [...(world.looseWisps ?? [])];
     const occ = buildOccupancy(graves, placeables);
     const taken = new Set([...occ, ...looseWisps.map((w) => `${w.gridX},${w.gridY}`)]);
-    const toSpawn = Math.min(WISP_CAP - looseWisps.length, 1 + rng.int(3));
+    const toSpawn = Math.min(SIM.wispCap - looseWisps.length, 1 + rng.int(SIM.wispSpawnMax));
     let attempts = 0;
     let spawned = 0;
     while (spawned < toSpawn && attempts < 60) {
@@ -193,11 +217,13 @@ export const simulationService = {
       world: nextWorld,
       updatedGraves,
       newWeeds,
+      newDirt,
       witheredFlowers,
       ghostGraveId,
       ghostGraveName,
       blessingGraveId,
       blessingGraveName,
+      spawns,
       anniversaries,
       xpGained,
     };

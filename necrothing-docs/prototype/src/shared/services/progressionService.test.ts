@@ -35,6 +35,7 @@ function grave(partial: Partial<Grave>): Grave {
     hasFlowers: false,
     flowersUpdatedAt: null,
     hasWeeds: false,
+    isDirty: false,
     lastAnniversaryYear: null,
     createdAt: '2026-01-01T00:00:00Z',
     updatedAt: '2026-01-01T00:00:00Z',

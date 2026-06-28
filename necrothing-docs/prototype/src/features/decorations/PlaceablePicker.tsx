@@ -3,6 +3,7 @@ import { Sheet } from '@/shared/components/Sheet';
 import { useGameStore } from '@/shared/store/gameStore';
 import { PlaceableSprite } from '@/shared/assets/PlaceableSprite';
 import { DECORATION_TYPES, STRUCTURE_TYPES, type PlaceableType } from '@/shared/domain/enums';
+import type { Decoration } from '@/shared/domain/types';
 import { PLACEABLES } from '@/shared/domain/placeables';
 import { rankForXp } from '@/shared/services/progressionService';
 
@@ -10,7 +11,7 @@ interface Props {
   gridX: number;
   gridY: number;
   onClose: () => void;
-  onPlaced: () => void;
+  onPlaced: (placed?: Decoration) => void;
   // modalità "cambia": sostituisce un elemento esistente con footprint compatibile
   replaceMode?: boolean;
   footprintFilter?: [number, number];
@@ -39,10 +40,11 @@ export function PlaceablePicker({
     try {
       if (replaceMode && onReplace) {
         await onReplace(type);
+        onPlaced();
       } else {
-        await place(type, gridX, gridY);
+        const created = await place(type, gridX, gridY);
+        onPlaced(created);
       }
-      onPlaced();
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Errore.');
       setBusy(false);

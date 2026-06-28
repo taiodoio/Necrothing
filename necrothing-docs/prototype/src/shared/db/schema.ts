@@ -11,10 +11,11 @@ import type {
   StoredImage,
   UserProgression,
   WorldState,
+  Zone,
 } from '@/shared/domain/types';
 
 export const DB_NAME = 'necrothing';
-export const DB_VERSION = 3;
+export const DB_VERSION = 4;
 
 export interface NecrothingDB extends DBSchema {
   graves: {
@@ -52,6 +53,10 @@ export interface NecrothingDB extends DBSchema {
     value: Decoration;
     indexes: { byCell: [number, number] };
   };
+  zones: {
+    key: string;
+    value: Zone;
+  };
 }
 
 let dbPromise: Promise<IDBPDatabase<NecrothingDB>> | null = null;
@@ -79,6 +84,9 @@ export function getDb(): Promise<IDBPDatabase<NecrothingDB>> {
         if (oldVersion < 3) {
           const deco = db.createObjectStore('decorations', { keyPath: 'id' });
           deco.createIndex('byCell', ['gridX', 'gridY'], { unique: true });
+        }
+        if (oldVersion < 4) {
+          db.createObjectStore('zones', { keyPath: 'id' });
         }
       },
     });

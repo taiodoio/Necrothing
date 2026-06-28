@@ -1,58 +1,243 @@
 // Pagina principale: scena + top/bottom bar + wizard + dettaglio + toast.
+// Hub d'interazione: selezione con popup contestuale, drag&drop, posizionamento
+// al centro vista, entità erranti ed eventi (con pannello dev).
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useGameStore } from '@/shared/store/gameStore';
-import { CemeteryScene } from './CemeteryScene';
+import { CemeteryScene, type Selection } from './CemeteryScene';
 import { TopBar } from './TopBar';
-import { CellActionSheet } from './CellActionSheet';
+import { DevPanel } from './DevPanel';
+import { useRoamingEntities, type RoamingEntity } from './useRoamingEntities';
 import { BurialWizard } from '@/features/burial/BurialWizard';
 import { GraveDetail } from '@/features/graves/GraveDetail';
 import { PlaceablePicker } from '@/features/decorations/PlaceablePicker';
 import { DecorationSheet } from '@/features/decorations/DecorationSheet';
 import { FuneralScene } from '@/features/funeral/FuneralScene';
-import { GRAVE_FOOTPRINT, MAP_COLS, MAP_ROWS, type Grave } from '@/shared/domain/types';
-import { buildOccupancy, canPlace, PLACEABLES } from '@/shared/domain/placeables';
+import {
+  GRAVE_FOOTPRINT,
+  MAP_COLS,
+  MAP_ROWS,
+  type Grave,
+} from '@/shared/domain/types';
+import {
+  buildOccupancy,
+  canPlace,
+  isRotatable,
+  PLACEABLES,
+  type Footprint,
+} from '@/shared/domain/placeables';
+import { WEATHER } from '@/shared/domain/enums';
+import type { PopupAction } from './ObjectPopup';
+
+const isDev = import.meta.env.DEV;
 
 export function CemeteryPage() {
   const graves = useGameStore((s) => s.graves);
   const decorations = useGameStore((s) => s.decorations);
   const world = useGameStore((s) => s.world);
+  const pendingSpawns = useGameStore((s) => s.pendingSpawns);
   const collectWisp = useGameStore((s) => s.collectWisp);
+  const moveGrave = useGameStore((s) => s.moveGrave);
   const movePlaceable = useGameStore((s) => s.movePlaceable);
+  const removeGrave = useGameStore((s) => s.removeGrave);
+  const removeDecoration = useGameStore((s) => s.removeDecoration);
+  const bringFlowers = useGameStore((s) => s.bringFlowers);
+  const cleanWeeds = useGameStore((s) => s.cleanWeeds);
+  const rotatePlaceable = useGameStore((s) => s.rotatePlaceable);
   const changePlaceable = useGameStore((s) => s.changePlaceable);
+  const witnessGhost = useGameStore((s) => s.witnessGhost);
+  const petCat = useGameStore((s) => s.petCat);
+  const blessFromPriest = useGameStore((s) => s.blessFromPriest);
+  const shooRat = useGameStore((s) => s.shooRat);
+  const consumeSpawns = useGameStore((s) => s.consumeSpawns);
   const lastSimMessage = useGameStore((s) => s.lastSimMessage);
   const lastUnlockedAchievement = useGameStore((s) => s.lastUnlockedAchievement);
+  // azioni dev
+  const devSpawnWisp = useGameStore((s) => s.devSpawnWisp);
+  const devDirtyRandomGrave = useGameStore((s) => s.devDirtyRandomGrave);
+  const devSetWeather = useGameStore((s) => s.devSetWeather);
+  const devBlessing = useGameStore((s) => s.devBlessing);
 
-  const [actionCell, setActionCell] = useState<{ x: number; y: number } | null>(null);
-  const [burialCell, setBurialCell] = useState<{ x: number; y: number } | null>(null);
-  const [decorateCell, setDecorateCell] = useState<{ x: number; y: number } | null>(null);
+  const roaming = useRoamingEntities();
+
+  const [selection, setSelection] = useState<Selection | null>(null);
+  const [placing, setPlacing] = useState(false);
+  const [burialOpen, setBurialOpen] = useState(false);
+  const [decorateOpen, setDecorateOpen] = useState(false);
   const [detailId, setDetailId] = useState<string | null>(null);
   const [decorationSelId, setDecorationSelId] = useState<string | null>(null);
-  const [movingId, setMovingId] = useState<string | null>(null);
-  const [replaceTarget, setReplaceTarget] = useState<{ id: string; footprint: [number, number] } | null>(null);
+  const [replaceTarget, setReplaceTarget] = useState<{ id: string; footprint: Footprint } | null>(
+    null,
+  );
   const [funeralGrave, setFuneralGrave] = useState<Grave | null>(null);
   const [toast, setToast] = useState<string | null>(null);
 
-  const showToast = (msg: string) => {
-    setToast(msg);
-    setTimeout(() => setToast(null), 4000);
-  };
+  const viewCenter = useRef({ x: 0, y: 0 });
+
+  const showToast = (msg: string) => setToast(msg);
+  useEffect(() => {
+    if (!toast) return;
+    const t = setTimeout(() => setToast(null), 4000);
+    return () => clearTimeout(t);
+  }, [toast]);
 
   useEffect(() => {
-    if (lastSimMessage) {
-      setToast(lastSimMessage);
-      const t = setTimeout(() => setToast(null), 4000);
-      return () => clearTimeout(t);
-    }
+    if (lastSimMessage) showToast(lastSimMessage);
   }, [lastSimMessage]);
 
   useEffect(() => {
-    if (lastUnlockedAchievement) {
-      setToast(`🏆 Achievement sbloccato: ${lastUnlockedAchievement}`);
-      const t = setTimeout(() => setToast(null), 4000);
-      return () => clearTimeout(t);
-    }
+    if (lastUnlockedAchievement) showToast(`🏆 Achievement: ${lastUnlockedAchievement}`);
   }, [lastUnlockedAchievement]);
+
+  // La simulazione segnala entità erranti: le facciamo comparire sulla mappa.
+  useEffect(() => {
+    if (pendingSpawns.length === 0) return;
+    for (const s of pendingSpawns) {
+      const g = s.graveId ? graves.find((x) => x.id === s.graveId) : undefined;
+      roaming.spawn(s.kind, g ? { x: g.gridX, y: g.gridY } : undefined);
+    }
+    consumeSpawns();
+  }, [pendingSpawns, graves, roaming, consumeSpawns]);
+
+  /** Trova una cella libera vicino al centro vista per un dato ingombro. */
+  const freeCellNearCenter = (footprint: Footprint): { x: number; y: number } => {
+    const occ = buildOccupancy(graves, decorations);
+    const c = viewCenter.current;
+    const cx = Math.min(Math.max(0, c.x), MAP_COLS - footprint[0]);
+    const cy = Math.min(Math.max(0, c.y), MAP_ROWS - footprint[1]);
+    if (canPlace(cx, cy, footprint, occ, MAP_COLS, MAP_ROWS)) return { x: cx, y: cy };
+    // ricerca a spirale crescente attorno al centro
+    for (let r = 1; r < Math.max(MAP_COLS, MAP_ROWS); r++) {
+      for (let dy = -r; dy <= r; dy++) {
+        for (let dx = -r; dx <= r; dx++) {
+          if (Math.max(Math.abs(dx), Math.abs(dy)) !== r) continue;
+          const x = cx + dx;
+          const y = cy + dy;
+          if (x < 0 || y < 0 || x > MAP_COLS - footprint[0] || y > MAP_ROWS - footprint[1]) continue;
+          if (canPlace(x, y, footprint, occ, MAP_COLS, MAP_ROWS)) return { x, y };
+        }
+      }
+    }
+    return { x: cx, y: cy };
+  };
+
+  const burialCell = burialOpen ? freeCellNearCenter(GRAVE_FOOTPRINT) : null;
+
+  // Azioni del popup contestuale in base alla selezione.
+  const popupActions: PopupAction[] = (() => {
+    if (!selection) return [];
+    if (selection.kind === 'grave') {
+      const g = graves.find((x) => x.id === selection.id);
+      if (!g) return [];
+      const acts: PopupAction[] = [
+        { key: 'examine', icon: '🔍', label: 'Esamina' },
+        { key: 'flowers', icon: '💐', label: 'Porta fiori' },
+      ];
+      if (g.hasWeeds || g.isDirty) acts.push({ key: 'clean', icon: '🧹', label: 'Pulisci' });
+      acts.push({ key: 'delete', icon: '🗑', label: 'Elimina', danger: true });
+      if (placing) acts.push({ key: 'confirm', icon: '✓', label: 'Conferma', primary: true });
+      return acts;
+    }
+    const p = decorations.find((x) => x.id === selection.id);
+    if (!p) return [];
+    const acts: PopupAction[] = [{ key: 'examine', icon: '🔍', label: 'Dettagli' }];
+    if (isRotatable(p.type)) acts.push({ key: 'rotate', icon: '⟳', label: 'Ruota' });
+    acts.push({ key: 'change', icon: '🔁', label: 'Cambia' });
+    acts.push({ key: 'delete', icon: '🗑', label: 'Elimina', danger: true });
+    if (placing) acts.push({ key: 'confirm', icon: '✓', label: 'Conferma', primary: true });
+    return acts;
+  })();
+
+  const clearSelection = () => {
+    setSelection(null);
+    setPlacing(false);
+  };
+
+  const onPopupAction = async (key: string) => {
+    if (!selection) return;
+    const { id, kind } = selection;
+    try {
+      switch (key) {
+        case 'examine':
+          if (kind === 'grave') setDetailId(id);
+          else setDecorationSelId(id);
+          break;
+        case 'flowers':
+          await bringFlowers(id);
+          showToast('Hai portato fiori. 💐');
+          break;
+        case 'clean':
+          await cleanWeeds(id);
+          showToast('Lapide pulita. ✨');
+          break;
+        case 'rotate':
+          await rotatePlaceable(id);
+          break;
+        case 'change': {
+          const p = decorations.find((x) => x.id === id);
+          if (p) setReplaceTarget({ id, footprint: PLACEABLES[p.type].footprint });
+          break;
+        }
+        case 'delete':
+          if (kind === 'grave') await removeGrave(id);
+          else await removeDecoration(id);
+          clearSelection();
+          showToast('Eliminato.');
+          break;
+        case 'confirm':
+          clearSelection();
+          showToast('Posizionato. Riposi in pace.');
+          break;
+      }
+    } catch (e) {
+      showToast(e instanceof Error ? e.message : 'Errore.');
+    }
+  };
+
+  const onTapRoaming = async (ent: RoamingEntity) => {
+    roaming.remove(ent.id);
+    switch (ent.kind) {
+      case 'ghost':
+        await witnessGhost(null);
+        showToast('Hai assistito a unʼapparizione! 👻 +40 XP');
+        break;
+      case 'cat':
+        await petCat();
+        showToast('Il gatto nero ti porta fortuna. 🐈‍⬛ +2 fuochi fatui');
+        break;
+      case 'priest':
+        await blessFromPriest(null);
+        showToast('Il prete impartisce una benedizione. ✝️ +20 XP, +3 fuochi');
+        break;
+      case 'rat':
+        await shooRat();
+        showToast('Hai scacciato un topo. 🐀 +1 fuoco fatuo');
+        break;
+      case 'crow':
+        showToast('Un corvo gracchia nel silenzio. 🐦‍⬛');
+        break;
+      case 'gravedigger':
+        showToast('Il becchino prosegue il suo lavoro. ⛏️');
+        break;
+    }
+  };
+
+  const devActions = {
+    ghost: () => roaming.spawn('ghost'),
+    cat: () => roaming.spawn('cat'),
+    crow: () => roaming.spawn('crow'),
+    gravedigger: () => roaming.spawn('gravedigger'),
+    priest: () => roaming.spawn('priest'),
+    rat: () => roaming.spawn('rat'),
+    wisp: () => devSpawnWisp(),
+    dirty: () => devDirtyRandomGrave(),
+    weather: () => {
+      const cur = world?.currentWeather ?? 'gloomy_clear';
+      const i = WEATHER.indexOf(cur);
+      devSetWeather(WEATHER[(i + 1) % WEATHER.length]);
+    },
+    blessing: () => devBlessing(),
+  };
 
   return (
     <div className="app-shell">
@@ -62,97 +247,98 @@ export function CemeteryPage() {
         graves={graves}
         placeables={decorations}
         looseWisps={world?.looseWisps ?? []}
+        roaming={roaming.entities}
+        roamingTickMs={roaming.tickMs}
         weather={world?.currentWeather ?? 'gloomy_clear'}
         dayPhase={world?.currentDayPhase ?? 'day'}
-        movingId={movingId}
-        onSelectEmpty={(x, y) => {
-          if (movingId) {
-            movePlaceable(movingId, x, y)
-              .then(() => {
-                setMovingId(null);
-                showToast('Elemento spostato.');
-              })
-              .catch((e) => showToast(e instanceof Error ? e.message : 'Errore.'));
-            return;
-          }
-          setActionCell({ x, y });
+        selection={selection}
+        popupActions={popupActions}
+        onPopupAction={onPopupAction}
+        onSelectEmpty={clearSelection}
+        onSelectGrave={(g) => {
+          setSelection({ id: g.id, kind: 'grave' });
+          setPlacing(false);
         }}
-        onSelectGrave={(g: Grave) => setDetailId(g.id)}
         onSelectPlaceable={(d) => {
-          if (movingId) return;
-          setDecorationSelId(d.id);
+          setSelection({ id: d.id, kind: 'placeable' });
+          setPlacing(false);
         }}
         onCollectWisp={(id) => collectWisp(id)}
+        onTapRoaming={onTapRoaming}
+        onMoveCommit={async (kind, id, x, y) => {
+          try {
+            if (kind === 'grave') await moveGrave(id, x, y);
+            else await movePlaceable(id, x, y);
+          } catch (e) {
+            showToast(e instanceof Error ? e.message : 'Spazio occupato.');
+          }
+        }}
+        onMoveInvalid={() => showToast('Spazio occupato: scegli una zona libera.')}
+        onViewportCenter={(x, y) => {
+          viewCenter.current = { x, y };
+        }}
       />
 
       <div className="bottombar">
-        <button
-          className="btn btn--primary"
-          onClick={() => {
-            // trova il primo spazio 2×2 libero per la CTA rapida
-            const occ = buildOccupancy(graves, decorations);
-            for (let y = 0; y < MAP_ROWS; y++) {
-              for (let x = 0; x < MAP_COLS; x++) {
-                if (canPlace(x, y, GRAVE_FOOTPRINT, occ, MAP_COLS, MAP_ROWS)) {
-                  setBurialCell({ x, y });
-                  return;
-                }
-              }
-            }
-          }}
-        >
+        <button className="btn btn--primary" onClick={() => setBurialOpen(true)}>
           ⚰️ Seppellisci un oggetto
         </button>
+        <button className="btn" onClick={() => setDecorateOpen(true)}>
+          🪴 Decora
+        </button>
       </div>
-
-      {actionCell && (
-        <CellActionSheet
-          onClose={() => setActionCell(null)}
-          onBury={() => {
-            setBurialCell(actionCell);
-            setActionCell(null);
-          }}
-          onDecorate={() => {
-            setDecorateCell(actionCell);
-            setActionCell(null);
-          }}
-        />
-      )}
 
       {burialCell && (
         <BurialWizard
           gridX={burialCell.x}
           gridY={burialCell.y}
-          onClose={() => setBurialCell(null)}
+          onClose={() => setBurialOpen(false)}
           onBuried={(grave) => {
-            setBurialCell(null);
+            setBurialOpen(false);
             setFuneralGrave(grave);
           }}
         />
       )}
 
-      {decorateCell && (
+      {decorateOpen && (
         <PlaceablePicker
-          gridX={decorateCell.x}
-          gridY={decorateCell.y}
-          onClose={() => setDecorateCell(null)}
-          onPlaced={() => {
-            setDecorateCell(null);
-            setToast('Elemento posizionato.');
-            setTimeout(() => setToast(null), 4000);
+          gridX={freeCellNearCenter([1, 1]).x}
+          gridY={freeCellNearCenter([1, 1]).y}
+          onClose={() => setDecorateOpen(false)}
+          onPlaced={(placed) => {
+            setDecorateOpen(false);
+            if (placed) {
+              setSelection({ id: placed.id, kind: 'placeable' });
+              setPlacing(true);
+              showToast('Trascina per posizionare, poi conferma.');
+            }
           }}
         />
       )}
 
-      {detailId && <GraveDetail graveId={detailId} onClose={() => setDetailId(null)} />}
+      {detailId && (
+        <GraveDetail
+          graveId={detailId}
+          onClose={() => setDetailId(null)}
+          onDeleted={() => {
+            setDetailId(null);
+            clearSelection();
+            showToast('Tomba rimossa.');
+          }}
+          onMoveHint={() => {
+            setDetailId(null);
+            showToast('Trascina la lapide per spostarla.');
+          }}
+        />
+      )}
 
       {decorationSelId && (
         <DecorationSheet
           id={decorationSelId}
           onClose={() => setDecorationSelId(null)}
-          onMove={(id) => {
+          onMove={() => {
             setDecorationSelId(null);
-            setMovingId(id);
+            showToast('Trascina lʼelemento per spostarlo.');
           }}
           onChange={(id) => {
             const p = decorations.find((d) => d.id === id);
@@ -182,23 +368,20 @@ export function CemeteryPage() {
         <FuneralScene
           grave={funeralGrave}
           onDone={() => {
+            const g = funeralGrave;
             setFuneralGrave(null);
-            setToast('Sepoltura completata. Riposi in pace.');
-            setTimeout(() => setToast(null), 4000);
+            setSelection({ id: g.id, kind: 'grave' });
+            setPlacing(true);
+            // Il becchino fa la sua comparsa dopo una sepoltura.
+            roaming.spawn('gravedigger', { x: g.gridX, y: g.gridY });
+            showToast('Trascina per posizionare la lapide, poi conferma.');
           }}
         />
       )}
 
-      {movingId && (
-        <div className="move-banner">
-          ✋ Tocca la cella di destinazione
-          <button className="btn btn--ghost" onClick={() => setMovingId(null)}>
-            Annulla
-          </button>
-        </div>
-      )}
-
       {toast && <div className="toast">{toast}</div>}
+
+      {isDev && <DevPanel actions={devActions} />}
     </div>
   );
 }

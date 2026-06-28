@@ -23,16 +23,19 @@ const EVENT_LABELS: Record<MemoryEventType, string> = {
 interface Props {
   graveId: string;
   onClose: () => void;
+  onDeleted?: () => void;
+  onMoveHint?: () => void;
 }
 
 function deathCauseLabel(cause: string): string {
   return (DEATH_CAUSE_LABELS as Record<string, string>)[cause as DeathCause] ?? cause;
 }
 
-export function GraveDetail({ graveId, onClose }: Props) {
+export function GraveDetail({ graveId, onClose, onDeleted, onMoveHint }: Props) {
   const grave = useGameStore((s) => s.graves.find((g) => g.id === graveId)) as Grave | undefined;
   const bringFlowers = useGameStore((s) => s.bringFlowers);
   const cleanWeeds = useGameStore((s) => s.cleanWeeds);
+  const removeGrave = useGameStore((s) => s.removeGrave);
   const shareGrave = useGameStore((s) => s.shareGrave);
   const loadEvents = useGameStore((s) => s.loadEvents);
   const [events, setEvents] = useState<GraveMemoryEvent[]>([]);
@@ -88,6 +91,7 @@ export function GraveDetail({ graveId, onClose }: Props) {
           type={grave.graveType}
           hasFlowers={grave.hasFlowers}
           hasWeeds={grave.hasWeeds}
+          isDirty={grave.isDirty}
           size={84}
         />
         <div className="muted" style={{ fontSize: 13, lineHeight: 1.6 }}>
@@ -102,7 +106,14 @@ export function GraveDetail({ graveId, onClose }: Props) {
         <img
           src={photoUrl}
           alt={`Foto di ${grave.name}`}
-          style={{ width: '100%', maxHeight: 240, objectFit: 'cover', borderRadius: 12, marginTop: 12 }}
+          style={{
+            width: '100%',
+            maxHeight: 240,
+            objectFit: 'cover',
+            borderRadius: 12,
+            marginTop: 12,
+            imageRendering: 'pixelated',
+          }}
         />
       )}
 
@@ -118,18 +129,23 @@ export function GraveDetail({ graveId, onClose }: Props) {
         >
           💐 Porta fiori
         </button>
-        {grave.hasWeeds && (
+        {(grave.hasWeeds || grave.isDirty) && (
           <button
             className="btn"
             disabled={busy}
             onClick={() => doAction(() => cleanWeeds(grave.id))}
           >
-            🌿 Pulisci erbacce
+            🧹 Pulisci
           </button>
         )}
       </div>
 
       <div className="wizard-nav">
+        {onMoveHint && (
+          <button className="btn" disabled={busy} onClick={onMoveHint}>
+            ✋ Sposta
+          </button>
+        )}
         <button
           className="btn"
           disabled={busy}
@@ -140,7 +156,20 @@ export function GraveDetail({ graveId, onClose }: Props) {
             })
           }
         >
-          📜 Condividi certificato
+          📜 Condividi
+        </button>
+        <button
+          className="btn btn--danger"
+          disabled={busy}
+          onClick={() =>
+            doAction(async () => {
+              await removeGrave(grave.id);
+              if (onDeleted) onDeleted();
+              else onClose();
+            })
+          }
+        >
+          🗑 Elimina
         </button>
       </div>
 

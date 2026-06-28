@@ -65,6 +65,7 @@ export const graveService = {
       hasFlowers: false,
       flowersUpdatedAt: null,
       hasWeeds: false,
+      isDirty: false,
       lastAnniversaryYear: null,
       createdAt: now,
       updatedAt: now,
@@ -99,16 +100,51 @@ export const graveService = {
     return { grave: updated, xpAwarded: XP_VALUES.flowers };
   },
 
-  /** Rimuove le erbacce. XP solo se presenti. */
+  /** Pulisce erbacce e sporcizia. XP solo se c'era qualcosa da pulire. */
   async cleanWeeds(graveId: string, clock: ClockService): Promise<{ grave: Grave; xpAwarded: number }> {
     const grave = await graveRepository.getById(graveId);
     if (!grave) throw new BurialError('Tomba inesistente.');
-    if (!grave.hasWeeds) return { grave, xpAwarded: 0 };
+    if (!grave.hasWeeds && !grave.isDirty) return { grave, xpAwarded: 0 };
 
-    const updated: Grave = { ...grave, hasWeeds: false, updatedAt: clock.nowIso() };
+    const updated: Grave = {
+      ...grave,
+      hasWeeds: false,
+      isDirty: false,
+      updatedAt: clock.nowIso(),
+    };
     await graveRepository.update(updated);
     await memoryEventRepository.add(memoryEvent(graveId, 'weed_cleaned', clock));
     return { grave: updated, xpAwarded: XP_VALUES.weedCleaned };
+  },
+
+  /** Registra un evento qualunque sulla timeline della tomba. */
+  async recordEvent(
+    graveId: string,
+    type: GraveMemoryEvent['type'],
+    clock: ClockService,
+  ): Promise<void> {
+    const grave = await graveRepository.getById(graveId);
+    if (!grave) return;
+    await memoryEventRepository.add(memoryEvent(graveId, type, clock));
+  },
+
+  /** Sposta una tomba su una nuova cella (footprint 2×2). */
+  async move(graveId: string, gridX: number, gridY: number, clock: ClockService): Promise<Grave> {
+    const grave = await graveRepository.getById(graveId);
+    if (!grave) throw new BurialError('Tomba inesistente.');
+    const graves = (await graveRepository.getAll()).filter((g) => g.id !== graveId);
+    const placeables = await decorationsRepository.getAll();
+    const occupancy = buildOccupancy(graves, placeables);
+    if (!canPlace(gridX, gridY, GRAVE_FOOTPRINT, occupancy, MAP_COLS, MAP_ROWS)) {
+      throw new BurialError('Spazio non disponibile: servono 2×2 celle libere.');
+    }
+    const moved: Grave = { ...grave, gridX, gridY, updatedAt: clock.nowIso() };
+    await graveRepository.update(moved);
+    return moved;
+  },
+
+  async remove(graveId: string): Promise<void> {
+    await graveRepository.remove(graveId);
   },
 
   async listGraves(): Promise<Grave[]> {

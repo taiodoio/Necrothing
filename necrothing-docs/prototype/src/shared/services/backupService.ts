@@ -11,11 +11,12 @@ import type {
   Settings,
   UserProgression,
   WorldState,
+  Zone,
 } from '@/shared/domain/types';
 import type { ClockService } from '@/shared/utils/clock';
 
 export const BACKUP_FORMAT = 'necrothing-backup';
-export const BACKUP_VERSION = 1;
+export const BACKUP_VERSION = 2;
 
 interface BackupImage {
   id: string;
@@ -35,6 +36,7 @@ export interface BackupFile {
     settings: Settings[];
     achievements: Achievement[];
     decorations: Decoration[];
+    zones: Zone[];
     images: BackupImage[];
   };
 }
@@ -66,6 +68,7 @@ export const backupService = {
       settings,
       achievements,
       decorations,
+      zones,
       rawImages,
     ] = await Promise.all([
       db.getAll('graves'),
@@ -75,6 +78,7 @@ export const backupService = {
       db.getAll('settings'),
       db.getAll('achievements'),
       db.getAll('decorations'),
+      db.getAll('zones'),
       db.getAll('images'),
     ]);
 
@@ -96,6 +100,7 @@ export const backupService = {
         settings,
         achievements,
         decorations,
+        zones,
         images,
       },
     };
@@ -128,6 +133,7 @@ export const backupService = {
         'settings',
         'achievements',
         'decorations',
+        'zones',
         'images',
       ],
       'readwrite',
@@ -141,6 +147,7 @@ export const backupService = {
       tx.objectStore('settings').clear(),
       tx.objectStore('achievements').clear(),
       tx.objectStore('decorations').clear(),
+      tx.objectStore('zones').clear(),
       tx.objectStore('images').clear(),
     ]);
 
@@ -151,6 +158,7 @@ export const backupService = {
     for (const s of d.settings ?? []) tx.objectStore('settings').put(s);
     for (const a of d.achievements ?? []) tx.objectStore('achievements').put(a);
     for (const deco of d.decorations ?? []) tx.objectStore('decorations').put(deco);
+    for (const z of d.zones ?? []) tx.objectStore('zones').put(z);
     for (const img of d.images ?? []) {
       const bytes = base64ToBytes(img.b64);
       const blob = new Blob([bytes.buffer as ArrayBuffer], { type: img.mime });

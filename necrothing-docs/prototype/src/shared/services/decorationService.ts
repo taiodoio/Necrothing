@@ -5,7 +5,7 @@
 import { PLACEABLE_TYPES, type PlaceableType } from '@/shared/domain/enums';
 import type { Decoration } from '@/shared/domain/types';
 import { MAP_COLS, MAP_ROWS } from '@/shared/domain/types';
-import { PLACEABLES, buildOccupancy, canPlace } from '@/shared/domain/placeables';
+import { PLACEABLES, UNIQUE_PLACEABLES, buildOccupancy, canPlace } from '@/shared/domain/placeables';
 import { decorationsRepository } from '@/shared/repositories/decorationsRepository';
 import { graveRepository } from '@/shared/repositories/graveRepository';
 import { newId } from '@/shared/utils/id';
@@ -36,6 +36,9 @@ export const decorationService = {
     }
     const graves = await graveRepository.getAll();
     const placeables = await decorationsRepository.getAll();
+    if (UNIQUE_PLACEABLES.has(type) && placeables.some((p) => p.type === type)) {
+      throw new DecorationError('Ne esiste già uno: è un elemento unico.');
+    }
     const occupancy = buildOccupancy(graves, placeables);
     if (!canPlace(gridX, gridY, def.footprint, occupancy, MAP_COLS, MAP_ROWS)) {
       throw new DecorationError('Spazio non disponibile per questo elemento.');

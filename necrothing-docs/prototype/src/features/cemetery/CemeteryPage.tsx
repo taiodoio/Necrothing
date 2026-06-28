@@ -12,7 +12,10 @@ import { BurialWizard } from '@/features/burial/BurialWizard';
 import { GraveDetail } from '@/features/graves/GraveDetail';
 import { PlaceablePicker } from '@/features/decorations/PlaceablePicker';
 import { DecorationSheet } from '@/features/decorations/DecorationSheet';
+import { BottegaSheet } from '@/features/shop/BottegaSheet';
+import { InventarioSheet } from '@/features/inventory/InventarioSheet';
 import { FuneralScene } from '@/features/funeral/FuneralScene';
+import type { PlaceableType } from '@/shared/domain/enums';
 import {
   GRAVE_FOOTPRINT,
   MAP_COLS,
@@ -45,6 +48,7 @@ export function CemeteryPage() {
   const cleanWeeds = useGameStore((s) => s.cleanWeeds);
   const rotatePlaceable = useGameStore((s) => s.rotatePlaceable);
   const changePlaceable = useGameStore((s) => s.changePlaceable);
+  const placeDecoration = useGameStore((s) => s.placeDecoration);
   const witnessGhost = useGameStore((s) => s.witnessGhost);
   const petCat = useGameStore((s) => s.petCat);
   const blessFromPriest = useGameStore((s) => s.blessFromPriest);
@@ -63,7 +67,8 @@ export function CemeteryPage() {
   const [selection, setSelection] = useState<Selection | null>(null);
   const [placing, setPlacing] = useState(false);
   const [burialOpen, setBurialOpen] = useState(false);
-  const [decorateOpen, setDecorateOpen] = useState(false);
+  const [bottegaOpen, setBottegaOpen] = useState(false);
+  const [inventarioOpen, setInventarioOpen] = useState(false);
   const [detailId, setDetailId] = useState<string | null>(null);
   const [decorationSelId, setDecorationSelId] = useState<string | null>(null);
   const [replaceTarget, setReplaceTarget] = useState<{ id: string; footprint: Footprint } | null>(
@@ -122,6 +127,21 @@ export function CemeteryPage() {
   };
 
   const burialCell = burialOpen ? freeCellNearCenter(GRAVE_FOOTPRINT) : null;
+
+  // Posiziona un oggetto preso dall'Inventario al centro vista, poi entra in
+  // modalità posizionamento (trascina + conferma).
+  const placeFromInventory = async (type: PlaceableType) => {
+    setInventarioOpen(false);
+    const cell = freeCellNearCenter(PLACEABLES[type].footprint);
+    try {
+      const created = await placeDecoration(type, cell.x, cell.y);
+      setSelection({ id: created.id, kind: 'placeable' });
+      setPlacing(true);
+      showToast('Trascina per posizionare, poi conferma.');
+    } catch (e) {
+      showToast(e instanceof Error ? e.message : 'Errore.');
+    }
+  };
 
   // Azioni del popup contestuale in base alla selezione.
   const popupActions: PopupAction[] = (() => {
@@ -281,10 +301,13 @@ export function CemeteryPage() {
 
       <div className="bottombar">
         <button className="btn btn--primary" onClick={() => setBurialOpen(true)}>
-          ⚰️ Seppellisci un oggetto
+          ⚰️ Seppellisci
         </button>
-        <button className="btn" onClick={() => setDecorateOpen(true)}>
-          🪴 Decora
+        <button className="btn" onClick={() => setBottegaOpen(true)}>
+          🛒 Bottega
+        </button>
+        <button className="btn" onClick={() => setInventarioOpen(true)}>
+          🎒 Inventario
         </button>
       </div>
 
@@ -300,19 +323,12 @@ export function CemeteryPage() {
         />
       )}
 
-      {decorateOpen && (
-        <PlaceablePicker
-          gridX={freeCellNearCenter([1, 1]).x}
-          gridY={freeCellNearCenter([1, 1]).y}
-          onClose={() => setDecorateOpen(false)}
-          onPlaced={(placed) => {
-            setDecorateOpen(false);
-            if (placed) {
-              setSelection({ id: placed.id, kind: 'placeable' });
-              setPlacing(true);
-              showToast('Trascina per posizionare, poi conferma.');
-            }
-          }}
+      {bottegaOpen && <BottegaSheet onClose={() => setBottegaOpen(false)} />}
+
+      {inventarioOpen && (
+        <InventarioSheet
+          onClose={() => setInventarioOpen(false)}
+          onPlace={(type: PlaceableType) => placeFromInventory(type)}
         />
       )}
 

@@ -19,6 +19,8 @@ function grave(x: number, y: number): Grave {
     flowersUpdatedAt: null,
     hasWeeds: false,
     isDirty: false,
+    dirtySince: null,
+    broken: false,
     lastAnniversaryYear: null,
     createdAt: 'x',
     updatedAt: 'x',

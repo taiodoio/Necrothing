@@ -30,6 +30,7 @@ import { imageStorageService } from '@/shared/services/imageStorageService';
 import { graveRepository } from '@/shared/repositories/graveRepository';
 import { decorationsRepository } from '@/shared/repositories/decorationsRepository';
 import { PLACEABLES } from '@/shared/domain/placeables';
+import { DECAY } from '@/shared/domain/balance';
 import type { PlaceableType, Weather } from '@/shared/domain/enums';
 import type { RoamingSpawn } from '@/shared/domain/roaming';
 import { detectDistricts, zoneScore } from '@/shared/services/zoneService';
@@ -78,6 +79,8 @@ interface GameState {
   cleanWeeds: (graveId: string) => Promise<void>;
   moveGrave: (graveId: string, gridX: number, gridY: number) => Promise<void>;
   removeGrave: (graveId: string) => Promise<void>;
+  repairGrave: (graveId: string) => Promise<void>;
+  toggleLight: (id: string) => Promise<void>;
   witnessGhost: (graveId: string | null) => Promise<void>;
   petCat: () => Promise<void>;
   blessFromPriest: (graveId: string | null) => Promise<void>;
@@ -238,6 +241,10 @@ export const useGameStore = create<GameState>((set, get) => ({
         result.anniversaries.length === 1
           ? `Oggi ricorre l'anniversario di ${first.name}.`
           : `Oggi ricorrono ${result.anniversaries.length} anniversari funebri.`;
+    } else if (result.newBroken > 0) {
+      message = `${result.newBroken} ${
+        result.newBroken === 1 ? 'tomba si è rotta' : 'tombe si sono rotte'
+      }: vanno riparate.`;
     } else if (result.blessingGraveName) {
       message = `Il prete ha benedetto ${result.blessingGraveName}.`;
     } else if (result.ghostGraveName) {
@@ -342,6 +349,25 @@ export const useGameStore = create<GameState>((set, get) => ({
     set({ graves, zones: detectDistricts(graves) });
     await notificationService.rescheduleAll();
     await get().refreshAchievements();
+  },
+
+  async repairGrave(graveId) {
+    const grave = get().graves.find((g) => g.id === graveId);
+    if (!grave?.broken) return;
+    const prog = get().progression;
+    if (prog.wisps < DECAY.repairCost) {
+      throw new Error(`Servono ${DECAY.repairCost} fuochi fatui per riparare.`);
+    }
+    await graveService.repair(graveId, clock);
+    const progression = { ...prog, wisps: prog.wisps - DECAY.repairCost };
+    await persistProgression(progression);
+    set({ graves: await graveService.listGraves(), progression });
+    await get().refreshAchievements();
+  },
+
+  async toggleLight(id) {
+    await decorationService.toggleLight(id);
+    set({ decorations: await decorationService.list() });
   },
 
   async witnessGhost(graveId) {

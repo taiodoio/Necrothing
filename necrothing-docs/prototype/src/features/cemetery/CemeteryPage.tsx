@@ -48,6 +48,8 @@ export function CemeteryPage() {
   const removeDecoration = useGameStore((s) => s.removeDecoration);
   const bringFlowers = useGameStore((s) => s.bringFlowers);
   const cleanWeeds = useGameStore((s) => s.cleanWeeds);
+  const repairGrave = useGameStore((s) => s.repairGrave);
+  const toggleLight = useGameStore((s) => s.toggleLight);
   const rotatePlaceable = useGameStore((s) => s.rotatePlaceable);
   const changePlaceable = useGameStore((s) => s.changePlaceable);
   const placeDecoration = useGameStore((s) => s.placeDecoration);
@@ -166,11 +168,13 @@ export function CemeteryPage() {
         if (placing) acts.push({ key: 'confirm', icon: '✓', label: 'Conferma', primary: true });
         return acts;
       }
-      const acts: PopupAction[] = [
-        { key: 'examine', icon: '🔍', label: 'Esamina' },
-        { key: 'flowers', icon: '💐', label: 'Porta fiori' },
-      ];
-      if (g.hasWeeds || g.isDirty) acts.push({ key: 'clean', icon: '🧹', label: 'Pulisci' });
+      const acts: PopupAction[] = [{ key: 'examine', icon: '🔍', label: 'Esamina' }];
+      if (g.broken) {
+        acts.push({ key: 'repair', icon: '🛠️', label: 'Ripara' });
+      } else {
+        acts.push({ key: 'flowers', icon: '💐', label: 'Porta fiori' });
+        if (g.hasWeeds || g.isDirty) acts.push({ key: 'clean', icon: '🧹', label: 'Pulisci' });
+      }
       return acts;
     }
     const p = decorations.find((x) => x.id === selection.id);
@@ -183,7 +187,12 @@ export function CemeteryPage() {
       if (placing) acts.push({ key: 'confirm', icon: '✓', label: 'Conferma', primary: true });
       return acts;
     }
-    return [{ key: 'examine', icon: '🔍', label: 'Dettagli' }];
+    // Fuori da Edit: interazione semplice. Le luci si accendono/spengono.
+    const acts: PopupAction[] = [{ key: 'examine', icon: '🔍', label: 'Dettagli' }];
+    if (PLACEABLES[p.type].category === 'light') {
+      acts.push({ key: 'light', icon: p.lit === false ? '💡' : '🌑', label: p.lit === false ? 'Accendi' : 'Spegni' });
+    }
+    return acts;
   })();
 
   // Entra in modalità Modifica (con popup introduttivo la prima volta).
@@ -220,6 +229,13 @@ export function CemeteryPage() {
         case 'clean':
           await cleanWeeds(id);
           showToast('Lapide pulita. ✨');
+          break;
+        case 'repair':
+          await repairGrave(id);
+          showToast('Tomba riparata. 🛠️');
+          break;
+        case 'light':
+          await toggleLight(id);
           break;
         case 'rotate':
           await rotatePlaceable(id);

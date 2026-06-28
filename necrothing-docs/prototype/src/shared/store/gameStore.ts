@@ -12,7 +12,7 @@ import type {
   WorldState,
   Zone,
 } from '@/shared/domain/types';
-import { DEFAULT_NOTIFICATION_PREFERENCES } from '@/shared/domain/types';
+import { DEFAULT_NOTIFICATION_PREFERENCES, DEFAULT_PLAYER_NAME } from '@/shared/domain/types';
 import { graveService } from '@/shared/services/graveService';
 import { simulationService } from '@/shared/services/simulationService';
 import {
@@ -59,6 +59,7 @@ interface GameState {
   world: WorldState | null;
   progression: UserProgression;
   notificationPrefs: NotificationPreferences;
+  playerName: string;
   achievements: Achievement[];
   lastUnlockedAchievement: string | null;
   lastSimMessage: string | null;
@@ -95,6 +96,7 @@ interface GameState {
   // notifiche
   updateNotificationPrefs: (prefs: NotificationPreferences) => Promise<void>;
   requestNotificationPermission: () => Promise<void>;
+  setPlayerName: (name: string) => Promise<void>;
 
   // strumenti di sviluppo (solo dev)
   devSpawnWisp: () => Promise<void>;
@@ -126,6 +128,7 @@ export const useGameStore = create<GameState>((set, get) => ({
     lastShareDate: null,
   },
   notificationPrefs: DEFAULT_NOTIFICATION_PREFERENCES,
+  playerName: DEFAULT_PLAYER_NAME,
   achievements: [],
   lastUnlockedAchievement: null,
   lastSimMessage: null,
@@ -163,8 +166,9 @@ export const useGameStore = create<GameState>((set, get) => ({
     // Settings
     const settings = await settingsRepository.get();
     const notificationPrefs = settings?.notifications ?? DEFAULT_NOTIFICATION_PREFERENCES;
+    const playerName = settings?.playerName ?? DEFAULT_PLAYER_NAME;
     if (!settings) {
-      await settingsRepository.save({ id: 'singleton', notifications: notificationPrefs });
+      await settingsRepository.save({ id: 'singleton', notifications: notificationPrefs, playerName });
     }
 
     const graves = await graveService.listGraves();
@@ -172,7 +176,7 @@ export const useGameStore = create<GameState>((set, get) => ({
     const decorations = await decorationsRepository.getAll();
     const inventory = await inventoryService.getMap();
     const zones = detectDistricts(graves);
-    set({ world, progression, notificationPrefs, graves, decorations, inventory, zones, achievements, ready: true });
+    set({ world, progression, notificationPrefs, playerName, graves, decorations, inventory, zones, achievements, ready: true });
 
     await get().simulate();
     await get().refreshAchievements();
@@ -519,7 +523,23 @@ export const useGameStore = create<GameState>((set, get) => ({
 
   async updateNotificationPrefs(prefs) {
     await notificationService.updatePreferences(prefs);
+    // updatePreferences riscrive le settings: ripristina il nome giocatore.
+    await settingsRepository.save({
+      id: 'singleton',
+      notifications: prefs,
+      playerName: get().playerName,
+    });
     set({ notificationPrefs: prefs });
+  },
+
+  async setPlayerName(name) {
+    const playerName = name.trim().slice(0, 24) || DEFAULT_PLAYER_NAME;
+    await settingsRepository.save({
+      id: 'singleton',
+      notifications: get().notificationPrefs,
+      playerName,
+    });
+    set({ playerName });
   },
 
   async requestNotificationPermission() {

@@ -6,6 +6,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useGameStore } from '@/shared/store/gameStore';
 import { CemeteryScene, type Selection } from './CemeteryScene';
 import { TopBar } from './TopBar';
+import { ActionBubble, type BubbleAction } from './ActionBubble';
 import { DevPanel } from './DevPanel';
 import { useRoamingEntities, type RoamingEntity } from './useRoamingEntities';
 import { BurialWizard } from '@/features/burial/BurialWizard';
@@ -259,6 +260,15 @@ export function CemeteryPage() {
     blessing: () => devBlessing(),
   };
 
+  const bubbleActions: BubbleAction[] = [
+    { key: 'bury', icon: '⚰️', label: 'Seppellisci', onClick: () => setBurialOpen(true) },
+    { key: 'shop', icon: '🛒', label: 'Bottega', onClick: () => setBottegaOpen(true) },
+    { key: 'inv', icon: '🎒', label: 'Inventario', onClick: () => setInventarioOpen(true) },
+    { key: 'edit', icon: '✏️', label: 'Modifica', onClick: () => showToast('Modalità Modifica in arrivo.') },
+    { key: 'photo', icon: '📷', label: 'Foto', onClick: () => showToast('Fotocamera in arrivo.') },
+    { key: 'gallery', icon: '🖼️', label: 'Galleria', onClick: () => showToast('Galleria in arrivo.') },
+  ];
+
   return (
     <div className="app-shell">
       <TopBar />
@@ -299,17 +309,7 @@ export function CemeteryPage() {
         }}
       />
 
-      <div className="bottombar">
-        <button className="btn btn--primary" onClick={() => setBurialOpen(true)}>
-          ⚰️ Seppellisci
-        </button>
-        <button className="btn" onClick={() => setBottegaOpen(true)}>
-          🛒 Bottega
-        </button>
-        <button className="btn" onClick={() => setInventarioOpen(true)}>
-          🎒 Inventario
-        </button>
-      </div>
+      <ActionBubble actions={bubbleActions} />
 
       {burialCell && (
         <BurialWizard

@@ -95,7 +95,10 @@ export interface NotificationPreferences {
 export interface Settings {
   id: 'singleton';
   notifications: NotificationPreferences;
+  playerName?: string;
 }
+
+export const DEFAULT_PLAYER_NAME = 'Custode';
 
 export interface Achievement {
   id: string;

@@ -946,3 +946,92 @@ button {
     transition: none !important;
   }
 }
+
+/* ── FASE B: Shell UI (FAB bubble + TopBar player/clock) ── */
+.topbar-right {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+}
+.game-clock {
+  font-size: 12px;
+  color: var(--text-dim);
+  white-space: nowrap;
+  padding-top: 2px;
+}
+.player-block {
+  display: block;
+  color: inherit;
+  text-decoration: none;
+  border-radius: 12px;
+  padding: 2px 4px;
+}
+.player-block:active {
+  background: var(--bg-elev-2);
+}
+
+.fab-wrap {
+  position: fixed;
+  left: 16px;
+  bottom: calc(18px + var(--safe-bottom));
+  z-index: 55;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 10px;
+}
+.fab-main {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  border: 1px solid var(--accent);
+  background: linear-gradient(180deg, #3a2e5c, #2a2142);
+  color: var(--text);
+  font-size: 24px;
+  cursor: pointer;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.5);
+  transition: transform 0.12s ease;
+}
+.fab-wrap.open .fab-main {
+  transform: rotate(90deg);
+}
+.fab-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  animation: fab-in 0.16s ease;
+}
+@keyframes fab-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+}
+.fab-action {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 44px;
+  padding: 0 16px 0 12px;
+  border-radius: 99px;
+  border: 1px solid var(--line);
+  background: var(--bg-elev-2);
+  color: var(--text);
+  font-size: 14px;
+  cursor: pointer;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
+}
+.fab-action:disabled {
+  opacity: 0.5;
+}
+.fab-action-icon {
+  font-size: 18px;
+}
+
+.player-card {
+  background: var(--bg-elev);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 14px;
+  margin-bottom: 16px;
+}

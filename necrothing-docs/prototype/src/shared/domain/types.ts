@@ -96,6 +96,7 @@ export interface Settings {
   id: 'singleton';
   notifications: NotificationPreferences;
   playerName?: string;
+  editIntroSeen?: boolean;
 }
 
 export const DEFAULT_PLAYER_NAME = 'Custode';

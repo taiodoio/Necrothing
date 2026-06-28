@@ -60,6 +60,7 @@ interface GameState {
   progression: UserProgression;
   notificationPrefs: NotificationPreferences;
   playerName: string;
+  editIntroSeen: boolean;
   achievements: Achievement[];
   lastUnlockedAchievement: string | null;
   lastSimMessage: string | null;
@@ -97,6 +98,7 @@ interface GameState {
   updateNotificationPrefs: (prefs: NotificationPreferences) => Promise<void>;
   requestNotificationPermission: () => Promise<void>;
   setPlayerName: (name: string) => Promise<void>;
+  markEditIntroSeen: () => Promise<void>;
 
   // strumenti di sviluppo (solo dev)
   devSpawnWisp: () => Promise<void>;
@@ -129,6 +131,7 @@ export const useGameStore = create<GameState>((set, get) => ({
   },
   notificationPrefs: DEFAULT_NOTIFICATION_PREFERENCES,
   playerName: DEFAULT_PLAYER_NAME,
+  editIntroSeen: false,
   achievements: [],
   lastUnlockedAchievement: null,
   lastSimMessage: null,
@@ -167,8 +170,14 @@ export const useGameStore = create<GameState>((set, get) => ({
     const settings = await settingsRepository.get();
     const notificationPrefs = settings?.notifications ?? DEFAULT_NOTIFICATION_PREFERENCES;
     const playerName = settings?.playerName ?? DEFAULT_PLAYER_NAME;
+    const editIntroSeen = settings?.editIntroSeen ?? false;
     if (!settings) {
-      await settingsRepository.save({ id: 'singleton', notifications: notificationPrefs, playerName });
+      await settingsRepository.save({
+        id: 'singleton',
+        notifications: notificationPrefs,
+        playerName,
+        editIntroSeen,
+      });
     }
 
     const graves = await graveService.listGraves();
@@ -176,7 +185,7 @@ export const useGameStore = create<GameState>((set, get) => ({
     const decorations = await decorationsRepository.getAll();
     const inventory = await inventoryService.getMap();
     const zones = detectDistricts(graves);
-    set({ world, progression, notificationPrefs, playerName, graves, decorations, inventory, zones, achievements, ready: true });
+    set({ world, progression, notificationPrefs, playerName, editIntroSeen, graves, decorations, inventory, zones, achievements, ready: true });
 
     await get().simulate();
     await get().refreshAchievements();
@@ -523,11 +532,12 @@ export const useGameStore = create<GameState>((set, get) => ({
 
   async updateNotificationPrefs(prefs) {
     await notificationService.updatePreferences(prefs);
-    // updatePreferences riscrive le settings: ripristina il nome giocatore.
+    // updatePreferences riscrive le settings: ripristina gli altri campi.
     await settingsRepository.save({
       id: 'singleton',
       notifications: prefs,
       playerName: get().playerName,
+      editIntroSeen: get().editIntroSeen,
     });
     set({ notificationPrefs: prefs });
   },
@@ -538,8 +548,20 @@ export const useGameStore = create<GameState>((set, get) => ({
       id: 'singleton',
       notifications: get().notificationPrefs,
       playerName,
+      editIntroSeen: get().editIntroSeen,
     });
     set({ playerName });
+  },
+
+  async markEditIntroSeen() {
+    if (get().editIntroSeen) return;
+    await settingsRepository.save({
+      id: 'singleton',
+      notifications: get().notificationPrefs,
+      playerName: get().playerName,
+      editIntroSeen: true,
+    });
+    set({ editIntroSeen: true });
   },
 
   async requestNotificationPermission() {

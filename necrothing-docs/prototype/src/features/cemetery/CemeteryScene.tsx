@@ -40,6 +40,7 @@ interface Props {
   roamingTickMs: number;
   weather: Weather;
   dayPhase: DayPhase;
+  editMode: boolean;
   selection: Selection | null;
   popupActions: PopupAction[];
   onPopupAction: (key: string) => void;
@@ -79,6 +80,7 @@ export function CemeteryScene({
   roamingTickMs,
   weather,
   dayPhase,
+  editMode,
   selection,
   popupActions,
   onPopupAction,
@@ -159,10 +161,13 @@ export function CemeteryScene({
       valid: true,
       pointerId: e.pointerId,
     };
-    (e.currentTarget as Element).setPointerCapture?.(e.pointerId);
+    // Solo in modalità Modifica catturiamo il puntatore per il drag; fuori da
+    // Edit lasciamo scorrere la mappa e gestiamo solo il tap.
+    if (editMode) (e.currentTarget as Element).setPointerCapture?.(e.pointerId);
   }
 
   function moveDrag(e: PointerEvent) {
+    if (!editMode) return;
     const s = dragRef.current;
     if (!s || e.pointerId !== s.pointerId) return;
     const dx = e.clientX - s.startX;

@@ -1,10 +1,43 @@
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useGameStore } from '@/shared/store/gameStore';
+import { rankForXp } from '@/shared/services/progressionService';
 import {
   ACHIEVEMENTS,
   type AchievementContext,
   type AchievementTier,
 } from '@/shared/services/achievementService';
+
+function PlayerCard() {
+  const playerName = useGameStore((s) => s.playerName);
+  const setPlayerName = useGameStore((s) => s.setPlayerName);
+  const progression = useGameStore((s) => s.progression);
+  const prestige = useGameStore((s) => s.prestige());
+  const [name, setName] = useState(playerName);
+  const rank = rankForXp(progression.xp);
+
+  return (
+    <section className="player-card">
+      <div className="field" style={{ marginBottom: 8 }}>
+        <label htmlFor="player-name">Nome custode</label>
+        <input
+          id="player-name"
+          value={name}
+          maxLength={24}
+          onChange={(e) => setName(e.target.value)}
+          onBlur={() => setPlayerName(name)}
+          onKeyDown={(e) => e.key === 'Enter' && (e.target as HTMLInputElement).blur()}
+        />
+      </div>
+      <div className="muted" style={{ fontSize: 13, display: 'flex', gap: 14, flexWrap: 'wrap' }}>
+        <span>Rango {rank.level}: {rank.name}</span>
+        <span>{progression.xp} Punti Necro</span>
+        <span className="wisp-counter">✦ {progression.wisps}</span>
+        <span>Prestigio {prestige}</span>
+      </div>
+    </section>
+  );
+}
 
 const TIER_LABEL: Record<AchievementTier, string> = {
   bronze: 'Bronzo',
@@ -39,6 +72,7 @@ export function AchievementsPage() {
       </header>
 
       <div className="scene-wrap">
+        <PlayerCard />
         {TIER_ORDER.map((tier) => {
           const items = ACHIEVEMENTS.filter((a) => a.tier === tier);
           if (items.length === 0) return null;

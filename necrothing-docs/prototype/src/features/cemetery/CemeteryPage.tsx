@@ -59,6 +59,9 @@ export function CemeteryPage() {
   const petCat = useGameStore((s) => s.petCat);
   const blessFromPriest = useGameStore((s) => s.blessFromPriest);
   const shooRat = useGameStore((s) => s.shooRat);
+  const witnessCrow = useGameStore((s) => s.witnessCrow);
+  const fightZombie = useGameStore((s) => s.fightZombie);
+  const gravediggerSweep = useGameStore((s) => s.gravediggerSweep);
   const consumeSpawns = useGameStore((s) => s.consumeSpawns);
   const editIntroSeen = useGameStore((s) => s.editIntroSeen);
   const markEditIntroSeen = useGameStore((s) => s.markEditIntroSeen);
@@ -112,7 +115,10 @@ export function CemeteryPage() {
     if (pendingSpawns.length === 0) return;
     for (const s of pendingSpawns) {
       const g = s.graveId ? graves.find((x) => x.id === s.graveId) : undefined;
-      roaming.spawn(s.kind, g ? { x: g.gridX, y: g.gridY } : undefined);
+      roaming.spawn(s.kind, g ? { x: g.gridX, y: g.gridY } : undefined, {
+        rare: s.rare,
+        graveId: s.graveId,
+      });
     }
     consumeSpawns();
   }, [pendingSpawns, graves, roaming, consumeSpawns]);
@@ -269,15 +275,19 @@ export function CemeteryPage() {
     roaming.remove(ent.id);
     switch (ent.kind) {
       case 'ghost':
-        await witnessGhost(null);
-        showToast('Hai assistito a unʼapparizione! 👻 +40 XP');
+        await witnessGhost(ent.graveId ?? null, ent.rare);
+        showToast(
+          ent.rare
+            ? 'Il fantasma dellʼoggetto sepolto si manifesta! 👻✨ +70 XP'
+            : 'Hai assistito a unʼapparizione! 👻 +40 XP',
+        );
         break;
       case 'cat':
         await petCat();
         showToast('Il gatto nero ti porta fortuna. 🐈‍⬛ +2 fuochi fatui');
         break;
       case 'priest':
-        await blessFromPriest(null);
+        await blessFromPriest(ent.graveId ?? null);
         showToast('Il prete impartisce una benedizione. ✝️ +20 XP, +3 fuochi');
         break;
       case 'rat':
@@ -285,11 +295,22 @@ export function CemeteryPage() {
         showToast('Hai scacciato un topo. 🐀 +1 fuoco fatuo');
         break;
       case 'crow':
-        showToast('Un corvo gracchia nel silenzio. 🐦‍⬛');
+        await witnessCrow();
+        showToast('Il corvo lascia cadere un fuoco fatuo. 🐦‍⬛ +1');
         break;
-      case 'gravedigger':
-        showToast('Il becchino prosegue il suo lavoro. ⛏️');
+      case 'zombie':
+        await fightZombie(ent.graveId ?? null);
+        showToast('Hai ricacciato lo zombie nella fossa. 🧟 +25 XP, +4 fuochi');
         break;
+      case 'gravedigger': {
+        const n = await gravediggerSweep(Math.round(ent.x), Math.round(ent.y));
+        showToast(
+          n > 0
+            ? `Il becchino ripulisce ${n} ${n === 1 ? 'tomba' : 'tombe'} qui intorno. ⛏️`
+            : 'Il becchino prosegue il suo lavoro. ⛏️',
+        );
+        break;
+      }
     }
   };
 
@@ -300,6 +321,7 @@ export function CemeteryPage() {
     gravedigger: () => roaming.spawn('gravedigger'),
     priest: () => roaming.spawn('priest'),
     rat: () => roaming.spawn('rat'),
+    zombie: () => roaming.spawn('zombie'),
     wisp: () => devSpawnWisp(),
     dirty: () => devDirtyRandomGrave(),
     weather: () => {

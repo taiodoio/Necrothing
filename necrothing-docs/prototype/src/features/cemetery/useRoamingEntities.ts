@@ -24,6 +24,16 @@ export interface RoamingEntity {
   perched: boolean;
   /** Timestamp (ms) di scadenza: oltre, l'entità svanisce. */
   expiresAt: number;
+  /** Variante rara (es. fantasma-oggetto): ricompensa maggiore. */
+  rare?: boolean;
+  /** Tomba di riferimento (es. fantasma legato a una sepoltura). */
+  graveId?: string;
+}
+
+/** Opzioni di comparsa: variante rara e tomba di riferimento. */
+export interface SpawnOpts {
+  rare?: boolean;
+  graveId?: string;
 }
 
 function randCell(): { x: number; y: number } {
@@ -37,7 +47,7 @@ export interface UseRoamingEntities {
   entities: RoamingEntity[];
   tickMs: number;
   /** Genera un'entità. `near` (in tile) ne fissa il punto di comparsa. */
-  spawn: (kind: RoamingKind, near?: { x: number; y: number }) => void;
+  spawn: (kind: RoamingKind, near?: { x: number; y: number }, opts?: SpawnOpts) => void;
   remove: (id: string) => void;
 }
 
@@ -46,7 +56,7 @@ export function useRoamingEntities(): UseRoamingEntities {
   const ref = useRef(entities);
   ref.current = entities;
 
-  const spawn = useCallback<UseRoamingEntities['spawn']>((kind, near) => {
+  const spawn = useCallback<UseRoamingEntities['spawn']>((kind, near, opts) => {
     const def = ROAMING_DEFS[kind];
     let start: { x: number; y: number };
     let target: { x: number; y: number };
@@ -75,6 +85,8 @@ export function useRoamingEntities(): UseRoamingEntities {
         facing: target.x >= start.x ? 1 : -1,
         perched: false,
         expiresAt: Date.now() + def.lifespanMs,
+        rare: opts?.rare,
+        graveId: opts?.graveId,
       },
     ]);
   }, []);

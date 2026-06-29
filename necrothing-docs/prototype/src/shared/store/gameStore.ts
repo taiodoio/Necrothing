@@ -31,7 +31,7 @@ import { imageStorageService } from '@/shared/services/imageStorageService';
 import { graveRepository } from '@/shared/repositories/graveRepository';
 import { decorationsRepository } from '@/shared/repositories/decorationsRepository';
 import { PLACEABLES } from '@/shared/domain/placeables';
-import { DECAY } from '@/shared/domain/balance';
+import { DECAY, GRAVEDIGGER } from '@/shared/domain/balance';
 import type { PlaceableType, Weather } from '@/shared/domain/enums';
 import type { RoamingSpawn } from '@/shared/domain/roaming';
 import { detectDistricts, zoneScore } from '@/shared/services/zoneService';
@@ -83,10 +83,14 @@ interface GameState {
   removeGrave: (graveId: string) => Promise<void>;
   repairGrave: (graveId: string) => Promise<void>;
   toggleLight: (id: string) => Promise<void>;
-  witnessGhost: (graveId: string | null) => Promise<void>;
+  witnessGhost: (graveId: string | null, rare?: boolean) => Promise<void>;
   petCat: () => Promise<void>;
   blessFromPriest: (graveId: string | null) => Promise<void>;
   shooRat: () => Promise<void>;
+  witnessCrow: () => Promise<void>;
+  fightZombie: (graveId: string | null) => Promise<void>;
+  /** Il becchino pulisce gratis le tombe vicine. Ritorna quante ne ha pulite. */
+  gravediggerSweep: (x: number, y: number) => Promise<number>;
   consumeSpawns: () => void;
   shareGrave: (graveId: string) => Promise<{ xpAwarded: number }>;
   buyItem: (type: PlaceableType) => Promise<void>;
@@ -376,7 +380,7 @@ export const useGameStore = create<GameState>((set, get) => ({
     set({ decorations: await decorationService.list() });
   },
 
-  async witnessGhost(graveId) {
+  async witnessGhost(graveId, rare = false) {
     const graves = get().graves;
     const target = graveId
       ? graves.find((g) => g.id === graveId)
@@ -384,10 +388,12 @@ export const useGameStore = create<GameState>((set, get) => ({
     if (target) {
       await graveService.recordEvent(target.id, 'ghost', clock);
     }
-    let progression = addXp(get().progression, XP_VALUES.ghost);
+    const xp = rare ? XP_VALUES.ghostObject : XP_VALUES.ghost;
+    const wisps = rare ? WISP_VALUES.ghostObject : WISP_VALUES.ghost;
+    let progression = addXp(get().progression, xp);
     progression = {
       ...progression,
-      wisps: progression.wisps + WISP_VALUES.ghost,
+      wisps: progression.wisps + wisps,
       ghostsWitnessed: (progression.ghostsWitnessed ?? 0) + 1,
     };
     await persistProgression(progression);
@@ -436,6 +442,54 @@ export const useGameStore = create<GameState>((set, get) => ({
     await persistProgression(progression);
     set({ progression });
     await get().refreshAchievements();
+  },
+
+  async witnessCrow() {
+    const cur = get().progression;
+    const progression = {
+      ...cur,
+      wisps: cur.wisps + WISP_VALUES.crow,
+      npcEncountered: (cur.npcEncountered ?? 0) + 1,
+    };
+    await persistProgression(progression);
+    set({ progression });
+    await get().refreshAchievements();
+  },
+
+  async fightZombie(graveId) {
+    if (graveId) await graveService.recordEvent(graveId, 'ghost', clock);
+    let progression = addXp(get().progression, XP_VALUES.zombie);
+    progression = {
+      ...progression,
+      wisps: progression.wisps + WISP_VALUES.zombie,
+      npcEncountered: (progression.npcEncountered ?? 0) + 1,
+    };
+    await persistProgression(progression);
+    set({ progression });
+    await get().refreshAchievements();
+  },
+
+  async gravediggerSweep(x, y) {
+    const cleaned = await graveService.cleanNearby(x, y, GRAVEDIGGER.cleanRadius, clock);
+    if (cleaned > 0) {
+      let progression = addXp(get().progression, cleaned * XP_VALUES.gravediggerPerGrave);
+      progression = {
+        ...progression,
+        wisps: progression.wisps + cleaned * WISP_VALUES.gravediggerPerGrave,
+        cleanups: (progression.cleanups ?? 0) + cleaned,
+        npcEncountered: (progression.npcEncountered ?? 0) + 1,
+      };
+      await persistProgression(progression);
+      set({ graves: await graveService.listGraves(), progression });
+      await notificationService.rescheduleAll();
+      await get().refreshAchievements();
+    } else {
+      const cur = get().progression;
+      const progression = { ...cur, npcEncountered: (cur.npcEncountered ?? 0) + 1 };
+      await persistProgression(progression);
+      set({ progression });
+    }
+    return cleaned;
   },
 
   consumeSpawns() {

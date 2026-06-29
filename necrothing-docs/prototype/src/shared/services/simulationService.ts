@@ -5,7 +5,8 @@
 import { WEATHER, type MemoryEventType, type Weather } from '@/shared/domain/enums';
 import type { Grave, GraveMemoryEvent, LooseWisp, WorldState } from '@/shared/domain/types';
 import type { RoamingSpawn } from '@/shared/domain/roaming';
-import { SIM, SPAWN_CHANCE, DECAY } from '@/shared/domain/balance';
+import { SIM, DECAY } from '@/shared/domain/balance';
+import { computeSpawns } from './spawnService';
 import { MAP_COLS, MAP_ROWS } from '@/shared/domain/types';
 import { buildOccupancy } from '@/shared/domain/placeables';
 import { graveRepository, memoryEventRepository } from '@/shared/repositories/graveRepository';
@@ -189,15 +190,11 @@ export const simulationService = {
       xpGained += XP_VALUES.blessing;
     }
 
-    // Entità erranti: comparse probabilistiche legate a fascia oraria.
-    const spawns: RoamingSpawn[] = [];
-    if (ghostGraveId) spawns.push({ kind: 'ghost', graveId: ghostGraveId });
-    if (rng.chance(SPAWN_CHANCE.cat)) spawns.push({ kind: 'cat' });
-    if (!isNight && rng.chance(SPAWN_CHANCE.crowDay)) spawns.push({ kind: 'crow' });
-    if (graves.length > 0 && rng.chance(SPAWN_CHANCE.priest)) {
-      spawns.push({ kind: 'priest', graveId: rng.pick(graves).id });
-    }
-    if (isNight && rng.chance(SPAWN_CHANCE.ratNight)) spawns.push({ kind: 'rat' });
+    // Entità erranti: comparse probabilistiche con modificatori da edifici.
+    const spawns: RoamingSpawn[] = computeSpawns(
+      { graves, placeables, isNight, ghostGraveId },
+      rng,
+    );
 
     // Spawn di fuochi fatui (moneta) su celle libere, fino a un tetto.
     const looseWisps: LooseWisp[] = [...(world.looseWisps ?? [])];

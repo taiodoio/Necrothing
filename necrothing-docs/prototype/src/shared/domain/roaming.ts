@@ -8,6 +8,7 @@ export const ROAMING_KINDS = [
   'gravedigger',
   'priest',
   'rat',
+  'zombie',
 ] as const;
 export type RoamingKind = (typeof ROAMING_KINDS)[number];
 
@@ -16,6 +17,8 @@ export interface RoamingSpawn {
   kind: RoamingKind;
   /** Tomba di riferimento (es. fantasma/benedizione), se pertinente. */
   graveId?: string;
+  /** Variante rara (es. fantasma-oggetto): ricompensa maggiore. */
+  rare?: boolean;
 }
 
 export const ROAMING_LABELS: Record<RoamingKind, string> = {
@@ -25,4 +28,5 @@ export const ROAMING_LABELS: Record<RoamingKind, string> = {
   gravedigger: 'Becchino',
   priest: 'Prete',
   rat: 'Topo',
+  zombie: 'Zombie',
 };

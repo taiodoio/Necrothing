@@ -10,6 +10,7 @@ export interface DevActions {
   gravedigger: () => void;
   priest: () => void;
   rat: () => void;
+  zombie: () => void;
   wisp: () => void;
   dirty: () => void;
   weather: () => void;
@@ -30,6 +31,7 @@ const TRIGGERS: DevTrigger[] = [
   { key: 'e', label: 'Becchino', icon: '⛏️', run: 'gravedigger' },
   { key: 'p', label: 'Prete', icon: '✝️', run: 'priest' },
   { key: 't', label: 'Topo', icon: '🐀', run: 'rat' },
+  { key: 'z', label: 'Zombie', icon: '🧟', run: 'zombie' },
   { key: 'f', label: 'Fuoco fatuo', icon: '🔥', run: 'wisp' },
   { key: 'd', label: 'Sporca lapide', icon: '🧹', run: 'dirty' },
   { key: 'w', label: 'Cambia meteo', icon: '🌧️', run: 'weather' },

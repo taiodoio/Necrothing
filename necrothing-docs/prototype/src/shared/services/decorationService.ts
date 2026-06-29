@@ -68,6 +68,16 @@ export const decorationService = {
     return moved;
   },
 
+  /** Accende/spegne una luce (toggle; default accesa). */
+  async toggleLight(id: string): Promise<Decoration> {
+    const current = await decorationsRepository.get(id);
+    if (!current) throw new DecorationError('Elemento inesistente.');
+    const lit = !(current.lit ?? true);
+    const updated: Decoration = { ...current, lit };
+    await decorationsRepository.update(updated);
+    return updated;
+  },
+
   /** Ruota di 90° un placeable (toggle 0/90). */
   async rotate(id: string): Promise<Decoration> {
     const current = await decorationsRepository.get(id);

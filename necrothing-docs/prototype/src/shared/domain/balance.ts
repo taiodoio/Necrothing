@@ -67,6 +67,16 @@ export const ECONOMY = {
   sellRefund: 0.7,
 } as const;
 
+/** Decadimento e riparazione (Fase E). */
+export const DECAY = {
+  /** Giorni da sporca a rotta (una tomba trascurata si rompe). */
+  graveBreakDays: 10,
+  /** I fiori prolungano di N giorni la soglia prima della rottura. */
+  flowerGraceDays: 1,
+  /** Costo in fuochi fatui per riparare una tomba rotta. */
+  repairCost: 6,
+} as const;
+
 /**
  * Distretti tematici auto-rilevati: un distretto si forma quando un gruppo di
  * tombe coerenti col tema, vicine tra loro, raggiunge la soglia.

@@ -66,6 +66,8 @@ export const graveService = {
       flowersUpdatedAt: null,
       hasWeeds: false,
       isDirty: false,
+      dirtySince: null,
+      broken: false,
       lastAnniversaryYear: null,
       createdAt: now,
       updatedAt: now,
@@ -100,21 +102,41 @@ export const graveService = {
     return { grave: updated, xpAwarded: XP_VALUES.flowers };
   },
 
-  /** Pulisce erbacce e sporcizia. XP solo se c'era qualcosa da pulire. */
+  /** Pulisce erbacce e sporcizia. Bloccata se la tomba è rotta (serve riparare). */
   async cleanWeeds(graveId: string, clock: ClockService): Promise<{ grave: Grave; xpAwarded: number }> {
     const grave = await graveRepository.getById(graveId);
     if (!grave) throw new BurialError('Tomba inesistente.');
+    if (grave.broken) throw new BurialError('La tomba è rotta: va prima riparata.');
     if (!grave.hasWeeds && !grave.isDirty) return { grave, xpAwarded: 0 };
 
     const updated: Grave = {
       ...grave,
       hasWeeds: false,
       isDirty: false,
+      dirtySince: null,
       updatedAt: clock.nowIso(),
     };
     await graveRepository.update(updated);
     await memoryEventRepository.add(memoryEvent(graveId, 'weed_cleaned', clock));
     return { grave: updated, xpAwarded: XP_VALUES.weedCleaned };
+  },
+
+  /** Ripara una tomba rotta: la rimette a posto (pulisce anche). */
+  async repair(graveId: string, clock: ClockService): Promise<Grave> {
+    const grave = await graveRepository.getById(graveId);
+    if (!grave) throw new BurialError('Tomba inesistente.');
+    if (!grave.broken) return grave;
+    const updated: Grave = {
+      ...grave,
+      broken: false,
+      isDirty: false,
+      hasWeeds: false,
+      dirtySince: null,
+      updatedAt: clock.nowIso(),
+    };
+    await graveRepository.update(updated);
+    await memoryEventRepository.add(memoryEvent(graveId, 'weed_cleaned', clock));
+    return updated;
   },
 
   /** Registra un evento qualunque sulla timeline della tomba. */

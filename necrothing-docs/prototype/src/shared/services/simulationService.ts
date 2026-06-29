@@ -5,7 +5,7 @@
 import { WEATHER, type MemoryEventType, type Weather } from '@/shared/domain/enums';
 import type { Grave, GraveMemoryEvent, LooseWisp, WorldState } from '@/shared/domain/types';
 import type { RoamingSpawn } from '@/shared/domain/roaming';
-import { SIM, SPAWN_CHANCE } from '@/shared/domain/balance';
+import { SIM, SPAWN_CHANCE, DECAY } from '@/shared/domain/balance';
 import { MAP_COLS, MAP_ROWS } from '@/shared/domain/types';
 import { buildOccupancy } from '@/shared/domain/placeables';
 import { graveRepository, memoryEventRepository } from '@/shared/repositories/graveRepository';
@@ -35,6 +35,7 @@ export interface SimulationResult {
   updatedGraves: Grave[];
   newWeeds: number;
   newDirt: number;
+  newBroken: number;
   witheredFlowers: number;
   ghostGraveId: string | null;
   ghostGraveName: string | null;
@@ -99,6 +100,7 @@ export const simulationService = {
     const anniversaries: AnniversaryHit[] = [];
     let newWeeds = 0;
     let newDirt = 0;
+    let newBroken = 0;
     let witheredFlowers = 0;
     let xpGained = 0;
 
@@ -130,8 +132,20 @@ export const simulationService = {
         const p = Math.min(SIM.dirtProbMax, SIM.dirtProbPerDay * elapsedDays);
         if (rng.chance(p)) {
           next.isDirty = true;
+          next.dirtySince = clock.nowIso();
           changed = true;
           newDirt++;
+        }
+      }
+
+      // Rottura: una tomba trascurata troppo a lungo si rompe (e perde i fiori).
+      if (next.isDirty && !next.broken && next.dirtySince) {
+        const graceDays = DECAY.graveBreakDays + (next.hasFlowers ? DECAY.flowerGraceDays : 0);
+        if (daysBetween(new Date(next.dirtySince), now) >= graceDays) {
+          next.broken = true;
+          next.hasFlowers = false;
+          changed = true;
+          newBroken++;
         }
       }
 
@@ -218,6 +232,7 @@ export const simulationService = {
       updatedGraves,
       newWeeds,
       newDirt,
+      newBroken,
       witheredFlowers,
       ghostGraveId,
       ghostGraveName,

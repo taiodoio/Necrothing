@@ -35,6 +35,7 @@ export function GraveDetail({ graveId, onClose, onDeleted, onMoveHint }: Props) 
   const grave = useGameStore((s) => s.graves.find((g) => g.id === graveId)) as Grave | undefined;
   const bringFlowers = useGameStore((s) => s.bringFlowers);
   const cleanWeeds = useGameStore((s) => s.cleanWeeds);
+  const repairGrave = useGameStore((s) => s.repairGrave);
   const removeGrave = useGameStore((s) => s.removeGrave);
   const shareGrave = useGameStore((s) => s.shareGrave);
   const loadEvents = useGameStore((s) => s.loadEvents);
@@ -92,6 +93,7 @@ export function GraveDetail({ graveId, onClose, onDeleted, onMoveHint }: Props) 
           hasFlowers={grave.hasFlowers}
           hasWeeds={grave.hasWeeds}
           isDirty={grave.isDirty}
+          broken={grave.broken}
           size={84}
         />
         <div className="muted" style={{ fontSize: 13, lineHeight: 1.6 }}>
@@ -122,21 +124,33 @@ export function GraveDetail({ graveId, onClose, onDeleted, onMoveHint }: Props) 
       )}
 
       <div className="wizard-nav">
-        <button
-          className="btn btn--primary"
-          disabled={busy}
-          onClick={() => doAction(() => bringFlowers(grave.id))}
-        >
-          💐 Porta fiori
-        </button>
-        {(grave.hasWeeds || grave.isDirty) && (
+        {grave.broken ? (
           <button
-            className="btn"
+            className="btn btn--primary"
             disabled={busy}
-            onClick={() => doAction(() => cleanWeeds(grave.id))}
+            onClick={() => doAction(() => repairGrave(grave.id))}
           >
-            🧹 Pulisci
+            🛠️ Ripara
           </button>
+        ) : (
+          <>
+            <button
+              className="btn btn--primary"
+              disabled={busy}
+              onClick={() => doAction(() => bringFlowers(grave.id))}
+            >
+              💐 Porta fiori
+            </button>
+            {(grave.hasWeeds || grave.isDirty) && (
+              <button
+                className="btn"
+                disabled={busy}
+                onClick={() => doAction(() => cleanWeeds(grave.id))}
+              >
+                🧹 Pulisci
+              </button>
+            )}
+          </>
         )}
       </div>
 

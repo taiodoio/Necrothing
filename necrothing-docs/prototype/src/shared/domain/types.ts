@@ -30,6 +30,10 @@ export interface Grave {
   hasWeeds: boolean;
   // Sporcizia accumulata (polvere/muschio): da pulire periodicamente.
   isDirty: boolean;
+  // Quando è diventata sporca (per calcolare la rottura). null se pulita.
+  dirtySince: string | null;
+  // Rotta: trascurata troppo a lungo. Richiede riparazione (non solo pulizia).
+  broken: boolean;
   // Anno dell'ultimo anniversario già celebrato (per evitare doppioni).
   lastAnniversaryYear: number | null;
   createdAt: string; // ISO datetime
@@ -124,6 +128,7 @@ export interface Decoration {
   gridY: number;
   rotation?: 0 | 90; // rotazione (es. staccionata verticale)
   text?: string; // testo personalizzato (es. cartello)
+  lit?: boolean; // luci: accesa/spenta (default accesa)
   createdAt: string;
 }
 

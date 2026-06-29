@@ -10,6 +10,7 @@ interface Props {
   hasFlowers?: boolean;
   hasWeeds?: boolean;
   isDirty?: boolean;
+  broken?: boolean;
   size?: number;
   title?: string;
 }
@@ -51,9 +52,18 @@ function Shape({ type }: { type: GraveType }) {
   }
 }
 
-export function GraveSprite({ type, hasFlowers, hasWeeds, isDirty, size = 64, title }: Props) {
+export function GraveSprite({
+  type,
+  hasFlowers,
+  hasWeeds,
+  isDirty,
+  broken,
+  size = 64,
+  title,
+}: Props) {
   const png = spriteUrl(
     graveAssetId(type),
+    broken ? 'broken' : undefined,
     hasFlowers && hasWeeds ? 'flowers_weeds' : undefined,
     isDirty ? 'dirty' : undefined,
     hasFlowers ? 'flowers' : undefined,
@@ -71,7 +81,16 @@ export function GraveSprite({ type, hasFlowers, hasWeeds, isDirty, size = 64, ti
     >
       {/* zolla */}
       <ellipse cx="50" cy="86" rx="34" ry="9" fill="#2b2a1f" />
-      <Shape type={type} />
+      <g style={broken ? { opacity: 0.7 } : undefined} transform={broken ? 'rotate(-6 50 70)' : undefined}>
+        <Shape type={type} />
+      </g>
+      {broken && (
+        <g stroke="#1b1828" strokeWidth="2.5" fill="none" strokeLinecap="round">
+          {/* crepe della rottura */}
+          <path d="M50 40 l-6 16 l8 10 l-6 14" />
+          <path d="M44 56 l-8 4 M52 66 l9 3" />
+        </g>
+      )}
       {isDirty && (
         <g fill="#6f6a55" opacity="0.5">
           {/* chiazze di muschio/polvere */}

@@ -295,10 +295,15 @@ export function CemeteryScene({
                   hasFlowers={g.hasFlowers}
                   hasWeeds={g.hasWeeds}
                   isDirty={g.isDirty}
+                  broken={g.broken}
                   size={TILE_SIZE * 2 * 0.92}
                   title={g.name}
                 />
-                {(g.hasWeeds || g.isDirty) && <span className="badge badge-tl">🧹</span>}
+                {g.broken ? (
+                  <span className="badge badge-tl">🛠️</span>
+                ) : (
+                  (g.hasWeeds || g.isDirty) && <span className="badge badge-tl">🧹</span>
+                )}
                 {g.hasFlowers && <span className="badge badge-tr">💐</span>}
               </button>
             );
@@ -326,6 +331,11 @@ export function CemeteryScene({
                   style={{
                     display: 'flex',
                     transform: p.rotation ? `rotate(${p.rotation}deg)` : undefined,
+                    ...(PLACEABLES[p.type].category === 'light'
+                      ? p.lit === false
+                        ? { opacity: 0.45 }
+                        : { filter: 'drop-shadow(0 0 6px rgba(224,163,74,0.85))' }
+                      : null),
                   }}
                 >
                   <PlaceableSprite type={p.type} size={Math.min(w, h) * TILE_SIZE * 0.96} />

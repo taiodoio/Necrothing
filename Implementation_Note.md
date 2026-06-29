@@ -40,6 +40,7 @@
         - Vaso (x 2)
 
     Costruzioni
+        - Bottega (di dafault)
         - Mausoleo (Costa molto, aumenta del 10% la probabilità di vedere eventi random)
         - Tomba generica dissotterrata
         - Muretto in pietra
@@ -133,3 +134,15 @@
 
 NOTA: da definire % di comparsa di questi eventi per aumentare longevità nel gioco. 
 Dopo quanto ipoteticamente i giocatori hanno completato tutto e necessita di creare nuovi terreni o items?
+=========================================
+
+UPDATE 29/06:
+- pagine si aprono in bottom drawer. Il menù scompare se una pagina è aperta. Nel bottom drawer deve esserci il pulsante chiudi in alto a sinistra
+- Eventi random sembrano un pò troppo frequenti
+- Foto in generale troppo pixelate. Non si capisce cosa stia vedendo. Rimuove la pixelature e lasciamo il B/N. 
+- Foto - deve catturare una foto-screen del campo di gioco, non una foto a caso. 
+- Meteo da definire ogni quanto cambia. Magari giornaliero. PEr ora lsciamo solo notte - giorno. Aggiungiamo dopo altri effetti.
+- Movimento NPC su assi X e Y. Se incontra ostacoli, cambia direzione. Deve muoversi come la torre degli schacchi. Tranne i fantasmi. Loro possono attraversare ogni cosa, ma devono comunque muoversi solo sui due assi.
+- Funnel "seppelisci" - prima di dare l'ok, una preview con tomba e foto etc. Simile alla vista "dettaglio".
+- Bottega - Alcuni oggetti possono essere comprati più volte, altri no. In ambo i casi una volta selezionato un oggetto, appare una barra in fondo dove poter selezionare eventualmente la quantità (in base a disponibilità fondi e tipologia di oggetto) e CTAs acquista e sotto Annulla.
+- Bottega - da ponderare se inserirla come primo elemento del gioco. Occupa un 3x3. Non può essere cancellata, ma solo spostata. Ci si accede direttamente cliccandoci sopra nella mappa. Il posizionamento serve anche come primo tutorial. La vedo piazzata sul campo, la sposto, do l'ok. Appare un banner con le istruzioni "questa è la bottega, qui potrai comprare tutti gli elementi etc..". Cliccando sopra la bottega, nella CTA dettagli, si apre il bottom drawer della bottega attuale. Il pulsante nel menù è una shortcut per centrare la mappa sulla bottega. 

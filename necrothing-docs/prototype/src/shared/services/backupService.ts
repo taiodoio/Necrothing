@@ -17,10 +17,17 @@ import type {
 import type { ClockService } from '@/shared/utils/clock';
 
 export const BACKUP_FORMAT = 'necrothing-backup';
-export const BACKUP_VERSION = 3;
+export const BACKUP_VERSION = 4;
 
 interface BackupImage {
   id: string;
+  mime: string;
+  b64: string;
+}
+
+interface BackupPhoto {
+  id: string;
+  createdAt: string;
   mime: string;
   b64: string;
 }
@@ -40,6 +47,7 @@ export interface BackupFile {
     zones: Zone[];
     inventory: InventoryItem[];
     images: BackupImage[];
+    photos: BackupPhoto[];
   };
 }
 
@@ -73,6 +81,7 @@ export const backupService = {
       zones,
       inventory,
       rawImages,
+      rawPhotos,
     ] = await Promise.all([
       db.getAll('graves'),
       db.getAll('memoryEvents'),
@@ -84,12 +93,24 @@ export const backupService = {
       db.getAll('zones'),
       db.getAll('inventory'),
       db.getAll('images'),
+      db.getAll('photos'),
     ]);
 
     const images: BackupImage[] = [];
     for (const img of rawImages) {
       const buf = new Uint8Array(await img.blob.arrayBuffer());
       images.push({ id: img.id, mime: img.blob.type || 'image/png', b64: bytesToBase64(buf) });
+    }
+
+    const photos: BackupPhoto[] = [];
+    for (const ph of rawPhotos) {
+      const buf = new Uint8Array(await ph.blob.arrayBuffer());
+      photos.push({
+        id: ph.id,
+        createdAt: ph.createdAt,
+        mime: ph.blob.type || 'image/png',
+        b64: bytesToBase64(buf),
+      });
     }
 
     const file: BackupFile = {
@@ -107,6 +128,7 @@ export const backupService = {
         zones,
         inventory,
         images,
+        photos,
       },
     };
     return JSON.stringify(file, null, 2);
@@ -141,6 +163,7 @@ export const backupService = {
         'zones',
         'inventory',
         'images',
+        'photos',
       ],
       'readwrite',
     );
@@ -156,6 +179,7 @@ export const backupService = {
       tx.objectStore('zones').clear(),
       tx.objectStore('inventory').clear(),
       tx.objectStore('images').clear(),
+      tx.objectStore('photos').clear(),
     ]);
 
     for (const g of d.graves ?? []) tx.objectStore('graves').put(g);
@@ -171,6 +195,11 @@ export const backupService = {
       const bytes = base64ToBytes(img.b64);
       const blob = new Blob([bytes.buffer as ArrayBuffer], { type: img.mime });
       tx.objectStore('images').put({ id: img.id, blob });
+    }
+    for (const ph of d.photos ?? []) {
+      const bytes = base64ToBytes(ph.b64);
+      const blob = new Blob([bytes.buffer as ArrayBuffer], { type: ph.mime });
+      tx.objectStore('photos').put({ id: ph.id, blob, createdAt: ph.createdAt });
     }
 
     await tx.done;

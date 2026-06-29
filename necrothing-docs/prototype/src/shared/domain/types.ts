@@ -115,6 +115,13 @@ export interface StoredImage {
   blob: Blob;
 }
 
+/** Foto salvata nella Galleria (cattura del cimitero, B/N pixelata). */
+export interface GalleryPhoto {
+  id: string;
+  blob: Blob;
+  createdAt: string;
+}
+
 /** Quantità posseduta di un tipo piazzabile (modello buy-to-own). */
 export interface InventoryItem {
   type: PlaceableType;

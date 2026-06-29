@@ -7,6 +7,7 @@ import { SettingsHub } from '@/features/settings/SettingsHub';
 import { AboutPage } from '@/features/settings/AboutPage';
 import { AchievementsPage } from '@/features/achievements/AchievementsPage';
 import { BackupPage } from '@/features/backup/BackupPage';
+import { GalleryPage } from '@/features/gallery/GalleryPage';
 
 export function App() {
   const ready = useGameStore((s) => s.ready);
@@ -54,6 +55,7 @@ export function App() {
       <Route path="/settings/about" element={<AboutPage />} />
       <Route path="/settings/backup" element={<BackupPage />} />
       <Route path="/achievements" element={<AchievementsPage />} />
+      <Route path="/gallery" element={<GalleryPage />} />
     </Routes>
   );
 }

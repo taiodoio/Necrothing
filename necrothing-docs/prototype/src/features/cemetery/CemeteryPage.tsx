@@ -3,6 +3,7 @@
 // al centro vista, entità erranti ed eventi (con pannello dev).
 
 import { useEffect, useRef, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useGameStore } from '@/shared/store/gameStore';
 import { CemeteryScene, type Selection } from './CemeteryScene';
 import { TopBar } from './TopBar';
@@ -15,6 +16,7 @@ import { PlaceablePicker } from '@/features/decorations/PlaceablePicker';
 import { DecorationSheet } from '@/features/decorations/DecorationSheet';
 import { BottegaSheet } from '@/features/shop/BottegaSheet';
 import { InventarioSheet } from '@/features/inventory/InventarioSheet';
+import { PhotoCapture } from '@/features/photo/PhotoCapture';
 import { FuneralScene } from '@/features/funeral/FuneralScene';
 import { Sheet } from '@/shared/components/Sheet';
 import type { PlaceableType } from '@/shared/domain/enums';
@@ -69,8 +71,10 @@ export function CemeteryPage() {
   const devBlessing = useGameStore((s) => s.devBlessing);
 
   const roaming = useRoamingEntities();
+  const navigate = useNavigate();
 
   const [selection, setSelection] = useState<Selection | null>(null);
+  const [photoOpen, setPhotoOpen] = useState(false);
   const [placing, setPlacing] = useState(false);
   const [editMode, setEditMode] = useState(false);
   const [editIntro, setEditIntro] = useState(false);
@@ -316,8 +320,8 @@ export function CemeteryPage() {
       label: editMode ? 'Fine modifica' : 'Modifica',
       onClick: () => (editMode ? exitEdit() : enterEdit()),
     },
-    { key: 'photo', icon: '📷', label: 'Foto', onClick: () => showToast('Fotocamera in arrivo.') },
-    { key: 'gallery', icon: '🖼️', label: 'Galleria', onClick: () => showToast('Galleria in arrivo.') },
+    { key: 'photo', icon: '📷', label: 'Foto', onClick: () => setPhotoOpen(true) },
+    { key: 'gallery', icon: '🖼️', label: 'Galleria', onClick: () => navigate('/gallery') },
   ];
 
   return (
@@ -380,6 +384,16 @@ export function CemeteryPage() {
           onBuried={(grave) => {
             setBurialOpen(false);
             setFuneralGrave(grave);
+          }}
+        />
+      )}
+
+      {photoOpen && (
+        <PhotoCapture
+          onClose={() => setPhotoOpen(false)}
+          onSaved={() => {
+            setPhotoOpen(false);
+            showToast('Ricordo salvato in Galleria. 🖼️');
           }}
         />
       )}

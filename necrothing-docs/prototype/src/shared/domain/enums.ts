@@ -160,9 +160,87 @@ export const ZONE_THEME_LABELS: Record<ZoneTheme, string> = {
   tech: 'Settore Tecnologico',
 };
 
+// Categoria di catalogo (per raggruppare in Bottega/Inventario).
+export const PLACEABLE_CATEGORIES = ['light', 'decoration', 'structure', 'ambient', 'npc'] as const;
+export type PlaceableCategory = (typeof PLACEABLE_CATEGORIES)[number];
+export const PLACEABLE_CATEGORY_LABELS: Record<PlaceableCategory, string> = {
+  light: 'Luci',
+  decoration: 'Decorazioni',
+  structure: 'Costruzioni',
+  ambient: 'Ambiente',
+  npc: 'Presenze',
+};
+
+// Catalogo esteso (Fase D). Gli sprite finali arrivano da PixelLab; finché
+// mancano si usa un fallback a emoji (vedi PlaceableSprite).
+export const EXTRA_PLACEABLE_TYPES = [
+  // Luci
+  'ghost_lantern', 'glow_pumpkin', 'torch', 'bonfire',
+  // Decorazioni
+  'angel_statue', 'open_coffin', 'bones', 'vase', 'sign',
+  // Costruzioni
+  'arch_stone', 'well', 'fountain', 'gravedigger_house', 'shrine',
+  // Ambiente
+  'dead_bush', 'rock', 'flowerbed', 'tall_grass', 'xmas_tree',
+  // Presenze (NPC piazzabili)
+  'zombie_dancer', 'wandering_ghost', 'skeleton_animal',
+] as const;
+export type ExtraPlaceableType = (typeof EXTRA_PLACEABLE_TYPES)[number];
+
+export const EXTRA_PLACEABLE_LABELS: Record<ExtraPlaceableType, string> = {
+  ghost_lantern: 'Lanterna spettrale',
+  glow_pumpkin: 'Zucca luminosa',
+  torch: 'Torcia',
+  bonfire: 'Falò esoterico',
+  angel_statue: 'Statua angelo',
+  open_coffin: 'Bara aperta',
+  bones: 'Ossa',
+  vase: 'Vaso',
+  sign: 'Cartello',
+  arch_stone: 'Arco di pietra',
+  well: 'Pozzo',
+  fountain: 'Fontana',
+  gravedigger_house: 'Casa del becchino',
+  shrine: 'Santuario',
+  dead_bush: 'Cespuglio secco',
+  rock: 'Roccia',
+  flowerbed: 'Aiuola fiorita',
+  tall_grass: 'Erba alta',
+  xmas_tree: 'Albero di Natale',
+  zombie_dancer: 'Zombie danzante',
+  wandering_ghost: 'Fantasma errante',
+  skeleton_animal: 'Animale scheletro',
+};
+
+export const EXTRA_PLACEABLE_EMOJI: Record<ExtraPlaceableType, string> = {
+  ghost_lantern: '🏮', glow_pumpkin: '🎃', torch: '🔥', bonfire: '🔥',
+  angel_statue: '👼', open_coffin: '⚰️', bones: '🦴', vase: '🏺', sign: '🪧',
+  arch_stone: '🏛️', well: '🕳️', fountain: '⛲', gravedigger_house: '🏚️', shrine: '⛩️',
+  dead_bush: '🌿', rock: '🪨', flowerbed: '🌼', tall_grass: '🌾', xmas_tree: '🎄',
+  zombie_dancer: '🧟', wandering_ghost: '👻', skeleton_animal: '🐾',
+};
+
+export const EXTRA_PLACEABLE_CATEGORY: Record<ExtraPlaceableType, PlaceableCategory> = {
+  ghost_lantern: 'light', glow_pumpkin: 'light', torch: 'light', bonfire: 'light',
+  angel_statue: 'decoration', open_coffin: 'decoration', bones: 'decoration', vase: 'decoration', sign: 'decoration',
+  arch_stone: 'structure', well: 'structure', fountain: 'structure', gravedigger_house: 'structure', shrine: 'structure',
+  dead_bush: 'ambient', rock: 'ambient', flowerbed: 'ambient', tall_grass: 'ambient', xmas_tree: 'ambient',
+  zombie_dancer: 'npc', wandering_ghost: 'npc', skeleton_animal: 'npc',
+};
+
 // Tipo unificato di oggetto piazzabile (decorazione o struttura).
-export type PlaceableType = DecorationType | StructureType;
-export const PLACEABLE_TYPES: PlaceableType[] = [...DECORATION_TYPES, ...STRUCTURE_TYPES];
+export type PlaceableType = DecorationType | StructureType | ExtraPlaceableType;
+export const PLACEABLE_TYPES: PlaceableType[] = [
+  ...DECORATION_TYPES,
+  ...STRUCTURE_TYPES,
+  ...EXTRA_PLACEABLE_TYPES,
+];
+
+/** Solo dicembre: l'albero di Natale è acquistabile/visibile in Bottega. */
+export function isSeasonallyAvailable(type: PlaceableType, month0: number): boolean {
+  if (type === 'xmas_tree') return month0 === 11;
+  return true;
+}
 
 export const MEMORY_EVENT_TYPES = [
   'burial',

@@ -77,6 +77,15 @@ export const decorationService = {
     return rotated;
   },
 
+  /** Imposta il testo personalizzato (es. cartello). */
+  async setText(id: string, text: string): Promise<Decoration> {
+    const current = await decorationsRepository.get(id);
+    if (!current) throw new DecorationError('Elemento inesistente.');
+    const updated: Decoration = { ...current, text: text.slice(0, 60) };
+    await decorationsRepository.update(updated);
+    return updated;
+  },
+
   /** Cambia il tipo di un placeable (richiede footprint compatibile, gratis). */
   async changeType(id: string, newType: PlaceableType): Promise<Decoration> {
     const current = await decorationsRepository.get(id);

@@ -60,3 +60,22 @@ describe('buildOccupancy + canPlace', () => {
     expect(canPlace(1, 1, [1, 1], occ, 24, 32)).toBe(false);
   });
 });
+
+describe('catalogo esteso (Fase D)', () => {
+  it('ogni PLACEABLE_TYPE ha una definizione con categoria valida', async () => {
+    const { PLACEABLE_TYPES, PLACEABLE_CATEGORIES } = await import('./enums');
+    for (const t of PLACEABLE_TYPES) {
+      const def = PLACEABLES[t];
+      expect(def, t).toBeTruthy();
+      expect(PLACEABLE_CATEGORIES).toContain(def.category);
+      expect(def.cost).toBeGreaterThan(0);
+    }
+  });
+
+  it('lʼalbero di Natale è disponibile solo a dicembre', async () => {
+    const { isSeasonallyAvailable } = await import('./enums');
+    expect(isSeasonallyAvailable('xmas_tree', 11)).toBe(true);
+    expect(isSeasonallyAvailable('xmas_tree', 5)).toBe(false);
+    expect(isSeasonallyAvailable('candle', 5)).toBe(true);
+  });
+});

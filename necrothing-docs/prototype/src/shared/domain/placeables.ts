@@ -5,7 +5,16 @@
 import {
   DECORATION_LABELS,
   DECORATION_MIN_RANK,
+  DECORATION_TYPES,
   STRUCTURE_LABELS,
+  STRUCTURE_TYPES,
+  EXTRA_PLACEABLE_TYPES,
+  EXTRA_PLACEABLE_LABELS,
+  EXTRA_PLACEABLE_CATEGORY,
+  type DecorationType,
+  type StructureType,
+  type ExtraPlaceableType,
+  type PlaceableCategory,
   type PlaceableType,
 } from './enums';
 import { GRAVE_FOOTPRINT, type Decoration, type Grave } from './types';
@@ -14,6 +23,7 @@ export type Footprint = [number, number]; // [larghezza, altezza]
 
 export interface PlaceableDef {
   kind: 'decoration' | 'structure';
+  category: PlaceableCategory;
   label: string;
   footprint: Footprint;
   cost: number; // fuochi fatui
@@ -54,24 +64,61 @@ const STRUCT_MIN_RANK: Record<string, number> = {
   mausoleum: 5,
 };
 
-export const PLACEABLES: Record<PlaceableType, PlaceableDef> = {
-  // decorazioni
-  candle: { kind: 'decoration', label: DECORATION_LABELS.candle, footprint: [1, 1], cost: DECO_COST.candle, minRank: DECORATION_MIN_RANK.candle },
-  wreath: { kind: 'decoration', label: DECORATION_LABELS.wreath, footprint: [1, 1], cost: DECO_COST.wreath, minRank: DECORATION_MIN_RANK.wreath },
-  mushroom: { kind: 'decoration', label: DECORATION_LABELS.mushroom, footprint: [1, 1], cost: DECO_COST.mushroom, minRank: DECORATION_MIN_RANK.mushroom },
-  dead_tree: { kind: 'decoration', label: DECORATION_LABELS.dead_tree, footprint: [1, 1], cost: DECO_COST.dead_tree, minRank: DECORATION_MIN_RANK.dead_tree },
-  skull: { kind: 'decoration', label: DECORATION_LABELS.skull, footprint: [1, 1], cost: DECO_COST.skull, minRank: DECORATION_MIN_RANK.skull },
-  lantern: { kind: 'decoration', label: DECORATION_LABELS.lantern, footprint: [1, 1], cost: DECO_COST.lantern, minRank: DECORATION_MIN_RANK.lantern },
-  willow: { kind: 'decoration', label: DECORATION_LABELS.willow, footprint: DECO_FOOTPRINT.willow, cost: DECO_COST.willow, minRank: DECORATION_MIN_RANK.willow },
-  // strutture
-  path_dirt: { kind: 'structure', label: STRUCTURE_LABELS.path_dirt, footprint: STRUCT_FOOTPRINT.path_dirt ?? [1, 1], cost: STRUCT_COST.path_dirt, minRank: STRUCT_MIN_RANK.path_dirt },
-  path_stone: { kind: 'structure', label: STRUCTURE_LABELS.path_stone, footprint: [1, 1], cost: STRUCT_COST.path_stone, minRank: STRUCT_MIN_RANK.path_stone },
-  fence_wood: { kind: 'structure', label: STRUCTURE_LABELS.fence_wood, footprint: [1, 1], cost: STRUCT_COST.fence_wood, minRank: STRUCT_MIN_RANK.fence_wood },
-  fence_iron: { kind: 'structure', label: STRUCTURE_LABELS.fence_iron, footprint: [1, 1], cost: STRUCT_COST.fence_iron, minRank: STRUCT_MIN_RANK.fence_iron },
-  wall_stone: { kind: 'structure', label: STRUCTURE_LABELS.wall_stone, footprint: [1, 1], cost: STRUCT_COST.wall_stone, minRank: STRUCT_MIN_RANK.wall_stone },
-  lamp_post: { kind: 'structure', label: STRUCTURE_LABELS.lamp_post, footprint: [1, 1], cost: STRUCT_COST.lamp_post, minRank: STRUCT_MIN_RANK.lamp_post },
-  mausoleum: { kind: 'structure', label: STRUCTURE_LABELS.mausoleum, footprint: STRUCT_FOOTPRINT.mausoleum, cost: STRUCT_COST.mausoleum, minRank: STRUCT_MIN_RANK.mausoleum },
+// Default di catalogo per gli elementi estesi (Fase D), per categoria.
+const EXTRA_DEFAULTS: Record<PlaceableCategory, { cost: number; minRank: number }> = {
+  light: { cost: 6, minRank: 2 },
+  decoration: { cost: 8, minRank: 2 },
+  structure: { cost: 35, minRank: 4 },
+  ambient: { cost: 3, minRank: 1 },
+  npc: { cost: 30, minRank: 4 },
 };
+const EXTRA_FOOTPRINT: Partial<Record<ExtraPlaceableType, Footprint>> = {
+  well: [2, 2],
+  fountain: [2, 2],
+  gravedigger_house: [2, 2],
+  shrine: [2, 2],
+};
+
+function decoDef(t: DecorationType): PlaceableDef {
+  return {
+    kind: 'decoration',
+    category: 'decoration',
+    label: DECORATION_LABELS[t],
+    footprint: DECO_FOOTPRINT[t] ?? [1, 1],
+    cost: DECO_COST[t],
+    minRank: DECORATION_MIN_RANK[t],
+  };
+}
+function structDef(t: StructureType): PlaceableDef {
+  return {
+    kind: 'structure',
+    category: 'structure',
+    label: STRUCTURE_LABELS[t],
+    footprint: STRUCT_FOOTPRINT[t] ?? [1, 1],
+    cost: STRUCT_COST[t],
+    minRank: STRUCT_MIN_RANK[t],
+  };
+}
+function extraDef(t: ExtraPlaceableType): PlaceableDef {
+  const category = EXTRA_PLACEABLE_CATEGORY[t];
+  const d = EXTRA_DEFAULTS[category];
+  return {
+    kind: category === 'structure' ? 'structure' : 'decoration',
+    category,
+    label: EXTRA_PLACEABLE_LABELS[t],
+    footprint: EXTRA_FOOTPRINT[t] ?? [1, 1],
+    cost: d.cost,
+    minRank: d.minRank,
+  };
+}
+
+export const PLACEABLES: Record<PlaceableType, PlaceableDef> = (() => {
+  const out = {} as Record<PlaceableType, PlaceableDef>;
+  for (const t of DECORATION_TYPES) out[t] = decoDef(t);
+  for (const t of STRUCTURE_TYPES) out[t] = structDef(t);
+  for (const t of EXTRA_PLACEABLE_TYPES) out[t] = extraDef(t);
+  return out;
+})();
 
 /** Strutture uniche: ne può esistere al massimo una per cimitero. */
 export const UNIQUE_PLACEABLES: ReadonlySet<PlaceableType> = new Set<PlaceableType>(['mausoleum']);

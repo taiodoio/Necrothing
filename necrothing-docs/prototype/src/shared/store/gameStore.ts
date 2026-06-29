@@ -91,6 +91,7 @@ interface GameState {
   movePlaceable: (id: string, gridX: number, gridY: number) => Promise<void>;
   rotatePlaceable: (id: string) => Promise<void>;
   changePlaceable: (id: string, newType: PlaceableType) => Promise<void>;
+  setPlaceableText: (id: string, text: string) => Promise<void>;
   collectWisp: (id: string) => Promise<void>;
   loadEvents: (graveId: string) => Promise<GraveMemoryEvent[]>;
 
@@ -509,6 +510,11 @@ export const useGameStore = create<GameState>((set, get) => ({
     } else {
       set({ decorations });
     }
+  },
+
+  async setPlaceableText(id, text) {
+    await decorationService.setText(id, text);
+    set({ decorations: await decorationService.list() });
   },
 
   async collectWisp(id) {

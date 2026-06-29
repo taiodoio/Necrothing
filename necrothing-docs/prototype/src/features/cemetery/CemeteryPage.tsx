@@ -16,6 +16,7 @@ import { DecorationSheet } from '@/features/decorations/DecorationSheet';
 import { BottegaSheet } from '@/features/shop/BottegaSheet';
 import { InventarioSheet } from '@/features/inventory/InventarioSheet';
 import { FuneralScene } from '@/features/funeral/FuneralScene';
+import { Sheet } from '@/shared/components/Sheet';
 import type { PlaceableType } from '@/shared/domain/enums';
 import {
   GRAVE_FOOTPRINT,
@@ -55,6 +56,8 @@ export function CemeteryPage() {
   const blessFromPriest = useGameStore((s) => s.blessFromPriest);
   const shooRat = useGameStore((s) => s.shooRat);
   const consumeSpawns = useGameStore((s) => s.consumeSpawns);
+  const editIntroSeen = useGameStore((s) => s.editIntroSeen);
+  const markEditIntroSeen = useGameStore((s) => s.markEditIntroSeen);
   const lastSimMessage = useGameStore((s) => s.lastSimMessage);
   const lastUnlockedAchievement = useGameStore((s) => s.lastUnlockedAchievement);
   // azioni dev
@@ -67,6 +70,9 @@ export function CemeteryPage() {
 
   const [selection, setSelection] = useState<Selection | null>(null);
   const [placing, setPlacing] = useState(false);
+  const [editMode, setEditMode] = useState(false);
+  const [editIntro, setEditIntro] = useState(false);
+  const [editIntroDontShow, setEditIntroDontShow] = useState(true);
   const [burialOpen, setBurialOpen] = useState(false);
   const [bottegaOpen, setBottegaOpen] = useState(false);
   const [inventarioOpen, setInventarioOpen] = useState(false);
@@ -136,6 +142,7 @@ export function CemeteryPage() {
     const cell = freeCellNearCenter(PLACEABLES[type].footprint);
     try {
       const created = await placeDecoration(type, cell.x, cell.y);
+      setEditMode(true);
       setSelection({ id: created.id, kind: 'placeable' });
       setPlacing(true);
       showToast('Trascina per posizionare, poi conferma.');
@@ -144,30 +151,53 @@ export function CemeteryPage() {
     }
   };
 
-  // Azioni del popup contestuale in base alla selezione.
+  // Azioni del popup contestuale: dipendono dalla modalità Modifica.
+  // Fuori da Edit → interazione semplice. In Edit → strumenti di editing.
   const popupActions: PopupAction[] = (() => {
     if (!selection) return [];
     if (selection.kind === 'grave') {
       const g = graves.find((x) => x.id === selection.id);
       if (!g) return [];
+      if (editMode) {
+        const acts: PopupAction[] = [
+          { key: 'examine', icon: '🔍', label: 'Esamina' },
+          { key: 'delete', icon: '🗑', label: 'Elimina', danger: true },
+        ];
+        if (placing) acts.push({ key: 'confirm', icon: '✓', label: 'Conferma', primary: true });
+        return acts;
+      }
       const acts: PopupAction[] = [
         { key: 'examine', icon: '🔍', label: 'Esamina' },
         { key: 'flowers', icon: '💐', label: 'Porta fiori' },
       ];
       if (g.hasWeeds || g.isDirty) acts.push({ key: 'clean', icon: '🧹', label: 'Pulisci' });
-      acts.push({ key: 'delete', icon: '🗑', label: 'Elimina', danger: true });
-      if (placing) acts.push({ key: 'confirm', icon: '✓', label: 'Conferma', primary: true });
       return acts;
     }
     const p = decorations.find((x) => x.id === selection.id);
     if (!p) return [];
-    const acts: PopupAction[] = [{ key: 'examine', icon: '🔍', label: 'Dettagli' }];
-    if (isRotatable(p.type)) acts.push({ key: 'rotate', icon: '⟳', label: 'Ruota' });
-    acts.push({ key: 'change', icon: '🔁', label: 'Cambia' });
-    acts.push({ key: 'delete', icon: '🗑', label: 'Elimina', danger: true });
-    if (placing) acts.push({ key: 'confirm', icon: '✓', label: 'Conferma', primary: true });
-    return acts;
+    if (editMode) {
+      const acts: PopupAction[] = [{ key: 'examine', icon: '🔍', label: 'Dettagli' }];
+      if (isRotatable(p.type)) acts.push({ key: 'rotate', icon: '⟳', label: 'Ruota' });
+      acts.push({ key: 'change', icon: '🔁', label: 'Cambia' });
+      acts.push({ key: 'delete', icon: '🗑', label: 'Elimina', danger: true });
+      if (placing) acts.push({ key: 'confirm', icon: '✓', label: 'Conferma', primary: true });
+      return acts;
+    }
+    return [{ key: 'examine', icon: '🔍', label: 'Dettagli' }];
   })();
+
+  // Entra in modalità Modifica (con popup introduttivo la prima volta).
+  const enterEdit = () => {
+    if (!editIntroSeen) {
+      setEditIntro(true);
+      return;
+    }
+    setEditMode(true);
+  };
+  const exitEdit = () => {
+    setEditMode(false);
+    clearSelection();
+  };
 
   const clearSelection = () => {
     setSelection(null);
@@ -264,7 +294,12 @@ export function CemeteryPage() {
     { key: 'bury', icon: '⚰️', label: 'Seppellisci', onClick: () => setBurialOpen(true) },
     { key: 'shop', icon: '🛒', label: 'Bottega', onClick: () => setBottegaOpen(true) },
     { key: 'inv', icon: '🎒', label: 'Inventario', onClick: () => setInventarioOpen(true) },
-    { key: 'edit', icon: '✏️', label: 'Modifica', onClick: () => showToast('Modalità Modifica in arrivo.') },
+    {
+      key: 'edit',
+      icon: editMode ? '✅' : '✏️',
+      label: editMode ? 'Fine modifica' : 'Modifica',
+      onClick: () => (editMode ? exitEdit() : enterEdit()),
+    },
     { key: 'photo', icon: '📷', label: 'Foto', onClick: () => showToast('Fotocamera in arrivo.') },
     { key: 'gallery', icon: '🖼️', label: 'Galleria', onClick: () => showToast('Galleria in arrivo.') },
   ];
@@ -272,6 +307,15 @@ export function CemeteryPage() {
   return (
     <div className="app-shell">
       <TopBar />
+
+      {editMode && (
+        <div className="edit-banner">
+          <span>✏️ Modifica: trascina per spostare, tocca per il menù</span>
+          <button className="btn btn--ghost" onClick={exitEdit}>
+            Fine
+          </button>
+        </div>
+      )}
 
       <CemeteryScene
         graves={graves}
@@ -281,6 +325,7 @@ export function CemeteryPage() {
         roamingTickMs={roaming.tickMs}
         weather={world?.currentWeather ?? 'gloomy_clear'}
         dayPhase={world?.currentDayPhase ?? 'day'}
+        editMode={editMode}
         selection={selection}
         popupActions={popupActions}
         onPopupAction={onPopupAction}
@@ -343,6 +388,7 @@ export function CemeteryPage() {
           }}
           onMoveHint={() => {
             setDetailId(null);
+            setEditMode(true);
             showToast('Trascina la lapide per spostarla.');
           }}
         />
@@ -354,6 +400,7 @@ export function CemeteryPage() {
           onClose={() => setDecorationSelId(null)}
           onMove={() => {
             setDecorationSelId(null);
+            setEditMode(true);
             showToast('Trascina lʼelemento per spostarlo.');
           }}
           onChange={(id) => {
@@ -386,6 +433,7 @@ export function CemeteryPage() {
           onDone={() => {
             const g = funeralGrave;
             setFuneralGrave(null);
+            setEditMode(true);
             setSelection({ id: g.id, kind: 'grave' });
             setPlacing(true);
             // Il becchino fa la sua comparsa dopo una sepoltura.
@@ -393,6 +441,41 @@ export function CemeteryPage() {
             showToast('Trascina per posizionare la lapide, poi conferma.');
           }}
         />
+      )}
+
+      {editIntro && (
+        <Sheet title="Modalità Modifica" onClose={() => setEditIntro(false)}>
+          <p className="muted" style={{ fontSize: 14, lineHeight: 1.6 }}>
+            In <strong>Modifica</strong> puoi <strong>trascinare</strong> gli elementi per
+            spostarli e, toccandoli, aprire il menù per <strong>ruotare</strong>,{' '}
+            <strong>cambiare</strong> o <strong>eliminare</strong> (gli elementi eliminati tornano
+            in Inventario). Fuori da Modifica il tocco è solo interazione.
+          </p>
+          <label className="switch-row" style={{ borderBottom: 0 }}>
+            <span>Non mostrare più</span>
+            <input
+              type="checkbox"
+              checked={editIntroDontShow}
+              onChange={(e) => setEditIntroDontShow(e.target.checked)}
+              style={{ width: 22, height: 22 }}
+            />
+          </label>
+          <div className="wizard-nav">
+            <button className="btn" onClick={() => setEditIntro(false)}>
+              Annulla
+            </button>
+            <button
+              className="btn btn--primary"
+              onClick={async () => {
+                if (editIntroDontShow) await markEditIntroSeen();
+                setEditIntro(false);
+                setEditMode(true);
+              }}
+            >
+              Inizia
+            </button>
+          </div>
+        </Sheet>
       )}
 
       {toast && <div className="toast">{toast}</div>}

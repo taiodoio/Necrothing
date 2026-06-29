@@ -30,6 +30,7 @@ export function PlaceablePicker({
   const place = useGameStore((s) => s.placeDecoration);
   const xp = useGameStore((s) => s.progression.xp);
   const wisps = useGameStore((s) => s.progression.wisps);
+  const inventory = useGameStore((s) => s.inventory);
   const rankLevel = rankForXp(xp).level;
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -58,7 +59,9 @@ export function PlaceablePicker({
   };
 
   const renderGroup = (title: string, allTypes: readonly PlaceableType[]) => {
-    const types = allTypes.filter(footprintMatches);
+    let types = allTypes.filter(footprintMatches);
+    // In modalità "cambia" puoi usare solo elementi che possiedi.
+    if (replaceMode) types = types.filter((t) => (inventory[t] ?? 0) > 0);
     if (types.length === 0) return null;
     return (
       <>
@@ -103,7 +106,7 @@ export function PlaceablePicker({
     <Sheet title={replaceMode ? 'Cambia elemento' : 'Decora / Costruisci'} onClose={onClose}>
       <p className="muted" style={{ fontSize: 13 }}>
         {replaceMode ? (
-          'Scegli un elemento dello stesso ingombro con cui sostituire.'
+          'Scegli un elemento posseduto dello stesso ingombro con cui sostituire.'
         ) : (
           <>
             Hai <span style={{ color: '#9af5dd' }}>✦ {wisps}</span> fuochi fatui. I tipi si

@@ -8,6 +8,7 @@ import type {
   Decoration,
   Grave,
   GraveMemoryEvent,
+  InventoryItem,
   Settings,
   UserProgression,
   WorldState,
@@ -16,7 +17,7 @@ import type {
 import type { ClockService } from '@/shared/utils/clock';
 
 export const BACKUP_FORMAT = 'necrothing-backup';
-export const BACKUP_VERSION = 2;
+export const BACKUP_VERSION = 3;
 
 interface BackupImage {
   id: string;
@@ -37,6 +38,7 @@ export interface BackupFile {
     achievements: Achievement[];
     decorations: Decoration[];
     zones: Zone[];
+    inventory: InventoryItem[];
     images: BackupImage[];
   };
 }
@@ -69,6 +71,7 @@ export const backupService = {
       achievements,
       decorations,
       zones,
+      inventory,
       rawImages,
     ] = await Promise.all([
       db.getAll('graves'),
@@ -79,6 +82,7 @@ export const backupService = {
       db.getAll('achievements'),
       db.getAll('decorations'),
       db.getAll('zones'),
+      db.getAll('inventory'),
       db.getAll('images'),
     ]);
 
@@ -101,6 +105,7 @@ export const backupService = {
         achievements,
         decorations,
         zones,
+        inventory,
         images,
       },
     };
@@ -134,6 +139,7 @@ export const backupService = {
         'achievements',
         'decorations',
         'zones',
+        'inventory',
         'images',
       ],
       'readwrite',
@@ -148,6 +154,7 @@ export const backupService = {
       tx.objectStore('achievements').clear(),
       tx.objectStore('decorations').clear(),
       tx.objectStore('zones').clear(),
+      tx.objectStore('inventory').clear(),
       tx.objectStore('images').clear(),
     ]);
 
@@ -159,6 +166,7 @@ export const backupService = {
     for (const a of d.achievements ?? []) tx.objectStore('achievements').put(a);
     for (const deco of d.decorations ?? []) tx.objectStore('decorations').put(deco);
     for (const z of d.zones ?? []) tx.objectStore('zones').put(z);
+    for (const inv of d.inventory ?? []) tx.objectStore('inventory').put(inv);
     for (const img of d.images ?? []) {
       const bytes = base64ToBytes(img.b64);
       const blob = new Blob([bytes.buffer as ArrayBuffer], { type: img.mime });

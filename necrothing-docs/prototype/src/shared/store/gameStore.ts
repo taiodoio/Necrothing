@@ -25,6 +25,7 @@ import {
   XP_VALUES,
 } from '@/shared/services/progressionService';
 import { decorationService } from '@/shared/services/decorationService';
+import { inventoryService, sellPrice, type InventoryMap } from '@/shared/services/inventoryService';
 import { imageStorageService } from '@/shared/services/imageStorageService';
 import { graveRepository } from '@/shared/repositories/graveRepository';
 import { decorationsRepository } from '@/shared/repositories/decorationsRepository';
@@ -53,6 +54,7 @@ interface GameState {
   ready: boolean;
   graves: Grave[];
   decorations: Decoration[];
+  inventory: InventoryMap;
   zones: Zone[];
   world: WorldState | null;
   progression: UserProgression;
@@ -80,6 +82,8 @@ interface GameState {
   shooRat: () => Promise<void>;
   consumeSpawns: () => void;
   shareGrave: (graveId: string) => Promise<{ xpAwarded: number }>;
+  buyItem: (type: PlaceableType) => Promise<void>;
+  sellItem: (type: PlaceableType) => Promise<void>;
   placeDecoration: (type: PlaceableType, gridX: number, gridY: number) => Promise<Decoration>;
   removeDecoration: (id: string) => Promise<void>;
   movePlaceable: (id: string, gridX: number, gridY: number) => Promise<void>;
@@ -110,6 +114,7 @@ export const useGameStore = create<GameState>((set, get) => ({
   ready: false,
   graves: [],
   decorations: [],
+  inventory: {},
   zones: [],
   world: null,
   progression: {
@@ -165,8 +170,9 @@ export const useGameStore = create<GameState>((set, get) => ({
     const graves = await graveService.listGraves();
     const achievements = await achievementsRepository.getAll();
     const decorations = await decorationsRepository.getAll();
+    const inventory = await inventoryService.getMap();
     const zones = detectDistricts(graves);
-    set({ world, progression, notificationPrefs, graves, decorations, zones, achievements, ready: true });
+    set({ world, progression, notificationPrefs, graves, decorations, inventory, zones, achievements, ready: true });
 
     await get().simulate();
     await get().refreshAchievements();
@@ -403,31 +409,61 @@ export const useGameStore = create<GameState>((set, get) => ({
     return { xpAwarded: XP_VALUES.share };
   },
 
-  async placeDecoration(type, gridX, gridY) {
+  async buyItem(type) {
     const def = PLACEABLES[type];
     const prog = get().progression;
+    if (rankForXp(prog.xp).level < def.minRank) {
+      throw new Error(`Sblocca al rango ${def.minRank}.`);
+    }
     if (prog.wisps < def.cost) {
       throw new Error(`Servono ${def.cost} fuochi fatui (ne hai ${prog.wisps}).`);
     }
-    const rankLevel = rankForXp(prog.xp).level;
-    const created = await decorationService.place(type, gridX, gridY, rankLevel, clock);
+    const owned = await inventoryService.add(type, +1);
     const progression = {
       ...prog,
       wisps: prog.wisps - def.cost,
       wispsSpent: (prog.wispsSpent ?? 0) + def.cost,
-      decorationsPlaced: (prog.decorationsPlaced ?? 0) + 1,
     };
     await persistProgression(progression);
+    set({ progression, inventory: { ...get().inventory, [type]: owned } });
+    await get().refreshAchievements();
+  },
+
+  async sellItem(type) {
+    const prog = get().progression;
+    if ((get().inventory[type] ?? 0) <= 0) return;
+    const owned = await inventoryService.add(type, -1);
+    const progression = { ...prog, wisps: prog.wisps + sellPrice(type) };
+    await persistProgression(progression);
+    set({ progression, inventory: { ...get().inventory, [type]: owned } });
+  },
+
+  async placeDecoration(type, gridX, gridY) {
+    const prog = get().progression;
+    if ((get().inventory[type] ?? 0) <= 0) {
+      throw new Error('Non possiedi questo oggetto: compralo in Bottega.');
+    }
+    const rankLevel = rankForXp(prog.xp).level;
+    const created = await decorationService.place(type, gridX, gridY, rankLevel, clock);
+    const owned = await inventoryService.add(type, -1);
+    const progression = { ...prog, decorationsPlaced: (prog.decorationsPlaced ?? 0) + 1 };
+    await persistProgression(progression);
     const decorations = await decorationService.list();
-    set({ decorations, progression });
+    set({ decorations, progression, inventory: { ...get().inventory, [type]: owned } });
     await get().refreshAchievements();
     return created;
   },
 
   async removeDecoration(id) {
+    const placeable = get().decorations.find((d) => d.id === id);
     await decorationService.remove(id);
     const decorations = await decorationService.list();
-    set({ decorations });
+    if (placeable) {
+      const owned = await inventoryService.add(placeable.type, +1);
+      set({ decorations, inventory: { ...get().inventory, [placeable.type]: owned } });
+    } else {
+      set({ decorations });
+    }
   },
 
   async movePlaceable(id, gridX, gridY) {
@@ -441,8 +477,25 @@ export const useGameStore = create<GameState>((set, get) => ({
   },
 
   async changePlaceable(id, newType) {
+    const current = get().decorations.find((d) => d.id === id);
+    const oldType = current?.type;
+    if (oldType && oldType !== newType) {
+      if ((get().inventory[newType] ?? 0) <= 0) {
+        throw new Error('Non possiedi questo oggetto: compralo in Bottega.');
+      }
+    }
     await decorationService.changeType(id, newType);
-    set({ decorations: await decorationService.list() });
+    const decorations = await decorationService.list();
+    if (oldType && oldType !== newType) {
+      const newOwned = await inventoryService.add(newType, -1);
+      const oldOwned = await inventoryService.add(oldType, +1);
+      set({
+        decorations,
+        inventory: { ...get().inventory, [newType]: newOwned, [oldType]: oldOwned },
+      });
+    } else {
+      set({ decorations });
+    }
   },
 
   async collectWisp(id) {

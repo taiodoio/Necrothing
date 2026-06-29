@@ -7,6 +7,7 @@ import type {
   Decoration,
   Grave,
   GraveMemoryEvent,
+  InventoryItem,
   Settings,
   StoredImage,
   UserProgression,
@@ -15,7 +16,7 @@ import type {
 } from '@/shared/domain/types';
 
 export const DB_NAME = 'necrothing';
-export const DB_VERSION = 4;
+export const DB_VERSION = 5;
 
 export interface NecrothingDB extends DBSchema {
   graves: {
@@ -57,6 +58,10 @@ export interface NecrothingDB extends DBSchema {
     key: string;
     value: Zone;
   };
+  inventory: {
+    key: string;
+    value: InventoryItem;
+  };
 }
 
 let dbPromise: Promise<IDBPDatabase<NecrothingDB>> | null = null;
@@ -87,6 +92,9 @@ export function getDb(): Promise<IDBPDatabase<NecrothingDB>> {
         }
         if (oldVersion < 4) {
           db.createObjectStore('zones', { keyPath: 'id' });
+        }
+        if (oldVersion < 5) {
+          db.createObjectStore('inventory', { keyPath: 'type' });
         }
       },
     });

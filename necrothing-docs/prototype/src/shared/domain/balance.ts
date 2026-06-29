@@ -61,6 +61,12 @@ export const ROAMING_DEFS: Record<RoamingKind, RoamingDef> = {
 /** Bonus prestigio del mausoleo centrale. */
 export const MAUSOLEUM_PRESTIGE = 25;
 
+/** Economia "buy-to-own": acquisto in Bottega, possesso in Inventario. */
+export const ECONOMY = {
+  /** Rimborso sulla vendita di un oggetto posseduto (frazione del costo). */
+  sellRefund: 0.7,
+} as const;
+
 /**
  * Distretti tematici auto-rilevati: un distretto si forma quando un gruppo di
  * tombe coerenti col tema, vicine tra loro, raggiunge la soglia.

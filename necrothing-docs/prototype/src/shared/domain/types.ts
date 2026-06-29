@@ -107,6 +107,12 @@ export interface StoredImage {
   blob: Blob;
 }
 
+/** Quantità posseduta di un tipo piazzabile (modello buy-to-own). */
+export interface InventoryItem {
+  type: PlaceableType;
+  owned: number;
+}
+
 export interface Decoration {
   id: string;
   type: PlaceableType;

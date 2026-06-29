@@ -23,7 +23,6 @@ import type { PlaceableType } from '@/shared/domain/enums';
 import {
   GRAVE_FOOTPRINT,
   MAP_COLS,
-  MAP_ROWS,
   type Grave,
 } from '@/shared/domain/types';
 import {
@@ -34,6 +33,7 @@ import {
   type Footprint,
 } from '@/shared/domain/placeables';
 import { WEATHER } from '@/shared/domain/enums';
+import { usableRows as usableRowsFor } from '@/shared/services/expansionService';
 import type { PopupAction } from './ObjectPopup';
 
 const isDev = import.meta.env.DEV;
@@ -42,6 +42,7 @@ export function CemeteryPage() {
   const graves = useGameStore((s) => s.graves);
   const decorations = useGameStore((s) => s.decorations);
   const world = useGameStore((s) => s.world);
+  const prestige = useGameStore((s) => s.prestige());
   const pendingSpawns = useGameStore((s) => s.pendingSpawns);
   const collectWisp = useGameStore((s) => s.collectWisp);
   const moveGrave = useGameStore((s) => s.moveGrave);
@@ -123,22 +124,24 @@ export function CemeteryPage() {
     consumeSpawns();
   }, [pendingSpawns, graves, roaming, consumeSpawns]);
 
+  const maxRows = usableRowsFor(prestige);
+
   /** Trova una cella libera vicino al centro vista per un dato ingombro. */
   const freeCellNearCenter = (footprint: Footprint): { x: number; y: number } => {
     const occ = buildOccupancy(graves, decorations);
     const c = viewCenter.current;
     const cx = Math.min(Math.max(0, c.x), MAP_COLS - footprint[0]);
-    const cy = Math.min(Math.max(0, c.y), MAP_ROWS - footprint[1]);
-    if (canPlace(cx, cy, footprint, occ, MAP_COLS, MAP_ROWS)) return { x: cx, y: cy };
+    const cy = Math.min(Math.max(0, c.y), maxRows - footprint[1]);
+    if (canPlace(cx, cy, footprint, occ, MAP_COLS, maxRows)) return { x: cx, y: cy };
     // ricerca a spirale crescente attorno al centro
-    for (let r = 1; r < Math.max(MAP_COLS, MAP_ROWS); r++) {
+    for (let r = 1; r < Math.max(MAP_COLS, maxRows); r++) {
       for (let dy = -r; dy <= r; dy++) {
         for (let dx = -r; dx <= r; dx++) {
           if (Math.max(Math.abs(dx), Math.abs(dy)) !== r) continue;
           const x = cx + dx;
           const y = cy + dy;
-          if (x < 0 || y < 0 || x > MAP_COLS - footprint[0] || y > MAP_ROWS - footprint[1]) continue;
-          if (canPlace(x, y, footprint, occ, MAP_COLS, MAP_ROWS)) return { x, y };
+          if (x < 0 || y < 0 || x > MAP_COLS - footprint[0] || y > maxRows - footprint[1]) continue;
+          if (canPlace(x, y, footprint, occ, MAP_COLS, maxRows)) return { x, y };
         }
       }
     }
@@ -368,6 +371,7 @@ export function CemeteryPage() {
         weather={world?.currentWeather ?? 'gloomy_clear'}
         dayPhase={world?.currentDayPhase ?? 'day'}
         editMode={editMode}
+        usableRows={maxRows}
         selection={selection}
         popupActions={popupActions}
         onPopupAction={onPopupAction}

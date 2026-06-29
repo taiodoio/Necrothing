@@ -77,24 +77,37 @@ ricostruire la mappa mentale del progetto.
 | Entità | Stato | Comportamento | Ricompensa al tap |
 |---|---|---|---|
 | Fantasma 👻 | ✅ | wander | +40 XP, +2 ✦ |
+| Fantasma-oggetto 👻✨ | ✅ | wander (raro, legato a tomba) | +70 XP, +5 ✦ |
 | Gatto nero 🐈‍⬛ | ✅ | wander | +2 ✦ |
-| Corvo 🐦‍⬛ | ✅ | perch (si posa) | atmosfera |
-| Becchino ⛏️ | ✅ | path (post-sepoltura) | atmosfera |
+| Corvo 🐦‍⬛ | ✅ | perch (si posa) | +1 ✦ |
+| Becchino ⛏️ | ✅ | path | pulisce gratis le tombe vicine (raggio `GRAVEDIGGER.cleanRadius`) + XP/✦ |
 | Prete ✝️ | ✅ | path | +20 XP, +3 ✦ (benedizione) |
 | Topo 🐀 | ✅ | skitter | +1 ✦ |
+| Zombie 🧟 | ✅ | wander (lento) | +25 XP, +4 ✦ — spawn da bare aperte |
 
 Codice: `features/cemetery/useRoamingEntities.ts`, sprite `shared/assets/*Sprite.tsx`,
-spawn da `simulationService.ts` → `pendingSpawns` → `CemeteryPage`. Tuning:
-`ROAMING_DEFS` e `SPAWN_CHANCE` in `balance.ts`.
+calcolo spawn puro in `services/spawnService.ts` (con modificatori da edifici) →
+`simulationService.ts` → `pendingSpawns` → `CemeteryPage`. Tuning: `ROAMING_DEFS`,
+`SPAWN_CHANCE`, `SPAWN_MODIFIERS`, `GRAVEDIGGER` in `balance.ts`.
+
+> **Modificatori di spawn (Fase G)**: gli edifici piazzati cambiano le
+> probabilità — **mausoleo** +10% eventi soprannaturali, **casa del becchino**
+> ↑becchino, **santuario** ↑prete, **bare aperte** attirano gli zombie.
 
 ## 5. Economia & decorazioni
 
 | Feature | Stato | Codice | Tuning |
 |---|---|---|---|
 | Fuochi fatui (moneta): spawn/raccolta | ✅ | `simulationService.ts`, `gameStore.collectWisp` | `SIM.wispCap/wispSpawnMax` |
+| Economia buy-to-own (Bottega → Inventario → posa) | ✅ | `inventoryService.ts`, `BottegaSheet.tsx`, `InventarioSheet.tsx` | `ECONOMY.sellRefund` (rivendita 70%) |
+| Catalogo esteso (luci/deco/costruzioni/ambiente/presenze) | ✅ | `enums.ts` (`EXTRA_PLACEABLE_*`), `placeables.ts` | `EXTRA_DEFAULTS`, gate stagionale (albero di Natale) |
 | Decorazioni (candela, corona, funghi…) | ✅ | `placeables.ts`, `DecorationSprite` | costi/rank in `placeables.ts` |
 | Strutture (sentieri, recinzioni, lampione) | ✅ | `placeables.ts`, `StructureSprite` | idem |
+| Stati oggetti + riparazione (pulito→sporco→rotto) | ✅ | `simulationService.ts`, `graveService.repair`, `gameStore` | `DECAY` (`graveBreakDays`, `repairCost`) |
+| Luci accese/spente | ✅ | `decorationService.toggleLight`, `CemeteryScene` | `Decoration.lit` |
+| Modalità Modifica esplicita (drag solo in edit) | ✅ | `CemeteryPage.tsx`, `CemeteryScene.tsx` | elimina → torna in Inventario |
 | Ruota / cambia / sposta / elimina placeable | ✅ | `decorationService.ts`, `DecorationSheet.tsx` | `ROTATABLE` |
+| Cartello con testo personalizzato | ✅ | `decorationService.setText`, `DecorationSheet.tsx` | `Decoration.text` |
 
 ## 6. Spazio: zone & landmark
 
@@ -119,6 +132,10 @@ spawn da `simulationService.ts` → `pendingSpawns` → `CemeteryPage`. Tuning:
 | Achievement (24, a tier + progresso) | ✅ | `achievementService.ts`, `AchievementsPage.tsx` | include mausoleo + 4 distretti |
 | Contatori cumulativi | ✅ | `gameStore.ts` | `flowersBrought`, `cleanups`, ecc. |
 | Condivisione certificato | ✅ | `services/shareService.ts` | XP `share` 1/giorno |
+| Espansione del cimitero (terreno per prestigio) | ✅ | `expansionService.ts`, `CemeteryScene` (frontiera) | `EXPANSION.tiers` in `balance.ts` |
+| Target di longevità (commenti di taratura) | ✅ | `balance.ts` (`BALANCE_TARGETS`) | tabella tempi di completamento |
+| Foto del cimitero (cattura + ritaglio + pixel-art B/N) | ✅ | `features/photo/PhotoCapture.tsx`, `utils/image.ts` | — |
+| Galleria foto (griglia, condividi, elimina) | ✅ | `features/gallery/GalleryPage.tsx`, `galleryService.ts` | store `photos` (DB v6), backup v4 |
 
 ## 8. Da fare / aperto (Fase 12+)
 

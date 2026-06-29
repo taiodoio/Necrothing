@@ -41,6 +41,8 @@ interface Props {
   weather: Weather;
   dayPhase: DayPhase;
   editMode: boolean;
+  /** Righe della mappa utilizzabili (espansione da prestigio, Fase H). */
+  usableRows: number;
   selection: Selection | null;
   popupActions: PopupAction[];
   onPopupAction: (key: string) => void;
@@ -81,6 +83,7 @@ export function CemeteryScene({
   weather,
   dayPhase,
   editMode,
+  usableRows,
   selection,
   popupActions,
   onPopupAction,
@@ -178,9 +181,10 @@ export function CemeteryScene({
     if (!rect) return;
     const lx = e.clientX - rect.left;
     const ly = e.clientY - rect.top;
+    const rowBound = Math.min(usableRows, MAP_ROWS);
     const gx = clamp(Math.round(lx / TILE_SIZE - s.w / 2), 0, MAP_COLS - s.w);
-    const gy = clamp(Math.round(ly / TILE_SIZE - s.h / 2), 0, MAP_ROWS - s.h);
-    const valid = canPlace(gx, gy, [s.w, s.h], occExcluding(s.kind, s.id), MAP_COLS, MAP_ROWS);
+    const gy = clamp(Math.round(ly / TILE_SIZE - s.h / 2), 0, rowBound - s.h);
+    const valid = canPlace(gx, gy, [s.w, s.h], occExcluding(s.kind, s.id), MAP_COLS, rowBound);
     s.gx = gx;
     s.gy = gy;
     s.valid = valid;
@@ -273,6 +277,21 @@ export function CemeteryScene({
             if (e.currentTarget === e.target) onSelectEmpty();
           }}
         >
+          {/* Frontiera bloccata: terra non ancora sbloccata (espansione). */}
+          {usableRows < MAP_ROWS && (
+            <div
+              className="map-locked"
+              aria-hidden
+              style={{
+                top: usableRows * TILE_SIZE,
+                height: (MAP_ROWS - usableRows) * TILE_SIZE,
+                width: MAP_COLS * TILE_SIZE,
+              }}
+            >
+              <span className="map-locked-label">🔒 Terreno consacrato dal prestigio</span>
+            </div>
+          )}
+
           {/* Tombe (2×2) */}
           {graves.map((g) => {
             const isDragging = drag?.kind === 'grave' && drag.id === g.id;

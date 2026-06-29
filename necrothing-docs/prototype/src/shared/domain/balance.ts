@@ -109,6 +109,47 @@ export const DECAY = {
 } as const;
 
 /**
+ * Bilanciamento & longevità (Fase H). Target di riferimento per la taratura,
+ * da validare in playtest (vedi docs/game-design/08-implementation-plan.md):
+ *
+ *  Profilo               | Achievement | Cimitero pieno | Completo (anniv.)
+ *  ----------------------|-------------|----------------|------------------
+ *  Casual (5–10 min/g)   | 2–3 mesi    | 4–6 mesi       | 2+ anni
+ *  Engaged (20–30 min/g) | 4–6 sett.   | 2–3 mesi       | 1–2 anni
+ *  Hardcore              | 3–4 sett.   | ~1 mese        | ~1 anno
+ *
+ * Vincolo dominante: il TEMPO REALE (erbacce, decadimento, anniversari a 1
+ * anno). Gli anniversari sono l'end-game naturale; l'espansione del terreno
+ * (vedi EXPANSION) e i ranghi danno obiettivi intermedi.
+ *
+ * Curva fuochi fatui (entrate tipiche): raccolta sulla mappa ~1–3/giorno
+ * (wispCap 8), azioni di cura 1–3 ciascuna, eventi NPC 1–5. Uscite: oggetti in
+ * Bottega (EXTRA_DEFAULTS.cost) e riparazioni (DECAY.repairCost). Obiettivo:
+ * un giocatore attento accumula a sufficienza per 1–2 acquisti/settimana senza
+ * grinding, restando in lieve scarsità per dare peso alle scelte.
+ */
+export const BALANCE_TARGETS = {
+  /** Acquisti "comodi" a settimana per un giocatore engaged (riferimento). */
+  comfortableBuysPerWeek: 2,
+} as const;
+
+/**
+ * Hook di espansione: il terreno coltivabile del cimitero cresce con il
+ * prestigio, così da evitare il "tutto completato". Ogni tier sblocca più
+ * righe utilizzabili della mappa (MAP_ROWS è il massimo). Le soglie sono
+ * volutamente crescenti per scandire l'end-game.
+ */
+export const EXPANSION = {
+  tiers: [
+    { minPrestige: 0, rows: 12, label: 'Recinto iniziale' },
+    { minPrestige: 30, rows: 18, label: 'Ala orientale' },
+    { minPrestige: 80, rows: 24, label: 'Ala occidentale' },
+    { minPrestige: 160, rows: 28, label: 'Campo dei dimenticati' },
+    { minPrestige: 280, rows: 32, label: 'Cimitero intero' },
+  ],
+} as const;
+
+/**
  * Distretti tematici auto-rilevati: un distretto si forma quando un gruppo di
  * tombe coerenti col tema, vicine tra loro, raggiunge la soglia.
  */

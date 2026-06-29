@@ -16,6 +16,21 @@ esistente del prototipo (`prototype/src/`) per essere subito implementabile.
 
 - ✅ Fatto · 🟡 Parziale · ⬜ Da fare
 
+### Aggiornamento — piano A–H implementato (vedi `08-implementation-plan.md`)
+
+Il piano per fasi A–H è stato implementato per intero nel prototipo:
+
+- **A** Economia buy-to-own (Bottega + Inventario, rivendita 70%).
+- **B** Shell UI: bolla d'azione (FAB) + TopBar con nome custode e ora.
+- **C** Modalità Modifica esplicita (drag solo in edit; elimina → Inventario).
+- **D** Catalogo esteso (luci, decorazioni, costruzioni, ambiente, presenze).
+- **E** Stati oggetti + riparazione (pulito → sporco → rotto; luci on/off).
+- **F** Foto + Galleria (cattura, ritaglio, pixel-art B/N, condivisione).
+- **G** NPC interattivi (becchino pulisce ad area, fantasma-oggetto, zombie,
+  ricompense corvo, modificatori di spawn dagli edifici).
+- **H** Bilanciamento & longevità (target di taratura in `balance.ts`,
+  **espansione del cimitero per prestigio** come obiettivo intermedio).
+
 ### Baseline già implementata (riferimento)
 
 | Area | Stato | Note |

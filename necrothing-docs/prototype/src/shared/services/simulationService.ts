@@ -5,7 +5,7 @@
 import { WEATHER, type MemoryEventType, type Weather } from '@/shared/domain/enums';
 import type { Grave, GraveMemoryEvent, LooseWisp, WorldState } from '@/shared/domain/types';
 import type { RoamingSpawn } from '@/shared/domain/roaming';
-import { SIM, DECAY } from '@/shared/domain/balance';
+import { SIM, DECAY, SPAWN_CHANCE } from '@/shared/domain/balance';
 import { computeSpawns } from './spawnService';
 import { MAP_COLS, MAP_ROWS } from '@/shared/domain/types';
 import { buildOccupancy } from '@/shared/domain/placeables';
@@ -167,11 +167,11 @@ export const simulationService = {
       }
     }
 
-    // Evento fantasma raro, più probabile di notte.
+    // Fantasma generico: probabilità dalla matrice SPAWN_CHANCE, più alta di notte.
     let ghostGraveId: string | null = null;
     let ghostGraveName: string | null = null;
     if (graves.length > 0) {
-      const ghostChance = isNight ? SIM.ghostChanceNight : SIM.ghostChanceDay;
+      const ghostChance = isNight ? SPAWN_CHANCE.ghostGenericNight : SPAWN_CHANCE.ghostGenericDay;
       if (rng.chance(ghostChance)) {
         const ghost = rng.pick(graves);
         ghostGraveId = ghost.id;
@@ -214,12 +214,18 @@ export const simulationService = {
       spawned++;
     }
 
+    // Il meteo cambia al massimo una volta al giorno (giornaliero).
+    const todayDate = now.toISOString().slice(0, 10);
+    const weatherChanged = (world.lastWeatherDate ?? '') !== todayDate;
+    const nextWeather = weatherChanged ? pickWeather(rng, isNight) : world.currentWeather;
+
     const nextWorld: WorldState = {
       ...world,
       lastSimulationAt: clock.nowIso(),
       currentDayPhase: phase,
       currentSeason: seasonForMonth(now.getMonth()),
-      currentWeather: pickWeather(rng, isNight),
+      currentWeather: nextWeather,
+      lastWeatherDate: weatherChanged ? todayDate : world.lastWeatherDate,
       looseWisps,
     };
     await worldRepository.save(nextWorld);

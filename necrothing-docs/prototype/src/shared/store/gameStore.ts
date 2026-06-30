@@ -64,6 +64,7 @@ interface GameState {
   notificationPrefs: NotificationPreferences;
   playerName: string;
   editIntroSeen: boolean;
+  shopTutorialDone: boolean;
   achievements: Achievement[];
   lastUnlockedAchievement: string | null;
   lastSimMessage: string | null;
@@ -111,6 +112,8 @@ interface GameState {
   requestNotificationPermission: () => Promise<void>;
   setPlayerName: (name: string) => Promise<void>;
   markEditIntroSeen: () => Promise<void>;
+  moveShop: (gridX: number, gridY: number) => Promise<void>;
+  markShopTutorialDone: () => Promise<void>;
 
   // strumenti di sviluppo (solo dev)
   devSpawnWisp: () => Promise<void>;
@@ -145,6 +148,7 @@ export const useGameStore = create<GameState>((set, get) => ({
   notificationPrefs: DEFAULT_NOTIFICATION_PREFERENCES,
   playerName: DEFAULT_PLAYER_NAME,
   editIntroSeen: false,
+  shopTutorialDone: false,
   achievements: [],
   lastUnlockedAchievement: null,
   lastSimMessage: null,
@@ -184,13 +188,21 @@ export const useGameStore = create<GameState>((set, get) => ({
     const notificationPrefs = settings?.notifications ?? DEFAULT_NOTIFICATION_PREFERENCES;
     const playerName = settings?.playerName ?? DEFAULT_PLAYER_NAME;
     const editIntroSeen = settings?.editIntroSeen ?? false;
+    const shopTutorialDone = settings?.shopTutorialDone ?? false;
     if (!settings) {
       await settingsRepository.save({
         id: 'singleton',
         notifications: notificationPrefs,
         playerName,
         editIntroSeen,
+        shopTutorialDone,
       });
+    }
+
+    // Prima apertura: posiziona la Bottega al centro in alto della mappa.
+    if (!world.shopGridX && !world.shopGridY) {
+      world = { ...world, shopGridX: Math.floor(MAP_COLS / 2) - 1, shopGridY: 2 };
+      await worldRepository.save(world);
     }
 
     const graves = await graveService.listGraves();
@@ -199,7 +211,7 @@ export const useGameStore = create<GameState>((set, get) => ({
     const inventory = await inventoryService.getMap();
     const photos = await galleryService.listMeta();
     const zones = detectDistricts(graves);
-    set({ world, progression, notificationPrefs, playerName, editIntroSeen, graves, decorations, inventory, photos, zones, achievements, ready: true });
+    set({ world, progression, notificationPrefs, playerName, editIntroSeen, shopTutorialDone, graves, decorations, inventory, photos, zones, achievements, ready: true });
 
     await get().simulate();
     await get().refreshAchievements();
@@ -662,8 +674,29 @@ export const useGameStore = create<GameState>((set, get) => ({
       notifications: get().notificationPrefs,
       playerName: get().playerName,
       editIntroSeen: true,
+      shopTutorialDone: get().shopTutorialDone,
     });
     set({ editIntroSeen: true });
+  },
+
+  async moveShop(gridX, gridY) {
+    const world = get().world;
+    if (!world) return;
+    const next = { ...world, shopGridX: gridX, shopGridY: gridY };
+    await worldRepository.save(next);
+    set({ world: next });
+  },
+
+  async markShopTutorialDone() {
+    if (get().shopTutorialDone) return;
+    await settingsRepository.save({
+      id: 'singleton',
+      notifications: get().notificationPrefs,
+      playerName: get().playerName,
+      editIntroSeen: get().editIntroSeen,
+      shopTutorialDone: true,
+    });
+    set({ shopTutorialDone: true });
   },
 
   async requestNotificationPermission() {

@@ -56,6 +56,11 @@ export interface WorldState {
   currentDayPhase: DayPhase;
   seed: string;
   looseWisps: LooseWisp[]; // fuochi fatui presenti sulla mappa
+  /** ISO date (YYYY-MM-DD) dell'ultimo cambio meteo: il meteo cambia una volta al giorno. */
+  lastWeatherDate?: string;
+  /** Posizione della Bottega sulla mappa (celle). Default: centro in basso. */
+  shopGridX?: number;
+  shopGridY?: number;
 }
 
 export interface UserProgression {
@@ -101,6 +106,8 @@ export interface Settings {
   notifications: NotificationPreferences;
   playerName?: string;
   editIntroSeen?: boolean;
+  /** true dopo che l'utente ha completato il tutorial di piazzamento della Bottega. */
+  shopTutorialDone?: boolean;
 }
 
 export const DEFAULT_PLAYER_NAME = 'Custode';

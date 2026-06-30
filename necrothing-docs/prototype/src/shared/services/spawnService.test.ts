@@ -93,7 +93,7 @@ describe('computeSpawns', () => {
     computeSpawns(baseCtx({ placeables: [placeable('mausoleum')] }), withMaus);
     // 1ª chance = fantasma-oggetto.
     expect(withMaus.chances[0]).toBeCloseTo(
-      SPAWN_CHANCE.ghostObject * (1 + SPAWN_MODIFIERS.mausoleumEventBonus),
+      SPAWN_CHANCE.ghostObjectDay * (1 + SPAWN_MODIFIERS.mausoleumEventBonus),
     );
   });
 

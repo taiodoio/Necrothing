@@ -56,14 +56,21 @@ export function computeSpawns(ctx: SpawnContext, rng: Rng): RoamingSpawn[] {
   // Fantasma generico (deciso dalla simulazione).
   if (ghostGraveId) spawns.push({ kind: 'ghost', graveId: ghostGraveId });
 
+  // Fantasma generico: già deciso dalla simulazione (ghostGraveId), ma
+  // applichiamo anche la probabilità della matrice per coerenza con la UI.
+  // (ghostGraveId viene emesso separatamente dalla sim per gli eventi narrativi.)
+
   // Fantasma-oggetto: raro, legato a una tomba, premia di più. Il mausoleo lo
   // rende più probabile.
-  if (graves.length > 0 && rng.chance(withMausoleum(SPAWN_CHANCE.ghostObject, b.mausoleum))) {
-    spawns.push({ kind: 'ghost', graveId: rng.pick(graves).id, rare: true });
+  if (graves.length > 0) {
+    const ghostObjChance = isNight ? SPAWN_CHANCE.ghostObjectNight : SPAWN_CHANCE.ghostObjectDay;
+    if (rng.chance(withMausoleum(ghostObjChance, b.mausoleum))) {
+      spawns.push({ kind: 'ghost', graveId: rng.pick(graves).id, rare: true });
+    }
   }
 
   if (rng.chance(SPAWN_CHANCE.cat)) spawns.push({ kind: 'cat' });
-  if (!isNight && rng.chance(SPAWN_CHANCE.crowDay)) spawns.push({ kind: 'crow' });
+  if (!isNight && rng.chance(SPAWN_CHANCE.crow)) spawns.push({ kind: 'crow' });
 
   // Prete: santuario e mausoleo ne aumentano la comparsa.
   if (graves.length > 0) {
@@ -81,7 +88,7 @@ export function computeSpawns(ctx: SpawnContext, rng: Rng): RoamingSpawn[] {
     spawns.push({ kind: 'gravedigger' });
   }
 
-  if (isNight && rng.chance(SPAWN_CHANCE.ratNight)) spawns.push({ kind: 'rat' });
+  if (isNight && rng.chance(SPAWN_CHANCE.rat)) spawns.push({ kind: 'rat' });
 
   // Zombie: le bare aperte (tombe dissotterrate) li attirano.
   if (b.openCoffin > 0) {

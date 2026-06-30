@@ -138,9 +138,9 @@ Dopo quanto ipoteticamente i giocatori hanno completato tutto e necessita di cre
 
 UPDATE 29/06:
 - pagine si aprono in bottom drawer. Il menù scompare se una pagina è aperta. Nel bottom drawer deve esserci il pulsante chiudi in alto a sinistra
-- Eventi random sembrano un pò troppo frequenti
-- Foto in generale troppo pixelate. Non si capisce cosa stia vedendo. Rimuove la pixelature e lasciamo il B/N. 
-- Foto - deve catturare una foto-screen del campo di gioco, non una foto a caso. 
+- Eventi random sembrano un pò troppo frequenti. Creiamo una matrice con ogni evento e la % di probabilità di comparsa
+- Foto (in generale) troppo pixelate. Non si capisce cosa stia vedendo. Rimuovere la pixelature e lasciamo il B/N. 
+- Foto - deve catturare un screen del campo di gioco, non una foto a caso. 
 - Meteo da definire ogni quanto cambia. Magari giornaliero. PEr ora lsciamo solo notte - giorno. Aggiungiamo dopo altri effetti.
 - Movimento NPC su assi X e Y. Se incontra ostacoli, cambia direzione. Deve muoversi come la torre degli schacchi. Tranne i fantasmi. Loro possono attraversare ogni cosa, ma devono comunque muoversi solo sui due assi.
 - Funnel "seppelisci" - prima di dare l'ok, una preview con tomba e foto etc. Simile alla vista "dettaglio".

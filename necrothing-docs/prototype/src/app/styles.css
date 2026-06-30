@@ -210,6 +210,32 @@ button {
     transform: translateY(100%);
   }
 }
+.sheet-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 14px;
+}
+.sheet-header h2 {
+  margin: 0;
+  font-size: 18px;
+  flex: 1;
+}
+.sheet-close {
+  background: none;
+  border: none;
+  color: var(--text-dim);
+  font-size: 18px;
+  line-height: 1;
+  padding: 4px 8px;
+  cursor: pointer;
+  border-radius: 8px;
+  flex-shrink: 0;
+}
+.sheet-close:hover {
+  background: var(--line);
+  color: var(--text);
+}
 .sheet h2 {
   margin: 4px 0 14px;
   font-size: 18px;

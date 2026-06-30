@@ -2,7 +2,7 @@
 // Hub d'interazione: selezione con popup contestuale, drag&drop, posizionamento
 // al centro vista, entità erranti ed eventi (con pannello dev).
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useGameStore } from '@/shared/store/gameStore';
 import { CemeteryScene, type Selection } from './CemeteryScene';
@@ -66,6 +66,9 @@ export function CemeteryPage() {
   const consumeSpawns = useGameStore((s) => s.consumeSpawns);
   const editIntroSeen = useGameStore((s) => s.editIntroSeen);
   const markEditIntroSeen = useGameStore((s) => s.markEditIntroSeen);
+  const shopTutorialDone = useGameStore((s) => s.shopTutorialDone);
+  const moveShop = useGameStore((s) => s.moveShop);
+  const markShopTutorialDone = useGameStore((s) => s.markShopTutorialDone);
   const lastSimMessage = useGameStore((s) => s.lastSimMessage);
   const lastUnlockedAchievement = useGameStore((s) => s.lastUnlockedAchievement);
   // azioni dev
@@ -74,7 +77,21 @@ export function CemeteryPage() {
   const devSetWeather = useGameStore((s) => s.devSetWeather);
   const devBlessing = useGameStore((s) => s.devBlessing);
 
-  const roaming = useRoamingEntities();
+  // Occupazione della griglia (tombe + strutture + Bottega): gli NPC la usano
+  // per cambiare direzione davanti agli ostacoli.
+  const roamingOccupancy = useMemo(() => {
+    const occ = buildOccupancy(graves, decorations);
+    if (world?.shopGridX != null && world?.shopGridY != null) {
+      for (let dx = 0; dx < 3; dx++) {
+        for (let dy = 0; dy < 3; dy++) {
+          occ.add(`${world.shopGridX + dx},${world.shopGridY + dy}`);
+        }
+      }
+    }
+    return occ;
+  }, [graves, decorations, world?.shopGridX, world?.shopGridY]);
+
+  const roaming = useRoamingEntities(roamingOccupancy);
   const navigate = useNavigate();
 
   const [selection, setSelection] = useState<Selection | null>(null);
@@ -93,8 +110,10 @@ export function CemeteryPage() {
   );
   const [funeralGrave, setFuneralGrave] = useState<Grave | null>(null);
   const [toast, setToast] = useState<string | null>(null);
+  const [shopTutorialOpen, setShopTutorialOpen] = useState(!shopTutorialDone);
 
   const viewCenter = useRef({ x: 0, y: 0 });
+  const [centerShopSignal, setCenterShopSignal] = useState(0);
 
   const showToast = (msg: string) => setToast(msg);
   useEffect(() => {
@@ -170,6 +189,16 @@ export function CemeteryPage() {
   // Fuori da Edit → interazione semplice. In Edit → strumenti di editing.
   const popupActions: PopupAction[] = (() => {
     if (!selection) return [];
+    if (selection.kind === 'shop') {
+      // In piazzamento (primo avvio): conferma la posizione.
+      if (editMode && placing) {
+        return [{ key: 'confirm', icon: '✓', label: 'Conferma posizione', primary: true }];
+      }
+      // In Modifica (riposizionamento): si trascina, nessuna azione.
+      if (editMode) return [];
+      // Interazione semplice: unica azione = entrare nella Bottega.
+      return [{ key: 'enter', icon: '🛒', label: 'Entra nella bottega' }];
+    }
     if (selection.kind === 'grave') {
       const g = graves.find((x) => x.id === selection.id);
       if (!g) return [];
@@ -264,9 +293,26 @@ export function CemeteryPage() {
           clearSelection();
           showToast('Eliminato.');
           break;
-        case 'confirm':
+        case 'enter':
+          // Unica azione del menù contestuale della Bottega.
           clearSelection();
-          showToast('Posizionato. Riposi in pace.');
+          setBottegaOpen(true);
+          break;
+        case 'confirm':
+          if (kind === 'shop') {
+            // Conferma il piazzamento iniziale della Bottega.
+            setEditMode(false);
+            clearSelection();
+            if (!shopTutorialDone) {
+              await markShopTutorialDone();
+              showToast('Bottega posizionata! Toccala per acquistare. 🛒');
+            } else {
+              showToast('Bottega spostata.');
+            }
+          } else {
+            clearSelection();
+            showToast('Posizionato. Riposi in pace.');
+          }
           break;
       }
     } catch (e) {
@@ -337,7 +383,16 @@ export function CemeteryPage() {
 
   const bubbleActions: BubbleAction[] = [
     { key: 'bury', icon: '⚰️', label: 'Seppellisci', onClick: () => setBurialOpen(true) },
-    { key: 'shop', icon: '🛒', label: 'Bottega', onClick: () => setBottegaOpen(true) },
+    {
+      key: 'shop',
+      icon: '🛒',
+      label: 'Bottega',
+      onClick: () => {
+        // Shortcut: centra la vista sulla Bottega e la seleziona (popup "Entra").
+        setCenterShopSignal((n) => n + 1);
+        if (!editMode) setSelection({ id: '__shop__', kind: 'shop' });
+      },
+    },
     { key: 'inv', icon: '🎒', label: 'Inventario', onClick: () => setInventarioOpen(true) },
     {
       key: 'edit',
@@ -388,8 +443,13 @@ export function CemeteryPage() {
         onTapRoaming={onTapRoaming}
         onMoveCommit={async (kind, id, x, y) => {
           try {
-            if (kind === 'grave') await moveGrave(id, x, y);
-            else await movePlaceable(id, x, y);
+            if (id === '__shop__') {
+              await moveShop(x, y);
+            } else if (kind === 'grave') {
+              await moveGrave(id, x, y);
+            } else {
+              await movePlaceable(id, x, y);
+            }
           } catch (e) {
             showToast(e instanceof Error ? e.message : 'Spazio occupato.');
           }
@@ -398,9 +458,29 @@ export function CemeteryPage() {
         onViewportCenter={(x, y) => {
           viewCenter.current = { x, y };
         }}
+        shopGridX={world?.shopGridX}
+        shopGridY={world?.shopGridY}
+        onSelectShop={() => {
+          setSelection({ id: '__shop__', kind: 'shop' });
+        }}
+        centerShopSignal={centerShopSignal}
       />
 
-      <ActionBubble actions={bubbleActions} />
+      <ActionBubble
+        actions={bubbleActions}
+        hidden={
+          burialOpen ||
+          photoOpen ||
+          bottegaOpen ||
+          inventarioOpen ||
+          !!detailId ||
+          !!decorationSelId ||
+          !!replaceTarget ||
+          !!funeralGrave ||
+          editIntro ||
+          shopTutorialOpen
+        }
+      />
 
       {burialCell && (
         <BurialWizard
@@ -529,6 +609,31 @@ export function CemeteryPage() {
               }}
             >
               Inizia
+            </button>
+          </div>
+        </Sheet>
+      )}
+
+      {shopTutorialOpen && !shopTutorialDone && (
+        <Sheet title="Benvenuto nella Bottega!" onClose={() => setShopTutorialOpen(false)}>
+          <p className="muted" style={{ fontSize: 14, lineHeight: 1.6 }}>
+            Questa è la tua <strong>Bottega</strong>: il cuore del cimitero. Per prima cosa,{' '}
+            <strong>posizionala</strong> dove preferisci — trascinala sulla mappa, poi tocca{' '}
+            <strong>✓ Conferma</strong>. In seguito potrai entrarci toccandola e il pulsante 🛒 nel
+            menù la riporterà sempre al centro.
+          </p>
+          <div className="wizard-nav">
+            <button
+              className="btn btn--primary"
+              onClick={() => {
+                setShopTutorialOpen(false);
+                setEditMode(true);
+                setSelection({ id: '__shop__', kind: 'shop' });
+                setPlacing(true);
+                showToast('Trascina la Bottega dove vuoi, poi tocca ✓ Conferma.');
+              }}
+            >
+              Posiziona la Bottega
             </button>
           </div>
         </Sheet>

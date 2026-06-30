@@ -18,29 +18,54 @@ export const SIM = {
   dirtProbMax: 0.6,
   // Fiori: giorni dopo i quali appassiscono.
   flowerWitherDays: 3,
-  // Eventi.
-  ghostChanceNight: 0.08,
-  ghostChanceDay: 0.02,
-  blessingChance: 0.05,
+  // Meteo.
   fullMoonChance: 0.15,
+  // Benedizione del prete (evento narrativo, probabilità separata dagli spawn NPC).
+  blessingChance: 0.05,
   // Economia fuochi fatui sulla mappa.
   wispCap: 8,
   wispSpawnMax: 3, // 1 + rng.int(wispSpawnMax)
 } as const;
 
-/** Probabilità base di comparsa delle entità erranti per esecuzione. */
-export const SPAWN_CHANCE: Record<
-  'cat' | 'crowDay' | 'priest' | 'ratNight' | 'gravedigger' | 'ghostObject',
-  number
-> = {
+/**
+ * Matrice di spawn degli eventi casuali: probabilità base per esecuzione di
+ * simulazione. Ogni voce indica la chance (0–1) di comparsa per "slot" di
+ * simulazione (chiamata a simulationService.run). Le voci con suffisso *Day /
+ * *Night si applicano solo nella fase giorno / notte.
+ *
+ * Modificare qui per tarare la frequenza percepita senza toccare la logica.
+ *
+ *  Entità          | Base  | Contesto
+ *  ----------------|-------|----------------------------------
+ *  ghostGeneric    | 0.05  | notte (×4) / giorno (×1)
+ *  ghostObject     | 0.03  | notte (×4) / giorno (×1) — raro
+ *  cat             | 0.06  | qualsiasi
+ *  crow            | 0.10  | giorno
+ *  priest          | 0.04  | qualsiasi
+ *  gravedigger     | 0.05  | qualsiasi
+ *  rat             | 0.06  | notte
+ *  zombie          | base × open_coffins (vedi SPAWN_MODIFIERS)
+ */
+export const SPAWN_CHANCE = {
+  /** Fantasma generico: più probabile di notte. */
+  ghostGenericNight: 0.08,
+  ghostGenericDay: 0.02,
+  /** Fantasma-oggetto (più raro, premia di più). */
+  ghostObjectNight: 0.05,
+  ghostObjectDay: 0.01,
+  /** Gatto nero: compare sia di giorno che di notte. */
   cat: 0.06,
-  crowDay: 0.1,
+  /** Corvo: solo di giorno (si posa sulle lapidi). */
+  crow: 0.10,
+  /** Prete: benedice le tombe, orario qualsiasi. */
   priest: 0.04,
-  ratNight: 0.06,
+  /** Becchino: attraversa il campo, orario qualsiasi. */
   gravedigger: 0.05,
-  // Fantasma-oggetto (più raro del fantasma generico, ma premia di più).
-  ghostObject: 0.03,
-};
+  /** Topo: scatta di notte. */
+  rat: 0.06,
+  /** Zombie: base per bara aperta (moltiplicato da SPAWN_MODIFIERS.zombiePerOpenCoffin). */
+  zombieBase: 0.0,
+} as const;
 
 /**
  * Modificatori di spawn dati dagli edifici piazzati (Fase G). Gli edifici

@@ -1,4 +1,4 @@
-// Bottom sheet modale, mobile-first. Chiude su backdrop o ESC.
+// Bottom sheet modale, mobile-first. Chiude su backdrop, ESC o pulsante Chiudi.
 
 import { useEffect, type ReactNode } from 'react';
 
@@ -20,7 +20,12 @@ export function Sheet({ title, onClose, children }: Props) {
   return (
     <div className="sheet-backdrop" onClick={onClose} role="dialog" aria-modal="true">
       <div className="sheet" onClick={(e) => e.stopPropagation()}>
-        <h2>{title}</h2>
+        <div className="sheet-header">
+          <button className="sheet-close" onClick={onClose} aria-label="Chiudi">
+            ✕
+          </button>
+          <h2>{title}</h2>
+        </div>
         {children}
       </div>
     </div>

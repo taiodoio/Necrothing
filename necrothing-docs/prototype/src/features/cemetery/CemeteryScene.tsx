@@ -26,7 +26,7 @@ import { ObjectPopup, type PopupAction } from './ObjectPopup';
 import type { RoamingEntity } from './useRoamingEntities';
 import type { DayPhase, Weather } from '@/shared/domain/enums';
 
-export type SelKind = 'grave' | 'placeable';
+export type SelKind = 'grave' | 'placeable' | 'shop';
 export interface Selection {
   id: string;
   kind: SelKind;
@@ -54,6 +54,13 @@ interface Props {
   onMoveCommit: (kind: SelKind, id: string, gridX: number, gridY: number) => void;
   onMoveInvalid: () => void;
   onViewportCenter: (gridX: number, gridY: number) => void;
+  /** Posizione della Bottega sulla mappa. */
+  shopGridX?: number;
+  shopGridY?: number;
+  /** Selezione della Bottega (apre il menù contestuale). */
+  onSelectShop?: () => void;
+  /** Contatore: a ogni incremento centra la vista sulla Bottega. */
+  centerShopSignal?: number;
 }
 
 interface DragSession {
@@ -95,6 +102,10 @@ export function CemeteryScene({
   onMoveCommit,
   onMoveInvalid,
   onViewportCenter,
+  shopGridX,
+  shopGridY,
+  onSelectShop,
+  centerShopSignal,
 }: Props) {
   const mapRef = useRef<HTMLDivElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -117,6 +128,21 @@ export function CemeteryScene({
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // Centra la vista sulla Bottega quando il segnale cambia (shortcut dal menù).
+  useEffect(() => {
+    if (!centerShopSignal || shopGridX == null || shopGridY == null) return;
+    const el = scrollRef.current;
+    if (!el) return;
+    const px = (shopGridX + 1.5) * TILE_SIZE; // centro della Bottega 3×3
+    const py = (shopGridY + 1.5) * TILE_SIZE;
+    el.scrollTo({
+      left: px - el.clientWidth / 2,
+      top: py - el.clientHeight / 2,
+      behavior: 'smooth',
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [centerShopSignal]);
 
   const onScroll = () => {
     const el = scrollRef.current;
@@ -248,6 +274,13 @@ export function CemeteryScene({
         ow = GRAVE_FOOTPRINT[0];
         found = true;
       }
+    } else if (selection.kind === 'shop') {
+      if (shopGridX != null && shopGridY != null) {
+        ox = shopGridX;
+        oy = shopGridY;
+        ow = 3;
+        found = true;
+      }
     } else {
       const p = placeables.find((x) => x.id === selection.id);
       if (p) {
@@ -369,6 +402,34 @@ export function CemeteryScene({
               className={`drop-ghost${drag.valid ? '' : ' invalid'}`}
               style={cell(drag.gx, drag.gy, drag.w, drag.h)}
             />
+          )}
+
+          {/* Bottega (edificio fisso, spostabile in Edit, cliccabile per aprire il drawer) */}
+          {shopGridX != null && shopGridY != null && (
+            <button
+              className={`map-object${selection?.kind === 'shop' ? ' selected' : ''}`}
+              style={{
+                ...cell(shopGridX, shopGridY, 3, 3),
+                background: 'rgba(60,35,20,0.85)',
+                border: '2px solid #7a5532',
+                borderRadius: 8,
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                justifyContent: 'center',
+                fontSize: 28,
+                cursor: editMode ? 'grab' : 'pointer',
+                zIndex: 2,
+              }}
+              aria-label="Bottega"
+              onPointerDown={editMode ? (e) => startDrag(e, 'placeable', '__shop__', [3, 3]) : undefined}
+              onPointerMove={editMode ? moveDrag : undefined}
+              onPointerUp={editMode ? (e) => endDrag(e, () => onSelectShop?.()) : undefined}
+              onClick={!editMode ? (e) => { e.stopPropagation(); onSelectShop?.(); } : undefined}
+            >
+              <span>🛒</span>
+              <span style={{ fontSize: 10, color: '#c9a87a', marginTop: 4 }}>Bottega</span>
+            </button>
           )}
 
           {/* Fuochi fatui raccoglibili */}

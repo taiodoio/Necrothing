@@ -120,8 +120,23 @@ export const PLACEABLES: Record<PlaceableType, PlaceableDef> = (() => {
   return out;
 })();
 
-/** Strutture uniche: ne può esistere al massimo una per cimitero. */
-export const UNIQUE_PLACEABLES: ReadonlySet<PlaceableType> = new Set<PlaceableType>(['mausoleum']);
+/**
+ * Strutture uniche: possono essere acquistate e piazzate al massimo una volta.
+ * Tentare di acquistarne una seconda volta restituisce l'oggetto già posseduto
+ * senza addebitare fuochi fatui (logica in gameStore.buyItem).
+ */
+export const UNIQUE_PLACEABLES: ReadonlySet<PlaceableType> = new Set<PlaceableType>([
+  'mausoleum',
+  'gravedigger_house',
+  'shrine',
+  'well',
+  'fountain',
+]);
+
+/** Ritorna true se l'oggetto può essere acquistato una sola volta. */
+export function isUnique(type: PlaceableType): boolean {
+  return UNIQUE_PLACEABLES.has(type);
+}
 
 export function placeableDef(type: PlaceableType): PlaceableDef {
   return PLACEABLES[type];

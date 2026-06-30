@@ -4,7 +4,8 @@ import { useEffect, useState } from 'react';
 import { Sheet } from '@/shared/components/Sheet';
 import { useGameStore } from '@/shared/store/gameStore';
 import { imageStorageService } from '@/shared/services/imageStorageService';
-import { pixelateGrayscale } from '@/shared/utils/image';
+import { grayscaleOnly } from '@/shared/utils/image';
+import { GraveSprite } from '@/shared/assets/GraveSprite';
 import {
   emptyDraft,
   validateDates,
@@ -90,7 +91,7 @@ export function BurialWizard({ gridX, gridY, onClose, onBuried }: Props) {
     try {
       let finalDraft = draft;
       if (photoFile) {
-        const processed = await pixelateGrayscale(photoFile);
+        const processed = await grayscaleOnly(photoFile);
         const photoId = await imageStorageService.save(processed);
         finalDraft = { ...draft, photoId };
       }
@@ -282,15 +283,45 @@ export function BurialWizard({ gridX, gridY, onClose, onBuried }: Props) {
 
       {step === 7 && (
         <div>
-          <h3>Riepilogo</h3>
-          <p>
-            <strong>{draft.name}</strong>
-            <br />
-            <span className="muted">
-              {draft.category && CATEGORY_LABELS[draft.category]} · morte il {draft.deathDate}
-            </span>
-          </p>
-          {draft.epitaph && <p className="muted">&laquo;{draft.epitaph}&raquo;</p>}
+          <h3>Anteprima sepoltura</h3>
+          <div style={{ display: 'flex', gap: 16, alignItems: 'flex-start', marginBottom: 12 }}>
+            {draft.graveType && (
+              <div style={{ flexShrink: 0 }}>
+                <GraveSprite
+                  type={draft.graveType}
+                  size={64}
+                />
+              </div>
+            )}
+            <div style={{ flex: 1 }}>
+              <p style={{ margin: '0 0 4px' }}>
+                <strong>{draft.name}</strong>
+              </p>
+              <p className="muted" style={{ margin: '0 0 4px', fontSize: 13 }}>
+                {draft.category && CATEGORY_LABELS[draft.category]}
+                {draft.deathDate && ` · † ${draft.deathDate}`}
+              </p>
+              {draft.graveType && (
+                <p className="muted" style={{ margin: '0 0 4px', fontSize: 12 }}>
+                  Lapide: {GRAVE_TYPE_LABELS[draft.graveType]}
+                </p>
+              )}
+              {draft.epitaph && (
+                <p className="muted" style={{ margin: 0, fontSize: 12, fontStyle: 'italic' }}>
+                  &laquo;{draft.epitaph}&raquo;
+                </p>
+              )}
+            </div>
+          </div>
+          {photoPreview && (
+            <div style={{ marginBottom: 12 }}>
+              <img
+                src={photoPreview}
+                alt="foto oggetto"
+                style={{ maxWidth: '100%', maxHeight: 120, borderRadius: 8, objectFit: 'cover', filter: 'grayscale(1)' }}
+              />
+            </div>
+          )}
           {error && <div className="error">{error}</div>}
         </div>
       )}

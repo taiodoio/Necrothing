@@ -1,8 +1,7 @@
-// Elaborazione foto: riduce a pixel-art in bianco e nero, coerente con
-// l'estetica del cimitero. Il blob risultante è già "renderizzato" alla
-// risoluzione di visualizzazione (pixelatura impressa, non solo via CSS).
+// Elaborazione foto: converte in bianco e nero con leggero aumento di contrasto,
+// coerente con l'estetica del cimitero.
 
-const PIXEL_COLS = 72; // larghezza in "pixel" della versione pixelata
+const PIXEL_COLS = 72; // usato solo da pixelateGrayscale (legacy)
 const OUT_MAX = 320; // lato massimo del blob esportato
 
 async function loadBitmap(file: Blob): Promise<ImageBitmap | HTMLImageElement> {
@@ -84,4 +83,42 @@ export async function pixelateGrayscale(file: File): Promise<Blob> {
 
 function clamp255(v: number): number {
   return v < 0 ? 0 : v > 255 ? 255 : v;
+}
+
+/**
+ * Converte un Blob immagine in scala di grigi (senza pixelatura).
+ * Mantiene la risoluzione originale fino a OUT_MAX px sul lato lungo.
+ * In caso di errore (ambiente senza canvas) ritorna il file originale.
+ */
+export async function grayscaleOnly(file: Blob): Promise<Blob> {
+  try {
+    const src = await loadBitmap(file);
+    const { w, h } = dims(src);
+    const scale = Math.min(1, OUT_MAX / Math.max(w, h));
+    const outW = Math.max(1, Math.round(w * scale));
+    const outH = Math.max(1, Math.round(h * scale));
+
+    const canvas = document.createElement('canvas');
+    canvas.width = outW;
+    canvas.height = outH;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return file;
+    ctx.drawImage(src, 0, 0, outW, outH);
+
+    const data = ctx.getImageData(0, 0, outW, outH);
+    const px = data.data;
+    for (let i = 0; i < px.length; i += 4) {
+      let l = 0.299 * px[i] + 0.587 * px[i + 1] + 0.114 * px[i + 2];
+      l = clamp255((l - 128) * 1.15 + 118);
+      px[i] = px[i + 1] = px[i + 2] = l;
+    }
+    ctx.putImageData(data, 0, 0);
+
+    const blob = await new Promise<Blob | null>((resolve) =>
+      canvas.toBlob((b) => resolve(b), 'image/png'),
+    );
+    return blob ?? file;
+  } catch {
+    return file;
+  }
 }

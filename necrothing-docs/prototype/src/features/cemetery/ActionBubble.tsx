@@ -13,10 +13,16 @@ export interface BubbleAction {
 
 interface Props {
   actions: BubbleAction[];
+  /** Se true, il FAB scompare (un drawer è aperto). */
+  hidden?: boolean;
 }
 
-export function ActionBubble({ actions }: Props) {
+export function ActionBubble({ actions, hidden }: Props) {
   const [open, setOpen] = useState(false);
+
+  useEffect(() => {
+    if (hidden) setOpen(false);
+  }, [hidden]);
   const ref = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -27,6 +33,8 @@ export function ActionBubble({ actions }: Props) {
     window.addEventListener('pointerdown', onDown);
     return () => window.removeEventListener('pointerdown', onDown);
   }, [open]);
+
+  if (hidden) return null;
 
   return (
     <div className={`fab-wrap${open ? ' open' : ''}`} ref={ref}>

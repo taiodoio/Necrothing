@@ -387,7 +387,7 @@ export function CemeteryScene({
                   hasWeeds={g.hasWeeds}
                   isDirty={g.isDirty}
                   broken={g.broken}
-                  size={TILE_SIZE * 2 * 0.92}
+                  size={TILE_SIZE * 2 * 0.46}
                   title={g.name}
                 />
                 {g.broken ? (

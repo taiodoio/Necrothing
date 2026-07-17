@@ -1,5 +1,7 @@
 # macOS
 .DS_Store
 
-# Sorgenti asset di design (grandi, tenuti fuori dal repo — usare storage/LFS)
+# Sorgenti asset di design (tenuti fuori dal repo — usare storage/LFS).
+# Gli asset usati dall'app stanno in prototype/src/shared/assets/{tiles,generated}/.
 necrothing-docs/assets/Asset_map/
+necrothing-docs/assets/Objects/

@@ -478,20 +478,35 @@ button {
 .map {
   position: relative;
   background-color: #33402a;
-  background-image:
-    linear-gradient(rgba(255, 255, 255, 0.045) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(255, 255, 255, 0.045) 1px, transparent 1px),
-    radial-gradient(rgba(0, 0, 0, 0.1) 1px, transparent 1px);
-  background-size:
-    var(--tile) var(--tile),
-    var(--tile) var(--tile),
-    9px 9px;
+}
+/* Layer di terreno ed erba: sotto a tombe, oggetti ed entità. */
+.map-ground {
+  position: absolute;
+  left: 0;
+  top: 0;
+  z-index: 0;
+  overflow: hidden; /* taglia l'ultima fila di tile fuori mappa */
+  pointer-events: none;
+}
+.map-tiles {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+}
+.map-tile {
+  position: absolute;
+  image-rendering: pixelated;
+  user-select: none;
+  -webkit-user-drag: none;
 }
 .map-object {
   border: 0;
   background: transparent;
   padding: 0;
   cursor: pointer;
+  position: relative;
+  z-index: 1;
 }
 .pixel-sprite {
   image-rendering: pixelated;

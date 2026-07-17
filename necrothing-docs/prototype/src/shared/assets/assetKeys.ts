@@ -27,4 +27,3 @@ export function structureAssetId(type: StructureType): string {
 }
 
 export const WISP_ASSET_ID = 'currency_wisp';
-export const TILE_GRASS_ASSET_ID = 'tile_grass';

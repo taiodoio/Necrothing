@@ -3,12 +3,13 @@
 // Interazione: tap = seleziona (popup contestuale), drag = sposta (con
 // validazione collisioni e overlay rosso). Entità erranti tappabili.
 
-import { useEffect, useRef, useState, type CSSProperties, type PointerEvent } from 'react';
+import { useEffect, useMemo, useRef, useState, type CSSProperties, type PointerEvent } from 'react';
 import {
   MAP_COLS,
   MAP_ROWS,
   TILE_SIZE,
   GRAVE_FOOTPRINT,
+  footprintTouchesFrame,
   type Decoration,
   type Grave,
   type LooseWisp,
@@ -19,8 +20,7 @@ import { PlaceableSprite } from '@/shared/assets/PlaceableSprite';
 import { WispSprite } from '@/shared/assets/WispSprite';
 import { RoamerSprite } from '@/shared/assets/RoamerSprite';
 import { ROAMING_LABELS } from '@/shared/domain/roaming';
-import { spriteUrl } from '@/shared/assets/Sprite';
-import { TILE_GRASS_ASSET_ID } from '@/shared/assets/assetKeys';
+import { HAS_TILES, buildFrame, buildGround } from '@/shared/assets/mapTiles';
 import { WeatherOverlay } from './WeatherOverlay';
 import { ObjectPopup, type PopupAction } from './ObjectPopup';
 import type { RoamingEntity } from './useRoamingEntities';
@@ -210,7 +210,9 @@ export function CemeteryScene({
     const rowBound = Math.min(usableRows, MAP_ROWS);
     const gx = clamp(Math.round(lx / TILE_SIZE - s.w / 2), 0, MAP_COLS - s.w);
     const gy = clamp(Math.round(ly / TILE_SIZE - s.h / 2), 0, rowBound - s.h);
-    const valid = canPlace(gx, gy, [s.w, s.h], occExcluding(s.kind, s.id), MAP_COLS, rowBound);
+    const valid =
+      canPlace(gx, gy, [s.w, s.h], occExcluding(s.kind, s.id), MAP_COLS, rowBound) &&
+      !footprintTouchesFrame(gx, gy, s.w, s.h);
     s.gx = gx;
     s.gy = gy;
     s.valid = valid;
@@ -234,19 +236,18 @@ export function CemeteryScene({
     else onMoveInvalid();
   }
 
-  const grassUrl = spriteUrl(TILE_GRASS_ASSET_ID);
   const mapStyle: CSSProperties = {
     width: MAP_COLS * TILE_SIZE,
     height: MAP_ROWS * TILE_SIZE,
     ['--tile' as string]: `${TILE_SIZE}px`,
-    ...(grassUrl
-      ? {
-          backgroundImage: `url(${grassUrl})`,
-          backgroundSize: `${TILE_SIZE}px ${TILE_SIZE}px`,
-          imageRendering: 'pixelated',
-        }
-      : null),
   };
+
+  // Layer statici (dipendono solo dalle dimensioni mappa): calcolati una volta
+  // sola e non ridisegnati su scroll o cambi di stato.
+  // Terreno: erba a tile grandi che riempie tutta la mappa. Sotto a tutto.
+  const ground = useMemo(() => (HAS_TILES ? buildGround(mapW, mapH) : null), [mapW, mapH]);
+  // Cornice: anello decorativo (recinto + alberi) sul perimetro.
+  const frame = useMemo(() => (HAS_TILES ? buildFrame(mapW, mapH) : null), [mapW, mapH]);
 
   const cell = (x: number, y: number, w: number, h: number): CSSProperties => ({
     position: 'absolute',
@@ -310,6 +311,44 @@ export function CemeteryScene({
             if (e.currentTarget === e.target) onSelectEmpty();
           }}
         >
+          {/* Terreno: erba a tile grandi (clip ai bordi mappa). */}
+          {ground && (
+            <div className="map-ground" aria-hidden style={{ width: mapW, height: mapH }}>
+              {ground.map((t) => (
+                <img
+                  key={t.key}
+                  className="map-tile"
+                  src={t.url}
+                  alt=""
+                  draggable={false}
+                  style={{
+                    left: t.left,
+                    top: t.top,
+                    // +1px: sovrapposizione anti-cucitura su DPR frazionari.
+                    width: t.size + 1,
+                    height: t.size + 1,
+                  }}
+                />
+              ))}
+            </div>
+          )}
+
+          {/* Cornice: anello decorativo (recinto + alberi) sul perimetro. */}
+          {frame && (
+            <div className="map-tiles" aria-hidden>
+              {frame.map((t) => (
+                <img
+                  key={t.key}
+                  className="map-tile"
+                  src={t.url}
+                  alt=""
+                  draggable={false}
+                  style={{ left: t.left, top: t.top, width: t.size + 1, height: t.size + 1 }}
+                />
+              ))}
+            </div>
+          )}
+
           {/* Frontiera bloccata: terra non ancora sbloccata (espansione). */}
           {usableRows < MAP_ROWS && (
             <div

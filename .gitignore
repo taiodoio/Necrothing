@@ -1,0 +1,5 @@
+# macOS
+.DS_Store
+
+# Sorgenti asset di design (grandi, tenuti fuori dal repo — usare storage/LFS)
+necrothing-docs/assets/Asset_map/

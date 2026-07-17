@@ -37,7 +37,7 @@ import type { RoamingSpawn } from '@/shared/domain/roaming';
 import { detectDistricts, zoneScore } from '@/shared/services/zoneService';
 import { newId } from '@/shared/utils/id';
 import { buildOccupancy } from '@/shared/domain/placeables';
-import { MAP_COLS, MAP_ROWS } from '@/shared/domain/types';
+import { FRAME_MARGIN, MAP_COLS, MAP_ROWS, isFrameCell } from '@/shared/domain/types';
 import { createNotificationService } from '@/shared/services/notificationService';
 import { webNotificationAdapter } from '@/shared/services/platform/webNotificationAdapter';
 import { evaluateAchievements } from '@/shared/services/achievementService';
@@ -201,7 +201,7 @@ export const useGameStore = create<GameState>((set, get) => ({
 
     // Prima apertura: posiziona la Bottega al centro in alto della mappa.
     if (!world.shopGridX && !world.shopGridY) {
-      world = { ...world, shopGridX: Math.floor(MAP_COLS / 2) - 1, shopGridY: 2 };
+      world = { ...world, shopGridX: Math.floor(MAP_COLS / 2) - 1, shopGridY: FRAME_MARGIN };
       await worldRepository.save(world);
     }
 
@@ -714,7 +714,7 @@ export const useGameStore = create<GameState>((set, get) => ({
     for (let i = 0; i < 80 && !cell; i++) {
       const x = Math.floor(Math.random() * MAP_COLS);
       const y = Math.floor(Math.random() * MAP_ROWS);
-      if (!taken.has(`${x},${y}`)) cell = { x, y };
+      if (!taken.has(`${x},${y}`) && !isFrameCell(x, y)) cell = { x, y };
     }
     if (!cell) return;
     const nextWorld = {

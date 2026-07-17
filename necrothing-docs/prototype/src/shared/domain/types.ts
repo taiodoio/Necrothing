@@ -175,5 +175,29 @@ export const MAP_COLS = 24;
 export const MAP_ROWS = 32;
 export const TILE_SIZE = 40;
 
+// Cornice decorativa (recinto): anello perimetrale spesso FRAME_MARGIN celle,
+// non piazzabile. L'area di gioco utile è l'interno.
+export const FRAME_MARGIN = 4;
+
+/** True se la cella (x,y) cade nell'anello di cornice (non piazzabile). */
+export function isFrameCell(x: number, y: number): boolean {
+  return (
+    x < FRAME_MARGIN ||
+    y < FRAME_MARGIN ||
+    x >= MAP_COLS - FRAME_MARGIN ||
+    y >= MAP_ROWS - FRAME_MARGIN
+  );
+}
+
+/** True se un ingombro w×h posato in (x,y) invade l'anello di cornice. */
+export function footprintTouchesFrame(x: number, y: number, w: number, h: number): boolean {
+  for (let dy = 0; dy < h; dy++) {
+    for (let dx = 0; dx < w; dx++) {
+      if (isFrameCell(x + dx, y + dy)) return true;
+    }
+  }
+  return false;
+}
+
 // Footprint (larghezza×altezza in celle) per categoria di oggetto.
 export const GRAVE_FOOTPRINT: [number, number] = [2, 2];

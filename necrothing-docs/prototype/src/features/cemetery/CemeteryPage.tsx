@@ -21,8 +21,10 @@ import { FuneralScene } from '@/features/funeral/FuneralScene';
 import { Sheet } from '@/shared/components/Sheet';
 import type { PlaceableType } from '@/shared/domain/enums';
 import {
+  FRAME_MARGIN,
   GRAVE_FOOTPRINT,
   MAP_COLS,
+  footprintTouchesFrame,
   type Grave,
 } from '@/shared/domain/types';
 import {
@@ -149,9 +151,14 @@ export function CemeteryPage() {
   const freeCellNearCenter = (footprint: Footprint): { x: number; y: number } => {
     const occ = buildOccupancy(graves, decorations);
     const c = viewCenter.current;
-    const cx = Math.min(Math.max(0, c.x), MAP_COLS - footprint[0]);
-    const cy = Math.min(Math.max(0, c.y), maxRows - footprint[1]);
-    if (canPlace(cx, cy, footprint, occ, MAP_COLS, maxRows)) return { x: cx, y: cy };
+    // Parte dall'interno dell'anello di cornice (non piazzabile).
+    const cx = Math.min(Math.max(FRAME_MARGIN, c.x), MAP_COLS - FRAME_MARGIN - footprint[0]);
+    const cy = Math.min(Math.max(FRAME_MARGIN, c.y), maxRows - FRAME_MARGIN - footprint[1]);
+    // Libera = né occupata né dentro l'anello di cornice.
+    const isFree = (x: number, y: number) =>
+      canPlace(x, y, footprint, occ, MAP_COLS, maxRows) &&
+      !footprintTouchesFrame(x, y, footprint[0], footprint[1]);
+    if (isFree(cx, cy)) return { x: cx, y: cy };
     // ricerca a spirale crescente attorno al centro
     for (let r = 1; r < Math.max(MAP_COLS, maxRows); r++) {
       for (let dy = -r; dy <= r; dy++) {
@@ -160,7 +167,7 @@ export function CemeteryPage() {
           const x = cx + dx;
           const y = cy + dy;
           if (x < 0 || y < 0 || x > MAP_COLS - footprint[0] || y > maxRows - footprint[1]) continue;
-          if (canPlace(x, y, footprint, occ, MAP_COLS, maxRows)) return { x, y };
+          if (isFree(x, y)) return { x, y };
         }
       }
     }

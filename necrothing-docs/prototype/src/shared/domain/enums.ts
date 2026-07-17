@@ -61,22 +61,35 @@ export const DEATH_CAUSE_LABELS: Record<DeathCause, string> = {
 };
 
 export const GRAVE_TYPES = [
+  'stone_simple', // 01
+  'rectangular', // 02
+  'gothic', // 03
+  'celtic_cross', // 04
+  'marble_cross', // 05
+  'angel', // 06
+  'obelisk', // 07
+  'family_memorial', // 08
+  'decorated_monument', // 09
+  'victorian', // 10
+  // Legacy (senza PNG dedicato → fallback SVG): mantenuti per salvataggi esistenti.
   'wood_cross',
-  'stone_simple',
-  'gothic',
   'broken',
-  'angel',
-  'obelisk',
 ] as const;
 export type GraveType = (typeof GRAVE_TYPES)[number];
 
 export const GRAVE_TYPE_LABELS: Record<GraveType, string> = {
-  wood_cross: 'Croce in legno',
-  stone_simple: 'Lapide semplice',
+  stone_simple: 'Lapide arrotondata',
+  rectangular: 'Lapide rettangolare',
   gothic: 'Lapide gotica',
-  broken: 'Lapide spezzata',
-  angel: 'Lapide con angelo',
+  celtic_cross: 'Croce celtica',
+  marble_cross: 'Croce in marmo',
+  angel: 'Monumento con angelo',
   obelisk: 'Obelisco',
+  family_memorial: 'Memoriale di famiglia',
+  decorated_monument: 'Monumento decorato',
+  victorian: 'Lapide vittoriana',
+  wood_cross: 'Croce in legno',
+  broken: 'Lapide spezzata',
 };
 
 export const WEATHER = [

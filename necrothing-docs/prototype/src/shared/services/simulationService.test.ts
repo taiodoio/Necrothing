@@ -71,3 +71,34 @@ describe('simulationService — anniversari', () => {
     expect(r.anniversaries).toHaveLength(0);
   });
 });
+
+describe('simulationService — ciclo stati tomba', () => {
+  beforeEach(() => {
+    globalThis.indexedDB = new IDBFactory();
+    __resetDbForTests();
+  });
+
+  it('i fiori dopo N giorni lasciano la tomba SPORCA (non pulita)', async () => {
+    const clock = fixedClock('2026-06-25T10:00:00Z');
+    // Fiori portati 4 giorni fa (> flowerWitherDays = 3).
+    await graveRepository.create(
+      grave({ hasFlowers: true, flowersUpdatedAt: '2026-06-21T10:00:00Z' }),
+    );
+    await simulationService.run(world(), clock);
+    const after = (await graveRepository.getAll())[0];
+    expect(after.hasFlowers).toBe(false);
+    expect(after.isDirty).toBe(true);
+  });
+
+  it('una tomba fiorita di recente resta pulita+fiori (niente sporco casuale)', async () => {
+    const clock = fixedClock('2026-06-25T10:00:00Z');
+    await graveRepository.create(
+      grave({ hasFlowers: true, flowersUpdatedAt: '2026-06-25T09:00:00Z' }),
+    );
+    await simulationService.run(world(), clock);
+    const after = (await graveRepository.getAll())[0];
+    expect(after.hasFlowers).toBe(true);
+    expect(after.isDirty).toBe(false);
+    expect(after.hasWeeds).toBe(false);
+  });
+});

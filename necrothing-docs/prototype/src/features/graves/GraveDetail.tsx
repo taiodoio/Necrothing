@@ -132,25 +132,23 @@ export function GraveDetail({ graveId, onClose, onDeleted, onMoveHint }: Props) 
           >
             🛠️ Ripara
           </button>
+        ) : grave.hasWeeds || grave.isDirty ? (
+          // Tomba sporca: prima si pulisce, poi si possono portare i fiori.
+          <button
+            className="btn btn--primary"
+            disabled={busy}
+            onClick={() => doAction(() => cleanWeeds(grave.id))}
+          >
+            🧹 Pulisci
+          </button>
         ) : (
-          <>
-            <button
-              className="btn btn--primary"
-              disabled={busy}
-              onClick={() => doAction(() => bringFlowers(grave.id))}
-            >
-              💐 Porta fiori
-            </button>
-            {(grave.hasWeeds || grave.isDirty) && (
-              <button
-                className="btn"
-                disabled={busy}
-                onClick={() => doAction(() => cleanWeeds(grave.id))}
-              >
-                🧹 Pulisci
-              </button>
-            )}
-          </>
+          <button
+            className="btn btn--primary"
+            disabled={busy}
+            onClick={() => doAction(() => bringFlowers(grave.id))}
+          >
+            💐 Porta fiori
+          </button>
         )}
       </div>
 

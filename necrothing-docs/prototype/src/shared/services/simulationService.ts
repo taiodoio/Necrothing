@@ -118,45 +118,59 @@ export const simulationService = {
         xpGained += XP_VALUES.anniversary;
       }
 
-      // Erbacce: probabilità cumulativa con i giorni trascorsi.
-      if (!next.hasWeeds && elapsedDays > 0) {
-        const p = Math.min(SIM.weedProbMax, SIM.weedProbPerDay * elapsedDays);
-        if (rng.chance(p)) {
-          next.hasWeeds = true;
+      // Ciclo degli stati (esclusivi): PULITA → PULITA+FIORI → SPORCA → (pulisci) → PULITA.
+      // I fiori si portano solo su tomba pulita; una tomba pulita SENZA fiori si
+      // trascura da sola (erbacce/sporco); i fiori appassiscono dopo N giorni e
+      // lasciano la tomba SPORCA (non pulita).
+
+      if (next.hasFlowers && next.flowersUpdatedAt) {
+        // Fiori: dopo ~3 giorni la tomba si trascura e diventa sporca.
+        const flowerAge = daysBetween(new Date(next.flowersUpdatedAt), now);
+        if (flowerAge >= SIM.flowerWitherDays) {
+          next.hasFlowers = false;
+          next.flowersUpdatedAt = null;
+          if (!next.isDirty) {
+            next.isDirty = true;
+            next.dirtySince = clock.nowIso();
+          }
           changed = true;
-          newWeeds++;
+          witheredFlowers++;
+        }
+      } else if (!next.hasFlowers && elapsedDays > 0) {
+        // Tomba pulita senza fiori: erbacce e sporco si accumulano nel tempo.
+        if (!next.hasWeeds) {
+          const p = Math.min(SIM.weedProbMax, SIM.weedProbPerDay * elapsedDays);
+          if (rng.chance(p)) {
+            next.hasWeeds = true;
+            changed = true;
+            newWeeds++;
+          }
+        }
+        if (!next.isDirty) {
+          const p = Math.min(SIM.dirtProbMax, SIM.dirtProbPerDay * elapsedDays);
+          if (rng.chance(p)) {
+            next.isDirty = true;
+            next.dirtySince = clock.nowIso();
+            changed = true;
+            newDirt++;
+          }
         }
       }
 
-      // Sporcizia (polvere/muschio): si accumula più lentamente delle erbacce.
-      if (!next.isDirty && elapsedDays > 0) {
-        const p = Math.min(SIM.dirtProbMax, SIM.dirtProbPerDay * elapsedDays);
-        if (rng.chance(p)) {
-          next.isDirty = true;
-          next.dirtySince = clock.nowIso();
-          changed = true;
-          newDirt++;
-        }
+      // Invariante di sicurezza: una tomba sporca/con erbacce non ha fiori.
+      if ((next.hasWeeds || next.isDirty) && next.hasFlowers) {
+        next.hasFlowers = false;
+        next.flowersUpdatedAt = null;
+        changed = true;
       }
 
-      // Rottura: una tomba trascurata troppo a lungo si rompe (e perde i fiori).
+      // Rottura: una tomba trascurata troppo a lungo si rompe.
       if (next.isDirty && !next.broken && next.dirtySince) {
-        const graceDays = DECAY.graveBreakDays + (next.hasFlowers ? DECAY.flowerGraceDays : 0);
-        if (daysBetween(new Date(next.dirtySince), now) >= graceDays) {
+        if (daysBetween(new Date(next.dirtySince), now) >= DECAY.graveBreakDays) {
           next.broken = true;
           next.hasFlowers = false;
           changed = true;
           newBroken++;
-        }
-      }
-
-      // Fiori: appassiscono dopo ~3 giorni.
-      if (next.hasFlowers && next.flowersUpdatedAt) {
-        const flowerAge = daysBetween(new Date(next.flowersUpdatedAt), now);
-        if (flowerAge >= SIM.flowerWitherDays) {
-          next.hasFlowers = false;
-          changed = true;
-          witheredFlowers++;
         }
       }
 

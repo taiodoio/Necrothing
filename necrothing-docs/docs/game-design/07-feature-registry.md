@@ -69,11 +69,26 @@ ricostruire la mappa mentale del progetto.
 
 | Feature | Stato | Codice | Tuning |
 |---|---|---|---|
-| Porta fiori (limite 1/giorno) | ✅ | `graveService.bringFlowers` | XP `flowers`, wisp `flowers` |
-| Erbacce (crescita nel tempo) | ✅ | `simulationService.ts` | `SIM.weedProbPerDay/Max` |
-| Sporcizia lapidi (muschio/polvere) | ✅ | `simulationService.ts`, stato `isDirty` | `SIM.dirtProbPerDay/Max` |
-| Pulizia (erbacce + sporco) | ✅ | `graveService.cleanWeeds` | XP/wisp `weedCleaned` |
-| Appassimento fiori | ✅ | `simulationService.ts` | `SIM.flowerWitherDays` |
+| Porta fiori (limite 1/giorno, **solo su tomba pulita**) | ✅ | `graveService.bringFlowers` | XP `flowers`, wisp `flowers` |
+| Erbacce/sporco (crescita nel tempo, solo su tombe senza fiori) | ✅ | `simulationService.ts`, stati `hasWeeds`/`isDirty` | `SIM.weedProb*`, `SIM.dirtProb*` |
+| Pulizia (erbacce + sporco → pulita) | ✅ | `graveService.cleanWeeds` | XP/wisp `weedCleaned` |
+| Fiori → sporca dopo N giorni | ✅ | `simulationService.ts` | `SIM.flowerWitherDays` (3) |
+| Rottura (tomba trascurata troppo a lungo) | ✅ | `simulationService.ts`, `graveService.repair` | `DECAY.graveBreakDays`, `DECAY.repairCost` |
+
+> **Ciclo degli stati della tomba** (esclusivi, resi dallo sprite — vedi §10):
+>
+> ```
+> PULITA ──porta fiori──► PULITA+FIORI ──3 giorni──► SPORCA ──pulisci──► PULITA
+>    │                                                  ▲
+>    └────────── erbacce/sporco casuali nel tempo ──────┘
+> ```
+>
+> - I fiori si portano **solo su tomba pulita** (`bringFlowers` rifiuta se sporca
+>   o rotta). Una tomba **pulita+fiori** è protetta dal degrado casuale: la sua
+>   unica evoluzione è → **sporca** dopo `flowerWitherDays`.
+> - Una tomba **pulita senza fiori** si sporca/inerba casualmente (manutenzione).
+> - Invariante applicata ovunque: **sporca ⟹ niente fiori**. Da sporca si torna
+>   puliti solo pulendo; troppo a lungo sporca → **rotta** (serve riparare).
 
 ## 4. Entità erranti & NPC
 
@@ -210,20 +225,26 @@ canvas **quadrato 1:1**, **sfondo trasparente**, pixel-art (render `pixelated`).
 
 | Oggetto | Footprint | Box logico | Sprite reso | Genera a | Fattore |
 |---|---|---|---|---|---|
-| **Tomba / croce** | 2×2 | 80×80px | 73.6px | **160×160** | `×2×0.92` |
+| **Tomba** | 2×2 | 80×80px | ~37px | **64–128** (≥2× del reso) | `×2×0.46` |
 | Placeable 1×1 | 1×1 | 40×40px | ~38px | **80×80** | `×0.96` |
 | Placeable 2×2 | 2×2 | 80×80px | ~77px | **160×160** | `×0.96` |
 | Placeable 3×3 (mausoleo/bottega) | 3×3 | 120×120px | ~115px | **256×256** | `×0.96` |
 
-- Fattori reali: tombe `TILE_SIZE*2*0.92` ([`CemeteryScene.tsx`](../../prototype/src/features/cemetery/CemeteryScene.tsx)),
+- Fattori reali: tombe `TILE_SIZE*2*0.46` ([`CemeteryScene.tsx`](../../prototype/src/features/cemetery/CemeteryScene.tsx)
+  — ridotto dal precedente 0.92 per adattarsi agli asset a 32px, resa ~1:1),
   altri placeable `min(w,h)*TILE_SIZE*0.96`. Il fattore <1 lascia margine tra
-  celle adiacenti: disegna l'arte quasi a pieno canvas (il margine è già dato dal
-  render).
+  celle adiacenti: disegna l'arte quasi a pieno canvas.
 - **Nome file = ID asset**, in [`shared/assets/generated/`](../../prototype/src/shared/assets/generated/):
   `grave_<tipo>`, `deco_<tipo>`, `env_<tipo>` / `tile_<tipo>` (strutture),
   `currency_wisp`, `npc_<tipo>`. Vedi `assetKeys.ts`.
-- **Varianti di stato** col suffisso `__stato`: `grave_gothic__flowers.png`,
-  `..__weeds`, `..__dirty`, `..__broken`, `..__flowers_weeds`, `deco_candle__lit`.
+- **Tombe (PNG reali)**: 10 tipi in [`enums.ts`](../../prototype/src/shared/domain/enums.ts)
+  `GRAVE_TYPES` — `stone_simple`, `rectangular`, `gothic`, `celtic_cross`,
+  `marble_cross`, `angel`, `obelisk`, `family_memorial`, `decorated_monument`,
+  `victorian`. Legacy `wood_cross`/`broken` restano su fallback SVG (nessun PNG).
+- **Varianti di stato** col suffisso `__stato` (switch in [`GraveSprite.tsx`](../../prototype/src/shared/assets/GraveSprite.tsx)):
+  ogni tomba ha `grave_<tipo>.png` (pulita), `__flowers` (pulita+fiori),
+  `__dirty` (sporca/erbacce). Priorità: **dirty > flowers** (resta il segnale
+  "da pulire"). `broken` non ha PNG: base + badge 🛠️. Ciclo stati in §3.
 - Trascinato un PNG in `generated/`, sostituisce automaticamente il fallback SVG
   (nessuna modifica al codice).
 - **Tile mappa** (§9): quadrati, generati a **256px** dal sorgente 782px, resi a

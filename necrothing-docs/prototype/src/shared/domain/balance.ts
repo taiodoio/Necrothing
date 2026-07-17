@@ -127,8 +127,6 @@ export const ECONOMY = {
 export const DECAY = {
   /** Giorni da sporca a rotta (una tomba trascurata si rompe). */
   graveBreakDays: 10,
-  /** I fiori prolungano di N giorni la soglia prima della rottura. */
-  flowerGraceDays: 1,
   /** Costo in fuochi fatui per riparare una tomba rotta. */
   repairCost: 6,
 } as const;

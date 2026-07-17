@@ -729,7 +729,16 @@ export const useGameStore = create<GameState>((set, get) => ({
     const graves = get().graves;
     if (graves.length === 0) return;
     const g = graves[Math.floor(Math.random() * graves.length)];
-    const updated = { ...g, hasWeeds: true, isDirty: true, updatedAt: clock.nowIso() };
+    const updated = {
+      ...g,
+      hasWeeds: true,
+      isDirty: true,
+      dirtySince: clock.nowIso(),
+      // Sporca ⟹ niente fiori (stati esclusivi).
+      hasFlowers: false,
+      flowersUpdatedAt: null,
+      updatedAt: clock.nowIso(),
+    };
     await graveRepository.update(updated);
     set({ graves: await graveService.listGraves() });
   },

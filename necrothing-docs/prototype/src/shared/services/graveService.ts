@@ -98,10 +98,16 @@ export const graveService = {
     return { grave, xpAwarded };
   },
 
-  /** Porta fiori su una tomba. Ritorna XP ottenuti (0 se già fioriti oggi). */
+  /**
+   * Porta fiori su una tomba. Ritorna XP ottenuti (0 se già fioriti oggi).
+   * I fiori si possono portare solo su una tomba **pulita**: se è rotta va
+   * riparata, se è sporca/con erbacce va prima pulita.
+   */
   async bringFlowers(graveId: string, clock: ClockService): Promise<{ grave: Grave; xpAwarded: number }> {
     const grave = await graveRepository.getById(graveId);
     if (!grave) throw new BurialError('Tomba inesistente.');
+    if (grave.broken) throw new BurialError('La tomba è rotta: va prima riparata.');
+    if (grave.isDirty || grave.hasWeeds) throw new BurialError('La tomba è sporca: va prima pulita.');
 
     const today = clock.todayIso();
     const alreadyToday = grave.flowersUpdatedAt?.slice(0, 10) === today && grave.hasFlowers;

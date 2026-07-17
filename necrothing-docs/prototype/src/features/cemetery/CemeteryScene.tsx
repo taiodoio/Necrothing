@@ -390,12 +390,9 @@ export function CemeteryScene({
                   size={TILE_SIZE * 2 * 0.46}
                   title={g.name}
                 />
-                {g.broken ? (
-                  <span className="badge badge-tl">🛠️</span>
-                ) : (
-                  (g.hasWeeds || g.isDirty) && <span className="badge badge-tl">🧹</span>
-                )}
-                {g.hasFlowers && <span className="badge badge-tr">💐</span>}
+                {/* Fiori e sporco/erbacce sono resi dallo sprite; resta solo il
+                    badge per la rottura (nessun asset dedicato). */}
+                {g.broken && <span className="badge badge-tl">🛠️</span>}
               </button>
             );
           })}

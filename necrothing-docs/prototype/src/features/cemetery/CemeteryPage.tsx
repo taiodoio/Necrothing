@@ -220,9 +220,11 @@ export function CemeteryPage() {
       const acts: PopupAction[] = [{ key: 'examine', icon: '🔍', label: 'Esamina' }];
       if (g.broken) {
         acts.push({ key: 'repair', icon: '🛠️', label: 'Ripara' });
+      } else if (g.hasWeeds || g.isDirty) {
+        // Sporca: prima pulire, poi si sbloccano i fiori.
+        acts.push({ key: 'clean', icon: '🧹', label: 'Pulisci' });
       } else {
         acts.push({ key: 'flowers', icon: '💐', label: 'Porta fiori' });
-        if (g.hasWeeds || g.isDirty) acts.push({ key: 'clean', icon: '🧹', label: 'Pulisci' });
       }
       return acts;
     }

@@ -1,5 +1,6 @@
-// Placeholder SVG di una lapide. Sostituibile in futuro con SVG animati.
-// Riceve il tipo di lapide e gli stati (fiori, erbacce) come props.
+// Sprite di una lapide. Usa il PNG in `generated/` con switch per stato
+// (base / __flowers / __dirty); se manca il PNG (tipi legacy) ripiega sul
+// disegno SVG con overlay di stato. Riceve tipo e stati come props.
 
 import type { GraveType } from '@/shared/domain/enums';
 import { spriteUrl, SpriteImg } from './Sprite';
@@ -61,13 +62,14 @@ export function GraveSprite({
   size = 64,
   title,
 }: Props) {
+  // Switch dell'asset per stato. Priorità: trascuratezza (sporco/erbacce) →
+  // asset "dirty", che ha la precedenza sui fiori così resta visibile il
+  // segnale "da pulire"; altrimenti fiori. `broken` non ha asset dedicato: usa
+  // lo stato base + badge nella scena.
   const png = spriteUrl(
     graveAssetId(type),
-    broken ? 'broken' : undefined,
-    hasFlowers && hasWeeds ? 'flowers_weeds' : undefined,
-    isDirty ? 'dirty' : undefined,
+    isDirty || hasWeeds ? 'dirty' : undefined,
     hasFlowers ? 'flowers' : undefined,
-    hasWeeds ? 'weeds' : undefined,
   );
   if (png) return <SpriteImg url={png} size={size} title={title} />;
 

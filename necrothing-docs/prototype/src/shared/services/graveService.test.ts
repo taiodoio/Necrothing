@@ -75,6 +75,17 @@ describe('graveService', () => {
     expect(noWeeds.xpAwarded).toBe(0);
   });
 
+  it('non porta fiori su una tomba sporca: prima va pulita', async () => {
+    const { grave } = await graveService.bury(draftAt(5, 5), clock);
+    await graveRepository.update({ ...grave, isDirty: true });
+    // Sporca → i fiori sono bloccati.
+    await expect(graveService.bringFlowers(grave.id, clock)).rejects.toBeInstanceOf(BurialError);
+    // Pulita → i fiori tornano possibili.
+    await graveService.cleanWeeds(grave.id, clock);
+    const res = await graveService.bringFlowers(grave.id, clock);
+    expect(res.grave.hasFlowers).toBe(true);
+  });
+
   it('gravesWithinRadius considera il footprint 2×2', () => {
     const g = { id: 'a', gridX: 10, gridY: 10 } as Grave;
     // La cella (12,10) è adiacente alla colonna destra (11) della tomba.

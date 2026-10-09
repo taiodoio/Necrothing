@@ -22,26 +22,30 @@ export class CameraRig {
   follow: THREE.Vector3 | null = null;
   private width = 1;
   private height = 1;
-  private bounds = 18;
+  /** Metà lato del terreno modellato (oltre non c'è nulla). */
+  private worldHalf = 48;
+  /** Fin dove può arrivare il centro della vista (recinto + un po' di bosco). */
+  private scrollHalf = 18;
   private blend = 1; // 0 = top, 1 = angled (transizione)
 
-  setMode(mode: CameraMode) { this.mode = mode; }
+  setMode(mode: CameraMode) { this.mode = mode; this.updateLimits(); }
 
   resize(w: number, h: number) {
     this.width = Math.max(1, w);
     this.height = Math.max(1, h);
     this.applyProjection();
+    this.updateLimits();
   }
 
   /** Zoom moltiplicativo (fattore > 1 allontana). */
   zoomBy(factor: number) {
-    this.viewHeight = THREE.MathUtils.clamp(this.viewHeight * factor, this.minView, this.maxView);
-    this.applyProjection();
+    this.setView(this.viewHeight * factor);
   }
 
   setView(h: number) {
     this.viewHeight = THREE.MathUtils.clamp(h, this.minView, this.maxView);
     this.applyProjection();
+    this.clampTarget();
   }
 
   private applyProjection() {
@@ -74,11 +78,44 @@ export class CameraRig {
     this.clampTarget();
   }
 
-  setBounds(halfSize: number) { this.bounds = halfSize; this.clampTarget(); }
+  /**
+   * Vincoli: `worldHalf` è il bordo del terreno, `scrollHalf` quanto ci si può
+   * allontanare dal centro (il recinto più una fascia di bosco). Lo zoom
+   * massimo e il pan sono calcolati perché il bordo del terreno non entri mai
+   * nell'inquadratura.
+   */
+  setWorld(worldHalf: number, scrollHalf: number) {
+    this.worldHalf = worldHalf;
+    this.scrollHalf = scrollHalf;
+    this.updateLimits();
+  }
+
+  /** Semi-estensioni (x,z) sul terreno dell'impronta inquadrata per un'altezza di vista. */
+  private footprint(viewH: number): [number, number] {
+    const aspect = this.width / this.height;
+    const hw = viewH * aspect / 2;
+    if (this.mode === 'top') return [hw, viewH / 2];
+    const hd = viewH / Math.sin(ELEVATION) / 2;
+    const c = Math.cos(AZIMUTH), s = Math.sin(AZIMUTH);
+    return [hw * c + hd * s, hw * s + hd * c];
+  }
+
+  private updateLimits() {
+    // margine per colline e lati del terreno (salgono fino a ~1 unità)
+    const room = this.worldHalf - 2.5;
+    const [ex, ez] = this.footprint(1);
+    this.maxView = Math.max(this.minView + 1, room / Math.max(ex, ez, 1e-3));
+    if (this.viewHeight > this.maxView) { this.viewHeight = this.maxView; this.applyProjection(); }
+    this.clampTarget();
+  }
 
   private clampTarget() {
-    this.target.x = THREE.MathUtils.clamp(this.target.x, -this.bounds, this.bounds);
-    this.target.z = THREE.MathUtils.clamp(this.target.z, -this.bounds, this.bounds);
+    const [ex, ez] = this.footprint(this.viewHeight);
+    const room = this.worldHalf - 2.5;
+    const bx = Math.max(0, Math.min(this.scrollHalf, room - ex));
+    const bz = Math.max(0, Math.min(this.scrollHalf, room - ez));
+    this.target.x = THREE.MathUtils.clamp(this.target.x, -bx, bx);
+    this.target.z = THREE.MathUtils.clamp(this.target.z, -bz, bz);
     this.target.y = 0;
   }
 

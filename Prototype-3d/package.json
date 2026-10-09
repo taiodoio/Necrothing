@@ -11,6 +11,8 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@fontsource/jacquard-24": "^5.3.0",
+    "@fontsource/pixelify-sans": "^5.3.0",
     "three": "^0.180.0"
   },
   "devDependencies": {

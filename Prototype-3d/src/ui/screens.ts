@@ -312,6 +312,7 @@ export function openSettings(ui: UI) {
     h('div', { class: 'setting' }, 'Vista', seg(s.camera, [['angled', 'Obliqua'], ['top', 'Dall’alto']], (v) => game.setCamera(v))),
     h('div', { class: 'setting' }, 'Qualità', seg(s.quality, [['low', 'Bassa'], ['medium', 'Media'], ['high', 'Alta']], (v) => game.setQuality(v))),
     h('div', { class: 'setting' }, 'Ora del giorno', seg<TimeOverride>(s.timeOverride, [['auto', 'Reale'], ['day', '☀️'], ['dusk', '🌆'], ['night', '🌙']], (v) => game.setTimeOverride(v))),
+    h('label', { class: 'setting' }, 'Sfocatura ai bordi', h('input', { type: 'checkbox', checked: s.edgeBlur, disabled: s.quality === 'low', onchange: (e: Event) => game.setEdgeBlur((e.target as HTMLInputElement).checked) })),
     h('label', { class: 'setting' }, 'Effetti meteo', h('input', { type: 'checkbox', checked: s.weatherEffects, onchange: (e: Event) => game.setWeatherEffects((e.target as HTMLInputElement).checked) })),
     h('label', { class: 'setting' }, 'Statistiche tecniche', h('input', { type: 'checkbox', checked: s.showDebug, onchange: (e: Event) => { s.showDebug = (e.target as HTMLInputElement).checked; game.afterChange(); } })),
     h('div', { class: 'section-title' }, 'Notifiche'),

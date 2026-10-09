@@ -4,7 +4,7 @@
 
 import type { ModelBuilder, Model } from '../shape.ts';
 import { P } from '../palette.ts';
-import { candle, pebbles, skull, tuft } from './common.ts';
+import { candle, leaves, pebbles, skull, tuft } from './common.ts';
 import { builder, decay, glass, type PVis } from './types.ts';
 
 /** Muro in pietra con corsi di mattoni sfalsati sulla faccia +z e +x. */
@@ -247,18 +247,30 @@ export function arch(v: PVis): Model {
 export function pathStone(v: PVis): Model {
   const b = builder(v);
   const r = b.rng;
-  const slabs: [number, number, number, number][] = r.chance(0.5)
-    ? [[-5, -5, 0, 0], [0.6, -5, 5, -0.4], [-5, 0.6, -0.6, 5], [0, 0, 5, 5]]
-    : [[-5, -5, 1.5, -1], [2, -5, 5, 1], [-5, -0.4, -1, 5], [-0.4, 1.6, 5, 5], [-0.6, -0.5, 1.6, 1.1]];
-  for (const [x0, z0, x1, z1] of slabs) {
-    if (v.broken && r.chance(0.35)) continue;
-    const inset = 0.4;
-    b.box(x0 + inset, 0, z0 + inset, x1 - inset, 1 + (r.chance(0.3) ? 0.6 : 0), z1 - inset, r.pick([P.stone, P.stoneDark, P.stoneLight, P.stoneWarm]), { jitter: 0.12, rough: 0.6 });
+  // acciottolato: file sfalsate di pietre irregolari con fughe di terra/muschio
+  b.box(-5, 0, -5, 5, 0.4, 5, P.earthDark);
+  const rows = 3 + r.int(2);
+  const tones = [P.stone, P.stone, '#77736c', P.stoneLight, P.stoneWarm, '#5d6066'];
+  let z = -5;
+  for (let row = 0; row < rows; row++) {
+    const depth = row === rows - 1 ? 5 - z : (10 / rows) * r.range(0.8, 1.2);
+    let x = -5;
+    while (x < 4.9) {
+      const w = Math.min(5 - x, r.range(1.8, 3.6));
+      if (!(v.broken && r.chance(0.3))) {
+        const gap = 0.3;
+        const hgt = 0.7 + r.next() * 0.6;
+        b.box(x + gap, 0, z + gap, x + w - gap, hgt, z + depth - gap, r.pick(tones), { jitter: 0.12, rough: 0.6 });
+        if (r.chance(0.25)) b.box(x + gap, hgt, z + gap, x + gap + 0.6, hgt + 0.3, z + depth - gap, P.stoneLight); // spigolo consumato
+      }
+      x += w;
+    }
+    z += depth;
   }
-  if (v.dirty) { tuft(b, -1, -1, 2, P.moss); tuft(b, 3, 3, 2, P.mossBright); }
+  for (let i = 0; i < 3; i++) { const mx = r.range(-4.5, 4), mz = r.range(-4.5, 4); b.box(mx, 0, mz, mx + 0.6, 1, mz + 0.6, r.pick([P.moss, P.mossBright, P.grass])); }
+  if (v.dirty) { tuft(b, -1, -1, 2, P.moss); tuft(b, 3, 3, 2, P.mossBright); leaves(b, -4, -4, 4, 4, 3, 1); }
   return b.build();
 }
-
 export function pathDirt(v: PVis): Model {
   const b = builder(v);
   pebbles(b, -5, -5, 5, 5, 3);

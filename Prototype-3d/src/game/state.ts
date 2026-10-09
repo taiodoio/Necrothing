@@ -109,6 +109,8 @@ export interface Settings {
   quality: Quality;
   timeOverride: TimeOverride;
   weatherEffects: boolean;
+  /** Sfocatura tilt-shift ai bordi (media/alta qualità). */
+  edgeBlur: boolean;
   editIntroSeen: boolean;
   shopTutorialDone: boolean;
   showDebug: boolean;
@@ -134,6 +136,7 @@ export const DEFAULT_SETTINGS: Settings = {
   quality: 'medium',
   timeOverride: 'auto',
   weatherEffects: true,
+  edgeBlur: true,
   editIntroSeen: false,
   shopTutorialDone: false,
   showDebug: false,
@@ -165,32 +168,47 @@ export function createNewGame(now: Date, seed = Math.floor(Math.random() * 1e9))
   const iso = now.toISOString();
   const day = (offset: number) => new Date(now.getTime() - offset * 86_400_000).toISOString();
   const rng = createRng(seed);
-  // Recinto iniziale 14×14 centrato: celle 9..22. Cancello a sud (y = 22).
+  // Recinto iniziale 22×22 centrato nella mappa 48×48: celle 13..34.
+  // Cancello a sud (y = 34, x = 22..24). Disposizione ispirata al riferimento:
+  // bottega a ovest, statua e tombe al centro, stagno a sud-est.
+  const P = (type: string, x: number, y: number, extra: Partial<Placed> = {}) => placed(type, x, y, iso, extra);
   const placeables: Placed[] = [
-    placed('shop', 17, 10, iso),
-    placed('lamp_post', 14, 19, iso),
-    placed('lamp_post', 18, 19, iso, { variant: 1 }),
-    placed('dead_tree', 10, 10, iso),
-    placed('lantern', 13, 13, iso),
+    P('shop', 14, 15),
+    P('votive_statue', 25, 15),
+    P('dead_tree', 31, 14),
+    P('dead_tree', 14, 25),
+    P('half_pine', 32, 24),
+    P('pond', 28, 29),
+    P('bushes', 14, 30),
+    P('lamp_post', 22, 27),
+    P('lamp_post', 25, 31, { variant: 1 }),
+    P('lantern', 19, 19),
+    P('lantern', 28, 19, { variant: 2 }),
+    P('tall_grass', 27, 27),
+    P('tall_grass', 33, 28),
+    P('poison_shrooms', 17, 27),
+    P('wreath', 21, 15),
   ];
-  for (let y = 14; y <= 22; y++) placeables.push(placed('path_stone', 16, y, iso));
-  for (let x = 17; x <= 18; x++) placeables.push(placed('path_stone', x, 13, iso));
-  placeables.push(placed('path_stone', 16, 13, iso));
+  for (let y = 21; y <= 34; y++) placeables.push(P('path_stone', 23, y));
+  for (let x = 15; x <= 30; x++) if (x !== 23) placeables.push(P('path_stone', x, 20));
+  placeables.push(P('path_stone', 15, 18), P('path_stone', 15, 19), P('path_stone', 23, 20));
 
-  const legacy: Array<[string, GraveType, number, number, Category, DeathCause, string]> = [
-    ['Floppy disk 1.44', 'rectangular', 11, 15, 'electronics', 'planned_obsolescence', 'Conteneva tutto. Ora contiene silenzio.'],
-    ['Tamagotchi', 'stone_simple', 11, 18, 'toys', 'owner_negligence', 'Aveva fame. Sempre.'],
-    ['Ombrello del 2009', 'gothic', 19, 16, 'household', 'fatal_fall', 'Si è rovesciato per l’ultima volta.'],
+  const legacy: Array<[string, GraveType, number, number, Category, DeathCause, string, 'dirty' | 'clean' | 'flowers']> = [
+    ['Floppy disk 1.44', 'rectangular', 19, 22, 'electronics', 'planned_obsolescence', 'Conteneva tutto. Ora contiene silenzio.', 'dirty'],
+    ['Tamagotchi', 'stone_simple', 19, 25, 'toys', 'owner_negligence', 'Aveva fame. Sempre.', 'clean'],
+    ['Ombrello del 2009', 'gothic', 26, 22, 'household', 'fatal_fall', 'Si è rovesciato per l’ultima volta.', 'dirty'],
+    ['Walkman', 'celtic_cross', 29, 22, 'electronics', 'battery_betrayal', 'Il nastro si è fermato a metà canzone.', 'flowers'],
+    ['Pianta grassa', 'victorian', 26, 25, 'plants', 'water_damage', 'Troppo amore, troppa acqua.', 'clean'],
   ];
-  const graves: Grave[] = legacy.map(([name, graveType, x, y, category, deathCause, epitaph], i) => ({
+  const graves: Grave[] = legacy.map(([name, graveType, x, y, category, deathCause, epitaph, cond], i) => ({
     id: `legacy-${i + 1}`,
     seed: Math.floor(rng.next() * 1e6),
     name, category, deathCause, epitaph, graveType, x, y,
     birthDate: null,
     deathDate: day(400 + i * 37).slice(0, 10),
     photoId: null,
-    hasFlowers: false, flowersAt: null,
-    weeds: i !== 1, dirty: i !== 1, dirtySince: i !== 1 ? day(2) : null,
+    hasFlowers: cond === 'flowers', flowersAt: cond === 'flowers' ? iso : null,
+    weeds: cond === 'dirty', dirty: cond === 'dirty', dirtySince: cond === 'dirty' ? day(2) : null,
     broken: false, lastAnniversaryYear: null, legacy: true, createdAt: day(400),
   }));
 
@@ -210,8 +228,9 @@ export function createNewGame(now: Date, seed = Math.floor(Math.random() * 1e9))
       weather: 'clear',
       lastWeatherDate: isoDate(now),
       looseWisps: [
-        { id: 'w-start-1', x: 13, y: 16 },
-        { id: 'w-start-2', x: 20, y: 20 },
+        { id: 'w-start-1', x: 21, y: 24 },
+        { id: 'w-start-2', x: 30, y: 27 },
+        { id: 'w-start-3', x: 17, y: 30 },
       ],
       blessingUntil: null,
       expansionLevel: 0,

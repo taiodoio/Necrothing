@@ -1,6 +1,8 @@
 // Micro-helper DOM (niente framework): creazione elementi, toast, numeri
 // fluttuanti, drawer dal basso.
 
+import { icon } from './icons.ts';
+
 type Child = Node | string | number | null | undefined | false;
 
 export function h<K extends keyof HTMLElementTagNameMap>(
@@ -30,14 +32,14 @@ export const $ = <T extends HTMLElement = HTMLElement>(sel: string) => document.
 export function toast(message: string, kind: '' | 'ach' = '') {
   if (!message) return;
   const box = $('#toasts');
-  const el = h('div', { class: `toast ${kind}` }, message);
+  const el = h('div', { class: `toast ${kind}` }, kind === 'ach' ? icon('trophy', 18) : null, message);
   box.append(el);
   while (box.children.length > 3) box.firstElementChild?.remove();
   setTimeout(() => el.remove(), 3900);
 }
 
 export function floater(x: number, y: number, text: string, kind: 'wisp' | 'xp') {
-  const el = h('div', { class: `floater ${kind}`, style: `left:${x}px;top:${y}px` }, text);
+  const el = h('div', { class: `floater ${kind}`, style: `left:${x}px;top:${y}px` }, text, kind === 'wisp' ? icon('wisp', 14) : null);
   $('#floaters').append(el);
   setTimeout(() => el.remove(), 1400);
 }

@@ -10,10 +10,12 @@ import { nextRank, rankForXp, rankProgress } from '../game/progression.ts';
 import type { BurialDraft } from '../game/rules.ts';
 import { DAY_PHASE_LABELS } from '../game/time.ts';
 import { $, closeDrawer, drawerOpen, h, toast } from './dom.ts';
+import { hydrateIcons, icon, iconUrl, installFrames } from './icons.ts';
 import * as S from './screens.ts';
 
 const WEATHER_LABELS = { clear: 'Sereno', fog: 'Nebbia', rain: 'Pioggia', storm: 'Temporale' } as const;
-const PHASE_ICONS = { dawn: '🌅', day: '☀️', dusk: '🌆', night: '🌙' } as const;
+const PHASE_ICONS = { dawn: 'dawn', day: 'sun', dusk: 'dusk', night: 'moon' } as const;
+const WEATHER_ICONS = { clear: '', fog: 'fog', rain: 'rain', storm: 'rain' } as const;
 
 export class UI {
   readonly game: Game;
@@ -23,6 +25,8 @@ export class UI {
 
   constructor(game: Game) {
     this.game = game;
+    installFrames();
+    hydrateIcons();
     $('#fab').addEventListener('click', () => this.toggleBubble());
     for (const b of document.querySelectorAll<HTMLButtonElement>('[data-act]')) {
       b.addEventListener('click', () => { this.closeBubble(); this.bubbleAction(b.dataset.act!); });
@@ -45,7 +49,7 @@ export class UI {
     const rank = rankForXp(p.xp);
     const next = nextRank(p.xp);
     $('#hud-name').textContent = p.name;
-    $('#hud-rank').textContent = `${rank.level} · ${rank.name}${next ? '' : ' ★'}`;
+    $('#hud-rank').textContent = `Rango ${rank.level} · ${rank.name}${next ? '' : ' ★'}`;
     ($('#hud-xp') as HTMLElement).style.width = `${Math.round(rankProgress(p.xp) * 100)}%`;
     $('#hud-wisps').textContent = String(p.wisps);
     this.refreshClock();
@@ -63,7 +67,11 @@ export class UI {
     $('#hud-clock').textContent = now.toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' });
     const phase = this.game.getPhase();
     const w = this.game.state.world.weather;
-    $('#hud-weather').textContent = `${PHASE_ICONS[phase]} ${window.innerWidth < 420 ? WEATHER_LABELS[w] : `${DAY_PHASE_LABELS[phase]} · ${WEATHER_LABELS[w]}`}`;
+    const el = $('#hud-weather');
+    const key = `${phase}|${w}|${window.innerWidth < 420}`;
+    if (el.dataset.key === key) return;
+    el.dataset.key = key;
+    el.replaceChildren(icon(WEATHER_ICONS[w] || PHASE_ICONS[phase], 14), window.innerWidth < 420 ? WEATHER_LABELS[w] : `${DAY_PHASE_LABELS[phase]} · ${WEATHER_LABELS[w]}`);
   }
 
   refreshDebug(text: string) {
@@ -74,7 +82,7 @@ export class UI {
 
   refreshSettingsButtons() {
     const cam = this.game.state.settings.camera;
-    $('#cam-toggle').textContent = cam === 'angled' ? '⊞' : '◇';
+    $('#cam-icon').style.backgroundImage = iconUrl(cam === 'angled' ? 'top' : 'angled');
     $('#cam-toggle').setAttribute('aria-label', cam === 'angled' ? 'Vista dall’alto' : 'Vista obliqua');
     if (drawerOpen() && document.querySelector('[data-settings]')) S.openSettings(this);
   }
@@ -86,12 +94,14 @@ export class UI {
     const open = !b.classList.contains('open');
     b.classList.toggle('open', open);
     $('#fab').setAttribute('aria-expanded', String(open));
+    $('#fab-icon').style.backgroundImage = iconUrl(open ? 'close' : 'shovel');
     for (const s of document.querySelectorAll<HTMLElement>('.slot')) s.classList.toggle('active', s.dataset.act === 'edit' && this.game.editMode);
   }
 
   closeBubble() {
     $('#bubble').classList.remove('open');
     $('#fab').setAttribute('aria-expanded', 'false');
+    $('#fab-icon').style.backgroundImage = iconUrl('shovel');
   }
 
   private bubbleAction(act: string) {
@@ -137,7 +147,7 @@ export class UI {
     const sel = this.game.selection;
     if (!sel || this.game.placement || drawerOpen()) { this.closeContext(); return; }
     const s = this.game.state;
-    const actions: Array<{ act: EntityAction; label: string; cls?: string; cost?: number }> = [];
+    const actions: Array<{ act: EntityAction; label: string; icon: string; cls?: string; cost?: number }> = [];
     let title = '';
     let sub = '';
     if (sel.kind === 'grave') {
@@ -147,12 +157,12 @@ export class UI {
       title = g.name;
       sub = `${GRAVE_TYPE_LABELS[g.graveType]} · ${GRAVE_STATE_LABELS[vs]}`;
       if (this.game.editMode) {
-        actions.push({ act: 'detail', label: '🔍 Dettagli' }, { act: 'exhume', label: '🗑 Esuma', cls: 'danger' }, { act: 'confirm', label: '✓ Fatto', cls: 'primary' });
+        actions.push({ act: 'detail', label: 'Dettagli', icon: 'search' }, { act: 'exhume', label: 'Esuma', icon: 'shovel', cls: 'danger' }, { act: 'confirm', label: 'Fatto', icon: 'check', cls: 'primary' });
       } else {
-        actions.push({ act: 'detail', label: '🔍 Dettagli' });
-        if (g.broken) actions.push({ act: 'repair', label: '🛠 Ripara', cls: 'primary', cost: DECAY.graveRepairCost });
-        else if (g.dirty || g.weeds) actions.push({ act: 'clean', label: '🧹 Pulisci', cls: 'primary' });
-        else actions.push({ act: 'flowers', label: g.hasFlowers ? '💐 Rinnova fiori' : '💐 Porta fiori', cls: 'primary' });
+        actions.push({ act: 'detail', label: 'Dettagli', icon: 'search' });
+        if (g.broken) actions.push({ act: 'repair', label: 'Ripara', icon: 'hammer', cls: 'primary', cost: DECAY.graveRepairCost });
+        else if (g.dirty || g.weeds) actions.push({ act: 'clean', label: 'Pulisci', icon: 'broom', cls: 'primary' });
+        else actions.push({ act: 'flowers', label: g.hasFlowers ? 'Rinnova fiori' : 'Porta fiori', icon: 'flower', cls: 'primary' });
       }
     } else {
       const p = s.placeables.find((x) => x.id === sel.id);
@@ -161,16 +171,16 @@ export class UI {
       title = def.label;
       sub = p.broken ? 'Rotto' : p.dirty ? 'Sporco' : def.light ? (p.lit ? 'Acceso' : 'Spento') : def.category === 'npc' ? 'Presenza' : 'In ordine';
       if (this.game.editMode) {
-        if (def.rotatable) actions.push({ act: 'rotate', label: '⟳ Ruota' });
-        if ((def.variants ?? 1) > 1) actions.push({ act: 'variant', label: '🎨 Variante' });
-        if (!def.permanent) actions.push({ act: 'store', label: '🎒 Riponi', cls: 'danger' });
-        actions.push({ act: 'confirm', label: '✓ Fatto', cls: 'primary' });
+        if (def.rotatable) actions.push({ act: 'rotate', label: 'Ruota', icon: 'variant' });
+        if ((def.variants ?? 1) > 1) actions.push({ act: 'variant', label: 'Variante', icon: 'gallery' });
+        if (!def.permanent) actions.push({ act: 'store', label: 'Riponi', icon: 'bag', cls: 'danger' });
+        actions.push({ act: 'confirm', label: 'Fatto', icon: 'check', cls: 'primary' });
       } else {
-        if (p.type === 'shop') actions.push({ act: 'shop', label: '🛒 Entra in bottega', cls: 'primary' });
-        actions.push({ act: 'detail', label: '🔍 Dettagli' });
-        if (p.broken) actions.push({ act: 'repair', label: '🛠 Ripara', cls: 'primary', cost: repairCost(def) });
-        else if (p.dirty) actions.push({ act: 'clean', label: '🧹 Pulisci' });
-        if (def.light && !p.broken) actions.push({ act: 'light', label: p.lit ? '🌑 Spegni' : '💡 Accendi' });
+        if (p.type === 'shop') actions.push({ act: 'shop', label: 'Entra in bottega', icon: 'shop', cls: 'primary' });
+        actions.push({ act: 'detail', label: 'Dettagli', icon: 'search' });
+        if (p.broken) actions.push({ act: 'repair', label: 'Ripara', icon: 'hammer', cls: 'primary', cost: repairCost(def) });
+        else if (p.dirty) actions.push({ act: 'clean', label: 'Pulisci', icon: 'broom' });
+        if (def.light && !p.broken) actions.push({ act: 'light', label: p.lit ? 'Spegni' : 'Accendi', icon: p.lit ? 'lightOff' : 'lightOn' });
       }
     }
     this.ctxId = sel.id;
@@ -178,7 +188,7 @@ export class UI {
     $('#ctx-actions').replaceChildren(...actions.map((a) => h('button', {
       class: a.cls ?? '',
       onclick: () => this.game.performEntityAction(sel.id, a.act),
-    }, a.label, a.cost ? h('em', {}, ` −${a.cost}✦`) : null)));
+    }, icon(a.icon, 20), a.label, a.cost ? h('em', {}, ` −${a.cost}`, icon('wisp', 12)) : null)));
     $('#ctx').hidden = false;
     this.positionContext();
   }
@@ -205,14 +215,14 @@ export class UI {
     if (!p) { this.placementBar?.remove(); this.placementBar = null; $('#bubble').classList.remove('hidden'); return; }
     this.closeContext();
     $('#bubble').classList.add('hidden');
-    const label = p.kind === 'grave' ? `⚰️ Dove riposerà ${p.draft!.name}?` : `📍 ${CATALOG[p.type!].label}`;
+    const label = p.kind === 'grave' ? `Dove riposerà ${p.draft!.name}?` : CATALOG[p.type!].label;
     const rot = p.kind === 'item' && CATALOG[p.type!].rotatable;
     const bar = h('div', { class: 'tutorial' },
-      h('b', {}, label),
+      h('b', {}, icon(p.kind === 'grave' ? 'bury' : 'target', 18), label),
       h('span', { class: 'muted' }, p.valid ? 'Tocca il terreno o trascina per spostare, poi conferma.' : 'Spazio occupato: scegli un punto libero.'),
       h('div', { class: 'row' },
         h('button', { class: 'pill', onclick: () => this.game.cancelPlacement() }, 'Annulla'),
-        rot ? h('button', { class: 'pill', onclick: () => this.game.rotatePlacement() }, '⟳ Ruota') : null,
+        rot ? h('button', { class: 'pill', onclick: () => this.game.rotatePlacement() }, icon('variant', 16), 'Ruota') : null,
         h('button', { class: 'pill primary', disabled: !p.valid, onclick: () => this.game.confirmPlacement() }, p.kind === 'grave' ? 'Seppellisci qui' : 'Conferma'),
       ),
     );
@@ -230,7 +240,7 @@ export class UI {
       this.game.select(null);
       const card = h('div', { class: 'tutorial' },
         h('b', {}, 'Benvenuto, Custode.'),
-        h('span', {}, 'Questa è la Bottega: qui compri lampioni, statue, presenze e tutto ciò che serve al cimitero, pagando in fuochi fatui ✦. Toccala per entrare; in Modifica puoi spostarla dove vuoi.'),
+        h('span', {}, 'Questa è la Bottega: qui compri lampioni, statue, presenze e tutto ciò che serve al cimitero, pagando in fuochi fatui. Toccala per entrare; in Modifica puoi spostarla dove vuoi.'),
         h('span', { class: 'muted' }, 'Il vecchio custode ha lasciato tre tombe trascurate: puliscile e porta loro dei fiori. Tocca il terreno per camminare.'),
         h('button', { class: 'big-btn', onclick: () => { s.shopTutorialDone = true; card.remove(); this.tutorial = null; this.game.recenter(); this.game.afterChange(); } }, 'Ho capito'),
       );

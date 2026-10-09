@@ -1,4 +1,8 @@
 import { Game } from './app/Game.ts';
+import '@fontsource/pixelify-sans/400.css';
+import '@fontsource/pixelify-sans/600.css';
+import '@fontsource/pixelify-sans/700.css';
+import '@fontsource/jacquard-24/400.css';
 import './styles/main.css';
 
 const canvas = document.querySelector<HTMLCanvasElement>('#world');

@@ -6,7 +6,7 @@
 import type { GraveType, GraveVisualState } from '../../game/graves.ts';
 import { ModelBuilder, type Model } from '../shape.ts';
 import { P } from '../palette.ts';
-import { bouquet, candle, cobweb, leaves, moss, pebbles, skull, weeds } from './common.ts';
+import { bouquet, candle, cobweb, DRY, grassClump, leaves, moss, pebbles, skull, weeds } from './common.ts';
 
 const STONE_Z = -6; // centro della lapide (asse z)
 
@@ -195,6 +195,15 @@ export function graveModel(type: GraveType, state: GraveVisualState, seed: numbe
     b.box(-8, 0, 6, -7, 2, 7, P.moss);
     b.box(7, 0, 0, 8, 2, 1, P.moss);
     if (r.chance(0.5)) candle(b, 4, 1, -3, false, 2);
+  }
+  // erba fine attorno alla base della lapide e ai bordi del tumulo
+  for (const [x, z] of [[-7.5, STONE_Z + 1], [7.5, STONE_Z], [-8, 4], [8, 7]] as const) {
+    if (r.chance(dirty ? 0.9 : 0.6)) grassClump(b, x + r.range(-0.8, 0.8), z + r.range(-0.8, 0.8), dirty ? 1.2 : 0.8, dirty ? DRY : undefined);
+  }
+  // licheni: piccole macchie chiare sulla base
+  for (let i = 0; i < 3; i++) {
+    const x = r.range(-5, 4), z = STONE_Z + r.range(-2.5, 2);
+    b.box(x, 1.6, z, x + 0.9, 2.3, z + 0.9, r.pick(['#8e9a6a', '#a3a37a', P.moss]));
   }
   return b.build();
 }

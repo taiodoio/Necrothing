@@ -15,11 +15,17 @@ import { areaForLevel, buildOccupancy, gateCells, type Rect } from '../game/worl
 import { getModel, instantiate, lightWorldPos, MATERIALS, type CachedModel } from '../render/modelCache.ts';
 import { fencePillar, fenceSegment, gate } from '../render/models/fence.ts';
 import { graveModel } from '../render/models/graves.ts';
-import { deadTree, pine, sceneryLeaves, sceneryPebbles, sceneryRock, sceneryTuft } from '../render/models/nature.ts';
+import { deadTree, pine, sceneryBush, sceneryFern, sceneryFlowers, sceneryLeaves, sceneryPebbles, sceneryRock, sceneryShrooms, sceneryTuft, sceneryWildGrass } from '../render/models/nature.ts';
 import { placeableKey, placeableModel, placeableSeed, type PVis } from '../render/models/registry.ts';
 import { P } from '../render/palette.ts';
+import { drawIcon } from '../ui/icons.ts';
 import type { Atmosphere, AnchorHandle } from './Atmosphere.ts';
-import { buildChunk, CHUNK, type Ground, type GroundInput } from './terrain.ts';
+import { buildChunk, CHUNK, groundHeightAtCell, groundType, lowNoise, WORLD_MAX, WORLD_MIN, type Ground, type GroundInput } from './terrain.ts';
+import { ChunkBaker } from './baker.ts';
+
+function columnLift(input: GroundInput, x: number, y: number): number {
+  return Math.max(0, groundHeightAtCell(input, x, y));
+}
 
 export const HALF = MAP_SIZE / 2;
 
@@ -56,18 +62,23 @@ function badgeMaterial(icon: string, ring: string): THREE.SpriteMaterial {
   const key = icon + ring;
   let m = badgeMaterials.get(key);
   if (m) return m;
+  // targhetta pixel: quadrato con angoli a gradino, bordo colorato, icona 12×12
   const c = document.createElement('canvas');
   c.width = c.height = 96;
   const g = c.getContext('2d')!;
-  g.fillStyle = 'rgba(16,18,24,0.88)';
-  g.beginPath(); g.arc(48, 48, 40, 0, Math.PI * 2); g.fill();
-  g.lineWidth = 6; g.strokeStyle = ring; g.stroke();
-  g.font = '44px system-ui, "Apple Color Emoji", "Noto Color Emoji", sans-serif';
-  g.textAlign = 'center'; g.textBaseline = 'middle';
-  g.fillStyle = '#fff';
-  g.fillText(icon, 48, 52);
+  const step = 6;
+  const plate = (inset: number, color: string) => {
+    g.fillStyle = color;
+    g.fillRect(inset + step, inset, 96 - 2 * (inset + step), 96 - 2 * inset);
+    g.fillRect(inset, inset + step, 96 - 2 * inset, 96 - 2 * (inset + step));
+  };
+  plate(0, '#07080b');
+  plate(step, ring);
+  plate(step * 2, '#161920');
+  drawIcon(g, icon, 18, 18, 60);
   const tex = new THREE.CanvasTexture(c);
   tex.colorSpace = THREE.SRGBColorSpace;
+  tex.magFilter = THREE.NearestFilter;
   m = new THREE.SpriteMaterial({ map: tex, depthTest: false, transparent: true });
   badgeMaterials.set(key, m);
   return m;
@@ -82,14 +93,13 @@ export class WorldView {
   private scenery = new THREE.Group();
   private decorLayer = new THREE.Group();
   private sceneryAnchors: AnchorHandle[] = [];
-  private terrainSig = '';
+  private terrainChunks = new Map<string, { mesh: THREE.Mesh; sig: string }>();
   private scenerySig = '';
   private decorSig = '';
   private style: ArtStyle;
   private selectedId: string | null = null;
   private selectionFrame: THREE.LineSegments;
   private ghostFrame: THREE.Mesh;
-  private terrainMat = new THREE.MeshLambertMaterial({ vertexColors: true });
   private readonly atmosphere: Atmosphere;
   private signTextures = new Map<string, THREE.CanvasTexture>();
   groundInput: GroundInput | null = null;
@@ -110,11 +120,13 @@ export class WorldView {
     scene.add(this.root);
   }
 
-  setStyle(style: ArtStyle, state: SaveData) {
-    if (style === this.style) return;
+  setStyle(style: ArtStyle, state: SaveData, force = false) {
+    if (style === this.style && !force) return;
     this.style = style;
     for (const e of [...this.entities.values()]) this.removeEntity(e.id);
-    this.terrainSig = this.scenerySig = this.decorSig = '';
+    this.scenerySig = this.decorSig = '';
+    for (const c of this.terrainChunks.values()) { this.terrain.remove(c.mesh); c.mesh.geometry.dispose(); (c.mesh.material as THREE.MeshLambertMaterial).map?.dispose(); (c.mesh.material as THREE.Material).dispose(); }
+    this.terrainChunks.clear();
     this.sync(state);
   }
 
@@ -140,7 +152,12 @@ export class WorldView {
     const a = this.area;
     for (let x = a.x - 1; x <= a.x + a.w; x++) { m.set(`${x},${a.y - 1}`, 'fence'); m.set(`${x},${a.y + a.h}`, 'fence'); }
     for (let y = a.y - 1; y <= a.y + a.h; y++) { m.set(`${a.x - 1},${y}`, 'fence'); m.set(`${a.x + a.w},${y}`, 'fence'); }
-    for (const c of gateCells(a)) { const [x, y] = c.split(',').map(Number); m.set(`${x},${y + 1}`, 'path'); m.set(`${x},${y + 2}`, 'path'); m.set(c, 'path'); }
+    // strada sterrata che dal cancello si perde nel bosco
+    for (const c of gateCells(a)) {
+      const [x, y] = c.split(',').map(Number);
+      m.set(c, 'path');
+      for (let k = 1; k < 30; k++) m.set(`${x},${y + k}`, k < 3 ? 'path' : 'dirt');
+    }
     for (const p of state.placeables) {
       const g: Ground | null = p.type === 'path_stone' ? 'path' : p.type === 'path_dirt' ? 'dirt' : p.type === 'mud' ? 'mud' : null;
       if (!g) continue;
@@ -150,31 +167,53 @@ export class WorldView {
     return m;
   }
 
+  private chunkKeys(): Array<[number, number]> {
+    const out: Array<[number, number]> = [];
+    for (let cy = WORLD_MIN; cy < WORLD_MAX; cy += CHUNK) for (let cx = WORLD_MIN; cx < WORLD_MAX; cx += CHUNK) out.push([cx, cy]);
+    return out;
+  }
+
+  /** Firma del suolo di un chunk (si ricostruisce solo ciò che cambia). */
+  private chunkSig(overrides: Map<string, Ground>, cx0: number, cy0: number): string {
+    const parts: string[] = [];
+    for (let y = cy0 - 1; y <= cy0 + CHUNK; y++) for (let x = cx0 - 1; x <= cx0 + CHUNK; x++) {
+      const g = overrides.get(`${x},${y}`);
+      if (g) parts.push(`${x},${y}${g[0]}`);
+    }
+    return `${this.style}|${this.area.x},${this.area.w}|${parts.join(';')}`;
+  }
+
   private syncTerrain(state: SaveData) {
     const overrides = this.groundOverrides(state);
-    const sig = `${this.style}|${state.world.expansionLevel}|${[...overrides.entries()].map(([k, v]) => k + v).sort().join(';')}`;
-    if (sig === this.terrainSig) return;
-    this.terrainSig = sig;
     this.groundInput = { seed: state.seed % 100000, area: this.area, overrides };
-    for (const c of [...this.terrain.children]) { this.terrain.remove(c); (c as THREE.Mesh).geometry.dispose(); }
-    for (let cy = 0; cy < MAP_SIZE; cy += CHUNK) {
-      for (let cx = 0; cx < MAP_SIZE; cx += CHUNK) {
-        const mesh = new THREE.Mesh(buildChunk(this.groundInput, cx, cy, this.style), this.terrainMat);
-        mesh.receiveShadow = true;
-        mesh.name = `chunk-${cx}-${cy}`;
-        this.terrain.add(mesh);
+    for (const [cx, cy] of this.chunkKeys()) {
+      const key = `${cx},${cy}`;
+      const sig = this.chunkSig(overrides, cx, cy);
+      const old = this.terrainChunks.get(key);
+      if (old && old.sig === sig) continue;
+      if (old) {
+        this.terrain.remove(old.mesh);
+        old.mesh.geometry.dispose();
+        (old.mesh.material as THREE.MeshLambertMaterial).map?.dispose();
+        (old.mesh.material as THREE.Material).dispose();
       }
+      const chunk = buildChunk(this.groundInput, cx, cy, this.style);
+      const mesh = new THREE.Mesh(chunk.geometry, new THREE.MeshLambertMaterial({ map: chunk.texture, vertexColors: true }));
+      mesh.receiveShadow = true;
+      mesh.name = `chunk-${key}`;
+      this.terrain.add(mesh);
+      this.terrainChunks.set(key, { mesh, sig });
     }
   }
 
-  /** Recinto + cancello + bosco selvatico fuori dall'area consacrata. */
+  /** Recinto + cancello (instancing) e bosco (cotto per chunk). */
   private syncScenery(state: SaveData) {
     const sig = `${this.style}|${state.world.expansionLevel}|${this.quality}`;
     if (sig === this.scenerySig) return;
     this.scenerySig = sig;
     for (const h of this.sceneryAnchors) this.atmosphere.removeAnchor(h);
     this.sceneryAnchors = [];
-    for (const c of [...this.scenery.children]) this.scenery.remove(c);
+    for (const c of [...this.scenery.children]) { this.scenery.remove(c); if ((c as THREE.Mesh).userData.baked) (c as THREE.Mesh).geometry.dispose(); }
     const a = this.area;
     const gate0 = a.x + Math.floor(a.w / 2) - 2; // prima cella del varco (3 celle)
     const segs: THREE.Matrix4[] = [];
@@ -201,84 +240,101 @@ export class WorldView {
     this.scenery.add(g);
     for (const an of gm.lights) this.sceneryAnchors.push(this.atmosphere.addAnchor(lightWorldPos(an).add(g.position), an));
 
-    // Bosco selvatico: celle fuori dal recinto (con un margine).
+    // Bosco: celle selvatiche e oltre la mappa. Vicino al recinto alberi voxel
+    // (dettaglio pieno), lontano un LOD leggero: la sfocatura ai bordi e la
+    // nebbia ne nascondono la semplificazione.
     const rng = createRng(state.seed + 77);
-    const trees: Record<string, THREE.Matrix4[]> = {};
-    const density = this.quality === 'low' ? 0.2 : this.quality === 'medium' ? 0.32 : 0.42;
-    for (let y = 0; y < MAP_SIZE; y += 2) {
-      for (let x = 0; x < MAP_SIZE; x += 2) {
-        const nearFence = x >= a.x - 3 && x < a.x + a.w + 2 && y >= a.y - 3 && y < a.y + a.h + 2;
-        if (nearFence) continue;
+    const input = this.groundInput!;
+    const density = this.quality === 'low' ? 0.22 : this.quality === 'medium' ? 0.32 : 0.42;
+    const baker = new ChunkBaker();
+    const nearRes = this.quality === 'high' ? 1.6 : 1.0;
+    const farRes = this.quality === 'high' ? 1.0 : 0.7;
+    for (let y = WORLD_MIN; y < WORLD_MAX; y += 2) {
+      for (let x = WORLD_MIN; x < WORLD_MAX; x += 2) {
+        const gt = groundType(input, x, y);
+        if (gt !== 'wild' && gt !== 'forest') continue;
+        if (x >= a.x - 3 && x < a.x + a.w + 2 && y >= a.y - 3 && y < a.y + a.h + 2) continue;
+        const dist = Math.max(a.x - x, x - (a.x + a.w), a.y - y, y - (a.y + a.h));
         const r = rng.next();
-        if (r > density + (x < 2 || y < 2 || x > MAP_SIZE - 3 || y > MAP_SIZE - 3 ? 0.25 : 0)) continue;
+        // macchie di bosco fitto alternate a radure (rumore a bassa frequenza)
+        const clump = lowNoise(x, y, input.seed + 31, 9);
+        if (r > (density + Math.min(0.3, dist * 0.015)) * (0.35 + clump * 1.3)) continue;
         const kind = rng.next();
-        const key = kind < 0.55 ? `pine:${rng.int(4)}` : kind < 0.85 ? `dead:${rng.int(4)}` : `rock:${rng.int(3)}`;
-        const s = 0.8 + rng.next() * 0.5;
-        (trees[key] ??= []).push(new THREE.Matrix4().compose(
-          new THREE.Vector3(x + 1 + rng.range(-0.6, 0.6) - HALF, 0, y + 1 + rng.range(-0.6, 0.6) - HALF),
-          new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), rng.range(0, Math.PI * 2)),
-          new THREE.Vector3(s, s * (0.9 + rng.next() * 0.3), s),
-        ));
+        const far = dist > 9;
+        const variant = rng.int(4);
+        const style = this.style;
+        const res = far ? farRes : nearRes;
+        const model = kind < 0.58
+          ? getModel(`wpine:${variant}`, style, () => pine(variant + 40), variant, true, res)
+          : kind < 0.88
+            ? getModel(`wdead:${variant}`, style, () => deadTree({ seed: variant + 90 }, true), variant, true, res)
+            : getModel(`wrock:${variant % 3}`, style, () => sceneryRock(variant % 3), variant, true, res);
+        const s = 0.85 + rng.next() * 0.55;
+        const pos = new THREE.Vector3(x + 1 + rng.range(-0.6, 0.6) - HALF, columnLift(input, x, y), y + 1 + rng.range(-0.6, 0.6) - HALF);
+        baker.add(model, new THREE.Matrix4().compose(pos, new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), rng.range(0, Math.PI * 2)), new THREE.Vector3(s, s * (0.9 + rng.next() * 0.35), s)), 1, x, y);
       }
     }
-    for (const [key, mats] of Object.entries(trees)) {
-      const [kind, n] = key.split(':');
-      const seed = Number(n);
-      const model = kind === 'pine' ? getModel(`wpine:${seed}`, this.style, () => pine(seed + 40), seed)
-        : kind === 'dead' ? getModel(`wdead:${seed}`, this.style, () => deadTree({ seed: seed + 90 }, true), seed)
-        : getModel(`wrock:${seed}`, this.style, () => sceneryRock(seed), seed);
-      this.addInstanced(model, mats, this.scenery, this.quality === 'high');
-    }
+    for (const mesh of baker.build(this.quality === 'high')) this.scenery.add(mesh);
   }
 
-  /** Ciuffi, foglie, sassolini dentro e fuori il recinto (evitano oggetti e sentieri). */
+  /**
+   * Sottobosco cotto per chunk: erba fitta, fiorellini, sassi e funghi nel
+   * prato; felci, cespugli, erba secca e foglie nel bosco. Evita oggetti e
+   * sentieri. I modelli sono pochi e condivisi, varia solo la trasformazione.
+   */
   private syncDecor(state: SaveData) {
     const occ = buildOccupancy(state);
-    const overrides = this.groundInput?.overrides ?? new Map();
-    const sig = `${this.style}|${this.quality}|${state.world.expansionLevel}|${[...occ.owner.keys()].length}|${state.placeables.length}|${state.graves.map((g) => g.x + ',' + g.y).join()}`;
+    const input = this.groundInput!;
+    const sig = `${this.style}|${this.quality}|${state.world.expansionLevel}|${[...occ.owner.keys()].sort().join(';')}`;
     if (sig === this.decorSig) return;
     this.decorSig = sig;
-    for (const c of [...this.decorLayer.children]) this.decorLayer.remove(c);
+    for (const c of [...this.decorLayer.children]) { this.decorLayer.remove(c); (c as THREE.Mesh).geometry.dispose(); }
     const rng = createRng(state.seed + 5);
-    const per = this.quality === 'low' ? 0.35 : this.quality === 'medium' ? 0.7 : 1.1;
-    const buckets: Record<string, THREE.Matrix4[]> = {};
-    const tints: Record<string, number[]> = {};
-    for (let y = 0; y < MAP_SIZE; y++) {
-      for (let x = 0; x < MAP_SIZE; x++) {
+    const per = this.quality === 'low' ? 0.45 : this.quality === 'medium' ? 0.85 : 1.25;
+    const baker = new ChunkBaker();
+    const st = this.style;
+    const M = {
+      tuft: (v: number) => getModel(`tuft:${v % 6}`, st, () => sceneryTuft(v % 6), v),
+      flowers: (v: number) => getModel(`flowers:${v % 4}`, st, () => sceneryFlowers(v % 4), v),
+      pebbles: (v: number) => getModel(`pebbles:${v % 3}`, st, () => sceneryPebbles(v % 3), v),
+      leaves: (v: number) => getModel(`leaves:${v % 3}`, st, () => sceneryLeaves(v % 3), v),
+      shrooms: (v: number) => getModel(`shroom:${v % 3}`, st, () => sceneryShrooms(v % 3), v),
+      wgrass: (v: number) => getModel(`wgrass:${v % 4}`, st, () => sceneryWildGrass(v % 4), v),
+      fern: (v: number) => getModel(`fern:${v % 4}`, st, () => sceneryFern(v % 4), v),
+      bush: (v: number) => getModel(`bush:${v % 4}`, st, () => sceneryBush(v % 4), v),
+    };
+    const meadow: Array<[number, keyof typeof M]> = [[0.72, 'tuft'], [0.82, 'flowers'], [0.92, 'pebbles'], [0.97, 'leaves'], [1, 'shrooms']];
+    const wood: Array<[number, keyof typeof M]> = [[0.36, 'wgrass'], [0.6, 'fern'], [0.72, 'bush'], [0.86, 'leaves'], [0.93, 'shrooms'], [1, 'pebbles']];
+    const reach = 10; // celle oltre il recinto con sottobosco
+    const a = this.area;
+    for (let y = a.y - reach; y < a.y + a.h + reach; y++) {
+      for (let x = a.x - reach; x < a.x + a.w + reach; x++) {
         const k = `${x},${y}`;
-        if (occ.owner.has(k) || overrides.get(k) === 'path' || overrides.get(k) === 'fence') continue;
-        const wild = !(x >= this.area.x && y >= this.area.y && x < this.area.x + this.area.w && y < this.area.y + this.area.h);
-        const n = (wild ? 1.3 : 0.45) * per;
+        const gt = groundType(input, x, y);
+        if (occ.owner.has(k) || gt === 'path' || gt === 'fence' || gt === 'dirt' || gt === 'mud') continue;
+        const wild = gt !== 'grass';
+        const dist = Math.max(a.x - x, x - (a.x + a.w - 1), a.y - y, y - (a.y + a.h - 1), 0);
+        const n = (wild ? 1.2 * Math.max(0, 1 - dist / reach) ** 0.7 : 1.7) * per;
         let count = Math.floor(n) + (rng.next() < n % 1 ? 1 : 0);
         while (count-- > 0) {
           const r = rng.next();
-          const key = r < 0.72 ? `tuft:${rng.int(5)}` : r < 0.84 ? `leaves:${rng.int(3)}` : `pebbles:${rng.int(3)}`;
-          (tints[key] ??= []).push(wild ? 0.55 + rng.next() * 0.2 : 0.85 + rng.next() * 0.2);
-          (buckets[key] ??= []).push(new THREE.Matrix4().compose(
-            new THREE.Vector3(x + rng.range(0.15, 0.85) - HALF, 0, y + rng.range(0.15, 0.85) - HALF),
-            new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), rng.int(4) * Math.PI / 2),
-            new THREE.Vector3(1, wild ? 1.3 : 1, 1),
-          ));
+          const kind = (wild ? wood : meadow).find(([p]) => r <= p)![1];
+          const model = M[kind](rng.int(12));
+          const pos = new THREE.Vector3(x + rng.range(0.2, 0.8) - HALF, columnLift(input, x, y), y + rng.range(0.2, 0.8) - HALF);
+          const sc = kind === 'bush' || kind === 'fern' ? 0.9 + rng.next() * 0.5 : 1;
+          baker.add(model, new THREE.Matrix4().compose(pos, new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), rng.int(4) * Math.PI / 2), new THREE.Vector3(sc, sc, sc)), wild ? 0.75 + rng.next() * 0.2 : 0.9 + rng.next() * 0.15, x, y);
         }
       }
     }
-    for (const [key, mats] of Object.entries(buckets)) {
-      const [kind, n] = key.split(':');
-      const seed = Number(n);
-      const model = kind === 'tuft' ? getModel(`tuft:${seed}`, this.style, () => sceneryTuft(seed), seed)
-        : kind === 'leaves' ? getModel(`leaves:${seed}`, this.style, () => sceneryLeaves(seed), seed)
-        : getModel(`pebbles:${seed}`, this.style, () => sceneryPebbles(seed), seed);
-      this.addInstanced(model, mats, this.decorLayer, false, tints[key]);
-    }
+    for (const mesh of baker.build(false)) this.decorLayer.add(mesh);
   }
 
-  private addInstanced(model: CachedModel, mats: THREE.Matrix4[], parent = this.scenery, cast = true, tint?: number[]) {
+  private addInstanced(model: CachedModel, mats: THREE.Matrix4[], parent = this.scenery, cast = true) {
     if (!mats.length) return;
     for (const [bucket, geo] of Object.entries(model.geometries)) {
       if (!geo) continue;
       const mesh = new THREE.InstancedMesh(geo, MATERIALS[bucket as keyof typeof MATERIALS], mats.length);
       mats.forEach((mm, i) => mesh.setMatrixAt(i, mm));
-      if (tint) tint.forEach((v, i) => mesh.setColorAt(i, new THREE.Color(v, v, v)));
       mesh.instanceMatrix.needsUpdate = true;
       mesh.castShadow = cast && bucket === 'solid';
       mesh.receiveShadow = bucket === 'solid';
@@ -362,7 +418,7 @@ export class WorldView {
 
   private setBadge(e: EntityView, need: 'dirty' | 'broken' | null) {
     if (!need) { if (e.badge) { e.group.remove(e.badge); e.badge = undefined; } return; }
-    const mat = need === 'broken' ? badgeMaterial('🛠', '#e0705f') : badgeMaterial('🧹', '#c9a25c');
+    const mat = need === 'broken' ? badgeMaterial('hammer', '#a8473b') : badgeMaterial('broom', '#c9a25c');
     if (!e.badge) { e.badge = new THREE.Sprite(mat); e.badge.scale.set(0.55, 0.55, 0.55); e.badge.renderOrder = 5; e.group.add(e.badge); }
     e.badge.material = mat;
     e.badge.position.set(0, e.height + 0.45, 0);
@@ -394,7 +450,7 @@ export class WorldView {
       for (const w of words) { if ((line + ' ' + w).trim().length > 12) { lines.push(line.trim()); line = w; } else line += ' ' + w; }
       lines.push(line.trim());
       const size = lines.length > 2 ? 30 : 38;
-      g.font = `bold ${size}px Georgia, serif`;
+      g.font = `${size}px "Jacquard 24", Georgia, serif`;
       lines.slice(0, 3).forEach((l, i) => g.fillText(l, 128, 80 + (i - (Math.min(lines.length, 3) - 1) / 2) * (size + 4)));
       tex = new THREE.CanvasTexture(c);
       tex.colorSpace = THREE.SRGBColorSpace;

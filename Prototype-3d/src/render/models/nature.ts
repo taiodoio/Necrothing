@@ -6,7 +6,7 @@ import * as THREE from 'three';
 import type { ModelBuilder, Model } from '../shape.ts';
 import { ModelBuilder as MB } from '../shape.ts';
 import { P } from '../palette.ts';
-import { bouquet, leaves, pebbles, tuft } from './common.ts';
+import { bouquet, DRY, grassClump, GREENS, leaves, pebbles, tuft } from './common.ts';
 import { builder, type PVis } from './types.ts';
 
 const euler = new THREE.Euler();
@@ -220,11 +220,67 @@ export function sceneryRock(seed: number): Model {
 export function sceneryTuft(seed: number): Model {
   const b = new MB(`tuft:${seed}`);
   const r = b.rng;
-  const n = 2 + r.int(3);
-  for (let i = 0; i < n; i++) tuft(b, Math.floor(r.range(-2, 2)), Math.floor(r.range(-2, 2)), 2 + r.int(3), r.pick([P.dryGrass, P.moss, P.moss, P.grass, P.grassDark, '#6b6a3a', seed === 4 ? P.autumn : P.dryGrass]));
+  const n = 1 + r.int(2);
+  for (let i = 0; i < n; i++) grassClump(b, r.range(-2, 2), r.range(-2, 2), 0.8 + r.next() * 0.5, seed === 4 ? DRY : GREENS);
   return b.build();
 }
-
+/** Erba secca/alta del sottobosco. */
+export function sceneryWildGrass(seed: number): Model {
+  const b = new MB(`wgrass:${seed}`);
+  const r = b.rng;
+  for (let i = 0; i < 2 + r.int(2); i++) grassClump(b, r.range(-2.5, 2.5), r.range(-2.5, 2.5), 1.1 + r.next() * 0.6, r.chance(0.5) ? DRY : [...GREENS.slice(0, 3), ...DRY.slice(0, 2)]);
+  return b.build();
+}
+/** Fiorellini di campo: steli sottili e una testa colorata di un voxel. */
+export function sceneryFlowers(seed: number): Model {
+  const b = new MB(`flowers:${seed}`);
+  const r = b.rng;
+  const colors = [[P.flowerWhite, '#e8e2d0'], [P.flowerYellow, '#e3c66a'], [P.flowerViolet, '#9a86c2'], [P.flowerRose, P.flowerRed]][seed % 4];
+  grassClump(b, 0, 0, 0.7);
+  for (let i = 0; i < 3 + r.int(4); i++) {
+    const x = r.range(-2.2, 2.2), z = r.range(-2.2, 2.2), h = 1.6 + r.next() * 1.8;
+    b.box(x, 0, z, x + 0.6, h, z + 0.6, P.leaf);
+    b.box(x - 0.3, h, z - 0.3, x + 0.9, h + 0.9, z + 0.9, r.pick(colors));
+  }
+  return b.build();
+}
+/** Felce: fronde inclinate disposte a raggiera (sottobosco). */
+export function sceneryFern(seed: number): Model {
+  const b = new MB(`fern:${seed}`);
+  const r = b.rng;
+  const n = 5 + r.int(3);
+  const c = r.pick(['#3f5a32', '#4a6136', '#56703d', '#5b5a33']);
+  for (let i = 0; i < n; i++) {
+    const yaw = (i / n) * Math.PI * 2 + r.range(-0.2, 0.2);
+    const len = 3.5 + r.next() * 2;
+    b.push([0, 0.4, 0], yaw, -0.75 - r.next() * 0.35).box(-0.4, 0, -0.3, 0.4, len, 0.3, c).pop();
+    // foglioline laterali
+    b.push([0, 0.4, 0], yaw, -0.9).box(-1.1, len * 0.45, -0.3, 1.1, len * 0.45 + 0.6, 0.3, c).pop();
+  }
+  return b.build();
+}
+/** Cespuglio basso per il bosco. */
+export function sceneryBush(seed: number): Model {
+  const b = new MB(`bush:${seed}`);
+  const r = b.rng;
+  for (let i = 0; i < 3 + r.int(2); i++) {
+    b.ell(r.range(-2, 2), 2 + r.next() * 1.5, r.range(-2, 2), 2 + r.next() * 1.3, 1.8 + r.next(), 2 + r.next() * 1.3, r.pick(['#2f4529', '#3a5230', '#44502c', '#2b3a26']), { rough: 0.8 });
+  }
+  if (r.chance(0.4)) for (let i = 0; i < 3; i++) { const x = r.range(-2.5, 2), y = 2.5 + r.next() * 2, z = r.range(1.5, 3.5); b.box(x, y, z, x + 0.8, y + 0.8, z + 0.8, P.red); }
+  return b.build();
+}
+/** Funghetti. */
+export function sceneryShrooms(seed: number): Model {
+  const b = new MB(`shroom:${seed}`);
+  const r = b.rng;
+  for (let i = 0; i < 2 + r.int(3); i++) {
+    const x = r.range(-2, 2), z = r.range(-2, 2), h = 0.8 + r.next() * 1.4;
+    b.box(x, 0, z, x + 0.6, h, z + 0.6, P.bone);
+    const cap = r.pick([P.red, '#b9824e', '#8a6a4a']);
+    b.box(x - 0.6, h, z - 0.6, x + 1.2, h + 0.7, z + 1.2, cap);
+  }
+  return b.build();
+}
 export function sceneryLeaves(seed: number): Model {
   const b = new MB(`leaves:${seed}`);
   leaves(b, -3, -3, 3, 3, 3);

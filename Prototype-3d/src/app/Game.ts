@@ -3,7 +3,7 @@
 // espansione/achievement → salvataggio → sincronizzazione della vista.
 
 import * as THREE from 'three';
-import { GRAVE_FOOTPRINT, LIVE_TICK_MS, MAP_SIZE } from '../game/balance.ts';
+import { FOREST_MARGIN, GRAVE_FOOTPRINT, LIVE_TICK_MS } from '../game/balance.ts';
 import { CATALOG, rotatedFootprint } from '../game/catalog.ts';
 import type { GraveVisualState } from '../game/graves.ts';
 import { graveVisualState } from '../game/graves.ts';
@@ -12,7 +12,8 @@ import { catchUpMessage, liveTick, runCatchUp } from '../game/simulation.ts';
 import { createNewGame, type ArtStyle, type CameraMode, type Quality, type SaveData, type TimeOverride } from '../game/state.ts';
 import { dayPhaseForHour, type DayPhase } from '../game/time.ts';
 import { areaForLevel, buildOccupancy, canPlaceAt, gateCells, nearestFreeSpot } from '../game/world.ts';
-import { cacheStats, getModel, MATERIALS } from '../render/modelCache.ts';
+import { applyStyleUniforms, cacheStats, clearAll, getModel, MATERIALS } from '../render/modelCache.ts';
+import { setVoxelResolution, voxelResolution, voxelsPerWorldUnit } from '../render/voxelMesher.ts';
 import { graveModel } from '../render/models/graves.ts';
 import { placeableKey, placeableModel, type PVis } from '../render/models/registry.ts';
 import { UI } from '../ui/UI.ts';
@@ -21,6 +22,7 @@ import { Actors, graveSpots } from '../view/Actors.ts';
 import { Atmosphere } from '../view/Atmosphere.ts';
 import { CameraRig } from '../view/CameraRig.ts';
 import { Effects } from '../view/Effects.ts';
+import { PostFX } from '../view/PostFX.ts';
 import { groundHeightAtCell } from '../view/terrain.ts';
 import { cellCenter, HALF, worldToCell, WorldView } from '../view/WorldView.ts';
 import { Input } from './Input.ts';
@@ -40,6 +42,9 @@ export interface Placement {
   rot: number;
   valid: boolean;
 }
+
+/** Densità dei voxel per qualità (voxel per unità di design; 10 unità = 1 cella). */
+const VOXEL_RES: Record<Quality, number> = { low: 1.0, medium: 1.6, high: 2.0 };
 
 export class Game {
   state: SaveData;
@@ -66,6 +71,8 @@ export class Game {
   private fps = { frames: 0, time: 0, value: 0 };
   private disposed = false;
   private canvas: HTMLCanvasElement;
+  private postfx: PostFX;
+  private focusNdc = new THREE.Vector3();
 
   constructor(canvas: HTMLCanvasElement) {
     this.canvas = canvas;
@@ -80,7 +87,10 @@ export class Game {
     this.renderer.shadowMap.enabled = true;
     this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
     this.renderer.info.autoReset = false;
+    this.postfx = new PostFX(this.renderer);
 
+    setVoxelResolution(VOXEL_RES[q]);
+    applyStyleUniforms(this.state.settings.style, voxelsPerWorldUnit());
     this.atmosphere = new Atmosphere(this.scene, q);
     this.effects = new Effects(this.scene, q);
     this.world = new WorldView(this.scene, this.atmosphere, this.state.settings.style);
@@ -152,7 +162,8 @@ export class Game {
     if (this.hudTimer <= 0) { this.hudTimer = 1; this.ui.refreshClock(); }
 
     this.renderer.info.reset();
-    this.renderer.render(this.scene, this.rig.camera);
+    this.updateFocus();
+    this.postfx.render(this.scene, this.rig.camera);
     this.ui.frame();
 
     this.fps.frames++; this.fps.time += dt;
@@ -193,10 +204,10 @@ export class Game {
     const w = window.innerWidth, h = window.innerHeight;
     this.renderer.setSize(w, h, false);
     this.rig.resize(w, h);
-    this.rig.setBounds(HALF - 1);
+    this.postfx?.setSize();
     this.rig.minView = 6;
-    this.rig.maxView = Math.max(30, MAP_SIZE * 1.2);
-    if (!this.resized) { this.rig.setView(w < 700 ? 21 : 20); this.resized = true; }
+    this.updateCameraWorld();
+    if (!this.resized) { this.rig.setView(w < 700 ? 24 : 22); this.resized = true; }
   };
   private resized = false;
 
@@ -231,7 +242,7 @@ export class Game {
   private showRewards(at: THREE.Vector3, r: R.ActionResult) {
     const p = this.project(at);
     if (!p) return;
-    if (r.wisps) floater(p.x + 18, p.y - 6, `${r.wisps > 0 ? '+' : ''}${r.wisps} ✦`, 'wisp');
+    if (r.wisps) floater(p.x + 18, p.y - 6, `${r.wisps > 0 ? '+' : ''}${r.wisps}`, 'wisp');
     if (r.xp) floater(p.x - 18, p.y + 10, `+${r.xp} XP`, 'xp');
   }
 
@@ -239,10 +250,11 @@ export class Game {
   afterChange() {
     const now = this.now();
     const { achievements, expanded } = R.afterAction(this.state, now);
-    for (const a of achievements) toast(`🏆 ${a.name}`, 'ach');
-    if (expanded) toast(`🧱 Il recinto si allarga: ${areaForLevel(this.state.world.expansionLevel).w}×${areaForLevel(this.state.world.expansionLevel).h}!`, 'ach');
+    for (const a of achievements) toast(`Traguardo: ${a.name}`, 'ach');
+    if (expanded) toast(`Il recinto si allarga: ${areaForLevel(this.state.world.expansionLevel).w}×${areaForLevel(this.state.world.expansionLevel).h}!`, 'ach');
     scheduleSave(this.state);
     this.world.sync(this.state);
+    if (expanded) this.updateCameraWorld();
     this.refreshWalkable();
     this.actors.syncPresences(this.state, now);
     this.ui.refreshHud();
@@ -602,6 +614,7 @@ export class Game {
     if (this.state.settings.style === style) return;
     this.state.settings.style = style;
     const sel = this.selection;
+    applyStyleUniforms(style, voxelsPerWorldUnit());
     this.world.setStyle(style, this.state);
     this.actors.setStyle(style);
     this.select(sel);
@@ -625,7 +638,34 @@ export class Game {
     this.ui.refreshSettingsButtons();
   }
 
+  /** La fascia nitida segue il Custode (o la selezione), senza scatti. */
+  private updateFocus() {
+    if (!this.postfx.enabled) return;
+    const sel = this.selection ? this.world.entities.get(this.selection.id) : null;
+    const p = sel ? sel.group.position : this.actors.avatar.pos;
+    this.focusNdc.set(p.x, 0.5, p.z).project(this.rig.camera);
+    const fx = THREE.MathUtils.clamp(this.focusNdc.x * 0.5 + 0.5, 0.3, 0.7);
+    const fy = THREE.MathUtils.clamp(this.focusNdc.y * 0.5 + 0.5, 0.3, 0.7);
+    this.postfx.focus.x += (fx - this.postfx.focus.x) * 0.08;
+    this.postfx.focus.y += (fy - this.postfx.focus.y) * 0.08;
+  }
+
+  /** La vista può scorrere sul recinto e su una fascia di bosco, mai oltre il terreno. */
+  private updateCameraWorld() {
+    const a = this.world.area;
+    const half = Math.max(a.w, a.h) / 2;
+    this.rig.setWorld(HALF + FOREST_MARGIN, half + 7);
+  }
+
   private applyQuality(q: Quality) {
+    if (VOXEL_RES[q] !== voxelResolution()) {
+      setVoxelResolution(VOXEL_RES[q]);
+      applyStyleUniforms(this.state.settings.style, voxelsPerWorldUnit());
+      clearAll();
+      this.world.setStyle(this.state.settings.style, this.state, true);
+      this.actors.setStyle(this.state.settings.style);
+      this.select(this.selection);
+    }
     const cap = q === 'low' ? 1 : q === 'medium' ? 1.5 : 2;
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, cap));
     this.renderer.shadowMap.type = q === 'low' ? THREE.PCFShadowMap : THREE.PCFSoftShadowMap;
@@ -634,6 +674,7 @@ export class Game {
     this.world.quality = q;
     this.world.sync(this.state);
     this.resize();
+    this.postfx.configure(q !== 'low' && this.state.settings.edgeBlur, q === 'high' ? 5 : 3.5);
     for (const m of Object.values(MATERIALS)) m.needsUpdate = true;
   }
 
@@ -642,6 +683,12 @@ export class Game {
     scheduleSave(this.state);
     this.updatePhase(true);
     this.ui.refreshSettingsButtons();
+  }
+
+  setEdgeBlur(on: boolean) {
+    this.state.settings.edgeBlur = on;
+    this.applyQuality(this.state.settings.quality);
+    scheduleSave(this.state);
   }
 
   setWeatherEffects(on: boolean) {
@@ -671,7 +718,7 @@ export class Game {
 
   /** Cattura un rettangolo (px CSS) della scena in bianco e nero. */
   capture(rect: { x: number; y: number; w: number; h: number }): string {
-    this.renderer.render(this.scene, this.rig.camera);
+    this.postfx.render(this.scene, this.rig.camera);
     const src = this.renderer.domElement;
     const sx = src.width / src.clientWidth, sy = src.height / src.clientHeight;
     const out = document.createElement('canvas');

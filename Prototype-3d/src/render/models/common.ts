@@ -12,6 +12,27 @@ export function tuft(b: ModelBuilder, x: number, z: number, h = 3, color: string
   if (r.chance(0.4)) b.box(x - 1, 0, z, x, Math.max(1, h - 2), z + 1, color, { jitter: 0.12 });
 }
 
+/**
+ * Ciuffo d'erba fine: fili sottili (0,6 voxel di design ≈ un voxel a qualità
+ * media) di altezze e verdi diversi, alcuni piegati. Pensato per essere fitto.
+ */
+export function grassClump(b: ModelBuilder, x: number, z: number, scale = 1, palette: readonly string[] = GREENS) {
+  const r = b.rng;
+  const n = 4 + r.int(5);
+  const t = 0.6;
+  for (let i = 0; i < n; i++) {
+    const bx = x + r.range(-1.6, 1.6) * scale, bz = z + r.range(-1.6, 1.6) * scale;
+    const h = (1.2 + r.next() * 2.6) * scale;
+    const c = r.pick(palette);
+    b.box(bx, 0, bz, bx + t, h * 0.6, bz + t, c);
+    // punta piegata verso una direzione casuale
+    const dx = r.pick([-t, 0, t]), dz = r.pick([-t, 0, 0, t]);
+    b.box(bx + dx, h * 0.6, bz + dz, bx + dx + t, h, bz + dz + t, c);
+  }
+}
+export const GREENS = ['#4a6136', '#3f5233', '#56703d', '#62793f', '#35482d', '#6b7f45'] as const;
+export const DRY = ['#8d7a4c', '#6b6a3a', '#7a6a3e', '#5b5a33', '#a0632f'] as const;
+
 export function weeds(b: ModelBuilder, x0: number, z0: number, x1: number, z1: number, n: number) {
   const r = b.rng;
   for (let i = 0; i < n; i++) {
@@ -86,8 +107,9 @@ export function smallCross(b: ModelBuilder, x: number, z: number, h: number, col
 export function pebbles(b: ModelBuilder, x0: number, z0: number, x1: number, z1: number, n: number) {
   const r = b.rng;
   for (let i = 0; i < n; i++) {
-    const x = Math.floor(r.range(x0, x1)), z = Math.floor(r.range(z0, z1));
-    b.box(x, 0, z, x + 1 + r.int(2), 1, z + 1 + r.int(2), r.pick([P.stoneDark, P.stone]), { jitter: 0.1, rough: 0.5 });
+    const x = r.range(x0, x1), z = r.range(z0, z1);
+    const w = 0.7 + r.next() * 1.1, d = 0.7 + r.next() * 0.9, hgt = 0.5 + r.next() * 0.6;
+    b.box(x, 0, z, x + w, hgt, z + d, r.pick([P.stone, P.stoneLight, P.stoneWarm, '#7d7a72']), { jitter: 0.1, rough: 0.5 });
   }
 }
 

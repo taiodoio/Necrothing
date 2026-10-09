@@ -3,8 +3,10 @@
 // (necrothing-docs/prototype/src/shared/domain/balance.ts e
 // progressionService.ts) e adattati al gioco 3D "in tempo reale".
 
-/** Mappa logica: 32×32 celle. 1 cella = 1 unità mondo. */
-export const MAP_SIZE = 32;
+/** Mappa logica: 48×48 celle. 1 cella = 1 unità mondo. */
+export const MAP_SIZE = 48;
+/** Bosco decorativo oltre la mappa (celle per lato): il terreno non "finisce" mai a schermo. */
+export const FOREST_MARGIN = 24;
 export const GRAVE_FOOTPRINT: [number, number] = [2, 2];
 
 export const RANKS = [
@@ -131,11 +133,11 @@ export const MAUSOLEUM_PRESTIGE = 25;
  * centrato nella mappa 32×32. Il resto è terra selvaggia non consacrata.
  */
 export const EXPANSION = [
-  { minPrestige: 0, size: 14, label: 'Recinto iniziale' },
-  { minPrestige: 30, size: 18, label: 'Ala orientale' },
-  { minPrestige: 80, size: 22, label: 'Ala occidentale' },
-  { minPrestige: 160, size: 26, label: 'Campo dei dimenticati' },
-  { minPrestige: 280, size: 30, label: 'Cimitero intero' },
+  { minPrestige: 0, size: 22, label: 'Recinto iniziale' },
+  { minPrestige: 90, size: 26, label: 'Ala orientale' },
+  { minPrestige: 160, size: 30, label: 'Ala occidentale' },
+  { minPrestige: 260, size: 36, label: 'Campo dei dimenticati' },
+  { minPrestige: 400, size: 44, label: 'Cimitero intero' },
 ] as const;
 
 export const DISTRICT = { minGraves: 4, adjacency: 3 } as const;

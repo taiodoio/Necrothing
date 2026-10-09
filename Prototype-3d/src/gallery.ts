@@ -6,7 +6,8 @@ import * as THREE from 'three';
 import { GRAVE_TYPES, type GraveVisualState } from './game/graves.ts';
 import type { ArtStyle, CameraMode } from './game/state.ts';
 import type { DayPhase } from './game/time.ts';
-import { getModel, instantiate, lightWorldPos } from './render/modelCache.ts';
+import { applyStyleUniforms, getModel, instantiate, lightWorldPos } from './render/modelCache.ts';
+import { voxelsPerWorldUnit } from './render/voxelMesher.ts';
 import { graveModel } from './render/models/graves.ts';
 import { gallerySets } from './render/models/registry.ts';
 import { Atmosphere } from './view/Atmosphere.ts';
@@ -48,6 +49,7 @@ if (params.get('time')) phase = params.get('time') as DayPhase;
 
 let extent = 10;
 function rebuild() {
+  applyStyleUniforms(style, voxelsPerWorldUnit());
   for (const c of [...root.children]) root.remove(c);
   atmosphere.clearAnchors();
   const all = sets[select.value];

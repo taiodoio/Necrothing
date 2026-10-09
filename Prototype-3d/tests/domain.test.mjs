@@ -5,13 +5,17 @@ import * as R from '../src/game/rules.ts';
 import { runCatchUp, liveTick } from '../src/game/simulation.ts';
 import { computeSpawns, countBuildings } from '../src/game/spawn.ts';
 import { createRng } from '../src/game/rng.ts';
-import { areaForLevel, buildOccupancy, canPlaceAt, computePrestige, detectDistricts } from '../src/game/world.ts';
+import { areaForLevel, buildOccupancy, canPlaceAt, computePrestige, detectDistricts, nearestFreeSpot } from '../src/game/world.ts';
 import { CATALOG_LIST, rotatedFootprint } from '../src/game/catalog.ts';
 import { evaluateAchievements, rankForXp } from '../src/game/progression.ts';
 import { DECAY, EXPANSION, WISPS, XP } from '../src/game/balance.ts';
 
 const NOW = new Date('2026-10-09T12:00:00Z');
 const later = (days) => new Date(NOW.getTime() + days * 86_400_000);
+
+function spot(s, fp = [2, 2], near = [17, 31]) {
+  return nearestFreeSpot(near[0], near[1], fp, buildOccupancy(s), areaForLevel(s.world.expansionLevel));
+}
 
 function draft(over = {}) {
   return { ...R.emptyDraft(NOW), name: 'Caricatore', category: 'electronics', deathCause: 'broken_cable', ...over };
@@ -35,12 +39,15 @@ test('nuova partita: bottega pre-piazzata e posizioni dentro il recinto', () => 
 
 test('sepoltura: XP, fuochi, occupazione e limite astratto giornaliero', () => {
   const s = createNewGame(NOW, 1);
-  const { grave, result } = R.bury(s, draft(), 13, 10, NOW);
+  const a = spot(s);
+  const { grave, result } = R.bury(s, draft(), a.x, a.y, NOW);
   assert.equal(result.xp, XP.burialPhysical);
   assert.equal(s.player.xp, XP.burialPhysical);
-  assert.throws(() => R.bury(s, draft({ name: 'Altro' }), 13, 10, NOW), R.GameError);
-  R.bury(s, draft({ name: 'Il lunedì', category: 'abstract' }), 9, 20, NOW);
-  assert.throws(() => R.bury(s, draft({ name: 'La pazienza', category: 'abstract' }), 20, 20, NOW), /astratta/);
+  assert.throws(() => R.bury(s, draft({ name: 'Altro' }), a.x, a.y, NOW), R.GameError);
+  const b = spot(s);
+  R.bury(s, draft({ name: 'Il lunedì', category: 'abstract' }), b.x, b.y, NOW);
+  const c = spot(s);
+  assert.throws(() => R.bury(s, draft({ name: 'La pazienza', category: 'abstract' }), c.x, c.y, NOW), /astratta/);
   assert.equal(s.graves.find((g) => g.id === grave.id).name, 'Caricatore');
 });
 
@@ -104,12 +111,14 @@ test('bottega: acquisto, pezzi unici, vendita al 70%', () => {
 test('modifica: piazza, ruota, sposta, riponi; la bottega non si elimina', () => {
   const s = createNewGame(NOW, 6);
   s.inventory.fence_iron = 1;
-  const p = R.placeFromInventory(s, 'fence_iron', 13, 20, 0, NOW);
+  const at = spot(s, [1, 1]);
+  const p = R.placeFromInventory(s, 'fence_iron', at.x, at.y, 0, NOW);
   assert.equal(s.inventory.fence_iron, undefined);
   R.rotateEntity(s, p.id);
   assert.equal(p.rot, 1);
-  R.moveEntity(s, p.id, 14, 21);
-  assert.deepEqual([p.x, p.y], [14, 21]);
+  const to = spot(s, [1, 1], [30, 33]);
+  R.moveEntity(s, p.id, to.x, to.y);
+  assert.deepEqual([p.x, p.y], [to.x, to.y]);
   R.storePlaceable(s, p.id);
   assert.equal(s.inventory.fence_iron, 1);
   const shop = s.placeables.find((x) => x.type === 'shop');
@@ -119,7 +128,7 @@ test('modifica: piazza, ruota, sposta, riponi; la bottega non si elimina', () =>
 test('becchino: pulisce gratis le tombe vicine', () => {
   const s = createNewGame(NOW, 7);
   const dirty = s.graves.filter((g) => g.dirty);
-  const r = R.interactRoamer(s, 'gravedigger', NOW, { x: 12, y: 16 });
+  const r = R.interactRoamer(s, 'gravedigger', NOW, { x: 21, y: 23 });
   assert.ok(r.xp > 0);
   assert.ok(dirty.some((g) => !g.dirty));
 });
@@ -151,8 +160,10 @@ test('spawn deterministico con lo stesso seed', () => {
 
 test('espansione monotona: il recinto cresce col prestigio e non si restringe', () => {
   const s = createNewGame(NOW, 10);
-  const spots = [[9, 20], [12, 20], [19, 20]];
-  spots.forEach(([x, y], i) => R.bury(s, draft({ name: `Oggetto ${i}`, category: ['toys', 'tools', 'plants'][i] }), x, y, NOW));
+  ['toys', 'tools', 'plants', 'clothing', 'vehicles', 'expensive', 'other', 'toys', 'tools'].forEach((category, i) => {
+    const p = spot(s);
+    R.bury(s, draft({ name: `Oggetto ${i}`, category }), p.x, p.y, NOW);
+  });
   s.graves.forEach((g) => { g.hasFlowers = true; g.dirty = false; g.weeds = false; });
   const { expanded } = R.afterAction(s, NOW);
   assert.ok(computePrestige(s) >= EXPANSION[1].minPrestige);
@@ -165,7 +176,8 @@ test('espansione monotona: il recinto cresce col prestigio e non si restringe', 
 
 test('achievement e ranghi', () => {
   const s = createNewGame(NOW, 11);
-  R.bury(s, draft(), 13, 10, NOW);
+  const a = spot(s);
+  R.bury(s, draft(), a.x, a.y, NOW);
   const fresh = evaluateAchievements(s, NOW).map((a) => a.id);
   assert.ok(fresh.includes('first_burial'));
   assert.equal(rankForXp(1500).level, 3);

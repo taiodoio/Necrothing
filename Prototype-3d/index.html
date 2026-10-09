@@ -14,42 +14,42 @@
 
       <header class="hud-top">
         <button class="player-chip" id="player-chip" aria-label="Profilo del custode">
-          <span class="chip-avatar" aria-hidden="true">⚰</span>
+          <span class="chip-avatar" aria-hidden="true"><i data-icon="keeper"></i></span>
           <span class="chip-body">
             <strong id="hud-name">Custode</strong>
             <small id="hud-rank">Rango 1</small>
             <span class="xp-bar"><i id="hud-xp"></i></span>
           </span>
-          <span class="wisp-count"><b class="wisp-icon" aria-hidden="true"></b><span id="hud-wisps">0</span></span>
+          <span class="wisp-count"><i class="wisp-icon" data-icon="wisp"></i><span id="hud-wisps">0</span></span>
         </button>
         <div class="hud-right">
           <div class="clock-block">
             <strong id="hud-clock">--:--</strong>
             <small id="hud-weather">Notte</small>
           </div>
-          <button class="icon-btn" id="settings-btn" aria-label="Impostazioni">⚙</button>
+          <button class="icon-btn" id="settings-btn" aria-label="Impostazioni"><i data-icon="gear"></i></button>
         </div>
       </header>
 
       <div class="edit-banner" id="edit-banner" hidden>
-        <span>✏️ Modifica — tocca un elemento, trascinalo per spostarlo</span>
+        <i data-icon="edit"></i><span>Modifica — tocca un elemento, trascinalo per spostarlo</span>
         <button class="pill" id="edit-done">Fine</button>
       </div>
 
       <div class="map-tools">
-        <button class="icon-btn" id="cam-toggle" aria-label="Cambia vista">◇</button>
-        <button class="icon-btn" id="recenter" aria-label="Centra sul custode">⌖</button>
+        <button class="icon-btn" id="cam-toggle" aria-label="Cambia vista"><i data-icon="top" id="cam-icon"></i></button>
+        <button class="icon-btn" id="recenter" aria-label="Centra sul custode"><i data-icon="target"></i></button>
       </div>
 
       <nav class="bubble" id="bubble" aria-label="Azioni">
-        <button class="fab" id="fab" aria-expanded="false" aria-label="Apri azioni"><span>✦</span></button>
+        <button class="fab" id="fab" aria-expanded="false" aria-label="Apri azioni"><i data-icon="shovel" id="fab-icon"></i></button>
         <div class="slots" id="slots">
-          <button class="slot" data-act="bury"><span>⚰️</span><small>Seppellisci</small></button>
-          <button class="slot" data-act="edit"><span>✏️</span><small>Modifica</small></button>
-          <button class="slot" data-act="inventory"><span>🎒</span><small>Inventario</small></button>
-          <button class="slot" data-act="shop"><span>🏚️</span><small>Bottega</small></button>
-          <button class="slot" data-act="photo"><span>📷</span><small>Foto</small></button>
-          <button class="slot" data-act="gallery"><span>🖼️</span><small>Galleria</small></button>
+          <button class="slot" data-act="bury"><i data-icon="bury"></i><small>Seppellisci</small></button>
+          <button class="slot" data-act="edit"><i data-icon="edit"></i><small>Modifica</small></button>
+          <button class="slot" data-act="inventory"><i data-icon="bag"></i><small>Inventario</small></button>
+          <button class="slot" data-act="shop"><i data-icon="shop"></i><small>Bottega</small></button>
+          <button class="slot" data-act="photo"><i data-icon="photo"></i><small>Foto</small></button>
+          <button class="slot" data-act="gallery"><i data-icon="gallery"></i><small>Galleria</small></button>
         </div>
       </nav>
 
@@ -61,7 +61,7 @@
       <div class="scrim" id="scrim" hidden></div>
       <section class="drawer" id="drawer" hidden aria-modal="true" role="dialog">
         <header class="drawer-head">
-          <button class="icon-btn small" id="drawer-close" aria-label="Chiudi">✕</button>
+          <button class="icon-btn small" id="drawer-close" aria-label="Chiudi"><i data-icon="close"></i></button>
           <h2 id="drawer-title"></h2>
         </header>
         <div class="drawer-body" id="drawer-body"></div>

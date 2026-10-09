@@ -18,6 +18,7 @@ import { graveModel } from '../render/models/graves.ts';
 import { deadTree, pine, sceneryBush, sceneryFern, sceneryFlowers, sceneryLeaves, sceneryPebbles, sceneryRock, sceneryShrooms, sceneryTuft, sceneryWildGrass } from '../render/models/nature.ts';
 import { placeableKey, placeableModel, placeableSeed, type PVis } from '../render/models/registry.ts';
 import { P } from '../render/palette.ts';
+import { drawIcon } from '../ui/icons.ts';
 import type { Atmosphere, AnchorHandle } from './Atmosphere.ts';
 import { buildChunk, CHUNK, groundHeightAtCell, groundType, lowNoise, WORLD_MAX, WORLD_MIN, type Ground, type GroundInput } from './terrain.ts';
 import { ChunkBaker } from './baker.ts';
@@ -61,18 +62,23 @@ function badgeMaterial(icon: string, ring: string): THREE.SpriteMaterial {
   const key = icon + ring;
   let m = badgeMaterials.get(key);
   if (m) return m;
+  // targhetta pixel: quadrato con angoli a gradino, bordo colorato, icona 12×12
   const c = document.createElement('canvas');
   c.width = c.height = 96;
   const g = c.getContext('2d')!;
-  g.fillStyle = 'rgba(16,18,24,0.88)';
-  g.beginPath(); g.arc(48, 48, 40, 0, Math.PI * 2); g.fill();
-  g.lineWidth = 6; g.strokeStyle = ring; g.stroke();
-  g.font = '44px system-ui, "Apple Color Emoji", "Noto Color Emoji", sans-serif';
-  g.textAlign = 'center'; g.textBaseline = 'middle';
-  g.fillStyle = '#fff';
-  g.fillText(icon, 48, 52);
+  const step = 6;
+  const plate = (inset: number, color: string) => {
+    g.fillStyle = color;
+    g.fillRect(inset + step, inset, 96 - 2 * (inset + step), 96 - 2 * inset);
+    g.fillRect(inset, inset + step, 96 - 2 * inset, 96 - 2 * (inset + step));
+  };
+  plate(0, '#07080b');
+  plate(step, ring);
+  plate(step * 2, '#161920');
+  drawIcon(g, icon, 18, 18, 60);
   const tex = new THREE.CanvasTexture(c);
   tex.colorSpace = THREE.SRGBColorSpace;
+  tex.magFilter = THREE.NearestFilter;
   m = new THREE.SpriteMaterial({ map: tex, depthTest: false, transparent: true });
   badgeMaterials.set(key, m);
   return m;
@@ -308,7 +314,7 @@ export class WorldView {
         if (occ.owner.has(k) || gt === 'path' || gt === 'fence' || gt === 'dirt' || gt === 'mud') continue;
         const wild = gt !== 'grass';
         const dist = Math.max(a.x - x, x - (a.x + a.w - 1), a.y - y, y - (a.y + a.h - 1), 0);
-        const n = (wild ? 1.1 * (1 - dist / (reach + 4)) : 1.7) * per;
+        const n = (wild ? 1.2 * Math.max(0, 1 - dist / reach) ** 0.7 : 1.7) * per;
         let count = Math.floor(n) + (rng.next() < n % 1 ? 1 : 0);
         while (count-- > 0) {
           const r = rng.next();
@@ -412,7 +418,7 @@ export class WorldView {
 
   private setBadge(e: EntityView, need: 'dirty' | 'broken' | null) {
     if (!need) { if (e.badge) { e.group.remove(e.badge); e.badge = undefined; } return; }
-    const mat = need === 'broken' ? badgeMaterial('🛠', '#e0705f') : badgeMaterial('🧹', '#c9a25c');
+    const mat = need === 'broken' ? badgeMaterial('hammer', '#a8473b') : badgeMaterial('broom', '#c9a25c');
     if (!e.badge) { e.badge = new THREE.Sprite(mat); e.badge.scale.set(0.55, 0.55, 0.55); e.badge.renderOrder = 5; e.group.add(e.badge); }
     e.badge.material = mat;
     e.badge.position.set(0, e.height + 0.45, 0);
@@ -444,7 +450,7 @@ export class WorldView {
       for (const w of words) { if ((line + ' ' + w).trim().length > 12) { lines.push(line.trim()); line = w; } else line += ' ' + w; }
       lines.push(line.trim());
       const size = lines.length > 2 ? 30 : 38;
-      g.font = `bold ${size}px Georgia, serif`;
+      g.font = `${size}px "Jacquard 24", Georgia, serif`;
       lines.slice(0, 3).forEach((l, i) => g.fillText(l, 128, 80 + (i - (Math.min(lines.length, 3) - 1) / 2) * (size + 4)));
       tex = new THREE.CanvasTexture(c);
       tex.colorSpace = THREE.SRGBColorSpace;

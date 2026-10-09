@@ -5,7 +5,7 @@ import { exportBackup, gallery, importBackup, type PhotoRecord } from '../app/pe
 import { DECAY } from '../game/balance.ts';
 import { CATALOG, CATALOG_LIST, CATEGORY_ORDER, PLACEABLE_CATEGORY_LABELS, isSeasonallyAvailable, repairCost, type PlaceableCategory } from '../game/catalog.ts';
 import {
-  CATEGORIES, CATEGORY_ICONS, CATEGORY_LABELS, DEATH_CAUSE_LABELS, DEATH_CAUSES, GRAVE_STATE_LABELS,
+  CATEGORIES, CATEGORY_LABELS, DEATH_CAUSE_LABELS, DEATH_CAUSES, GRAVE_STATE_LABELS,
   GRAVE_TYPE_LABELS, GRAVE_TYPE_MIN_RANK, GRAVE_TYPES, graveVisualState,
 } from '../game/graves.ts';
 import { ACHIEVEMENTS, achievementProgress, nextRank, rankForXp, rankProgress } from '../game/progression.ts';
@@ -15,6 +15,7 @@ import { computePrestige, detectDistricts, DISTRICT_LABELS, expansionFor } from 
 import { newId } from '../game/rng.ts';
 import { $, closeDrawer, fmtDate, h, openDrawer, setDrawerBody, setDrawerFooter, toast } from './dom.ts';
 import { graveThumb, placeableThumb } from './thumbs.ts';
+import { ACH_ICONS, icon } from './icons.ts';
 import type { UI } from './UI.ts';
 
 const EPITAPHS = [
@@ -47,7 +48,7 @@ export function openBurial(ui: UI, initial?: R.BurialDraft, startStep = 0) {
         field('Categoria', h('div', { class: 'chips' }, ...CATEGORIES.map((c) => h('button', {
           class: `chip ${d.category === c ? 'active' : ''}`,
           onclick: () => { d.category = c; render(); },
-        }, `${CATEGORY_ICONS[c]} ${CATEGORY_LABELS[c]}`)))),
+        }, CATEGORY_LABELS[c])))),
       );
       if (d.category === 'abstract' && !R.canBuryAbstractToday(game.state, now)) body.append(h('p', { class: 'err muted' }, 'Hai già seppellito una cosa astratta oggi: torna domani.'));
     } else if (step === 1) {
@@ -76,7 +77,7 @@ export function openBurial(ui: UI, initial?: R.BurialDraft, startStep = 0) {
             class: `card ${d.graveType === t ? 'selected' : ''} ${locked ? 'dim' : ''}`,
             disabled: locked,
             onclick: () => { d.graveType = t; render(); },
-          }, h('img', { src: graveThumb(t, game.state.settings.style), alt: '' }), h('b', {}, GRAVE_TYPE_LABELS[t]), locked ? h('span', { class: 'lock' }, `🔒 R${GRAVE_TYPE_MIN_RANK[t]}`) : null);
+          }, h('img', { src: graveThumb(t, game.state.settings.style), alt: '' }), h('b', {}, GRAVE_TYPE_LABELS[t]), locked ? h('span', { class: 'lock' }, icon('lock', 12), `R${GRAVE_TYPE_MIN_RANK[t]}`) : null);
         })));
     } else {
       body.append(h('div', { class: 'hero' },
@@ -84,7 +85,7 @@ export function openBurial(ui: UI, initial?: R.BurialDraft, startStep = 0) {
         h('h3', {}, d.name || '—'),
         d.epitaph ? h('div', { class: 'epitaph' }, `“${d.epitaph}”`) : null,
       ), h('dl', { class: 'kv' },
-        h('dt', {}, 'Categoria'), h('dd', {}, d.category ? `${CATEGORY_ICONS[d.category]} ${CATEGORY_LABELS[d.category]}` : '—'),
+        h('dt', {}, 'Categoria'), h('dd', {}, d.category ? CATEGORY_LABELS[d.category] : '—'),
         h('dt', {}, 'Vissuto'), h('dd', {}, `${fmtDate(d.birthDate)} → ${fmtDate(d.deathDate)}`),
         h('dt', {}, 'Causa'), h('dd', {}, d.deathCause ? DEATH_CAUSE_LABELS[d.deathCause] : '—'),
         h('dt', {}, 'Lapide'), h('dd', {}, d.graveType ? GRAVE_TYPE_LABELS[d.graveType] : '—'),
@@ -120,7 +121,7 @@ export function openEditIntro(ui: UI) {
 
 // ── Bottega ────────────────────────────────────────────────────────────
 
-const LOCK_LABEL: Record<R.ShopAvailability, string> = { ok: '', rank: '🔒 rango', season: '❄ dicembre', owned: '✓ posseduto', funds: '' };
+const LOCK_LABEL: Record<R.ShopAvailability, string> = { ok: '', rank: 'rango', season: 'dicembre', owned: 'posseduto', funds: '' };
 
 export function openShop(ui: UI, cat: PlaceableCategory = 'light', selected: string | null = null) {
   const game = ui.game;
@@ -138,11 +139,11 @@ export function openShop(ui: UI, cat: PlaceableCategory = 'light', selected: str
       },
       h('img', { src: placeableThumb(d.id, s.settings.style), alt: '' }),
       h('b', {}, d.label),
-      h('span', { class: 'price' }, `${d.cost} ✦`),
-      LOCK_LABEL[av] ? h('span', { class: 'lock' }, av === 'rank' ? `🔒 R${d.minRank}` : LOCK_LABEL[av]) : null,
+      h('span', { class: 'price' }, String(d.cost), icon('wisp', 12)),
+      LOCK_LABEL[av] ? h('span', { class: 'lock' }, av === 'rank' ? icon('lock', 12) : null, av === 'rank' ? `R${d.minRank}` : LOCK_LABEL[av]) : null,
       (s.inventory[d.id] ?? 0) > 0 ? h('span', { class: 'badge' }, String(s.inventory[d.id])) : null);
     }));
-    setDrawerBody(h('div', {}, h('p', { class: 'muted' }, `Hai ${s.player.wisps} ✦. Gli oggetti grigi richiedono rango, stagione o più fuochi fatui.`), tabs, grid));
+    setDrawerBody(h('div', {}, h('p', { class: 'muted' }, `Hai ${s.player.wisps} fuochi fatui. Gli oggetti grigi richiedono rango, stagione o più fuochi fatui.`), tabs, grid));
     if (!selected) { setDrawerFooter(null); return; }
     const d = CATALOG[selected];
     const av = R.shopAvailability(s, d.id, now);
@@ -165,7 +166,7 @@ export function openShop(ui: UI, cat: PlaceableCategory = 'light', selected: str
             setDrawerBody(h('div', {}, h('div', { class: 'hero' }, h('img', { src: placeableThumb(d.id, s.settings.style), alt: '' }), h('h3', {}, d.label), h('p', { class: 'muted' }, 'Acquistato: è nell’inventario.'))));
           }
         },
-      }, av === 'ok' ? `Acquista · ${d.cost * qty} ✦` : av === 'funds' ? 'Fuochi fatui insufficienti' : av === 'rank' ? `Serve il rango ${d.minRank}` : av === 'owned' ? 'Già posseduto' : 'Solo a dicembre'),
+      }, av === 'ok' ? `Acquista · ${d.cost * qty} fuochi fatui` : av === 'funds' ? 'Fuochi fatui insufficienti' : av === 'rank' ? `Serve il rango ${d.minRank}` : av === 'owned' ? 'Già posseduto' : 'Solo a dicembre'),
       h('button', { class: 'big-btn ghost', onclick: () => { selected = null; render(); } }, 'Annulla'),
     ));
   };
@@ -199,7 +200,7 @@ export function openInventory(ui: UI, cat: PlaceableCategory | 'all' = 'all') {
     setDrawerFooter(h('div', { style: 'display:grid;gap:8px' },
       h('div', { class: 'row' }, h('b', {}, d.label), h('span', { class: 'muted', style: 'text-align:right' }, `Ne hai ${s.inventory[d.id] ?? 0}`)),
       h('div', { class: 'row' },
-        h('button', { class: 'big-btn ghost', onclick: () => { game.act((st) => R.sell(st, d.id, 1)); if (!(s.inventory[d.id] ?? 0)) selected = null; render(); } }, `Vendi · +${R.sellPrice(d.id)} ✦`),
+        h('button', { class: 'big-btn ghost', onclick: () => { game.act((st) => R.sell(st, d.id, 1)); if (!(s.inventory[d.id] ?? 0)) selected = null; render(); } }, `Vendi · +${R.sellPrice(d.id)} fuochi fatui`),
         h('button', { class: 'big-btn', onclick: () => { closeDrawer(); game.startItemPlacement(d.id); } }, 'Inserisci')),
     ));
   };
@@ -209,7 +210,7 @@ export function openInventory(ui: UI, cat: PlaceableCategory | 'all' = 'all') {
 
 // ── Dettaglio ──────────────────────────────────────────────────────────
 
-const MEMORY_LABELS = { burial: '⚰️ Sepoltura', flower: '💐 Fiori', cleaned: '🧹 Pulizia', repaired: '🛠 Riparazione', anniversary: '🕯 Anniversario', ghost: '👻 Apparizione', blessing: '✝️ Benedizione', zombie: '🧟 Zombie' } as const;
+const MEMORY_LABELS = { burial: 'Sepoltura', flower: 'Fiori', cleaned: 'Pulizia', repaired: 'Riparazione', anniversary: 'Anniversario', ghost: 'Apparizione', blessing: 'Benedizione', zombie: 'Zombie' } as const;
 
 export function openDetail(ui: UI, id: string) {
   const game = ui.game;
@@ -225,11 +226,11 @@ export function openDetail(ui: UI, id: string) {
         h('h3', {}, g.name),
         g.epitaph ? h('div', { class: 'epitaph' }, `“${g.epitaph}”`) : null),
       h('dl', { class: 'kv' },
-        h('dt', {}, 'Categoria'), h('dd', {}, `${CATEGORY_ICONS[g.category]} ${CATEGORY_LABELS[g.category]}`),
+        h('dt', {}, 'Categoria'), h('dd', {}, CATEGORY_LABELS[g.category]),
         h('dt', {}, 'Vissuto'), h('dd', {}, `${fmtDate(g.birthDate)} → ${fmtDate(g.deathDate)}`),
         h('dt', {}, 'Causa'), h('dd', {}, DEATH_CAUSE_LABELS[g.deathCause]),
         h('dt', {}, 'Lapide'), h('dd', {}, GRAVE_TYPE_LABELS[g.graveType]),
-        h('dt', {}, 'Stato'), h('dd', {}, GRAVE_STATE_LABELS[vs] + (g.broken ? ` (riparare costa ${DECAY.graveRepairCost} ✦)` : '')),
+        h('dt', {}, 'Stato'), h('dd', {}, GRAVE_STATE_LABELS[vs] + (g.broken ? ` (riparare costa ${DECAY.graveRepairCost} fuochi fatui)` : '')),
       ),
       mem.length ? h('div', {}, h('div', { class: 'section-title' }, 'Ricordi'), h('ul', { class: 'timeline' }, ...mem.map((m) => h('li', {}, h('time', {}, fmtDate(m.at)), MEMORY_LABELS[m.type])))) : null,
     ), { footer: h('button', { class: 'big-btn ghost', onclick: () => { closeDrawer(); game.focusEntity(id); } }, 'Mostra sulla mappa') });
@@ -243,7 +244,7 @@ export function openDetail(ui: UI, id: string) {
     h('dl', { class: 'kv' },
       h('dt', {}, 'Categoria'), h('dd', {}, PLACEABLE_CATEGORY_LABELS[d.category]),
       d.variantLabels ? h('dt', {}, 'Variante') : null, d.variantLabels ? h('dd', {}, d.variantLabels[p.variant]) : null,
-      d.decays ? h('dt', {}, 'Condizione') : null, d.decays ? h('dd', {}, p.broken ? `Rotto (riparare: ${repairCost(d)} ✦)` : p.dirty ? 'Sporco: va pulito' : 'In ordine — si sporca dopo 3 giorni senza cure') : null,
+      d.decays ? h('dt', {}, 'Condizione') : null, d.decays ? h('dd', {}, p.broken ? `Rotto (riparare: ${repairCost(d)} fuochi fatui)` : p.dirty ? 'Sporco: va pulito' : 'In ordine — si sporca dopo 3 giorni senza cure') : null,
       d.light ? h('dt', {}, 'Luce') : null, d.light ? h('dd', {}, p.broken ? 'Guasta' : p.lit ? 'Accesa' : 'Spenta') : null,
     ),
   );
@@ -274,7 +275,7 @@ export function openPlayer(ui: UI) {
     h('dl', { class: 'kv' },
       h('dt', {}, 'Rango'), h('dd', {}, `${rank.level} · ${rank.name}`),
       h('dt', {}, 'Punti Necro'), h('dd', {}, `${p.xp}${next ? ` / ${next.minXp}` : ''}`),
-      h('dt', {}, 'Fuochi fatui'), h('dd', {}, `${p.wisps} ✦`),
+      h('dt', {}, 'Fuochi fatui'), h('dd', {}, `${p.wisps} fuochi fatui`),
       h('dt', {}, 'Prestigio'), h('dd', {}, String(prestige)),
       h('dt', {}, 'Recinto'), h('dd', {}, `${exp.label}${exp.next ? ` — prossimo a ${exp.next.minPrestige} (mancano ${exp.toNext})` : ''}`),
       h('dt', {}, 'Distretti'), h('dd', {}, districts.length ? districts.map((d) => DISTRICT_LABELS[d.theme]).join(', ') : 'Nessuno (4 tombe coerenti vicine)'),
@@ -285,7 +286,7 @@ export function openPlayer(ui: UI) {
       const done = got.has(a.id);
       const prog = achievementProgress(a, s);
       return h('div', { class: `ach ${done ? 'got' : ''} tier-${tier}` },
-        h('div', { class: 'ico' }, done ? a.icon : '🔒'),
+        h('div', { class: 'ico' }, icon(done ? (ACH_ICONS[a.id] ?? 'trophy') : 'lock', 30)),
         h('div', {}, h('b', {}, a.name), h('p', {}, `${a.description} · ${tiers[tier]}`), !done && prog > 0 ? h('div', { class: 'bar' }, h('i', { style: `width:${Math.round(prog * 100)}%` })) : null));
     })),
   ));
@@ -311,7 +312,7 @@ export function openSettings(ui: UI) {
     h('div', { class: 'setting' }, 'Stile', seg(s.style, [['voxel', 'Gothic Voxel'], ['miniature', 'Miniatura']], (v) => game.setStyle(v))),
     h('div', { class: 'setting' }, 'Vista', seg(s.camera, [['angled', 'Obliqua'], ['top', 'Dall’alto']], (v) => game.setCamera(v))),
     h('div', { class: 'setting' }, 'Qualità', seg(s.quality, [['low', 'Bassa'], ['medium', 'Media'], ['high', 'Alta']], (v) => game.setQuality(v))),
-    h('div', { class: 'setting' }, 'Ora del giorno', seg<TimeOverride>(s.timeOverride, [['auto', 'Reale'], ['day', '☀️'], ['dusk', '🌆'], ['night', '🌙']], (v) => game.setTimeOverride(v))),
+    h('div', { class: 'setting' }, 'Ora del giorno', seg<TimeOverride>(s.timeOverride, [['auto', 'Reale'], ['day', 'Giorno'], ['dusk', 'Sera'], ['night', 'Notte']], (v) => game.setTimeOverride(v))),
     h('label', { class: 'setting' }, 'Sfocatura ai bordi', h('input', { type: 'checkbox', checked: s.edgeBlur, disabled: s.quality === 'low', onchange: (e: Event) => game.setEdgeBlur((e.target as HTMLInputElement).checked) })),
     h('label', { class: 'setting' }, 'Effetti meteo', h('input', { type: 'checkbox', checked: s.weatherEffects, onchange: (e: Event) => game.setWeatherEffects((e.target as HTMLInputElement).checked) })),
     h('label', { class: 'setting' }, 'Statistiche tecniche', h('input', { type: 'checkbox', checked: s.showDebug, onchange: (e: Event) => { s.showDebug = (e.target as HTMLInputElement).checked; game.afterChange(); } })),

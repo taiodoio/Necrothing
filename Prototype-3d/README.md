@@ -11,9 +11,13 @@ modelli, texture o immagini esterne.
 |---|---|---|
 | ![](screenshots/B-voxel-dallalto.jpg) | ![](screenshots/C-miniatura-obliqua.jpg) | ![](screenshots/D-miniatura-dallalto.jpg) |
 
-| Telefono · notte | Telefono · giorno | Dettaglio notturno |
+| Telefono · notte | Telefono · giorno | Telefono · UI e menù contestuale |
 |---|---|---|
-| ![](screenshots/mobile-notte.jpg) | ![](screenshots/mobile-giorno.jpg) | ![](screenshots/dettaglio-notte.jpg) |
+| ![](screenshots/mobile-notte.jpg) | ![](screenshots/mobile-giorno.jpg) | ![](screenshots/mobile-ui.jpg) |
+
+| Zoom massimo: il bosco non finisce mai | Dettaglio notturno |
+|---|---|
+| ![](screenshots/E-zoom-massimo.jpg) | ![](screenshots/dettaglio-notte.jpg) |
 
 ## Avvio
 
@@ -37,9 +41,9 @@ esegue fisicamente (cammina, lavora, poi arriva la ricompensa).
 
 | Dove | Cosa (da `Implementation_Note.md`) |
 |---|---|
-| In alto a sinistra | Nome, rango con barra di progresso, fuochi fatui ✦ → profilo e achievement |
+| In alto a sinistra | Nome, rango con barra di progresso, fuochi fatui → profilo e achievement |
 | In alto a destra | Ora reale, fase del giorno e meteo, impostazioni |
-| In basso a sinistra | Bolla d'azione che si apre in orizzontale: Seppellisci, Modifica, Inventario, Bottega (centra la mappa sulla bottega), Foto, Galleria |
+| In basso a sinistra | Pala → barra a slot (stile hotbar) che si apre in orizzontale: Seppellisci, Modifica, Inventario, Bottega (centra la mappa sulla bottega), Foto, Galleria |
 | In basso a destra | Vista obliqua/dall'alto, ricentra sul Custode |
 | Drawer dal basso | Tutte le pagine, con ✕ in alto a sinistra; la bolla sparisce mentre sono aperte |
 
@@ -75,12 +79,35 @@ interagisci, `C` cambia vista, `V` cambia stile, `Esc` chiude.
 - **Simulazione a tempo reale** all'apertura e al ritorno in primo piano (erbacce,
   sporco, rotture, anniversari, meteo giornaliero) + tick "vivo" ogni 40 s mentre si gioca.
 - **Progressione**: 5 ranghi, 27 achievement, prestigio, distretti tematici
-  auto-rilevati e **espansione del recinto** per soglie di prestigio (14→30 celle, mai
-  in calo: il recinto e il cancello si ricostruiscono più grandi).
+  auto-rilevati e **espansione del recinto** per soglie di prestigio (22→44 celle su una
+  mappa di 48, mai in calo: il recinto e il cancello si ricostruiscono più grandi).
 - **Foto**: rettangolo ridimensionabile dagli angoli + otturatore, scatto in bianco e
   nero della scena, *Salva / Condividi / Elimina*; **Galleria** in IndexedDB.
 - **Impostazioni**: stile, vista, qualità (bassa/media/alta), ora del giorno (reale o
-  forzata), effetti meteo, statistiche tecniche, backup `.necro3d`, nuova partita.
+  forzata), sfocatura ai bordi, effetti meteo, statistiche tecniche, backup `.necro3d`,
+  nuova partita.
+
+### Mondo, camera e resa
+
+- **Area di gioco ampia**: mappa logica 48×48, recinto iniziale 22×22 (prima 14×14) che
+  cresce fino a 44×44. Oltre la mappa altre 24 celle di **bosco continuo** per lato:
+  colline a gradini, pini e alberi morti a macchie, sottobosco (felci, cespugli, erba
+  secca, funghi, foglie) e la strada sterrata che esce dal cancello.
+- **Niente terreno "flottante"**: la camera calcola l'impronta inquadrata (ortografica,
+  40° di elevazione, ruotata) e limita zoom massimo e pan perché il bordo del terreno non
+  entri mai nello schermo; si scorre fino al bosco attorno al recinto (recinto + 7 celle).
+- **Sfocatura tilt-shift ai bordi** (qualità media/alta, disattivabile): due passate
+  separabili a raggio variabile; la fascia nitida segue il Custode o l'oggetto selezionato,
+  il resto sfuma come in un diorama fotografato da vicino.
+- **Voxel più fini**: 16 voxel per cella a qualità media (10 in bassa, 20 in alta) invece
+  di 10, con greedy meshing (facce coplanari fuse) e variazione di colore per singolo voxel
+  nello shader. Erba a fili sottili, fiorellini, acciottolato irregolare con fughe e
+  muschio, licheni ed erba alla base delle lapidi.
+- **UI nello stile del gioco**: cornici pixel con angoli a gradino (SVG generati, nitidi a
+  ogni scala), icone pixel-art 12×12 disegnate con la stessa palette dei voxel (anche i
+  badge 3D 🧹/🛠 sono diventati targhette pixel), *Pixelify Sans* per il testo e
+  *Jacquard 24* (gotico pixelato) per titoli e nomi; ombre nette e animazioni a scatti.
+  I font sono inclusi via `@fontsource` (funzionano offline).
 
 ## Architettura
 
@@ -95,10 +122,13 @@ src/
 │   ├── lowpolyMesher.ts   stesse primitive → solidi sfaccettati irregolari
 │   ├── modelCache.ts      geometrie condivise per (modello, stato, stile)
 │   └── models/            tombe, luci, decorazioni, costruzioni, natura, recinto
-├── view/        scena: WorldView (sync con lo stato), terreno a chunk, Atmosphere
-│                (fasi del giorno, meteo, ombre, pool di luci), CameraRig, Actors
-│                (Custode, presenze, funerale, A*), personaggi a parti, effetti
-├── ui/          HUD, bolla, menù contestuale, drawer e schermate, miniature 3D
+├── view/        scena: WorldView (sync con lo stato), terreno a chunk con texture,
+│                ChunkBaker (bosco/sottobosco cotti per chunk), Atmosphere (fasi del
+│                giorno, meteo, ombre, pool di luci), CameraRig (vincoli sul bordo del
+│                mondo), PostFX (tilt-shift), Actors (Custode, presenze, funerale, A*),
+│                personaggi a parti, effetti
+├── ui/          HUD, bolla, menù contestuale, drawer e schermate, miniature 3D,
+│                icons.ts (icone pixel-art e cornici a 9 fette)
 └── app/         Game (controller), Input (gesti/tastiera), persistenza
 ```
 
@@ -109,16 +139,20 @@ src/
   pivot coincidono (testato). Cambiare stile (`V`) ricostruisce solo le mesh: posizioni,
   stati, selezione e Custode restano dove sono.
 - **Camere ortografiche vere**: obliqua a 40° di elevazione; *dall'alto* esattamente
-  lungo −Y (testato). Per la leggibilità dall'alto ci sono badge 🧹/🛠 sugli oggetti da
-  curare, cornice di selezione e aloni delle luci.
+  lungo −Y (testato). Per la leggibilità dall'alto ci sono targhette pixel (scopa/martello)
+  sugli oggetti da curare, cornice di selezione e aloni delle luci.
 - **Luci**: ogni sorgente ha voxel emissivi e un alone additivo (economici); un pool
   fisso di PointLight (4/7/10 per qualità) viene assegnato alle sorgenti più vicine al
   centro della vista, senza ricompilare gli shader. Una sola luce direzionale con ombra
   che segue la camera.
-- **Prestazioni**: geometrie condivise e cache, `InstancedMesh` per recinto, bosco,
-  ciuffi e sassi; materiali condivisi a colori per vertice. Misure nel browser headless
-  con rendering software (SwiftShader, quindi FPS non indicativi): ~150 draw call;
-  ~375k triangoli in voxel, ~125k in miniatura; tick logico trascurabile.
+- **Prestazioni**: geometrie condivise e cache; recinto in `InstancedMesh`; bosco e
+  sottobosco *cotti* in una geometria per chunk 12×12 (frustum culling per zona) con LOD
+  (alberi lontani a risoluzione voxel ridotta); terreno a chunk con greedy meshing delle
+  sommità. Misure nel browser headless con rendering software (SwiftShader, FPS non
+  indicativi), qualità media: telefono 390×844 ~190 draw call e ~630k triangoli in voxel;
+  desktop 1280×800 ~250 draw call, ~930k triangoli in voxel e ~410k in miniatura; allo
+  zoom massimo ~1,3M triangoli. La qualità bassa riduce voxel, densità del bosco e
+  sottobosco, e spegne la sfocatura.
 
 ## Asset dall'Excel
 
@@ -163,7 +197,10 @@ foto → galleria).
 ## Limiti noti
 
 - Prestazioni misurate solo con rendering software: vanno verificate su telefoni reali
-  (soprattutto i ~375k triangoli voxel: un greedy mesher dimezzerebbe il conto).
+  (i voxel più fini e il bosco esteso hanno alzato il conto dei triangoli; se serve, la
+  qualità bassa o un LOD più aggressivo per il sottobosco lo riducono).
+- Gli alberi lontani del bosco sono voxel a risoluzione ridotta: da vicino si vedono più
+  "grossi" degli alberi dentro il recinto (la sfocatura e la nebbia lo mascherano).
 - Le notifiche push sono rimandate all'app nativa (Capacitor); nel browser la
   simulazione recupera il tempo trascorso alla riapertura.
 - Nessun audio. La pathfinding è su griglia (niente evitamento dinamico tra personaggi).
@@ -172,7 +209,8 @@ foto → galleria).
 
 ## Prossimi passi
 
-1. Greedy meshing per i voxel e LOD per il bosco esterno; profilazione su iOS/Android.
+1. Profilazione su iOS/Android e taratura delle soglie di qualità (risoluzione voxel,
+   densità del bosco, raggio della sfocatura).
 2. Audio (ambiente notturno, campane, corvi) con rispetto del mute.
 3. Capacitor: notifiche native per anniversari/erbacce, salvataggio su SQLite.
 4. Rotazione della camera a passi di 90° e animazioni di transizione tra stili.

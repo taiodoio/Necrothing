@@ -242,7 +242,7 @@ export class Game {
   private showRewards(at: THREE.Vector3, r: R.ActionResult) {
     const p = this.project(at);
     if (!p) return;
-    if (r.wisps) floater(p.x + 18, p.y - 6, `${r.wisps > 0 ? '+' : ''}${r.wisps} ✦`, 'wisp');
+    if (r.wisps) floater(p.x + 18, p.y - 6, `${r.wisps > 0 ? '+' : ''}${r.wisps}`, 'wisp');
     if (r.xp) floater(p.x - 18, p.y + 10, `+${r.xp} XP`, 'xp');
   }
 
@@ -250,8 +250,8 @@ export class Game {
   afterChange() {
     const now = this.now();
     const { achievements, expanded } = R.afterAction(this.state, now);
-    for (const a of achievements) toast(`🏆 ${a.name}`, 'ach');
-    if (expanded) toast(`🧱 Il recinto si allarga: ${areaForLevel(this.state.world.expansionLevel).w}×${areaForLevel(this.state.world.expansionLevel).h}!`, 'ach');
+    for (const a of achievements) toast(`Traguardo: ${a.name}`, 'ach');
+    if (expanded) toast(`Il recinto si allarga: ${areaForLevel(this.state.world.expansionLevel).w}×${areaForLevel(this.state.world.expansionLevel).h}!`, 'ach');
     scheduleSave(this.state);
     this.world.sync(this.state);
     if (expanded) this.updateCameraWorld();

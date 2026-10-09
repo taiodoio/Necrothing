@@ -64,7 +64,6 @@ export function columnHeight(input: GroundInput, i: number, j: number): number {
 const C = (hex: string) => new THREE.Color(hex);
 const GRASS_A = C(P.grass), GRASS_B = C(P.grassDark), GRASS_DRY = C('#5b5a33'), MOSS = C(P.moss);
 const WILD_A = C('#2c3826'), WILD_B = C('#3a3a26'), WILD_DRY = C('#4f4428'), LEAF = C('#5a3a20');
-const FOREST_A = C('#232d20'), FOREST_B = C('#2d2a1e');
 const EARTH_A = C(P.earth), EARTH_B = C(P.earthDark), MUD = C(P.mud), STONE = C('#4c4a47');
 const tmp = new THREE.Color();
 
@@ -86,9 +85,6 @@ function groundColor(input: GroundInput, px: number, py: number, ppc: number): T
     case 'plot': tmp.copy(EARTH_A); break;
     case 'fence': tmp.copy(EARTH_B).lerp(GRASS_B, 0.35 + n3 * 0.5); break;
     case 'forest':
-      tmp.copy(FOREST_A).lerp(FOREST_B, n1);
-      if (n3 > 0.62) tmp.lerp(LEAF, (n3 - 0.62) * 1.4);
-      break;
     case 'wild':
       tmp.copy(WILD_A).lerp(WILD_B, n1);
       if (n2 > 0.55) tmp.lerp(WILD_DRY, (n2 - 0.55) * 1.6);

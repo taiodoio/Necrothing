@@ -107,7 +107,8 @@ interagisci, `C` cambia vista, `V` cambia stile (low-poly → voxel → miniatur
   sui 10 tipi del gioco, ognuna con varianti per seme e decorazioni modulari per stato
   (fiori, vasi, corone, candele accese, muschio, erbacce, foglie, crepe, frammenti).
   Edifici con finestre gotiche illuminate, porte ad arco, tetti a lastre, cantonali;
-  recinto con inferriata a lance; selciato a pietre poligonali; personaggi con le
+  recinto con inferriata a lance; selciato fitto a pietre poligonali con bordi sfumati
+  nel prato (erba bassa e sassolini); terreno morbido senza poligoni a vista; sassi e rocce sparsi; personaggi con le
   stesse parti del rig (Custode con cappello, lanterna e pala; scheletro; fantasma).
   Materiali `MeshStandardMaterial` opachi a flat shading. Gli asset non ancora migrati
   ricadono sulla resa *miniatura* (vedi catalogo). Ogni luce tremola con un

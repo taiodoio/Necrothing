@@ -11,25 +11,34 @@ import type { PVis } from '../models/types.ts';
 // ── Sentieri ─────────────────────────────────────────────────────────────
 
 /** Selciato: 5-8 pietre poligonali irregolari, spessori e grigi diversi. */
+/**
+ * Selciato: griglia sfalsata 4×4 di pietre poligonali irregolari, ben
+ * rilevate (4-7 cm), leggermente inclinate, con sommità più chiare dei
+ * fianchi e fughe strette di terra e muschio.
+ */
 export function pathStone(v: PVis): LPModel {
   const lp = new LP(`lp:path:${v.seed}:${v.dirty}${v.broken}`);
   const r = lp.rng;
-  const tones = [LPC.stone, '#5d6168', '#727069', LPC.stoneWarm, '#666660', LPC.stoneLight];
-  const pts: Array<[number, number]> = [];
-  for (let j = 0; j < 3; j++) for (let i = 0; i < 3; i++) {
-    if ((i + j) % 2 === 1 && r.chance(0.35)) continue;
-    pts.push([(i - 1) * 0.31 + r.range(-0.06, 0.06), (j - 1) * 0.31 + r.range(-0.06, 0.06)]);
+  const tones = [LPC.stone, '#5d6168', '#727069', LPC.stoneWarm, '#666660', '#7d7a74', '#575a60'];
+  const P = 0.25;
+  for (let j = 0; j < 4; j++) {
+    const shift = j % 2 ? P * 0.35 : -P * 0.15; // file sfalsate come un vero acciottolato
+    for (let i = 0; i < 4; i++) {
+      if (r.chance(v.broken ? 0.3 : 0.06)) continue;
+      const x = -0.375 + i * P + shift + r.range(-0.03, 0.03), z = -0.375 + j * P + r.range(-0.03, 0.03);
+      if (Math.abs(x) > 0.47) continue;
+      const t = 0.04 + r.next() * 0.03;
+      lp.push([x, t / 2 - 0.008, z], r.range(0, 6.28), -Math.PI / 2 + r.range(-0.06, 0.06), r.range(-0.06, 0.06));
+      lp.extrude(irregularShape(r, 0.1 + r.next() * 0.03, 5 + r.int(3), 0.8 + r.next() * 0.3), t, r.pick(tones), {
+        bevel: 0.012, vary: 0.05, ao: 0.35, curve: 1,
+        topTint: v.dirty ? LPC.moss : '#8f8c86', topAmount: v.dirty ? 0.45 : 0.3,
+      });
+      lp.pop();
+    }
   }
-  for (const [x, z] of pts) {
-    if (v.broken && r.chance(0.3)) continue;
-    const t = 0.03 + r.next() * 0.025;
-    lp.push([x, -0.012, z], r.range(0, 6.28), -Math.PI / 2);
-    lp.extrude(irregularShape(r, 0.13 + r.next() * 0.04, 5 + r.int(3), 0.85 + r.next() * 0.2), t, r.pick(tones), { bevel: 0.009, vary: 0.06, ao: 0.25, curve: 1, ...(v.dirty ? { topTint: LPC.moss, topAmount: 0.4 } : {}) });
-    lp.pop();
-  }
-  // fughe: muschio e fili d'erba
-  for (let i = 0; i < 2 + r.int(3); i++) moss(lp, r.range(-0.4, 0.4), 0.005, r.range(-0.4, 0.4), 0.035, r.chance(0.5) ? LPC.moss : LPC.grass);
-  if (r.chance(0.5)) grassTuft(lp, r.pick([-0.46, 0.46]), r.range(-0.4, 0.4), 0.7, GRASS, 4);
+  // fughe: muschio, fili d'erba e qualche sassolino
+  for (let i = 0; i < 3 + r.int(3); i++) moss(lp, r.range(-0.42, 0.42), 0.004, r.range(-0.42, 0.42), 0.03, r.chance(0.5) ? LPC.moss : LPC.grass);
+  if (r.chance(0.6)) grassTuft(lp, r.range(-0.4, 0.4), r.range(-0.4, 0.4), 0.55, GRASS, 4);
   if (v.dirty) { weeds(lp, r.range(-0.3, 0.3), r.range(-0.3, 0.3), 0.7); deadLeaves(lp, -0.45, -0.45, 0.45, 0.45, 6); }
   return lp.build();
 }

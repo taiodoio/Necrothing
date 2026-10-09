@@ -60,7 +60,7 @@ SaveData (unico stato) ──► WorldView / Actors (presentazione)
 | `render/lowpoly/nature.ts` | Selciato a pietre poligonali, sentiero in terra, alberi morti, pini, cespugli, erba alta, funghi, aiuola, stagno; scenografia (ciuffi, felci, fiori, rocce). |
 | `render/lowpoly/characters.ts` | Custode, becchino, prete, dolente, zombie, scheletro, fantasmi. |
 | `view/FireFlicker.ts` | Tremolio riutilizzabile, deterministico e indipendente per sorgente (aloni e PointLight). |
-| `view/terrain.ts` | Altezze (colline, pad piani sotto gli oggetti), terreno low-poly sfaccettato. |
+| `view/terrain.ts` | Altezze (colline, pad piani sotto gli oggetti), terreno low-poly morbido: griglia indicizzata con normali e colori per vertice (i bordi dei sentieri sfumano nel prato). |
 
 ## 4. Mondo: proporzioni e terreno
 
@@ -82,7 +82,7 @@ SaveData (unico stato) ──► WorldView / Actors (presentazione)
 | 1 Audit | ✅ (questo documento) |
 | 2 Integrazione 3D | ✅ già presente; aggiunti stile, materiali, adapter, flag |
 | 3 Prima tomba (stati, selezione) | ✅ tutte le 10, 4 stati, selezione con accento emissivo |
-| 4 Terreno | ✅ low-poly con colline e pad |
+| 4 Terreno | ✅ low-poly con colline e pad, shading morbido, sentieri sfumati con erba bassa e sassolini ai bordi |
 | 5 Luci dinamiche | ✅ lampioni/lanterne/candele con PointLight a pool e FireFlicker |
 | 6 Espansione asset | ✅ recinto, vegetazione, decorazioni |
 | 7 Edifici | ✅ bottega, casa del becchino, mausoleo, pozzo |

@@ -12,7 +12,7 @@ import { catchUpMessage, liveTick, runCatchUp } from '../game/simulation.ts';
 import { createNewGame, type ArtStyle, type CameraMode, type Quality, type SaveData, type TimeOverride } from '../game/state.ts';
 import { dayPhaseForHour, type DayPhase } from '../game/time.ts';
 import { areaForLevel, buildOccupancy, canPlaceAt, gateCells, nearestFreeSpot } from '../game/world.ts';
-import { applyStyleUniforms, cacheStats, clearAll, getModel, LOWPOLY_MATERIALS, MATERIALS } from '../render/modelCache.ts';
+import { applyStyleUniforms, cacheStats, clearAll, getModel, LOWPOLY_MATERIALS, LOWPOLY_TERRAIN, MATERIALS } from '../render/modelCache.ts';
 import '../render/lowpoly/index.ts';
 import { setVoxelResolution, voxelResolution, voxelsPerWorldUnit } from '../render/voxelMesher.ts';
 import { graveModel } from '../render/models/graves.ts';
@@ -681,7 +681,7 @@ export class Game {
     this.world.sync(this.state);
     this.resize();
     this.postfx.configure(q !== 'low' && this.state.settings.edgeBlur, q === 'high' ? 5 : 3.5);
-    for (const m of [...Object.values(MATERIALS), ...Object.values(LOWPOLY_MATERIALS)]) m.needsUpdate = true;
+    for (const m of [...Object.values(MATERIALS), ...Object.values(LOWPOLY_MATERIALS), LOWPOLY_TERRAIN]) m.needsUpdate = true;
   }
 
   setTimeOverride(o: TimeOverride) {

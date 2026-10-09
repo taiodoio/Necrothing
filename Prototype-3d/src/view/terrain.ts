@@ -112,7 +112,7 @@ export function cornerHeight(input: GroundInput, gx: number, gy: number): number
 
 /** Spostamento orizzontale irregolare dei vertici d'angolo del terreno low-poly. */
 function cornerJitter(input: GroundInput, gx: number, gy: number): [number, number] {
-  return [(hash3(gx, gy, 41, input.seed) - 0.5) * 0.28, (hash3(gx, gy, 43, input.seed) - 0.5) * 0.28];
+  return [(hash3(gx, gy, 41, input.seed) - 0.5) * 0.16, (hash3(gx, gy, 43, input.seed) - 0.5) * 0.16];
 }
 
 /**
@@ -193,59 +193,100 @@ export interface ChunkMesh {
   texture: THREE.DataTexture | null;
 }
 
-/** Colore di una faccia del terreno low-poly. */
-function lowpolyColor(input: GroundInput, cx: number, cy: number, face: number, out: THREE.Color): THREE.Color {
+/**
+ * Colore di una cella del terreno low-poly. Le variazioni sono a bassa
+ * frequenza (macchie ampie, non triangolo per triangolo): il suolo deve
+ * restare calmo e leggibile, il dettaglio lo danno erba, sassi e oggetti.
+ */
+function lowpolyCellColor(input: GroundInput, cx: number, cy: number, out: THREE.Color): THREE.Color {
   const g = groundAt(input, cx, cy);
-  const n1 = lowNoise(cx, cy, input.seed + 5, 6);
-  const n2 = lowNoise(cx, cy, input.seed + 11, 7);
-  const patch = lowNoise(cx * 2 + (face & 1), cy * 2 + (face >> 1), input.seed + 21, 5);
-  const h = hash3(cx * 4 + face, cy, 77, input.seed);
+  const n1 = lowNoise(cx, cy, input.seed + 5, 9);
+  const n2 = lowNoise(cx, cy, input.seed + 11, 13);
+  const patch = lowNoise(cx, cy, input.seed + 21, 6);
   switch (g) {
-    case 'path': out.copy(LP.soilDark).lerp(LP.stone, 0.25 + h * 0.2); break;
-    case 'dirt': out.copy(LP.soil).lerp(LP.soilDark, n1); break;
+    case 'path': out.copy(LP.soil).lerp(LP.soilDark, 0.35 + n1 * 0.3); break;
+    case 'dirt': out.copy(LP.soil).lerp(LP.soilDark, n1 * 0.6); break;
     case 'mud': out.copy(LP.mud); break;
     case 'plot': out.copy(LP.soil); break;
-    case 'fence': out.copy(LP.soilDark).lerp(LP.grassA, 0.5 + h * 0.3); break;
+    case 'fence': out.copy(LP.grassA).lerp(LP.soilDark, 0.35); break;
     case 'forest':
     case 'wild':
       out.copy(LP.wildA).lerp(LP.wildB, n1);
-      if (n2 > 0.55) out.lerp(LP.dry, (n2 - 0.55) * 0.9);
-      if (patch > 0.7) out.lerp(LP.leaf, (patch - 0.7) * 1.6);
+      if (n2 > 0.55) out.lerp(LP.dry, (n2 - 0.55) * 0.8);
+      if (patch > 0.72) out.lerp(LP.leaf, (patch - 0.72) * 1.2);
       break;
     default:
       out.copy(LP.grassA).lerp(LP.grassB, n1);
-      if (n2 > 0.62) out.lerp(LP.dry, (n2 - 0.62) * 1.1);
-      if (n2 < 0.3) out.lerp(LP.moss, (0.3 - n2) * 0.9);
-      if (patch > 0.78) out.lerp(LP.soil, Math.min(0.85, (patch - 0.78) * 4));
+      if (n2 > 0.62) out.lerp(LP.dry, (n2 - 0.62) * 0.8);
+      if (n2 < 0.3) out.lerp(LP.moss, (0.3 - n2) * 0.7);
+      if (patch > 0.8) out.lerp(LP.soil, Math.min(0.5, (patch - 0.8) * 2.5));
   }
-  return out.multiplyScalar(0.97 + h * 0.06);
+  return out;
 }
 
-/** Chunk low-poly: 4 triangoli per cella attorno al centro, colore per faccia. */
+/**
+ * Chunk low-poly: griglia indicizzata (angoli + centri di cella, 4 triangoli
+ * per cella) con normali e colori per vertice: il terreno è morbido e
+ * uniforme, i passaggi erba→terra dei sentieri sfumano su mezza cella.
+ * Le normali sono calcolate dalla funzione di altezza, quindi identiche ai
+ * bordi tra chunk (niente cuciture).
+ */
 function buildLowpolyChunk(input: GroundInput, cx0: number, cy0: number): ChunkMesh {
   const half = MAP_SIZE / 2;
-  const pos: number[] = [], col: number[] = [];
-  const c = new THREE.Color();
-  const corner = (gx: number, gy: number): [number, number, number] => {
-    const [jx, jz] = cornerJitter(input, gx, gy);
-    return [gx - half + jx, cornerHeight(input, gx, gy), gy - half + jz];
+  const n = CHUNK;
+  const pos: number[] = [], nor: number[] = [], col: number[] = [], ind: number[] = [];
+  const c = new THREE.Color(), acc = new THREE.Color();
+  const cellCol = new Map<string, THREE.Color>();
+  const colorOf = (cx: number, cy: number) => {
+    const k = `${cx},${cy}`;
+    let v = cellCol.get(k);
+    if (!v) cellCol.set(k, (v = lowpolyCellColor(input, cx, cy, new THREE.Color())));
+    return v;
   };
-  for (let cy = cy0; cy < cy0 + CHUNK; cy++) {
-    for (let cx = cx0; cx < cx0 + CHUNK; cx++) {
-      const center: [number, number, number] = [cx + 0.5 - half, cellHeight(input, cx, cy), cy + 0.5 - half];
-      const k00 = corner(cx, cy), k10 = corner(cx + 1, cy), k11 = corner(cx + 1, cy + 1), k01 = corner(cx, cy + 1);
-      // ordine antiorario visto dall'alto (+y)
-      const tris = [[center, k10, k00], [center, k11, k10], [center, k01, k11], [center, k00, k01]];
-      tris.forEach((t, face) => {
-        lowpolyColor(input, cx, cy, face, c);
-        for (const v of t) { pos.push(v[0], v[1], v[2]); col.push(c.r, c.g, c.b); }
-      });
+  const normal = (h: (dx: number, dy: number) => number, step: number): [number, number, number] => {
+    const dx = (h(1, 0) - h(-1, 0)) / (2 * step), dz = (h(0, 1) - h(0, -1)) / (2 * step);
+    const l = Math.hypot(dx, 1, dz);
+    return [-dx / l, 1 / l, -dz / l];
+  };
+  // angoli: (n+1)²
+  for (let j = 0; j <= n; j++) {
+    for (let i = 0; i <= n; i++) {
+      const gx = cx0 + i, gy = cy0 + j;
+      const [jx, jz] = cornerJitter(input, gx, gy);
+      pos.push(gx - half + jx, cornerHeight(input, gx, gy), gy - half + jz);
+      nor.push(...normal((dx, dy) => cornerHeight(input, gx + dx, gy + dy), 1));
+      acc.setRGB(0, 0, 0);
+      for (const [x, y] of [[gx - 1, gy - 1], [gx, gy - 1], [gx - 1, gy], [gx, gy]]) acc.add(colorOf(x, y));
+      acc.multiplyScalar(0.25);
+      col.push(acc.r, acc.g, acc.b);
+    }
+  }
+  // centri: n²
+  const base = (n + 1) * (n + 1);
+  for (let j = 0; j < n; j++) {
+    for (let i = 0; i < n; i++) {
+      const cx = cx0 + i, cy = cy0 + j;
+      pos.push(cx + 0.5 - half, cellHeight(input, cx, cy), cy + 0.5 - half);
+      const c00 = cornerHeight(input, cx, cy), c10 = cornerHeight(input, cx + 1, cy), c01 = cornerHeight(input, cx, cy + 1), c11 = cornerHeight(input, cx + 1, cy + 1);
+      const ddx = (c10 + c11 - c00 - c01) / 2, ddz = (c01 + c11 - c00 - c10) / 2, l = Math.hypot(ddx, 1, ddz);
+      nor.push(-ddx / l, 1 / l, -ddz / l);
+      c.copy(colorOf(cx, cy));
+      col.push(c.r, c.g, c.b);
+    }
+  }
+  const k = (i: number, j: number) => j * (n + 1) + i;
+  for (let j = 0; j < n; j++) {
+    for (let i = 0; i < n; i++) {
+      const ce = base + j * n + i;
+      const k00 = k(i, j), k10 = k(i + 1, j), k11 = k(i + 1, j + 1), k01 = k(i, j + 1);
+      ind.push(ce, k10, k00, ce, k11, k10, ce, k01, k11, ce, k00, k01);
     }
   }
   const g = new THREE.BufferGeometry();
   g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+  g.setAttribute('normal', new THREE.Float32BufferAttribute(nor, 3));
   g.setAttribute('color', new THREE.Float32BufferAttribute(col, 3));
-  g.computeVertexNormals();
+  g.setIndex(ind);
   g.computeBoundingSphere();
   return { geometry: g, texture: null };
 }

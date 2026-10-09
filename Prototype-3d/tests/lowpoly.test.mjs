@@ -52,6 +52,17 @@ test('lo stato della tomba cambia la geometria: fiori e candele accese, sporcizi
   assert.notEqual(n(dirty), n(broken));
 });
 
+test('catalogo completo: ogni oggetto ha un generatore low-poly dedicato', () => {
+  const missing = Object.keys(CATALOG).filter((id) => !LP_PLACEABLES[id]);
+  assert.deepEqual(missing, []);
+});
+
+test('animali low-poly: tutte le parti del rig', () => {
+  for (const kind of ['cat', 'rat', 'petDog', 'petCat', 'petRabbit']) for (const p of ['body', 'head', 'legL', 'legR', 'armL', 'armR']) assert.ok(LP_CHARACTERS[`${kind}:${p}`], `${kind}:${p}`);
+  for (const kind of ['crow', 'petCrow']) for (const p of ['body', 'head', 'armL', 'armR', 'legL', 'legR']) assert.ok(LP_CHARACTERS[`${kind}:${p}`], `${kind}:${p}`);
+  for (const p of ['body', 'head', 'legL', 'legR']) assert.ok(LP_CHARACTERS[`petDuck:${p}`]);
+});
+
 test('oggetti migrati: stanno nel loro ingombro, anche sporchi o rotti', () => {
   for (const id of Object.keys(LP_PLACEABLES)) {
     const fp = CATALOG[id].footprint;
@@ -78,9 +89,8 @@ test('cache: stile low-poly usa i generatori dedicati e i materiali PBR; il rest
   assert.equal(lp.dedicated, true);
   assert.equal(lp.mats, LOWPOLY_MATERIALS);
   assert.ok(LOWPOLY_MATERIALS.solid.flatShading);
-  const h = vis('hell_hole');
-  const fb = getModel(placeableKey(h), 'lowpoly', () => placeableModel(h), 1);
-  assert.equal(fb.dedicated, false, 'non ancora migrato → fallback');
+  const fb = getModel('test:fallback', 'lowpoly', () => graveModel('gothic', 'clean', 0), 1);
+  assert.equal(fb.dedicated, false, 'chiave senza generatore → fallback miniatura');
   assert.ok(fb.geometries.solid);
   const vx = getModel('g:gothic:clean:0', 'voxel', () => graveModel('gothic', 'clean', 0), 0);
   assert.equal(vx.mats, MATERIALS);

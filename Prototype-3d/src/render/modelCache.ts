@@ -74,6 +74,9 @@ export const LOWPOLY_MATERIALS: MaterialSet = {
   invalid: new THREE.MeshStandardMaterial({ vertexColors: true, flatShading: true, roughness: 0.85, metalness: 0, emissive: new THREE.Color('#7a1f1f'), emissiveIntensity: 0.9 }),
 };
 
+/** Terreno low-poly: shading morbido (normali per vertice), così il suolo resta calmo. */
+export const LOWPOLY_TERRAIN = new THREE.MeshStandardMaterial({ vertexColors: true, flatShading: false, roughness: 0.95, metalness: 0 });
+
 export function materialsFor(style: ArtStyle): MaterialSet {
   return style === 'lowpoly' ? LOWPOLY_MATERIALS : MATERIALS;
 }

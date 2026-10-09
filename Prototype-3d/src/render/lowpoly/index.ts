@@ -11,6 +11,11 @@ import { lowpolyGrave } from './graves.ts';
 import type { LPModel } from './kit.ts';
 import { angelStatueLP, fencePillarLP, fenceSegmentLP, gateLP, gravediggerHouseLP, mausoleumLP, shopLP, votiveStatueLP, wellLP } from './architecture.ts';
 import { characterGenerators } from './characters.ts';
+import {
+  archLP, bonfireLP, candleTreeLP, fenceIronLP, fenceWoodLP, fountainLP, ghostLanternLP, glowPumpkinLP, hellHoleLP, hillockLP,
+  monsterRocksLP, mudLP, npcHomeLP, openCoffinLP, openGraveLP, petHouseLP, shrineLP, skullCandleLP, spectralTreeLP, toxicPuddleLP,
+  wallStoneLP, xmasTreeLP,
+} from './extras.ts';
 import { bonesLP, signLP, vaseLP, wreathLP } from './decor.ts';
 import { lampPost, lantern, torch } from './lights.ts';
 import {
@@ -44,6 +49,35 @@ export const LP_PLACEABLES: Record<string, (v: PVis) => LPModel> = {
   vase: vaseLP,
   bones: bonesLP,
   sign: signLP,
+  ghost_lantern: ghostLanternLP,
+  glow_pumpkin: glowPumpkinLP,
+  skull_candle: skullCandleLP,
+  bonfire: bonfireLP,
+  candle_tree: candleTreeLP,
+  open_coffin: openCoffinLP,
+  shrine: shrineLP,
+  open_grave: openGraveLP,
+  wall_stone: wallStoneLP,
+  fence_wood: fenceWoodLP,
+  fence_iron: fenceIronLP,
+  arch_stone: archLP,
+  arch_lights: archLP,
+  arch_gothic: archLP,
+  fountain: fountainLP,
+  hell_hole: hellHoleLP,
+  pet_house: petHouseLP,
+  spectral_tree: spectralTreeLP,
+  xmas_tree: xmasTreeLP,
+  toxic_puddle: toxicPuddleLP,
+  monster_rocks: monsterRocksLP,
+  hillock: hillockLP,
+  mud: mudLP,
+  zombies_play: npcHomeLP,
+  zombies_dance: npcHomeLP,
+  zombie_walker: npcHomeLP,
+  ghosts_roam: npcHomeLP,
+  ghosts_ball: npcHomeLP,
+  skeleton_pet: npcHomeLP,
 };
 /** Generatori di scenografia (prefisso della chiave → generatore con parametro). */
 export const LP_SCENERY: Record<string, (arg: string) => LPModel> = {

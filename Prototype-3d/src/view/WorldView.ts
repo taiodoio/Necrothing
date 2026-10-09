@@ -12,7 +12,7 @@ import { graveVisualState } from '../game/graves.ts';
 import { hash3, hashString, createRng } from '../game/rng.ts';
 import type { ArtStyle, Grave, Placed, SaveData } from '../game/state.ts';
 import { areaForLevel, buildOccupancy, gateCells, type Rect } from '../game/world.ts';
-import { getModel, instantiate, LOWPOLY_MATERIALS, lightWorldPos, type CachedModel } from '../render/modelCache.ts';
+import { getModel, instantiate, LOWPOLY_TERRAIN, lightWorldPos, type CachedModel } from '../render/modelCache.ts';
 import { fencePillar, fenceSegment, gate } from '../render/models/fence.ts';
 import { graveModel } from '../render/models/graves.ts';
 import { deadTree, pine, sceneryBush, sceneryFern, sceneryFlowers, sceneryLeaves, sceneryPebbles, sceneryRock, sceneryShrooms, sceneryTuft, sceneryWildGrass } from '../render/models/nature.ts';
@@ -223,7 +223,7 @@ export class WorldView {
         this.disposeChunkMaterial(old.mesh);
       }
       const chunk = buildChunk(input, cx, cy, this.style);
-      const mesh = new THREE.Mesh(chunk.geometry, chunk.texture ? new THREE.MeshLambertMaterial({ map: chunk.texture, vertexColors: true }) : LOWPOLY_MATERIALS.solid);
+      const mesh = new THREE.Mesh(chunk.geometry, chunk.texture ? new THREE.MeshLambertMaterial({ map: chunk.texture, vertexColors: true }) : LOWPOLY_TERRAIN);
       mesh.receiveShadow = true;
       mesh.name = `chunk-${key}`;
       this.terrain.add(mesh);
@@ -233,7 +233,7 @@ export class WorldView {
 
   private disposeChunkMaterial(mesh: THREE.Mesh) {
     const m = mesh.material as THREE.MeshLambertMaterial;
-    if (m === LOWPOLY_MATERIALS.solid) return; // condiviso
+    if ((m as THREE.Material) === LOWPOLY_TERRAIN) return; // condiviso
     m.map?.dispose();
     m.dispose();
   }
@@ -335,11 +335,15 @@ export class WorldView {
       wgrass: (v: number) => getModel(`wgrass:${v % 4}`, st, () => sceneryWildGrass(v % 4), v),
       fern: (v: number) => getModel(`fern:${v % 4}`, st, () => sceneryFern(v % 4), v),
       bush: (v: number) => getModel(`bush:${v % 4}`, st, () => sceneryBush(v % 4), v),
+      rock: (v: number) => getModel(`wrock:${v % 3}`, st, () => sceneryRock(v % 3), v),
     };
-    const meadow: Array<[number, keyof typeof M]> = [[0.72, 'tuft'], [0.82, 'flowers'], [0.92, 'pebbles'], [0.97, 'leaves'], [1, 'shrooms']];
+    const lowpoly = this.style === 'lowpoly';
+    // in low-poly: pochi fiori (la scena resta leggibile), più sassi e rocce
+    const meadow: Array<[number, keyof typeof M]> = lowpoly
+      ? [[0.75, 'tuft'], [0.79, 'flowers'], [0.9, 'pebbles'], [0.94, 'rock'], [0.988, 'leaves'], [1, 'shrooms']]
+      : [[0.72, 'tuft'], [0.82, 'flowers'], [0.92, 'pebbles'], [0.97, 'leaves'], [1, 'shrooms']];
     const wood: Array<[number, keyof typeof M]> = [[0.36, 'wgrass'], [0.6, 'fern'], [0.72, 'bush'], [0.86, 'leaves'], [0.93, 'shrooms'], [1, 'pebbles']];
     const reach = 10; // celle oltre il recinto con sottobosco
-    const lowpoly = this.style === 'lowpoly';
     const a = this.area;
     for (let y = a.y - reach; y < a.y + a.h + reach; y++) {
       for (let x = a.x - reach; x < a.x + a.w + reach; x++) {
@@ -349,7 +353,7 @@ export class WorldView {
         const wild = gt !== 'grass';
         const dist = Math.max(a.x - x, x - (a.x + a.w - 1), a.y - y, y - (a.y + a.h - 1), 0);
         // in low-poly le piante sono in scala più realistica: ne servono di più
-        const n = (wild ? 1.2 * Math.max(0, 1 - dist / reach) ** 0.7 : 1.7) * per * (lowpoly ? 1.8 : 1);
+        const n = (wild ? 1.2 * Math.max(0, 1 - dist / reach) ** 0.7 : 1.7) * per * (lowpoly ? 1.5 : 1);
         let count = Math.floor(n) + (rng.next() < n % 1 ? 1 : 0);
         while (count-- > 0) {
           const r = rng.next();
@@ -357,12 +361,46 @@ export class WorldView {
           const model = M[kind](rng.int(12));
           const pos = new THREE.Vector3(x + rng.range(0.2, 0.8) - HALF, 0, y + rng.range(0.2, 0.8) - HALF);
           pos.y = this.heightAt(pos.x, pos.z) - 0.01;
-          const sc = (kind === 'bush' || kind === 'fern' ? 0.9 + rng.next() * 0.5 : 1) * (lowpoly && kind !== 'pebbles' && kind !== 'leaves' ? 1.45 : 1);
-          baker.add(model, new THREE.Matrix4().compose(pos, new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), rng.int(4) * Math.PI / 2), new THREE.Vector3(sc, sc, sc)), wild ? 0.75 + rng.next() * 0.2 : 0.9 + rng.next() * 0.15, x, y);
+          const sc = kind === 'rock' ? 0.3 + rng.next() * 0.45
+            : (kind === 'bush' || kind === 'fern' ? 0.9 + rng.next() * 0.5 : 1) * (lowpoly && kind !== 'pebbles' && kind !== 'leaves' ? 1.45 : kind === 'pebbles' && lowpoly ? 1.6 : 1);
+          const yaw = lowpoly ? rng.range(0, Math.PI * 2) : rng.int(4) * Math.PI / 2;
+          baker.add(model, new THREE.Matrix4().compose(pos, new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), yaw), new THREE.Vector3(sc, sc, sc)), wild ? 0.75 + rng.next() * 0.2 : 0.9 + rng.next() * 0.15, x, y);
         }
       }
     }
+    if (lowpoly) this.pathEdges(state, occ, baker, M.tuft, M.pebbles, rng);
     for (const mesh of baker.build(false)) this.decorLayer.add(mesh);
+  }
+
+  /**
+   * Bordi dei sentieri (low-poly): erba bassa e sassolini a cavallo del
+   * confine tra selciato e prato, così il sentiero non è un taglio netto.
+   */
+  private pathEdges(state: SaveData, occ: ReturnType<typeof buildOccupancy>, baker: ChunkBaker, tuft: (v: number) => CachedModel, pebbles: (v: number) => CachedModel, rng: ReturnType<typeof createRng>) {
+    const path = new Set<string>();
+    for (const p of state.placeables) if (p.type === 'path_stone' || p.type === 'path_dirt') path.add(`${p.x},${p.y}`);
+    const input = this.groundInput!;
+    for (const k of path) {
+      const [x, y] = k.split(',').map(Number);
+      for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+        const nk = `${x + dx},${y + dy}`;
+        if (path.has(nk)) continue;
+        const free = !occ.owner.has(nk) && groundType(input, x + dx, y + dy) !== 'fence';
+        const n = 2 + rng.int(3);
+        for (let i = 0; i < n; i++) {
+          const along = rng.range(0.08, 0.92);
+          const across = free ? rng.range(-0.08, 0.14) : rng.range(-0.1, -0.02); // lato prato (+) o appena dentro il selciato (−)
+          const cx = x + 0.5 + dx * (0.5 + across) + (dx === 0 ? along - 0.5 : 0);
+          const cz = y + 0.5 + dy * (0.5 + across) + (dy === 0 ? along - 0.5 : 0);
+          const pos = new THREE.Vector3(cx - HALF, 0, cz - HALF);
+          pos.y = this.heightAt(pos.x, pos.z) - 0.01;
+          const isPebble = rng.next() < 0.35;
+          const sc = isPebble ? 1.2 + rng.next() * 0.5 : 0.7 + rng.next() * 0.4;
+          const model = isPebble ? pebbles(rng.int(12)) : tuft(rng.int(12));
+          baker.add(model, new THREE.Matrix4().compose(pos, new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), rng.range(0, Math.PI * 2)), new THREE.Vector3(sc, sc * (isPebble ? 1 : 0.8), sc)), 0.92, x, y);
+        }
+      }
+    }
   }
 
   private addInstanced(model: CachedModel, mats: THREE.Matrix4[], parent = this.scenery, cast = true) {

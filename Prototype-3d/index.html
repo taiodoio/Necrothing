@@ -2,59 +2,88 @@
 <html lang="it">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-    <meta name="theme-color" content="#111310" />
-    <meta name="description" content="Un prototipo procedurale del cimitero di Necrothing." />
-    <title>Necrothing — Cimitero dimenticato</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no" />
+    <meta name="theme-color" content="#0d1016" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="description" content="Necrothing — il cimitero degli oggetti morti, in voxel." />
+    <title>Necrothing — Cimitero degli oggetti</title>
   </head>
   <body>
     <main id="game" aria-label="Cimitero di Necrothing">
       <canvas id="world" aria-label="Scena di gioco 3D"></canvas>
-      <header class="masthead">
-        <a class="brand" href="#" aria-label="Necrothing, ricentra il cimitero">
-          <span class="brand-mark">N</span>
-          <span><strong>NECROTHING</strong><small>IL GIARDINO DELLE OMBRE</small></span>
-        </a>
-        <div class="header-actions">
-          <button class="time-button" id="time-toggle" aria-label="Cambia atmosfera">
-            <span class="time-symbol">☾</span><span class="time-label">CREPUSCOLO</span>
-          </button>
-          <button class="icon-button" id="debug-toggle" aria-label="Mostra statistiche" title="Statistiche">≡</button>
+
+      <header class="hud-top">
+        <button class="player-chip" id="player-chip" aria-label="Profilo del custode">
+          <span class="chip-avatar" aria-hidden="true">⚰</span>
+          <span class="chip-body">
+            <strong id="hud-name">Custode</strong>
+            <small id="hud-rank">Rango 1</small>
+            <span class="xp-bar"><i id="hud-xp"></i></span>
+          </span>
+          <span class="wisp-count"><b class="wisp-icon" aria-hidden="true"></b><span id="hud-wisps">0</span></span>
+        </button>
+        <div class="hud-right">
+          <div class="clock-block">
+            <strong id="hud-clock">--:--</strong>
+            <small id="hud-weather">Notte</small>
+          </div>
+          <button class="icon-btn" id="settings-btn" aria-label="Impostazioni">⚙</button>
         </div>
       </header>
-      <div class="map-hint"><span class="gesture-icon">↔</span><span class="desktop-hint">TRASCINA PER ESPLORARE <i>·</i> ROTELLA PER ZOOM</span><span class="mobile-hint">TRASCINA LA MAPPA · PIZZICA PER ZOOM</span></div>
-      <div class="map-controls" aria-label="Navigazione mappa">
-        <button class="map-control" id="zoom-in" aria-label="Ingrandisci">+</button>
-        <button class="map-control" id="zoom-out" aria-label="Riduci">−</button>
-        <button class="map-control reset-control" id="camera-reset" aria-label="Ricentra la mappa">⌖</button>
+
+      <div class="edit-banner" id="edit-banner" hidden>
+        <span>✏️ Modifica — tocca un elemento, trascinalo per spostarlo</span>
+        <button class="pill" id="edit-done">Fine</button>
       </div>
-      <aside class="inspector" id="inspector" aria-live="polite" hidden>
-        <button class="close-button" id="close-inspector" aria-label="Chiudi">×</button>
-        <div class="eyebrow" id="grave-number">MEMORIA · 01</div>
-        <h1 id="grave-title">Una memoria quieta</h1>
-        <p class="inspector-copy" id="grave-description">La pietra attende una mano gentile.</p>
-        <div class="status-line"><span>CONDIZIONE</span><strong id="grave-status">In ordine</strong></div>
-        <div class="action-list">
-          <button class="action-button" data-action="clean"><span>01</span><b>Riordina la tomba</b><em>✦</em></button>
-          <button class="action-button" data-action="neglect"><span>02</span><b>Lascia che il tempo passi</b><em>⌁</em></button>
-          <button class="action-button" data-action="decorate"><span>03</span><b>Porta dei fiori</b><em>✿</em></button>
-        </div>
-        <div class="inspector-foot">Le piccole cure restano, anche al buio.</div>
-      </aside>
-      <nav class="hud-bottom" aria-label="Visualizzazione del cimitero">
-        <div class="display-switches">
-          <div class="control-group" role="group" aria-label="Stile del cimitero">
-            <button class="segment active" data-style="lowpoly"><span class="segment-symbol">◈</span><span>MINIATURA</span></button>
-            <button class="segment" data-style="voxel"><span class="segment-symbol">▦</span><span>VOXEL</span></button>
-          </div>
-          <div class="control-group camera-group" role="group" aria-label="Vista della mappa">
-            <button class="segment active" data-camera="angled"><span class="segment-symbol">◇</span><span>OBLIQUA</span></button>
-            <button class="segment" data-camera="top"><span class="segment-symbol">⊞</span><span>DALL’ALTO</span></button>
-          </div>
+
+      <div class="map-tools">
+        <button class="icon-btn" id="cam-toggle" aria-label="Cambia vista">◇</button>
+        <button class="icon-btn" id="recenter" aria-label="Centra sul custode">⌖</button>
+      </div>
+
+      <nav class="bubble" id="bubble" aria-label="Azioni">
+        <button class="fab" id="fab" aria-expanded="false" aria-label="Apri azioni"><span>✦</span></button>
+        <div class="slots" id="slots">
+          <button class="slot" data-act="bury"><span>⚰️</span><small>Seppellisci</small></button>
+          <button class="slot" data-act="edit"><span>✏️</span><small>Modifica</small></button>
+          <button class="slot" data-act="inventory"><span>🎒</span><small>Inventario</small></button>
+          <button class="slot" data-act="shop"><span>🏚️</span><small>Bottega</small></button>
+          <button class="slot" data-act="photo"><span>📷</span><small>Foto</small></button>
+          <button class="slot" data-act="gallery"><span>🖼️</span><small>Galleria</small></button>
         </div>
       </nav>
-      <div class="toast" id="toast" role="status" aria-live="polite"></div>
-      <section class="debug-panel" id="debug-panel" hidden aria-label="Statistiche tecniche"><div><span>FPS</span><b id="fps-value">—</b></div><div><span>DRAW CALLS</span><b id="calls-value">—</b></div><div><span>TRIANGOLI</span><b id="triangles-value">—</b></div><div><span>OGGETTI</span><b id="objects-value">—</b></div></section>
+
+      <div class="ctx" id="ctx" hidden>
+        <div class="ctx-title" id="ctx-title"></div>
+        <div class="ctx-actions" id="ctx-actions"></div>
+      </div>
+
+      <div class="scrim" id="scrim" hidden></div>
+      <section class="drawer" id="drawer" hidden aria-modal="true" role="dialog">
+        <header class="drawer-head">
+          <button class="icon-btn small" id="drawer-close" aria-label="Chiudi">✕</button>
+          <h2 id="drawer-title"></h2>
+        </header>
+        <div class="drawer-body" id="drawer-body"></div>
+        <footer class="drawer-foot" id="drawer-foot" hidden></footer>
+      </section>
+
+      <div class="photo-layer" id="photo-layer" hidden>
+        <div class="photo-shade"></div>
+        <div class="photo-rect" id="photo-rect">
+          <i data-h="nw"></i><i data-h="ne"></i><i data-h="sw"></i><i data-h="se"></i>
+        </div>
+        <div class="photo-bar">
+          <button class="pill" id="photo-cancel">Annulla</button>
+          <button class="shutter" id="photo-shoot" aria-label="Scatta"></button>
+          <span class="photo-hint">Sposta gli angoli</span>
+        </div>
+      </div>
+
+      <div class="toasts" id="toasts" aria-live="polite"></div>
+      <div class="floaters" id="floaters"></div>
+      <section class="debug" id="debug" hidden></section>
+      <div class="fatal" id="fatal" hidden></div>
     </main>
     <script type="module" src="/src/main.ts"></script>
   </body>

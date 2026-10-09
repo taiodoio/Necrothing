@@ -250,16 +250,16 @@ export function pathStone(v: PVis): Model {
   // acciottolato: file sfalsate di pietre irregolari con fughe di terra/muschio
   b.box(-5, 0, -5, 5, 0.4, 5, P.earthDark);
   const rows = 3 + r.int(2);
-  const tones = [P.stone, P.stone, '#77736c', P.stoneLight, P.stoneWarm, '#5d6066'];
+  const tones = [P.stone, '#77736c', '#6f6a62', P.stoneWarm, '#5d6066', '#83807a', '#585a5e'];
   let z = -5;
   for (let row = 0; row < rows; row++) {
-    const depth = row === rows - 1 ? 5 - z : (10 / rows) * r.range(0.8, 1.2);
+    const depth = row === rows - 1 ? 5 - z : (10 / rows) * r.range(0.7, 1.3);
     let x = -5;
     while (x < 4.9) {
-      const w = Math.min(5 - x, r.range(1.8, 3.6));
+      const w = Math.min(5 - x, r.range(1.4, 3.8));
       if (!(v.broken && r.chance(0.3))) {
-        const gap = 0.3;
-        const hgt = 0.7 + r.next() * 0.6;
+        const gap = 0.25 + r.next() * 0.2;
+        const hgt = 0.35 + r.next() * 0.4;
         b.box(x + gap, 0, z + gap, x + w - gap, hgt, z + depth - gap, r.pick(tones), { jitter: 0.12, rough: 0.6 });
         if (r.chance(0.25)) b.box(x + gap, hgt, z + gap, x + gap + 0.6, hgt + 0.3, z + depth - gap, P.stoneLight); // spigolo consumato
       }

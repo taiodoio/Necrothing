@@ -309,7 +309,7 @@ export function openSettings(ui: UI) {
   });
   const body = h('div', { 'data-settings': 'true' },
     h('div', { class: 'section-title' }, 'Resa grafica'),
-    h('div', { class: 'setting' }, 'Stile', seg(s.style, [['voxel', 'Gothic Voxel'], ['miniature', 'Miniatura']], (v) => game.setStyle(v))),
+    h('div', { class: 'setting' }, 'Stile', seg(s.style, [['lowpoly', 'Low-Poly'], ['voxel', 'Voxel'], ['miniature', 'Miniatura']], (v) => game.setStyle(v))),
     h('div', { class: 'setting' }, 'Vista', seg(s.camera, [['angled', 'Obliqua'], ['top', 'Dall’alto']], (v) => game.setCamera(v))),
     h('div', { class: 'setting' }, 'Qualità', seg(s.quality, [['low', 'Bassa'], ['medium', 'Media'], ['high', 'Alta']], (v) => game.setQuality(v))),
     h('div', { class: 'setting' }, 'Ora del giorno', seg<TimeOverride>(s.timeOverride, [['auto', 'Reale'], ['day', 'Giorno'], ['dusk', 'Sera'], ['night', 'Notte']], (v) => game.setTimeOverride(v))),

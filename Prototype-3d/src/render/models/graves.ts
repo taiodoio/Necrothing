@@ -197,7 +197,7 @@ export function graveModel(type: GraveType, state: GraveVisualState, seed: numbe
     if (r.chance(0.5)) candle(b, 4, 1, -3, false, 2);
   }
   // erba fine attorno alla base della lapide e ai bordi del tumulo
-  for (const [x, z] of [[-7.5, STONE_Z + 1], [7.5, STONE_Z], [-8, 4], [8, 7]] as const) {
+  for (const [x, z] of [[-6.8, STONE_Z + 1], [6.8, STONE_Z], [-7, 4], [7, 7]] as const) {
     if (r.chance(dirty ? 0.9 : 0.6)) grassClump(b, x + r.range(-0.8, 0.8), z + r.range(-0.8, 0.8), dirty ? 1.2 : 0.8, dirty ? DRY : undefined);
   }
   // licheni: piccole macchie chiare sulla base

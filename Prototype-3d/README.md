@@ -1,30 +1,41 @@
-# Necrothing — Prototype 3D (voxel)
+# Necrothing — Prototype 3D
 
-Nuova versione giocabile di Necrothing in 3D, mobile-first, con le stesse dinamiche
-della PWA React (`necrothing-docs/prototype/`) ma nello stile voxel gotico del
-riferimento. È tutto generato dal codice (TypeScript + Three.js + Vite): non ci sono
-modelli, texture o immagini esterne.
+Versione giocabile di Necrothing in 3D, mobile-first, con le stesse dinamiche della
+PWA React (`necrothing-docs/prototype/`). È tutto generato dal codice (TypeScript +
+Three.js + Vite): non ci sono modelli, texture o immagini esterne.
 
-![Gothic Voxel — obliqua](screenshots/A-voxel-obliqua.jpg)
+Tre stili di resa sugli **stessi dati di gioco**: **Gothic Low-Poly** (predefinito,
+sfaccettato, materiali opachi e luci calde), **Gothic Voxel** (la resa precedente) e
+**Miniatura**. Si cambiano da Impostazioni → Stile, col tasto `V` o con
+`?style=lowpoly|voxel|miniature` (alias `?renderer=lowpoly|legacy`).
 
-| Gothic Voxel · dall'alto | Miniatura · obliqua | Miniatura · dall'alto |
+| Low-Poly · giorno | Low-Poly · notte |
+|---|---|
+| ![](screenshots/A-lowpoly-giorno.jpg) | ![](screenshots/B-lowpoly-notte.jpg) |
+
+| Low-Poly · dall'alto | Voxel (legacy) · stessa scena | Miniatura · stessa scena |
 |---|---|---|
-| ![](screenshots/B-voxel-dallalto.jpg) | ![](screenshots/C-miniatura-obliqua.jpg) | ![](screenshots/D-miniatura-dallalto.jpg) |
+| ![](screenshots/C-lowpoly-dallalto.jpg) | ![](screenshots/D-voxel-legacy.jpg) | ![](screenshots/E-miniatura.jpg) |
 
 | Telefono · notte | Telefono · giorno | Telefono · UI e menù contestuale |
 |---|---|---|
 | ![](screenshots/mobile-notte.jpg) | ![](screenshots/mobile-giorno.jpg) | ![](screenshots/mobile-ui.jpg) |
 
-| Zoom massimo: il bosco non finisce mai | Dettaglio notturno |
+| Zoom massimo: il cimitero è il protagonista | Dettaglio notturno |
 |---|---|
-| ![](screenshots/E-zoom-massimo.jpg) | ![](screenshots/dettaglio-notte.jpg) |
+| ![](screenshots/F-zoom-massimo.jpg) | ![](screenshots/dettaglio-notte.jpg) |
+
+Documentazione della migrazione allo stile low-poly:
+[`docs/visual-migration-plan.md`](docs/visual-migration-plan.md) (audit, architettura,
+fasi, valutazione voxel vs low-poly vs GLB) e
+[`docs/asset-migration-catalog.md`](docs/asset-migration-catalog.md) (stato di ogni asset).
 
 ## Avvio
 
 ```bash
 npm install
 npm run dev        # http://localhost:5173  (galleria asset: /gallery.html)
-npm test           # 22 test (dominio + rendering)
+npm test           # 34 test (dominio, rendering voxel, adapter e generatori low-poly)
 npm run build      # typecheck + build di produzione in dist/
 ```
 
@@ -49,7 +60,7 @@ esegue fisicamente (cammina, lavora, poi arriva la ricompensa).
 
 **Controlli** — Touch: tocca per camminare/selezionare, trascina per spostare la mappa,
 pizzica per lo zoom. Desktop: WASD/frecce muovono il Custode, rotella zoom, `E`
-interagisci, `C` cambia vista, `V` cambia stile, `Esc` chiude.
+interagisci, `C` cambia vista, `V` cambia stile (low-poly → voxel → miniatura), `Esc` chiude.
 
 ### Dinamiche (portate dalla PWA, regole in `src/game/`)
 
@@ -89,13 +100,31 @@ interagisci, `C` cambia vista, `V` cambia stile, `Esc` chiude.
 
 ### Mondo, camera e resa
 
-- **Area di gioco ampia**: mappa logica 48×48, recinto iniziale 22×22 (prima 14×14) che
-  cresce fino a 44×44. Oltre la mappa altre 24 celle di **bosco continuo** per lato:
-  colline a gradini, pini e alberi morti a macchie, sottobosco (felci, cespugli, erba
-  secca, funghi, foglie) e la strada sterrata che esce dal cancello.
+- **Gothic Low-Poly** (`src/render/lowpoly/`): generatori dedicati con geometrie vere —
+  profili estrusi (lapidi, archi gotici, ali), torniti (vasi, urne, colonne, lampioni),
+  box smussati, coni e cilindri a pochi segmenti, icosaedri irregolari — con lievi
+  irregolarità deterministiche, colore per faccia e finto AO. Cinque famiglie di lapidi
+  sui 10 tipi del gioco, ognuna con varianti per seme e decorazioni modulari per stato
+  (fiori, vasi, corone, candele accese, muschio, erbacce, foglie, crepe, frammenti).
+  Edifici con finestre gotiche illuminate, porte ad arco, tetti a lastre, cantonali;
+  recinto con inferriata a lance; selciato a pietre poligonali; personaggi con le
+  stesse parti del rig (Custode con cappello, lanterna e pala; scheletro; fantasma).
+  Materiali `MeshStandardMaterial` opachi a flat shading. Gli asset non ancora migrati
+  ricadono sulla resa *miniatura* (vedi catalogo). Ogni luce tremola con un
+  `FireFlicker` indipendente e deterministico.
+
+- **Il cimitero è il protagonista**: mappa logica 64×64, recinto iniziale **34×34** che
+  cresce fino a 58×58; il bosco è solo una cornice (12 celle oltre la mappa) e la camera
+  ne mostra una fascia sottile: zoom massimo = recinto + ~7 celle, pan = recinto + 3.
+  Il cimitero iniziale ha 10 tombe di tutte le famiglie e in tutti gli stati, viali in
+  selciato, bottega, statue, pozzo, stagno, aiuola, lampioni e lanterne.
+- **Dislivelli e collinette**: colline morbide deterministiche dentro il recinto
+  (piatte lungo il muro di cinta), terreno che sale nel bosco; sotto ogni oggetto un
+  **pad** piano, così tombe ed edifici non pendono e i sentieri seguono il terreno.
+  Personaggi, fuochi fatui e tocco sul terreno usano la quota reale del suolo.
 - **Niente terreno "flottante"**: la camera calcola l'impronta inquadrata (ortografica,
   40° di elevazione, ruotata) e limita zoom massimo e pan perché il bordo del terreno non
-  entri mai nello schermo; si scorre fino al bosco attorno al recinto (recinto + 7 celle).
+  entri mai nello schermo.
 - **Sfocatura tilt-shift ai bordi** (qualità media/alta, disattivabile): due passate
   separabili a raggio variabile; la fascia nitida segue il Custode o l'oggetto selezionato,
   il resto sfuma come in un diorama fotografato da vicino.
@@ -145,7 +174,9 @@ src/
   fisso di PointLight (4/7/10 per qualità) viene assegnato alle sorgenti più vicine al
   centro della vista, senza ricompilare gli shader. Una sola luce direzionale con ombra
   che segue la camera.
-- **Prestazioni**: geometrie condivise e cache; recinto in `InstancedMesh`; bosco e
+- **Prestazioni** (SwiftShader, qualità media, stessa scena): low-poly ~600k triangoli
+  e ~320 draw call su desktop, ~520k su telefono; voxel ~790k; miniatura ~410k.
+- **Ottimizzazioni**: geometrie condivise e cache; recinto in `InstancedMesh`; bosco e
   sottobosco *cotti* in una geometria per chunk 12×12 (frustum culling per zona) con LOD
   (alberi lontani a risoluzione voxel ridotta); terreno a chunk con greedy meshing delle
   sommità. Misure nel browser headless con rendering software (SwiftShader, FPS non
@@ -172,17 +203,24 @@ sporco, rotto, luci notturne; tombe pulite/con fiori/sporche/rotte.
    10 per cella, origine al centro dell'ingombro a terra, fronte verso +z) e usa
    `decay()` per gli stati sporco/rotto; `b.light(...)` per le sorgenti luminose.
 3. Registralo in `BUILDERS` (`src/render/models/registry.ts`).
-4. Controllalo in `/gallery.html` nei due stili; `npm test` verifica che stia
-   nell'ingombro e che le luci spente non emettano.
+4. (Low-poly) scrivi il generatore in `src/render/lowpoly/*` con `LP` e registralo in
+   `LP_PLACEABLES` (`src/render/lowpoly/index.ts`); senza generatore l'oggetto usa la
+   resa miniatura.
+5. Controllalo in `/gallery.html?style=lowpoly` (anche `voxel`, `miniature`); `npm test`
+   verifica che stia nell'ingombro e che le luci spente non emettano.
 
 ## Test
 
-`npm test` — 22 test: nuova partita valida, sepoltura e limite astratto, ciclo
+`npm test` — 34 test: nuova partita valida, migrazione dei salvataggi v1, sepoltura e limite astratto, ciclo
 fiori/sporco/rotto, decadimento 3/7 giorni, bottega e vendita, modifica/rotazione/
 riponi, becchino, modificatori di spawn, determinismo, espansione monotona,
 achievement, distretti, catalogo; determinismo del mesher, parità dimensioni
 voxel/miniatura, tutte le lapidi × stati, ogni voce del catalogo in ogni stato,
-rasterizzazione conservativa, camera perpendicolare, stato invariato al cambio stile.
+rasterizzazione conservativa, camera perpendicolare, stato invariato al cambio stile;
+**low-poly**: adapter chiave → generatore per ogni lapide × stato, determinismo e
+varianti per seme, stati che cambiano la geometria, ingombri degli oggetti migrati,
+luci accese/spente, fallback e materiali per stile, parti dei personaggi, scenografia,
+terreno (colline, pad piani, continuità), limiti della camera, FireFlicker.
 Inoltre gli scenari di interazione sono stati verificati con Playwright (tap → menù →
 pulizia, sepoltura + funerale, bottega, inventario → posa, trascinamento in Modifica,
 foto → galleria).
@@ -199,8 +237,11 @@ foto → galleria).
 - Prestazioni misurate solo con rendering software: vanno verificate su telefoni reali
   (i voxel più fini e il bosco esteso hanno alzato il conto dei triangoli; se serve, la
   qualità bassa o un LOD più aggressivo per il sottobosco lo riducono).
-- Gli alberi lontani del bosco sono voxel a risoluzione ridotta: da vicino si vedono più
-  "grossi" degli alberi dentro il recinto (la sfocatura e la nebbia lo mascherano).
+- In voxel gli alberi lontani usano una risoluzione ridotta, ed erba e ciottolato non
+  possono scendere sotto la dimensione di un voxel: è il limite della resa voxel, per
+  questo lo stile predefinito è ora il low-poly.
+- In low-poly alcuni oggetti del catalogo usano ancora il fallback *miniatura*
+  (elenco in `docs/asset-migration-catalog.md`).
 - Le notifiche push sono rimandate all'app nativa (Capacitor); nel browser la
   simulazione recupera il tempo trascorso alla riapertura.
 - Nessun audio. La pathfinding è su griglia (niente evitamento dinamico tra personaggi).
@@ -209,8 +250,8 @@ foto → galleria).
 
 ## Prossimi passi
 
-1. Profilazione su iOS/Android e taratura delle soglie di qualità (risoluzione voxel,
-   densità del bosco, raggio della sfocatura).
-2. Audio (ambiente notturno, campane, corvi) con rispetto del mute.
-3. Capacitor: notifiche native per anniversari/erbacce, salvataggio su SQLite.
-4. Rotazione della camera a passi di 90° e animazioni di transizione tra stili.
+1. Migrare gli oggetti ancora in fallback (lanterna fantasma, zucca, falò, santuario,
+   fontana, archi, animali…) e valutare asset eroi in GLB (vedi piano di migrazione).
+2. Profilazione su iOS/Android e taratura delle soglie di qualità.
+3. Audio (ambiente notturno, campane, corvi) con rispetto del mute.
+4. Capacitor: notifiche native per anniversari/erbacce, salvataggio su SQLite.

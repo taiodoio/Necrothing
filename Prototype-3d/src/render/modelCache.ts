@@ -45,21 +45,58 @@ function voxelNoise<T extends THREE.Material>(m: T): T {
   return m;
 }
 
-export const MATERIALS = {
+export type MaterialSet = Record<Bucket | 'selected' | 'invalid', THREE.Material>;
+
+const glow = new THREE.MeshBasicMaterial({ vertexColors: true, toneMapped: false });
+const ghost = new THREE.MeshBasicMaterial({ vertexColors: true, transparent: true, opacity: 0.55, depthWrite: false, blending: THREE.AdditiveBlending });
+
+/** Materiali degli stili voxel e miniatura (Lambert + rumore per voxel). */
+export const MATERIALS: MaterialSet = {
   solid: voxelNoise(new THREE.MeshLambertMaterial({ vertexColors: true })),
-  glow: new THREE.MeshBasicMaterial({ vertexColors: true, toneMapped: false }),
+  glow,
   water: new THREE.MeshLambertMaterial({ vertexColors: true, transparent: true, opacity: 0.82 }),
-  ghost: new THREE.MeshBasicMaterial({ vertexColors: true, transparent: true, opacity: 0.55, depthWrite: false, blending: THREE.AdditiveBlending }),
+  ghost,
   selected: voxelNoise(new THREE.MeshLambertMaterial({ vertexColors: true, emissive: new THREE.Color('#4a3618'), emissiveIntensity: 0.55 })),
   invalid: voxelNoise(new THREE.MeshLambertMaterial({ vertexColors: true, emissive: new THREE.Color('#7a1f1f'), emissiveIntensity: 1 })),
-} as const;
+};
+
+/**
+ * Materiali "Stylized Gothic Low-Poly": PBR opaco (roughness alta, niente
+ * metallo) con flat shading, così ogni faccia legge la luce in modo netto.
+ * glow e ghost sono condivisi (l'Atmosfera ne regola l'intensità per fase).
+ */
+export const LOWPOLY_MATERIALS: MaterialSet = {
+  solid: new THREE.MeshStandardMaterial({ vertexColors: true, flatShading: true, roughness: 0.9, metalness: 0 }),
+  glow,
+  water: new THREE.MeshStandardMaterial({ vertexColors: true, flatShading: true, roughness: 0.25, metalness: 0.1, transparent: true, opacity: 0.86 }),
+  ghost,
+  selected: new THREE.MeshStandardMaterial({ vertexColors: true, flatShading: true, roughness: 0.85, metalness: 0, emissive: new THREE.Color('#5a4120'), emissiveIntensity: 0.45 }),
+  invalid: new THREE.MeshStandardMaterial({ vertexColors: true, flatShading: true, roughness: 0.85, metalness: 0, emissive: new THREE.Color('#7a1f1f'), emissiveIntensity: 0.9 }),
+};
+
+export function materialsFor(style: ArtStyle): MaterialSet {
+  return style === 'lowpoly' ? LOWPOLY_MATERIALS : MATERIALS;
+}
 
 export interface CachedModel {
   geometries: BucketGeometries;
   lights: LightAnchor[];
   /** Altezza massima (unità mondo), utile per hitbox ed etichette. */
   height: number;
+  /** Materiali dello stile con cui è stato generato. */
+  mats: MaterialSet;
+  /** Generato da un generatore low-poly dedicato (non dal fallback). */
+  dedicated?: boolean;
 }
+
+/**
+ * Adapter dello stile low-poly: data la chiave di un modello esistente
+ * (tomba, oggetto, scenografia, parte di personaggio) restituisce il suo
+ * generatore dedicato, se è già stato migrato. Registrato da render/lowpoly.
+ */
+export type LowpolyResolver = (key: string) => (() => { geometries: BucketGeometries; lights: LightAnchor[] }) | null;
+let lowpolyResolver: LowpolyResolver = () => null;
+export function setLowpolyResolver(r: LowpolyResolver) { lowpolyResolver = r; }
 
 const cache = new Map<string, CachedModel>();
 
@@ -77,11 +114,25 @@ export function getModel(key: string, style: ArtStyle, build: () => Model, seed 
   const full = `${style}|${res ?? '*'}|${key}`;
   let hit = cache.get(full);
   if (!hit) {
-    const model = build();
-    const geometries = style === 'voxel' ? meshVoxels(model, seed, grounded, res ?? voxelResolution()) : meshLowpoly(model, seed);
+    let geometries: BucketGeometries;
+    let lights: LightAnchor[];
+    let dedicated = false;
+    const lp = style === 'lowpoly' ? lowpolyResolver(key) : null;
+    if (lp) {
+      ({ geometries, lights } = lp());
+      dedicated = true;
+    } else {
+      const model = build();
+      geometries = style === 'voxel' ? meshVoxels(model, seed, grounded, res ?? voxelResolution()) : meshLowpoly(model, seed);
+      lights = model.lights;
+    }
     let height = 0.2;
-    for (const g of Object.values(geometries)) if (g?.boundingBox) height = Math.max(height, g.boundingBox.max.y);
-    hit = { geometries, lights: model.lights, height };
+    for (const g of Object.values(geometries)) {
+      if (!g) continue;
+      if (!g.boundingBox) g.computeBoundingBox();
+      height = Math.max(height, g.boundingBox!.max.y);
+    }
+    hit = { geometries, lights, height, mats: materialsFor(style), dedicated };
     cache.set(full, hit);
   }
   return hit;
@@ -91,7 +142,7 @@ export function getModel(key: string, style: ArtStyle, build: () => Model, seed 
 export function instantiate(model: CachedModel, opts: { castShadow?: boolean; receiveShadow?: boolean } = {}): THREE.Group {
   const group = new THREE.Group();
   for (const [bucket, geo] of Object.entries(model.geometries) as [Bucket, THREE.BufferGeometry][]) {
-    const mesh = new THREE.Mesh(geo, MATERIALS[bucket]);
+    const mesh = new THREE.Mesh(geo, model.mats[bucket]);
     mesh.name = bucket;
     mesh.castShadow = bucket === 'solid' && (opts.castShadow ?? true);
     mesh.receiveShadow = bucket === 'solid' && (opts.receiveShadow ?? true);

@@ -18,11 +18,11 @@ export function tuft(b: ModelBuilder, x: number, z: number, h = 3, color: string
  */
 export function grassClump(b: ModelBuilder, x: number, z: number, scale = 1, palette: readonly string[] = GREENS) {
   const r = b.rng;
-  const n = 4 + r.int(5);
+  const n = 3 + r.int(4);
   const t = 0.6;
   for (let i = 0; i < n; i++) {
     const bx = x + r.range(-1.6, 1.6) * scale, bz = z + r.range(-1.6, 1.6) * scale;
-    const h = (1.2 + r.next() * 2.6) * scale;
+    const h = (0.7 + r.next() * 1.5) * scale;
     const c = r.pick(palette);
     b.box(bx, 0, bz, bx + t, h * 0.6, bz + t, c);
     // punta piegata verso una direzione casuale

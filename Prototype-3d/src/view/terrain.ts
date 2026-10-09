@@ -1,9 +1,12 @@
 // Terreno continuo: la mappa logica (MAP_SIZE) è circondata da FOREST_MARGIN
 // celle di bosco, così a schermo il suolo non "finisce" mai.
-//  • geometria: colonne a gradini (2 per cella), facce superiori fuse per
-//    altezza uguale (greedy) → pochissimi triangoli sul piano del recinto;
-//  • colore: una texture per chunk (8 pixel per cella dentro la mappa, 4 fuori)
-//    con NearestFilter in stile voxel e LinearFilter in stile miniatura.
+//  • altezze: dentro il recinto colline dolci e ondulazioni (piatte vicino al
+//    recinto), fuori il terreno sale verso il bosco. Sotto ogni oggetto c'è un
+//    "pad" piano (tombe, sentieri ed edifici non galleggiano né affondano);
+//  • voxel/miniatura: colonne a gradini (2 per cella) con facce superiori fuse
+//    e una texture per chunk;
+//  • low-poly: superficie sfaccettata (4 triangoli per cella attorno al
+//    centro, vertici leggermente irregolari) con colore per faccia.
 
 import * as THREE from 'three';
 import { FOREST_MARGIN, MAP_SIZE } from '../game/balance.ts';
@@ -14,7 +17,7 @@ import { P } from '../render/palette.ts';
 
 export const CHUNK = 12; // celle per lato di un chunk
 const COLS = 2; // colonne di altezza per cella
-const STEP = 0.1; // altezza di un gradino
+export const STEP = 0.05; // altezza di un gradino (quantizzazione delle altezze)
 export const WORLD_MIN = -FOREST_MARGIN; // in celle logiche
 export const WORLD_MAX = MAP_SIZE + FOREST_MARGIN;
 
@@ -24,6 +27,8 @@ export interface GroundInput {
   seed: number;
   area: Rect;
   overrides: Map<string, Ground>;
+  /** Altezza piana sotto gli oggetti (cella → altezza mondo). */
+  pads: Map<string, number>;
 }
 
 function groundAt(input: GroundInput, cx: number, cy: number): Ground {
@@ -45,20 +50,98 @@ export function lowNoise(x: number, y: number, seed: number, scale: number): num
   return a + (b - a) * sx + (c - a) * sy + (a - b - c + d) * sx * sy;
 }
 
-/** Altezza in gradini della colonna (coordinate colonna, possono essere negative). */
-export function columnHeight(input: GroundInput, i: number, j: number): number {
-  const cx = Math.floor(i / COLS), cy = Math.floor(j / COLS);
+const q = (h: number) => Math.round(h / STEP) * STEP;
+const smooth = (e0: number, e1: number, x: number) => { const t = Math.min(1, Math.max(0, (x - e0) / (e1 - e0))); return t * t * (3 - 2 * t); };
+
+/**
+ * Collinette: una ogni ~9 celle (griglia con jitter, 65% di probabilità),
+ * profilo morbido (1 − d²)². Dipende solo dalle coordinate di mappa, così
+ * allargando il recinto le colline esistenti restano dove sono.
+ */
+function hillField(seed: number, x: number, y: number): number {
+  const G = 9;
+  let h = 0;
+  const gx = Math.floor(x / G), gy = Math.floor(y / G);
+  for (let j = gy - 1; j <= gy + 1; j++) {
+    for (let i = gx - 1; i <= gx + 1; i++) {
+      if (hash3(i, j, 1, seed) < 0.35) continue;
+      const hx = (i + 0.2 + hash3(i, j, 2, seed) * 0.6) * G, hy = (j + 0.2 + hash3(i, j, 3, seed) * 0.6) * G;
+      const rad = 4 + hash3(i, j, 4, seed) * 3.5;
+      const amp = 0.7 + hash3(i, j, 5, seed) * 1.0;
+      const d = Math.hypot(x - hx, y - hy) / rad;
+      if (d < 1) { const k = 1 - d * d; h += amp * k * k; }
+    }
+  }
+  return h;
+}
+
+/** Altezza naturale (senza pad) di una cella, in unità mondo. */
+export function naturalHeight(input: GroundInput, cx: number, cy: number): number {
   const g = groundAt(input, cx, cy);
-  if (g === 'grass' || g === 'path' || g === 'plot' || g === 'dirt') return 0;
-  if (g === 'mud') return -1;
-  if (g === 'fence') return lowNoise(i, j, input.seed, 4) > 0.75 ? 1 : 0;
-  const n = lowNoise(i, j, input.seed, 5);
-  const hill = lowNoise(i, j, input.seed + 9, 16);
-  // più ci si allontana dal recinto più il terreno sale dolcemente (bosco)
+  if (g === 'fence') return 0;
+  if (g === 'mud') return -STEP;
   const a = input.area;
-  const dx = Math.max(a.x - cx, 0, cx - (a.x + a.w)), dy = Math.max(a.y - cy, 0, cy - (a.y + a.h));
-  const far = Math.min(1, Math.max(dx, dy) / 10);
-  return Math.round(n * 1.0 + Math.max(0, hill - 0.5) * 7 * far + far * 2);
+  const inside = cx >= a.x && cy >= a.y && cx < a.x + a.w && cy < a.y + a.h;
+  if (inside) {
+    const dIn = Math.min(cx - a.x, a.x + a.w - 1 - cx, cy - a.y, a.y + a.h - 1 - cy);
+    const fade = smooth(0, 3.5, dIn);
+    const h = hillField(input.seed, cx + 0.5, cy + 0.5) + (lowNoise(cx, cy, input.seed + 3, 7) - 0.5) * 0.35;
+    return q(Math.max(-0.1, h * fade));
+  }
+  const dOut = Math.max(a.x - cx, cx - (a.x + a.w - 1), a.y - cy, cy - (a.y + a.h - 1)) - 1;
+  const far = Math.min(1, Math.max(0, dOut) / 6);
+  let h = far * 0.45 + hillField(input.seed + 7, cx + 0.5, cy + 0.5) * far * 1.1 + (lowNoise(cx, cy, input.seed, 5) - 0.5) * 0.2 * far;
+  if (g === 'dirt' || g === 'path') h *= 0.35;
+  return q(h);
+}
+
+/** Altezza di una cella: il pad dell'oggetto che la occupa, o quella naturale. */
+export function cellHeight(input: GroundInput, cx: number, cy: number): number {
+  return input.pads.get(`${cx},${cy}`) ?? naturalHeight(input, cx, cy);
+}
+
+/** Altezza di un vertice d'angolo (gx,gy): media dei pad se ce ne sono, altrimenti delle celle. */
+export function cornerHeight(input: GroundInput, gx: number, gy: number): number {
+  let ps = 0, pn = 0, ns = 0;
+  for (const [cx, cy] of [[gx - 1, gy - 1], [gx, gy - 1], [gx - 1, gy], [gx, gy]]) {
+    const p = input.pads.get(`${cx},${cy}`);
+    if (p !== undefined) { ps += p; pn++; } else ns += naturalHeight(input, cx, cy);
+  }
+  return pn ? ps / pn : ns / 4;
+}
+
+/** Spostamento orizzontale irregolare dei vertici d'angolo del terreno low-poly. */
+function cornerJitter(input: GroundInput, gx: number, gy: number): [number, number] {
+  return [(hash3(gx, gy, 41, input.seed) - 0.5) * 0.28, (hash3(gx, gy, 43, input.seed) - 0.5) * 0.28];
+}
+
+/**
+ * Quota del suolo in un punto del mondo (per personaggi, alberi, fuochi
+ * fatui). Nei due stili "a gradini" è piana per cella; in low-poly segue i
+ * triangoli della superficie (ventaglio attorno al centro della cella).
+ */
+export function surfaceHeight(input: GroundInput, style: ArtStyle, wx: number, wz: number): number {
+  const half = MAP_SIZE / 2;
+  const u = wx + half, v = wz + half;
+  const cx = Math.floor(u), cy = Math.floor(v);
+  if (style !== 'lowpoly') return cellHeight(input, cx, cy);
+  const fx = u - cx - 0.5, fy = v - cy - 0.5;
+  const hc = cellHeight(input, cx, cy);
+  let a: [number, number, number], b: [number, number, number];
+  if (Math.abs(fx) >= Math.abs(fy)) {
+    const gx = fx > 0 ? cx + 1 : cx;
+    a = [gx - cx - 0.5, cy - cy - 0.5, cornerHeight(input, gx, cy)];
+    b = [gx - cx - 0.5, 0.5, cornerHeight(input, gx, cy + 1)];
+  } else {
+    const gy = fy > 0 ? cy + 1 : cy;
+    a = [-0.5, gy - cy - 0.5, cornerHeight(input, cx, gy)];
+    b = [0.5, gy - cy - 0.5, cornerHeight(input, cx + 1, gy)];
+  }
+  // interpolazione baricentrica nel triangolo (centro, a, b)
+  const det = a[0] * b[1] - b[0] * a[1];
+  if (Math.abs(det) < 1e-6) return hc;
+  const la = (fx * b[1] - b[0] * fy) / det, lb = (a[0] * fy - fx * a[1]) / det;
+  return hc + la * (a[2] - hc) + lb * (b[2] - hc);
 }
 
 const C = (hex: string) => new THREE.Color(hex);
@@ -66,6 +149,11 @@ const GRASS_A = C(P.grass), GRASS_B = C(P.grassDark), GRASS_DRY = C('#5b5a33'), 
 const WILD_A = C('#2c3826'), WILD_B = C('#3a3a26'), WILD_DRY = C('#4f4428'), LEAF = C('#5a3a20');
 const EARTH_A = C(P.earth), EARTH_B = C(P.earthDark), MUD = C(P.mud), STONE = C('#4c4a47');
 const tmp = new THREE.Color();
+// palette "Stylized Gothic Low-Poly"
+const LP = {
+  grassA: C('#354839'), grassB: C('#3f5536'), moss: C('#61745a'), dry: C('#8d805c'), soil: C('#534238'),
+  soilDark: C('#3f3129'), wildA: C('#2f3b2c'), wildB: C('#3c3d2b'), leaf: C('#6a4a2c'), mud: C('#3a2f27'), stone: C('#4a4a49'),
+};
 
 /** Colore di un "pixel" di terreno (px,py in coordinate pixel, ppc = pixel per cella). */
 function groundColor(input: GroundInput, px: number, py: number, ppc: number): THREE.Color {
@@ -101,11 +189,70 @@ function groundColor(input: GroundInput, px: number, py: number, ppc: number): T
 
 export interface ChunkMesh {
   geometry: THREE.BufferGeometry;
-  texture: THREE.DataTexture;
+  /** Texture del suolo (stili a gradini); null in low-poly (colore per faccia). */
+  texture: THREE.DataTexture | null;
+}
+
+/** Colore di una faccia del terreno low-poly. */
+function lowpolyColor(input: GroundInput, cx: number, cy: number, face: number, out: THREE.Color): THREE.Color {
+  const g = groundAt(input, cx, cy);
+  const n1 = lowNoise(cx, cy, input.seed + 5, 6);
+  const n2 = lowNoise(cx, cy, input.seed + 11, 7);
+  const patch = lowNoise(cx * 2 + (face & 1), cy * 2 + (face >> 1), input.seed + 21, 5);
+  const h = hash3(cx * 4 + face, cy, 77, input.seed);
+  switch (g) {
+    case 'path': out.copy(LP.soilDark).lerp(LP.stone, 0.25 + h * 0.2); break;
+    case 'dirt': out.copy(LP.soil).lerp(LP.soilDark, n1); break;
+    case 'mud': out.copy(LP.mud); break;
+    case 'plot': out.copy(LP.soil); break;
+    case 'fence': out.copy(LP.soilDark).lerp(LP.grassA, 0.5 + h * 0.3); break;
+    case 'forest':
+    case 'wild':
+      out.copy(LP.wildA).lerp(LP.wildB, n1);
+      if (n2 > 0.55) out.lerp(LP.dry, (n2 - 0.55) * 0.9);
+      if (patch > 0.7) out.lerp(LP.leaf, (patch - 0.7) * 1.6);
+      break;
+    default:
+      out.copy(LP.grassA).lerp(LP.grassB, n1);
+      if (n2 > 0.62) out.lerp(LP.dry, (n2 - 0.62) * 1.1);
+      if (n2 < 0.3) out.lerp(LP.moss, (0.3 - n2) * 0.9);
+      if (patch > 0.78) out.lerp(LP.soil, Math.min(0.85, (patch - 0.78) * 4));
+  }
+  return out.multiplyScalar(0.97 + h * 0.06);
+}
+
+/** Chunk low-poly: 4 triangoli per cella attorno al centro, colore per faccia. */
+function buildLowpolyChunk(input: GroundInput, cx0: number, cy0: number): ChunkMesh {
+  const half = MAP_SIZE / 2;
+  const pos: number[] = [], col: number[] = [];
+  const c = new THREE.Color();
+  const corner = (gx: number, gy: number): [number, number, number] => {
+    const [jx, jz] = cornerJitter(input, gx, gy);
+    return [gx - half + jx, cornerHeight(input, gx, gy), gy - half + jz];
+  };
+  for (let cy = cy0; cy < cy0 + CHUNK; cy++) {
+    for (let cx = cx0; cx < cx0 + CHUNK; cx++) {
+      const center: [number, number, number] = [cx + 0.5 - half, cellHeight(input, cx, cy), cy + 0.5 - half];
+      const k00 = corner(cx, cy), k10 = corner(cx + 1, cy), k11 = corner(cx + 1, cy + 1), k01 = corner(cx, cy + 1);
+      // ordine antiorario visto dall'alto (+y)
+      const tris = [[center, k10, k00], [center, k11, k10], [center, k01, k11], [center, k00, k01]];
+      tris.forEach((t, face) => {
+        lowpolyColor(input, cx, cy, face, c);
+        for (const v of t) { pos.push(v[0], v[1], v[2]); col.push(c.r, c.g, c.b); }
+      });
+    }
+  }
+  const g = new THREE.BufferGeometry();
+  g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+  g.setAttribute('color', new THREE.Float32BufferAttribute(col, 3));
+  g.computeVertexNormals();
+  g.computeBoundingSphere();
+  return { geometry: g, texture: null };
 }
 
 /** Costruisce il chunk che parte dalla cella (cx0, cy0). */
 export function buildChunk(input: GroundInput, cx0: number, cy0: number, style: ArtStyle): ChunkMesh {
+  if (style === 'lowpoly') return buildLowpolyChunk(input, cx0, cy0);
   const inside = cx0 >= 0 && cy0 >= 0 && cx0 < MAP_SIZE && cy0 < MAP_SIZE;
   const ppc = inside ? 16 : 8;
   const tsize = CHUNK * ppc;
@@ -126,7 +273,7 @@ export function buildChunk(input: GroundInput, cx0: number, cy0: number, style: 
 
   const n = CHUNK * COLS;
   const i0 = cx0 * COLS, j0 = cy0 * COLS;
-  const H = (i: number, j: number) => columnHeight(input, i, j);
+  const H = (i: number, j: number) => Math.round(cellHeight(input, Math.floor(i / COLS), Math.floor(j / COLS)) / STEP);
   const heights = new Int16Array(n * n);
   for (let j = 0; j < n; j++) for (let i = 0; i < n; i++) heights[j * n + i] = H(i0 + i, j0 + j);
   const half = MAP_SIZE / 2;
@@ -195,9 +342,9 @@ export function buildChunk(input: GroundInput, cx0: number, cy0: number, style: 
   return { geometry: g, texture };
 }
 
-/** Altezza del suolo (unità mondo) al centro di una cella logica. */
+/** Altezza del suolo (unità mondo) di una cella logica. */
 export function groundHeightAtCell(input: GroundInput, cx: number, cy: number): number {
-  return columnHeight(input, cx * COLS, cy * COLS) * STEP;
+  return cellHeight(input, cx, cy);
 }
 
 export function groundType(input: GroundInput, cx: number, cy: number): Ground {

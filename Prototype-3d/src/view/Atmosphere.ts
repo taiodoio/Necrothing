@@ -9,6 +9,7 @@ import type { Quality, Weather } from '../game/state.ts';
 import type { DayPhase } from '../game/time.ts';
 import { MATERIALS } from '../render/modelCache.ts';
 import type { LightAnchor } from '../render/shape.ts';
+import { FireFlicker, seedFromPosition } from './FireFlicker.ts';
 
 interface Preset {
   top: string; bottom: string; fog: string;
@@ -28,7 +29,7 @@ interface AnchorEntry {
   pos: THREE.Vector3;
   anchor: LightAnchor;
   sprite: THREE.Sprite;
-  phase: number;
+  flicker: FireFlicker;
   on: boolean;
 }
 
@@ -130,7 +131,7 @@ export class Atmosphere {
     this.sun.color.set(p.sun);
     this.sun.intensity = p.sunI * dim;
     this.ambient.intensity = p.ambient;
-    MATERIALS.glow.color.setScalar(p.glow);
+    (MATERIALS.glow as THREE.MeshBasicMaterial).color.setScalar(p.glow);
     const fog = this.scene.fog as THREE.Fog;
     fog.color.set(p.fog);
     this.applyFocus();
@@ -171,7 +172,7 @@ export class Atmosphere {
     sprite.scale.set(s, s, s);
     sprite.renderOrder = 3;
     this.group.add(sprite);
-    this.anchors.set(id, { pos: pos.clone(), anchor, sprite, phase: Math.random() * 10, on });
+    this.anchors.set(id, { pos: pos.clone(), anchor, sprite, flicker: new FireFlicker(seedFromPosition(pos.x, pos.y, pos.z), anchor.flicker), on });
     return { id };
   }
 
@@ -200,7 +201,7 @@ export class Atmosphere {
     const p = this.preset;
     // Flicker degli aloni e delle luci.
     for (const e of this.anchors.values()) {
-      const f = 1 + Math.sin(t * 9 + e.phase) * e.anchor.flicker * 0.5 + Math.sin(t * 23 + e.phase * 3) * e.anchor.flicker * 0.25;
+      const f = e.flicker.value(t);
       (e.sprite.material as THREE.SpriteMaterial).opacity = e.on ? p.halo * Math.min(1, e.anchor.intensity * 1.4) * f : 0;
       e.sprite.visible = e.on && p.halo > 0.02;
     }
@@ -223,7 +224,7 @@ export class Atmosphere {
     for (const light of this.pool) {
       const e = light.userData.entry as AnchorEntry | undefined;
       if (!e) continue;
-      const f = 1 + Math.sin(t * 11 + e.phase) * e.anchor.flicker * 0.6;
+      const f = e.flicker.value(t);
       light.intensity = p.pool * e.anchor.intensity * 4.2 * f;
     }
     // Temporale: lampi occasionali.

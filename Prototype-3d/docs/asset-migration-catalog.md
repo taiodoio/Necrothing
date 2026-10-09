@@ -7,7 +7,7 @@ già usati dal gioco (`src/game/catalog.ts`, `src/game/graves.ts`,
 dedicato; se non esiste ancora, la cache usa il mesher *miniatura* sulle
 stesse primitive (stesse dimensioni e pivot), così il gioco resta completo.
 
-Legenda: ✅ generatore low-poly dedicato · 🟡 fallback miniatura (da migrare).
+Legenda: ✅ generatore low-poly dedicato · ✅ low-poly dedicato (da migrare).
 Unità: 1 u = 1 cella = 1 unità mondo. "Altezza" = altezza visiva del modello
 pulito, variante 0.
 
@@ -42,55 +42,55 @@ frammento caduto, calcinacci.
 |---|---|---|---|---|---|---|---|---|
 | `lamp_post` | Lampione | Luci | 1×1 | 3.0 u | pulito/sporco/rotto, acceso/spento | blocca | tremolio luce | ✅ low-poly dedicato |
 | `lantern` | Lanterna | Luci | 1×1 | 0.5 u | pulito/sporco/rotto, acceso/spento | blocca | tremolio luce | ✅ low-poly dedicato |
-| `ghost_lantern` | Lanterna fantasma | Luci | 1×1 | — | pulito/sporco/rotto, acceso/spento | blocca | tremolio luce | 🟡 fallback miniatura |
-| `glow_pumpkin` | Zucca luminosa | Luci | 1×1 | — | pulito/sporco/rotto, acceso/spento | blocca | tremolio luce | 🟡 fallback miniatura |
-| `skull_candle` | Teschio con candela | Luci | 1×1 | — | pulito/sporco/rotto, acceso/spento | blocca | tremolio luce | 🟡 fallback miniatura |
+| `ghost_lantern` | Lanterna fantasma | Luci | 1×1 | — | pulito/sporco/rotto, acceso/spento | blocca | tremolio luce | ✅ low-poly dedicato |
+| `glow_pumpkin` | Zucca luminosa | Luci | 1×1 | — | pulito/sporco/rotto, acceso/spento | blocca | tremolio luce | ✅ low-poly dedicato |
+| `skull_candle` | Teschio con candela | Luci | 1×1 | — | pulito/sporco/rotto, acceso/spento | blocca | tremolio luce | ✅ low-poly dedicato |
 | `torch` | Torcia in fiamme | Luci | 1×1 | 1.2 u | pulito/sporco/rotto, acceso/spento | blocca | tremolio luce | ✅ low-poly dedicato |
-| `bonfire` | Falò esoterico | Luci | 2×2 | — | pulito/sporco/rotto, acceso/spento | blocca | tremolio luce | 🟡 fallback miniatura |
-| `candle_tree` | Albero con candele | Luci | 3×3 | — | pulito/sporco/rotto, acceso/spento | blocca | tremolio luce | 🟡 fallback miniatura |
+| `bonfire` | Falò esoterico | Luci | 2×2 | — | pulito/sporco/rotto, acceso/spento | blocca | tremolio luce | ✅ low-poly dedicato |
+| `candle_tree` | Albero con candele | Luci | 3×3 | — | pulito/sporco/rotto, acceso/spento | blocca | tremolio luce | ✅ low-poly dedicato |
 | `wreath` | Corona di fiori | Decorazioni | 1×1 | 0.9 u | unico | blocca | — | ✅ low-poly dedicato |
 | `sign` | Cartello | Decorazioni | 1×1 | 1.4 u | unico | blocca | — | ✅ low-poly dedicato |
 | `angel_statue` | Statua angelo | Decorazioni | 2×2 | 2.2 u | unico | blocca | — | ✅ low-poly dedicato |
 | `votive_statue` | Statua votiva | Decorazioni | 2×2 | 2.0 u | unico | blocca | — | ✅ low-poly dedicato |
-| `open_coffin` | Bara aperta | Decorazioni | 1×2 | — | unico | blocca | — | 🟡 fallback miniatura |
+| `open_coffin` | Bara aperta | Decorazioni | 1×2 | — | unico | blocca | — | ✅ low-poly dedicato |
 | `bones` | Ossa | Decorazioni | 1×1 | 0.2 u | unico | calpestabile | — | ✅ low-poly dedicato |
 | `vase` | Vaso | Decorazioni | 1×1 | 0.6 u | unico | blocca | — | ✅ low-poly dedicato |
 | `shop` | Bottega | Costruzioni | 3×3 | 2.5 u | pulito/sporco/rotto, acceso/spento | blocca | tremolio luce | ✅ low-poly dedicato |
 | `gravedigger_house` | Casa del becchino | Costruzioni | 4×3 | 2.3 u | pulito/sporco/rotto, acceso/spento | blocca | tremolio luce | ✅ low-poly dedicato |
-| `shrine` | Santuario | Costruzioni | 3×3 | — | pulito/sporco/rotto, acceso/spento | blocca | tremolio luce | 🟡 fallback miniatura |
+| `shrine` | Santuario | Costruzioni | 3×3 | — | pulito/sporco/rotto, acceso/spento | blocca | tremolio luce | ✅ low-poly dedicato |
 | `mausoleum` | Mausoleo | Costruzioni | 3×3 | 2.8 u | pulito/sporco/rotto, acceso/spento | blocca | tremolio luce | ✅ low-poly dedicato |
-| `open_grave` | Tomba dissotterrata | Costruzioni | 2×2 | — | pulito/sporco/rotto | blocca | — | 🟡 fallback miniatura |
-| `wall_stone` | Muretto in pietra | Costruzioni | 1×1 | — | pulito/sporco/rotto | blocca | — | 🟡 fallback miniatura |
-| `fence_wood` | Staccionata di legno | Costruzioni | 1×1 | — | pulito/sporco/rotto | blocca | — | 🟡 fallback miniatura |
-| `fence_iron` | Inferriata di ferro | Costruzioni | 1×1 | — | pulito/sporco/rotto | blocca | — | 🟡 fallback miniatura |
-| `arch_stone` | Arco in pietra | Costruzioni | 3×1 | — | pulito/sporco/rotto | calpestabile | — | 🟡 fallback miniatura |
-| `arch_lights` | Arco con luci | Costruzioni | 3×1 | — | pulito/sporco/rotto, acceso/spento | calpestabile | tremolio luce | 🟡 fallback miniatura |
-| `arch_gothic` | Arco gotico | Costruzioni | 3×1 | — | pulito/sporco/rotto | calpestabile | — | 🟡 fallback miniatura |
+| `open_grave` | Tomba dissotterrata | Costruzioni | 2×2 | — | pulito/sporco/rotto | blocca | — | ✅ low-poly dedicato |
+| `wall_stone` | Muretto in pietra | Costruzioni | 1×1 | — | pulito/sporco/rotto | blocca | — | ✅ low-poly dedicato |
+| `fence_wood` | Staccionata di legno | Costruzioni | 1×1 | — | pulito/sporco/rotto | blocca | — | ✅ low-poly dedicato |
+| `fence_iron` | Inferriata di ferro | Costruzioni | 1×1 | — | pulito/sporco/rotto | blocca | — | ✅ low-poly dedicato |
+| `arch_stone` | Arco in pietra | Costruzioni | 3×1 | — | pulito/sporco/rotto | calpestabile | — | ✅ low-poly dedicato |
+| `arch_lights` | Arco con luci | Costruzioni | 3×1 | — | pulito/sporco/rotto, acceso/spento | calpestabile | tremolio luce | ✅ low-poly dedicato |
+| `arch_gothic` | Arco gotico | Costruzioni | 3×1 | — | pulito/sporco/rotto | calpestabile | — | ✅ low-poly dedicato |
 | `path_stone` | Sentiero in pietra | Costruzioni | 1×1 | 0.1 u | pulito/sporco/rotto | calpestabile | — | ✅ low-poly dedicato |
 | `path_dirt` | Sentiero in terra | Costruzioni | 1×1 | 0.0 u | pulito/sporco/rotto | calpestabile | — | ✅ low-poly dedicato |
 | `well` | Pozzo | Costruzioni | 2×2 | 1.6 u | pulito/sporco/rotto | blocca | — | ✅ low-poly dedicato |
-| `fountain` | Fontana | Costruzioni | 3×3 | — | pulito/sporco/rotto | blocca | — | 🟡 fallback miniatura |
-| `hell_hole` | Buco infernale | Costruzioni | 2×2 | — | pulito/sporco/rotto, acceso/spento | blocca | tremolio luce | 🟡 fallback miniatura |
-| `pet_house` | Casetta per animale | Costruzioni | 2×2 | — | pulito/sporco/rotto | blocca | — | 🟡 fallback miniatura |
+| `fountain` | Fontana | Costruzioni | 3×3 | — | pulito/sporco/rotto | blocca | — | ✅ low-poly dedicato |
+| `hell_hole` | Buco infernale | Costruzioni | 2×2 | — | pulito/sporco/rotto, acceso/spento | blocca | tremolio luce | ✅ low-poly dedicato |
+| `pet_house` | Casetta per animale | Costruzioni | 2×2 | — | pulito/sporco/rotto | blocca | — | ✅ low-poly dedicato |
 | `pond` | Lago con pesci morti | Ambiente | 4×3 | 0.7 u | unico | blocca | — | ✅ low-poly dedicato |
 | `dead_tree` | Albero morto | Ambiente | 2×2 | 3.0 u | unico | blocca | — | ✅ low-poly dedicato |
-| `spectral_tree` | Albero spettrale | Ambiente | 3×3 | — | unico, acceso/spento | blocca | tremolio luce | 🟡 fallback miniatura |
+| `spectral_tree` | Albero spettrale | Ambiente | 3×3 | — | unico, acceso/spento | blocca | tremolio luce | ✅ low-poly dedicato |
 | `half_pine` | Pino mezzo morto | Ambiente | 2×2 | 2.4 u | unico | blocca | — | ✅ low-poly dedicato |
-| `xmas_tree` | Albero di Natale morto | Ambiente | 2×2 | — | unico, acceso/spento | blocca | tremolio luce | 🟡 fallback miniatura |
-| `toxic_puddle` | Pozzanghera avvelenata | Ambiente | 2×1 | — | unico | calpestabile | — | 🟡 fallback miniatura |
-| `monster_rocks` | Rocce mostruose | Ambiente | 2×2 | — | unico | blocca | — | 🟡 fallback miniatura |
+| `xmas_tree` | Albero di Natale morto | Ambiente | 2×2 | — | unico, acceso/spento | blocca | tremolio luce | ✅ low-poly dedicato |
+| `toxic_puddle` | Pozzanghera avvelenata | Ambiente | 2×1 | — | unico | calpestabile | — | ✅ low-poly dedicato |
+| `monster_rocks` | Rocce mostruose | Ambiente | 2×2 | — | unico | blocca | — | ✅ low-poly dedicato |
 | `flowerbed` | Aiuola fiorita | Ambiente | 2×2 | 0.3 u | unico | blocca | — | ✅ low-poly dedicato |
 | `poison_shrooms` | Funghi velenosi | Ambiente | 1×1 | 0.2 u | unico | calpestabile | — | ✅ low-poly dedicato |
 | `bushes` | Cespugli | Ambiente | 2×2 | 0.7 u | unico | blocca | — | ✅ low-poly dedicato |
-| `hillock` | Collinetta | Ambiente | 2×2 | — | unico | blocca | — | 🟡 fallback miniatura |
+| `hillock` | Collinetta | Ambiente | 2×2 | — | unico | blocca | — | ✅ low-poly dedicato |
 | `tall_grass` | Erba alta | Ambiente | 1×1 | 0.4 u | unico | calpestabile | — | ✅ low-poly dedicato |
-| `mud` | Terreno fangoso | Ambiente | 1×1 | — | unico | calpestabile | — | 🟡 fallback miniatura |
-| `zombies_play` | Zombie che giocano | Presenze | 2×2 | — | unico | calpestabile | presenze animate (rig) | 🟡 fallback miniatura |
-| `zombies_dance` | Zombie che ballano | Presenze | 2×2 | — | unico | calpestabile | presenze animate (rig) | 🟡 fallback miniatura |
-| `zombie_walker` | Zombie errante | Presenze | 1×1 | — | unico | calpestabile | presenze animate (rig) | 🟡 fallback miniatura |
-| `ghosts_roam` | Fantasmi erranti | Presenze | 1×1 | — | unico | calpestabile | presenze animate (rig) | 🟡 fallback miniatura |
-| `ghosts_ball` | Fantasmi a palla | Presenze | 2×2 | — | unico | calpestabile | presenze animate (rig) | 🟡 fallback miniatura |
-| `skeleton_pet` | Animale scheletro | Presenze | 1×1 | — | unico | calpestabile | presenze animate (rig) | 🟡 fallback miniatura |
+| `mud` | Terreno fangoso | Ambiente | 1×1 | — | unico | calpestabile | — | ✅ low-poly dedicato |
+| `zombies_play` | Zombie che giocano | Presenze | 2×2 | — | unico | calpestabile | presenze animate (rig) | ✅ low-poly dedicato |
+| `zombies_dance` | Zombie che ballano | Presenze | 2×2 | — | unico | calpestabile | presenze animate (rig) | ✅ low-poly dedicato |
+| `zombie_walker` | Zombie errante | Presenze | 1×1 | — | unico | calpestabile | presenze animate (rig) | ✅ low-poly dedicato |
+| `ghosts_roam` | Fantasmi erranti | Presenze | 1×1 | — | unico | calpestabile | presenze animate (rig) | ✅ low-poly dedicato |
+| `ghosts_ball` | Fantasmi a palla | Presenze | 2×2 | — | unico | calpestabile | presenze animate (rig) | ✅ low-poly dedicato |
+| `skeleton_pet` | Animale scheletro | Presenze | 1×1 | — | unico | calpestabile | presenze animate (rig) | ✅ low-poly dedicato |
 
 ## Scenografia (non selezionabile)
 
@@ -111,4 +111,5 @@ frammento caduto, calcinacci.
 | `skeleton` | teschio con orbite e denti, costole ad arco, ossa lunghe | idle, camminata, ballo | ✅ |
 | `ghost`, `ghostRare` | lenzuolo tornito con orlo frastagliato, semitrasparente | fluttuazione | ✅ |
 | `gravedigger`, `priest`, `mourner`, `zombie` | umanoide parametrico (berretto/barba, tonaca e stola, velo, pelle verdastra) | come sopra | ✅ |
-| `cat`, `crow`, `rat`, animali scheletro | — | — | 🟡 |
+| `cat`, `rat`, `crow` | gatto nero con occhi verdi luminosi, topo con coda lunga, corvo con ali di penne e occhi rossi | camminata, volo (rig a parti) | ✅ |
+| `petDog`, `petCat`, `petRabbit`, `petCrow`, `petDuck` | animali scheletro: colonna, costole, teschio, zampe d'osso (anatra con becco dorato) | come sopra | ✅ |

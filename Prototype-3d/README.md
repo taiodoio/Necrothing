@@ -35,7 +35,7 @@ fasi, valutazione voxel vs low-poly vs GLB) e
 ```bash
 npm install
 npm run dev        # http://localhost:5173  (galleria asset: /gallery.html)
-npm test           # 34 test (dominio, rendering voxel, adapter e generatori low-poly)
+npm test           # 36 test (dominio, rendering voxel, adapter e generatori low-poly)
 npm run build      # typecheck + build di produzione in dist/
 ```
 
@@ -110,8 +110,11 @@ interagisci, `C` cambia vista, `V` cambia stile (low-poly → voxel → miniatur
   recinto con inferriata a lance; selciato fitto a pietre poligonali con bordi sfumati
   nel prato (erba bassa e sassolini); terreno morbido senza poligoni a vista; sassi e rocce sparsi; personaggi con le
   stesse parti del rig (Custode con cappello, lanterna e pala; scheletro; fantasma).
-  Materiali `MeshStandardMaterial` opachi a flat shading. Gli asset non ancora migrati
-  ricadono sulla resa *miniatura* (vedi catalogo). Ogni luce tremola con un
+  Edifici in chiave "cozy spooky" (case storte con travi a vista, tetti muschiati,
+  lanterne, edera, zucche intagliate), edicola votiva e angelo piangente, e **tutto il
+  catalogo** (51 oggetti) più gli animali con un generatore dedicato.
+  Materiali `MeshStandardMaterial` opachi a flat shading; il fallback *miniatura* resta
+  come rete di sicurezza per asset futuri. Ogni luce tremola con un
   `FireFlicker` indipendente e deterministico.
 
 - **Il cimitero è il protagonista**: mappa logica 64×64, recinto iniziale **34×34** che
@@ -212,7 +215,7 @@ sporco, rotto, luci notturne; tombe pulite/con fiori/sporche/rotte.
 
 ## Test
 
-`npm test` — 34 test: nuova partita valida, migrazione dei salvataggi v1, sepoltura e limite astratto, ciclo
+`npm test` — 36 test: nuova partita valida, migrazione dei salvataggi v1, sepoltura e limite astratto, ciclo
 fiori/sporco/rotto, decadimento 3/7 giorni, bottega e vendita, modifica/rotazione/
 riponi, becchino, modificatori di spawn, determinismo, espansione monotona,
 achievement, distretti, catalogo; determinismo del mesher, parità dimensioni
@@ -241,8 +244,6 @@ foto → galleria).
 - In voxel gli alberi lontani usano una risoluzione ridotta, ed erba e ciottolato non
   possono scendere sotto la dimensione di un voxel: è il limite della resa voxel, per
   questo lo stile predefinito è ora il low-poly.
-- In low-poly alcuni oggetti del catalogo usano ancora il fallback *miniatura*
-  (elenco in `docs/asset-migration-catalog.md`).
 - Le notifiche push sono rimandate all'app nativa (Capacitor); nel browser la
   simulazione recupera il tempo trascorso alla riapertura.
 - Nessun audio. La pathfinding è su griglia (niente evitamento dinamico tra personaggi).
@@ -251,8 +252,8 @@ foto → galleria).
 
 ## Prossimi passi
 
-1. Migrare gli oggetti ancora in fallback (lanterna fantasma, zucca, falò, santuario,
-   fontana, archi, animali…) e valutare asset eroi in GLB (vedi piano di migrazione).
+1. Fumo dai comignoli, scintille e fiamme animate; valutare asset eroi in GLB (vedi
+   piano di migrazione).
 2. Profilazione su iOS/Android e taratura delle soglie di qualità.
 3. Audio (ambiente notturno, campane, corvi) con rispetto del mute.
 4. Capacitor: notifiche native per anniversari/erbacce, salvataggio su SQLite.

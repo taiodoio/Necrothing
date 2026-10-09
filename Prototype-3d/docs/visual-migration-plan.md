@@ -104,12 +104,26 @@ SaveData (unico stato) ──► WorldView / Actors (presentazione)
   caricati da `GLTFLoader` dentro lo stesso adapter (la chiave del modello resta la
   stessa). I personaggi guadagnerebbero animazioni scheletriche (`AnimationMixer`).
 
-## 7. Prossimi passi
+## 7. Seconda passata: edifici "cozy spooky" e catalogo completo
 
-1. Migrare gli oggetti ancora in fallback (vedi catalogo): lanterna fantasma, zucca,
-   teschio-candela, falò, albero con candele, santuario, fontana, archi, buco
-   infernale, casetta, rocce mostruose, animali.
-2. Fiamme con leggera deformazione nel vertex shader del materiale `glow` e
-   scintille (Effects) sulle torce, solo a qualità alta.
-3. Profilazione su iOS/Android; eventuale LOD per il sottobosco low-poly.
-4. Pipeline GLB opzionale per gli asset eroi (vedi §6).
+- Edifici contestualizzati: case un po' storte con zoccolo di pietre irregolari,
+  intonaco caldo e travi a vista (o assi di legno), tetti ripidi con lastre e muschio,
+  comignoli storti, oblò nel timpano, persiane, fioriere, lanterne alle porte, edera,
+  zucche intagliate accese, ragnatele; casa del becchino con portico, bara appoggiata,
+  legna e attrezzi; mausoleo con cancello in ferro su un interno che brilla, gargoyle,
+  edera, candele e corona; pozzo con tettuccio storto e lanterna.
+- Statue leggibili: la statua votiva è un'**edicola votiva** (nicchia ad arco con
+  Madonnina e aureola illuminate da un lumino, tettuccio con croce, ex-voto, fiori);
+  l'angelo è un **angelo piangente** con veste a pieghe, volto tra le mani e ali di piume.
+- Catalogo completo: luci speciali, santuario con campaniletto, fontana, archi (pietra,
+  con luci, gotico), muretti, staccionate, inferriate, tomba dissotterrata, buco
+  infernale, casetta per animali, bara aperta, albero spettrale, albero di Natale morto,
+  pozzanghera tossica, rocce mostruose, collinetta, fango, le "case" delle presenze e gli
+  animali (gatto, topo, corvo e animali scheletro).
+
+## 8. Prossimi passi
+
+1. Fiamme con leggera deformazione nel vertex shader del materiale `glow` e scintille
+   sulle torce (solo qualità alta); fumo dai comignoli.
+2. Profilazione su iOS/Android; eventuale LOD per il sottobosco low-poly.
+3. Pipeline GLB opzionale per gli asset eroi (vedi §6).

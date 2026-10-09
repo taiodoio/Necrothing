@@ -154,9 +154,122 @@ const SPECS: Record<string, Parts> = {
     armL: (lp) => skeletonArm(lp),
     armR: (lp) => skeletonArm(lp),
   },
+  cat: quadruped({ len: 0.6, tall: 0.24, color: '#1c1c22', ears: 'cat', eyes: '#9bd34a', tail: 'up' }),
+  rat: quadruped({ len: 0.4, tall: 0.09, color: '#5c5866', ears: 'round', eyes: LPC.charcoal, tail: 'long', snout: true }),
+  petDog: boneQuadruped({ len: 0.6, tall: 0.3, ears: 'dog', snout: true }),
+  petCat: boneQuadruped({ len: 0.5, tall: 0.24, ears: 'cat' }),
+  petRabbit: boneQuadruped({ len: 0.4, tall: 0.16, ears: 'rabbit' }),
+  crow: bird('#16161b', true),
+  petCrow: bird(LPC.bone, false),
+  petDuck: duck(),
   ghost: ghostParts('#cfeee6'),
   ghostRare: ghostParts('#ffd9a8'),
 };
+
+// ── Animali (stessi perni di quad()/uccelli in view/characters.ts) ─────────
+
+interface QuadOpts { len: number; tall: number; color: string; ears: 'cat' | 'round' | 'dog' | 'rabbit'; eyes: string; tail: 'up' | 'long'; snout?: boolean }
+
+function ears(lp: LP, kind: QuadOpts['ears'], color: string) {
+  for (const s of [-1, 1]) {
+    if (kind === 'cat') lp.push([s * 0.06, 0.12, 0.0], 0, 0, s * -0.2).cyl(0, 0, 0, 0.04, 0, 0.08, 3, color, { jitter: 0 }).pop();
+    else if (kind === 'round') lp.push([s * 0.05, 0.07, -0.01], 0, 0, s * 0.3).cyl(0, 0, 0, 0.03, 0.03, 0.01, 6, '#c99a9a', { jitter: 0 }).pop();
+    else if (kind === 'dog') lp.push([s * 0.07, 0.08, -0.02], 0, 0, s * 0.9).box(0, -0.08, 0, 0.035, 0.09, 0.05, color, { jitter: 0 }).pop();
+    else lp.push([s * 0.035, 0.1, -0.02], 0, -0.25, s * -0.15).blob(0, 0.1, 0, 0.025, 0.11, 0.015, color, { jitter: 0 }).pop();
+  }
+}
+
+function quadruped(o: QuadOpts): Parts {
+  const T = o.tall, hl = o.len / 2;
+  const leg = (lp: LP) => { lp.cyl(0, -T, 0, 0.02, 0.025, T, 5, o.color, { jitter: 0 }); lp.blob(0, -T + 0.01, 0.015, 0.025, 0.015, 0.035, o.color, { jitter: 0 }); };
+  return {
+    body: (lp) => {
+      lp.blob(0, 0.12, 0, o.len * 0.27, T * 0.55 + 0.05, hl * 1.0, o.color, { detail: 1, jitter: 0.01, vary: 0.08 });
+      if (o.tail === 'up') {
+        lp.push([0, 0.17, -hl], 0, -0.5).cyl(0, 0, 0, 0.025, 0.02, 0.22, 5, o.color, { jitter: 0 }).pop();
+        lp.push([0, 0.36, -hl - 0.1], 0, 0.6).cyl(0, 0, 0, 0.02, 0.012, 0.14, 5, o.color, { jitter: 0 }).pop();
+      } else lp.push([0, 0.05, -hl], 0, -1.35).cyl(0, 0, 0, 0.012, 0.004, 0.42, 4, '#c99a9a', { jitter: 0 }).pop();
+    },
+    head: (lp) => {
+      lp.blob(0, 0.03, 0.03, 0.11, 0.1, 0.11, o.color, { detail: 1, jitter: 0.008 });
+      if (o.snout) lp.cyl(0, 0.0, 0.1, 0.05, 0.015, 0.1, 5, o.color, { jitter: 0 }).push([0, 0.0, 0.1], 0, Math.PI / 2).cyl(0, 0, 0, 0.045, 0.012, 0.09, 5, o.color, { jitter: 0 }).pop();
+      ears(lp, o.ears, o.color);
+      for (const s of [-1, 1]) lp.blob(s * 0.045, 0.05, 0.12, 0.02, 0.018, 0.012, o.eyes, { bucket: o.eyes === LPC.charcoal ? 'solid' : 'glow', jitter: 0 });
+    },
+    legL: leg, legR: leg, armL: leg, armR: leg,
+  };
+}
+
+/** Animale scheletro: colonna, costole, bacino, teschio, zampe d'osso. */
+function boneQuadruped(o: { len: number; tall: number; ears: QuadOpts['ears']; snout?: boolean }): Parts {
+  const T = o.tall, hl = o.len / 2, c = LPC.bone;
+  const leg = (lp: LP) => { lp.cyl(0, -T, 0, 0.014, 0.018, T, 4, c, { jitter: 0 }); lp.blob(0, -T / 2, 0, 0.022, 0.02, 0.022, c, { jitter: 0 }); lp.box(0, -T, 0.02, 0.035, 0.015, 0.06, c, { jitter: 0 }); };
+  return {
+    body: (lp) => {
+      lp.push([0, 0.14, 0], 0, Math.PI / 2).cyl(0, -hl, 0, 0.02, 0.02, o.len, 5, LPC.boneDark, { jitter: 0 }).pop();
+      for (let i = 0; i < 4; i++) {
+        const z = -hl * 0.3 + i * (hl * 0.35);
+        lp.push([0, 0.1, z]).add(new THREE.TorusGeometry(0.07 + o.tall * 0.1, 0.012, 3, 8, Math.PI * 1.4).rotateZ(-Math.PI * 1.2), c, { jitter: 0 }).pop();
+      }
+      lp.blob(0, 0.12, -hl * 0.8, 0.07, 0.05, 0.05, c, { jitter: 0.005 });
+      lp.push([0, 0.15, -hl], 0, -0.7).cyl(0, 0, 0, 0.012, 0.006, 0.18, 4, c, { jitter: 0 }).pop();
+    },
+    head: (lp) => {
+      lp.blob(0, 0.04, 0.02, 0.09, 0.08, 0.1, c, { detail: 1, jitter: 0.006 });
+      if (o.snout) lp.box(0, -0.0, 0.11, 0.07, 0.06, 0.12, c, { bevel: 0.015 });
+      for (const s of [-1, 1]) lp.blob(s * 0.04, 0.055, 0.09, 0.022, 0.024, 0.012, LPC.charcoal, { jitter: 0 });
+      ears(lp, o.ears, LPC.boneDark);
+    },
+    legL: leg, legR: leg, armL: leg, armR: leg,
+  };
+}
+
+/** Corvo (o corvo-scheletro): ali di penne sulle "braccia" del rig volante. */
+function bird(color: string, glowEyes: boolean): Parts {
+  const wing = (s: number) => (lp: LP) => {
+    const w = new THREE.Shape();
+    w.moveTo(0, -0.1); w.lineTo(0.12, -0.12); w.lineTo(0.3, -0.06); w.lineTo(0.34, 0.0); w.lineTo(0.28, 0.06); w.lineTo(0.14, 0.12); w.lineTo(0, 0.12); w.closePath();
+    lp.push([0, 0, 0], 0, -Math.PI / 2, 0, [s, 1, 1]).extrude(w, 0.02, color, { bevel: 0.004, jitter: 0.004 }).pop();
+  };
+  return {
+    body: (lp) => {
+      lp.blob(0, 0.0, 0, 0.13, 0.12, 0.2, color, { detail: 1, jitter: 0.01, vary: 0.08 });
+      const tail = new THREE.Shape(); tail.moveTo(-0.06, 0); tail.lineTo(0.06, 0); tail.lineTo(0.09, -0.2); tail.lineTo(-0.09, -0.2); tail.closePath();
+      lp.push([0, 0.02, -0.16], 0, -Math.PI / 2 + 0.25).extrude(tail, 0.015, color, { jitter: 0 }).pop();
+    },
+    head: (lp) => {
+      lp.blob(0, 0.04, 0.02, 0.08, 0.08, 0.09, color, { detail: 1, jitter: 0.006 });
+      lp.push([0, 0.03, 0.1], 0, Math.PI / 2).cyl(0, 0, 0, 0.03, 0, 0.12, 4, glowEyes ? '#3a3226' : LPC.boneDark, { jitter: 0 }).pop();
+      for (const s of [-1, 1]) lp.blob(s * 0.045, 0.06, 0.07, 0.016, 0.016, 0.01, glowEyes ? '#d8452a' : LPC.charcoal, { bucket: glowEyes ? 'glow' : 'solid', jitter: 0 });
+    },
+    armL: wing(-1),
+    armR: wing(1),
+    legL: (lp) => { lp.cyl(0, -0.1, 0, 0.008, 0.008, 0.1, 3, '#3a3226', { jitter: 0 }); lp.box(0, -0.1, 0.02, 0.04, 0.008, 0.05, '#3a3226', { jitter: 0 }); },
+    legR: (lp) => { lp.cyl(0, -0.1, 0, 0.008, 0.008, 0.1, 3, '#3a3226', { jitter: 0 }); lp.box(0, -0.1, 0.02, 0.04, 0.008, 0.05, '#3a3226', { jitter: 0 }); },
+  };
+}
+
+function duck(): Parts {
+  const foot = (lp: LP) => {
+    lp.cyl(0, -0.16, 0, 0.012, 0.014, 0.16, 4, LPC.gold, { jitter: 0 });
+    const f = new THREE.Shape(); f.moveTo(0, 0); f.lineTo(0.05, 0.08); f.lineTo(-0.05, 0.08); f.closePath();
+    lp.push([0, -0.158, 0], 0, -Math.PI / 2).plate(f, 0.008, LPC.gold, { ao: 0 }).pop();
+  };
+  return {
+    body: (lp) => {
+      lp.blob(0, -0.02, 0, 0.15, 0.12, 0.22, LPC.bone, { detail: 1, jitter: 0.01 });
+      for (let i = 0; i < 3; i++) lp.push([0, -0.02, -0.06 + i * 0.07]).add(new THREE.TorusGeometry(0.135, 0.008, 3, 8, Math.PI * 1.2).rotateZ(-Math.PI * 1.1), LPC.boneDark, { jitter: 0 }).pop();
+      lp.cyl(0, 0.04, -0.2, 0.06, 0.0, 0.1, 4, LPC.bone, { jitter: 0 });
+    },
+    head: (lp) => {
+      lp.cyl(0, -0.12, 0, 0.03, 0.035, 0.14, 5, LPC.bone, { jitter: 0 });
+      lp.blob(0, 0.06, 0.01, 0.075, 0.075, 0.085, LPC.bone, { detail: 1, jitter: 0.005 });
+      lp.box(0, 0.035, 0.1, 0.06, 0.025, 0.1, LPC.gold, { bevel: 0.008 });
+      for (const s of [-1, 1]) lp.blob(s * 0.04, 0.08, 0.06, 0.016, 0.018, 0.01, LPC.charcoal, { jitter: 0 });
+    },
+    legL: foot, legR: foot,
+  };
+}
 
 function skeletonLeg(lp: LP) {
   lp.cyl(0, -0.24, 0, 0.022, 0.026, 0.24, 5, LPC.bone, { jitter: 0 });

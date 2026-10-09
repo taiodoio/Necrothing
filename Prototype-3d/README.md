@@ -1,44 +1,178 @@
-# Necrothing — Prototype 3D
+# Necrothing — Prototype 3D (voxel)
 
-Prototype browser isolato per esplorare una seconda direzione visiva per Necrothing. Il progetto usa TypeScript, Three.js e Vite; non modifica la PWA React/SVG in necrothing-docs/prototype/ né il progetto Godot in necrothing-godot/.
+Nuova versione giocabile di Necrothing in 3D, mobile-first, con le stesse dinamiche
+della PWA React (`necrothing-docs/prototype/`) ma nello stile voxel gotico del
+riferimento. È tutto generato dal codice (TypeScript + Three.js + Vite): non ci sono
+modelli, texture o immagini esterne.
+
+![Gothic Voxel — obliqua](screenshots/A-voxel-obliqua.jpg)
+
+| Gothic Voxel · dall'alto | Miniatura · obliqua | Miniatura · dall'alto |
+|---|---|---|
+| ![](screenshots/B-voxel-dallalto.jpg) | ![](screenshots/C-miniatura-obliqua.jpg) | ![](screenshots/D-miniatura-dallalto.jpg) |
+
+| Telefono · notte | Telefono · giorno | Dettaglio notturno |
+|---|---|---|
+| ![](screenshots/mobile-notte.jpg) | ![](screenshots/mobile-giorno.jpg) | ![](screenshots/dettaglio-notte.jpg) |
 
 ## Avvio
 
-    npm install
-    npm run dev
+```bash
+npm install
+npm run dev        # http://localhost:5173  (galleria asset: /gallery.html)
+npm test           # 22 test (dominio + rendering)
+npm run build      # typecheck + build di produzione in dist/
+```
 
-Apri l’indirizzo mostrato da Vite. Per una build locale: npm run build.
-Per eseguire i test di generazione usa npm test (richiede Node 22.6 o successivo).
+Richiede Node ≥ 22.6 (i test usano `--experimental-strip-types`).
+`?seed=717` nell'URL crea una nuova partita con seme fisso (utile per confronti e test);
+il salvataggio esistente in `localStorage` ha la precedenza.
 
-## Controlli
+## Come si gioca
 
-- Touch: trascina per spostare la mappa, pizzica per zoomare, tocca una tomba per selezionarla.
-- Desktop: trascina per esplorare, rotella o pulsanti laterali per zoomare, clicca una tomba.
-- Barra inferiore: cambia resa miniatura/voxel e vista obliqua/dall’alto.
-- Pulsante con la luna: alterna alba, crepuscolo e notte.
-- V e C: scorciatoie opzionali da tastiera.
+Sei il **Custode**: un omino col cappello a tesa larga, la pala e una lanterna che
+illumina la notte. Tocchi il terreno e cammina lì (A* sulla griglia); tocchi una tomba
+o un oggetto e si avvicina, mentre si apre il menù contestuale. Le azioni di cura le
+esegue fisicamente (cammina, lavora, poi arriva la ricompensa).
 
-Non c’è un avatar da guidare: l’esplorazione muove la visuale, mentre il mondo resta fermo. Le tombe partono da definizioni logiche con seme, posizione, tipo e condizione. Cambiare stile o camera conserva il mondo e lo stato delle tombe.
+| Dove | Cosa (da `Implementation_Note.md`) |
+|---|---|
+| In alto a sinistra | Nome, rango con barra di progresso, fuochi fatui ✦ → profilo e achievement |
+| In alto a destra | Ora reale, fase del giorno e meteo, impostazioni |
+| In basso a sinistra | Bolla d'azione che si apre in orizzontale: Seppellisci, Modifica, Inventario, Bottega (centra la mappa sulla bottega), Foto, Galleria |
+| In basso a destra | Vista obliqua/dall'alto, ricentra sul Custode |
+| Drawer dal basso | Tutte le pagine, con ✕ in alto a sinistra; la bolla sparisce mentre sono aperte |
 
-## Implementazione presente
+**Controlli** — Touch: tocca per camminare/selezionare, trascina per spostare la mappa,
+pizzica per lo zoom. Desktop: WASD/frecce muovono il Custode, rotella zoom, `E`
+interagisci, `C` cambia vista, `V` cambia stile, `Esc` chiude.
 
-- Cimitero generato a partire da un seme fisso, con 24 tombe, ingresso gotico, casa, mausoleo, pozzo, stagno, lapide aperta, alberi, vialetti e recinto.
-- Fabbrica condivisa con generatori geometrici distinti per i due stili.
-- Cinque profili di lapidi con plinti, incisioni, teschi, muschio, fiori e candele; tre condizioni e variazioni deterministiche.
-- Archi scolpiti, gargoyle, ferri battuti, pietre di passaggio e dettagli di terreno generati via geometria e instancing.
-- Due viste con OrthographicCamera; quella dall’alto guarda esattamente lungo l’asse verticale.
-- Panning della camera, pinch/scroll e pulsanti zoom, selezione e azioni sulle tombe.
-- UI pensata prima per telefoni, safe area iOS, controlli touch ampi e layout anche in orizzontale.
-- Luci atmosferiche, ottimizzazione delle mesh statiche e pannello statistiche.
-- Test per generazione deterministica, dimensioni delle tombe e persistenza dello stato logico tra stili.
+### Dinamiche (portate dalla PWA, regole in `src/game/`)
 
-## Limiti della tranche
+- **Sepoltura** in 5 passi (nome+categoria, date+causa, epitaffio, lapide, anteprima),
+  poi scegli il posto sulla mappa e arriva il **corteo funebre** (prete, dolenti,
+  becchino). Una sola cosa astratta al giorno. Lapidi più ricche sbloccate dal rango.
+- **Ciclo delle tombe** (esclusivo): pulita → fiori → dopo 3 giorni appassiscono e la
+  tomba è sporca → dopo 10 giorni sporca si **rompe** (riparare costa 6 ✦ e pulisce).
+  I fiori si portano solo su una tomba pulita.
+- **Luci e costruzioni** si sporcano dopo 3 giorni senza cure e si rompono dopo 7
+  (dal foglio Excel); le luci si accendono/spengono, quelle rotte sono spente.
+- **Bottega** (pre-piazzata, tutorial al primo avvio, non eliminabile ma spostabile):
+  acquisto con quantità, pezzi unici, sblocchi per rango, albero di Natale solo a
+  dicembre. **Inventario** per categorie con *Inserisci* / *Vendi* (70%).
+- **Modifica**: tocca un elemento, trascinalo (anteprima verde/rossa), ruota, cambia
+  variante, riponi in inventario; popup introduttivo con "non mostrare più".
+- **Fuochi fatui**: compaiono sulla mappa in funzione di tombe, cure e fiori (la
+  benedizione del prete li aumenta per 24 ore); il Custode li raccoglie passandoci.
+- **Presenze erranti** dalla matrice di spawn (fantasma, fantasma-oggetto raro, gatto,
+  corvo che si posa sulle lapidi, prete, becchino, topo, zombie): si muovono "a torre"
+  sugli assi X/Z e cambiano direzione sugli ostacoli; i fantasmi attraversano tutto.
+  Toccarle dà XP/✦; il becchino pulisce gratis le tombe vicine. Mausoleo, santuario,
+  casa del becchino, bare aperte e buco infernale modificano le probabilità.
+- **Presenze piazzabili**: zombie che giocano a carte o ballano, zombie errante,
+  fantasmi in girotondo o a palla con un teschio, animali scheletro (cane, gatto,
+  coniglio, papera, corvo); la casetta per animali a volte, all'apertura, ha l'animale in tana.
+- **Simulazione a tempo reale** all'apertura e al ritorno in primo piano (erbacce,
+  sporco, rotture, anniversari, meteo giornaliero) + tick "vivo" ogni 40 s mentre si gioca.
+- **Progressione**: 5 ranghi, 27 achievement, prestigio, distretti tematici
+  auto-rilevati e **espansione del recinto** per soglie di prestigio (14→30 celle, mai
+  in calo: il recinto e il cancello si ricostruiscono più grandi).
+- **Foto**: rettangolo ridimensionabile dagli angoli + otturatore, scatto in bianco e
+  nero della scena, *Salva / Condividi / Elimina*; **Galleria** in IndexedDB.
+- **Impostazioni**: stile, vista, qualità (bassa/media/alta), ora del giorno (reale o
+  forzata), effetti meteo, statistiche tecniche, backup `.necro3d`, nuova partita.
 
-I generatori sono ancora una prima passata e non coprono l’intero catalogo del prompt. Non ci sono ancora seed selezionabile, inventario, salvataggio o posizionamento libero. La risposta dei gesti e le prestazioni vanno ancora controllate su dispositivi reali; il progetto non è stato verificato con Safari iOS/Android.
+## Architettura
 
-## Prossime tranche
+```text
+src/
+├── game/        dominio puro (nessun three/DOM): stato, regole, simulazione, spawn,
+│                catalogo (dall'Excel), progressione, mondo/occupazione — testato
+├── render/      DSL di forme + due mesher + cache + modelli procedurali
+│   ├── shape.ts           primitive in unità voxel (box, cilindro/cono, ellissoide,
+│   │                      prisma-tetto, arco, scavo) con trasformazioni
+│   ├── voxelMesher.ts     griglia di voxel → facce visibili + AO per vertice
+│   ├── lowpolyMesher.ts   stesse primitive → solidi sfaccettati irregolari
+│   ├── modelCache.ts      geometrie condivise per (modello, stato, stile)
+│   └── models/            tombe, luci, decorazioni, costruzioni, natura, recinto
+├── view/        scena: WorldView (sync con lo stato), terreno a chunk, Atmosphere
+│                (fasi del giorno, meteo, ombre, pool di luci), CameraRig, Actors
+│                (Custode, presenze, funerale, A*), personaggi a parti, effetti
+├── ui/          HUD, bolla, menù contestuale, drawer e schermate, miniature 3D
+└── app/         Game (controller), Input (gesti/tastiera), persistenza
+```
 
-1. Confrontare la scena sui telefoni di riferimento e rifinire scala, leggibilità e prestazioni.
-2. Estendere il catalogo procedurale con statue, recinzioni e decorazioni variabili.
-3. Aggiungere layout deterministici alternativi, placement/occupazione e salvataggio.
-4. Integrare test di generazione/stati e verificare le quattro combinazioni in un browser reale.
+- **Una definizione, due rese.** Ogni asset è una lista di primitive in voxel
+  (`ModelBuilder`). Il mesher voxel le rasterizza in cubetti con occlusione ambientale
+  (rasterizzazione conservativa per sbarre e aste sottili); il mesher *miniatura* le
+  trasforma in solidi low-poly con vertici irregolari e colore per faccia. Dimensioni e
+  pivot coincidono (testato). Cambiare stile (`V`) ricostruisce solo le mesh: posizioni,
+  stati, selezione e Custode restano dove sono.
+- **Camere ortografiche vere**: obliqua a 40° di elevazione; *dall'alto* esattamente
+  lungo −Y (testato). Per la leggibilità dall'alto ci sono badge 🧹/🛠 sugli oggetti da
+  curare, cornice di selezione e aloni delle luci.
+- **Luci**: ogni sorgente ha voxel emissivi e un alone additivo (economici); un pool
+  fisso di PointLight (4/7/10 per qualità) viene assegnato alle sorgenti più vicine al
+  centro della vista, senza ricompilare gli shader. Una sola luce direzionale con ombra
+  che segue la camera.
+- **Prestazioni**: geometrie condivise e cache, `InstancedMesh` per recinto, bosco,
+  ciuffi e sassi; materiali condivisi a colori per vertice. Misure nel browser headless
+  con rendering software (SwiftShader, quindi FPS non indicativi): ~150 draw call;
+  ~375k triangoli in voxel, ~125k in miniatura; tick logico trascurabile.
+
+## Asset dall'Excel
+
+Il catalogo (`src/game/catalog.ts`) segue il foglio *Asset for Necrothing con
+dimensioni Procreate*: 8 luci, 7 decorazioni, 17 costruzioni, 13 elementi
+d'ambiente, 6 presenze, più le 10 lapidi della PWA. L'ingombro dell'Excel era quello
+dello sprite 2D top-down; in 3D è stato convertito in **ingombro a terra** (es.
+lampione 2×3 → 1×1 alto, albero con candele 4×4 → 3×3). Le varianti "(x 3)", "(x 2)"
+e gli animali sono varianti selezionabili in Modifica. Stati gestiti: acceso/spento,
+sporco, rotto, luci notturne; tombe pulite/con fiori/sporche/rotte.
+
+### Aggiungere un asset
+
+1. Aggiungi la voce in `src/game/catalog.ts` (id, categoria, ingombro, costo, rango,
+   flag `decays`/`light`/`rotatable`/`walkable`/`variants`).
+2. Scrivi il modello in `src/render/models/*.ts` con `ModelBuilder` (misure in voxel:
+   10 per cella, origine al centro dell'ingombro a terra, fronte verso +z) e usa
+   `decay()` per gli stati sporco/rotto; `b.light(...)` per le sorgenti luminose.
+3. Registralo in `BUILDERS` (`src/render/models/registry.ts`).
+4. Controllalo in `/gallery.html` nei due stili; `npm test` verifica che stia
+   nell'ingombro e che le luci spente non emettano.
+
+## Test
+
+`npm test` — 22 test: nuova partita valida, sepoltura e limite astratto, ciclo
+fiori/sporco/rotto, decadimento 3/7 giorni, bottega e vendita, modifica/rotazione/
+riponi, becchino, modificatori di spawn, determinismo, espansione monotona,
+achievement, distretti, catalogo; determinismo del mesher, parità dimensioni
+voxel/miniatura, tutte le lapidi × stati, ogni voce del catalogo in ogni stato,
+rasterizzazione conservativa, camera perpendicolare, stato invariato al cambio stile.
+Inoltre gli scenari di interazione sono stati verificati con Playwright (tap → menù →
+pulizia, sepoltura + funerale, bottega, inventario → posa, trascinamento in Modifica,
+foto → galleria).
+
+## Rapporto con il resto del repository
+
+- `necrothing-docs/prototype/` (PWA React/SVG) resta intatta: è la fonte delle regole.
+  Qui le regole sono **riscritte come funzioni pure** (nessuna dipendenza da IndexedDB/
+  React), con gli stessi numeri (`src/game/balance.ts`).
+- Il salvataggio è locale (`localStorage` + IndexedDB per le foto), separato dalla PWA.
+
+## Limiti noti
+
+- Prestazioni misurate solo con rendering software: vanno verificate su telefoni reali
+  (soprattutto i ~375k triangoli voxel: un greedy mesher dimezzerebbe il conto).
+- Le notifiche push sono rimandate all'app nativa (Capacitor); nel browser la
+  simulazione recupera il tempo trascorso alla riapertura.
+- Nessun audio. La pathfinding è su griglia (niente evitamento dinamico tra personaggi).
+- Lo stile *Miniatura* è derivato dalle stesse primitive: alcune incisioni diventano
+  lastre scure e i tagli strutturali (scheggiature) non vengono resi.
+
+## Prossimi passi
+
+1. Greedy meshing per i voxel e LOD per il bosco esterno; profilazione su iOS/Android.
+2. Audio (ambiente notturno, campane, corvi) con rispetto del mute.
+3. Capacitor: notifiche native per anniversari/erbacce, salvataggio su SQLite.
+4. Rotazione della camera a passi di 90° e animazioni di transizione tra stili.

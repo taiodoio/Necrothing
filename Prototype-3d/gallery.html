@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="it">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <title>Necrothing — Galleria asset</title>
+    <style>
+      html, body { margin: 0; height: 100%; background: #101214; color: #e5dfd4; font: 13px system-ui, sans-serif; overflow: hidden; }
+      canvas { display: block; width: 100%; height: 100%; touch-action: none; }
+      .bar { position: fixed; top: 8px; left: 8px; right: 8px; display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+      .bar button, .bar select { background: #1d2024; color: inherit; border: 1px solid #3a3f45; border-radius: 8px; padding: 8px 10px; font: inherit; }
+      .bar .on { border-color: #c9a25c; color: #f1d39c; }
+      .info { position: fixed; bottom: 8px; left: 8px; opacity: .75; }
+    </style>
+  </head>
+  <body>
+    <canvas id="c"></canvas>
+    <div class="bar">
+      <select id="set"></select>
+      <button id="style">Stile: voxel</button>
+      <button id="cam">Camera: obliqua</button>
+      <button id="time">Ora: notte</button>
+    </div>
+    <div class="info" id="info"></div>
+    <script type="module" src="/src/gallery.ts"></script>
+  </body>
+</html>

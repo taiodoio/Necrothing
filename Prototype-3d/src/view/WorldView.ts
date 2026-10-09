@@ -35,6 +35,7 @@ export function worldToCell(p: THREE.Vector3): { x: number; y: number } {
 export type EntityKind = 'grave' | 'placeable';
 
 export interface EntityView {
+  badge?: THREE.Sprite;
   id: string;
   kind: EntityKind;
   key: string;
@@ -49,6 +50,28 @@ export interface EntityView {
 interface WispView { group: THREE.Group; hitbox: THREE.Mesh; anchor: AnchorHandle; phase: number; base: THREE.Vector3 }
 
 const hitMaterial = new THREE.MeshBasicMaterial({ visible: false });
+
+const badgeMaterials = new Map<string, THREE.SpriteMaterial>();
+function badgeMaterial(icon: string, ring: string): THREE.SpriteMaterial {
+  const key = icon + ring;
+  let m = badgeMaterials.get(key);
+  if (m) return m;
+  const c = document.createElement('canvas');
+  c.width = c.height = 96;
+  const g = c.getContext('2d')!;
+  g.fillStyle = 'rgba(16,18,24,0.88)';
+  g.beginPath(); g.arc(48, 48, 40, 0, Math.PI * 2); g.fill();
+  g.lineWidth = 6; g.strokeStyle = ring; g.stroke();
+  g.font = '44px system-ui, "Apple Color Emoji", "Noto Color Emoji", sans-serif';
+  g.textAlign = 'center'; g.textBaseline = 'middle';
+  g.fillStyle = '#fff';
+  g.fillText(icon, 48, 52);
+  const tex = new THREE.CanvasTexture(c);
+  tex.colorSpace = THREE.SRGBColorSpace;
+  m = new THREE.SpriteMaterial({ map: tex, depthTest: false, transparent: true });
+  badgeMaterials.set(key, m);
+  return m;
+}
 
 export class WorldView {
   readonly root = new THREE.Group();
@@ -204,7 +227,7 @@ export class WorldView {
       const model = kind === 'pine' ? getModel(`wpine:${seed}`, this.style, () => pine(seed + 40), seed)
         : kind === 'dead' ? getModel(`wdead:${seed}`, this.style, () => deadTree({ seed: seed + 90 }, true), seed)
         : getModel(`wrock:${seed}`, this.style, () => sceneryRock(seed), seed);
-      this.addInstanced(model, mats);
+      this.addInstanced(model, mats, this.scenery, this.quality === 'high');
     }
   }
 
@@ -281,6 +304,7 @@ export class WorldView {
       e = this.createEntity(g.id, 'grave', key, model, GRAVE_FOOTPRINT, 0);
     }
     this.placeEntity(e, center, 0);
+    this.setBadge(e, g.broken ? 'broken' : g.dirty || g.weeds ? 'dirty' : null);
   }
 
   pvis(p: Placed): PVis {
@@ -300,6 +324,8 @@ export class WorldView {
     }
     e.fp = fp;
     this.placeEntity(e, cellCenter(p.x, p.y, fp), p.rot);
+    const decays = CATALOG[p.type].decays && !['path_stone', 'path_dirt'].includes(p.type);
+    this.setBadge(e, decays ? (p.broken ? 'broken' : p.dirty ? 'dirty' : null) : null);
   }
 
   private createEntity(id: string, kind: EntityKind, key: string, model: CachedModel, baseFp: [number, number], rot: number): EntityView {
@@ -332,6 +358,14 @@ export class WorldView {
       const pos = lightWorldPos(a).applyMatrix4(e.group.matrixWorld);
       e.anchors.push(this.atmosphere.addAnchor(pos, a));
     }
+  }
+
+  private setBadge(e: EntityView, need: 'dirty' | 'broken' | null) {
+    if (!need) { if (e.badge) { e.group.remove(e.badge); e.badge = undefined; } return; }
+    const mat = need === 'broken' ? badgeMaterial('🛠', '#e0705f') : badgeMaterial('🧹', '#c9a25c');
+    if (!e.badge) { e.badge = new THREE.Sprite(mat); e.badge.scale.set(0.55, 0.55, 0.55); e.badge.renderOrder = 5; e.group.add(e.badge); }
+    e.badge.material = mat;
+    e.badge.position.set(0, e.height + 0.45, 0);
   }
 
   removeEntity(id: string) {
@@ -506,6 +540,7 @@ export class WorldView {
       w.group.scale.set(s, s * 1.05, s);
       this.atmosphere.moveAnchor(w.anchor, w.group.position);
     }
+    for (const e of this.entities.values()) if (e.badge) e.badge.position.y = e.height + 0.45 + Math.sin(t * 2.5 + e.group.position.x) * 0.06;
     if (this.selectionFrame.visible) {
       (this.selectionFrame.material as THREE.LineBasicMaterial).opacity = 0.55 + Math.sin(t * 4) * 0.4;
     }

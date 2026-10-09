@@ -13,7 +13,7 @@ export const MATERIALS = {
   glow: new THREE.MeshBasicMaterial({ vertexColors: true, toneMapped: false }),
   water: new THREE.MeshLambertMaterial({ vertexColors: true, transparent: true, opacity: 0.82 }),
   ghost: new THREE.MeshBasicMaterial({ vertexColors: true, transparent: true, opacity: 0.55, depthWrite: false, blending: THREE.AdditiveBlending }),
-  selected: new THREE.MeshLambertMaterial({ vertexColors: true, emissive: new THREE.Color('#5a4320'), emissiveIntensity: 0.9 }),
+  selected: new THREE.MeshLambertMaterial({ vertexColors: true, emissive: new THREE.Color('#4a3618'), emissiveIntensity: 0.55 }),
   invalid: new THREE.MeshLambertMaterial({ vertexColors: true, emissive: new THREE.Color('#7a1f1f'), emissiveIntensity: 1 }),
 } as const;
 

@@ -70,7 +70,8 @@ export class Game {
   constructor(canvas: HTMLCanvasElement) {
     this.canvas = canvas;
     const now = new Date();
-    this.state = loadSave() ?? createNewGame(now);
+    const urlSeed = Number(new URLSearchParams(location.search).get('seed'));
+    this.state = loadSave() ?? createNewGame(now, Number.isFinite(urlSeed) && urlSeed > 0 ? urlSeed : undefined);
     const q = this.state.settings.quality;
     this.renderer = new THREE.WebGLRenderer({ canvas, antialias: q !== 'low', powerPreference: 'high-performance', preserveDrawingBuffer: false });
     this.renderer.outputColorSpace = THREE.SRGBColorSpace;

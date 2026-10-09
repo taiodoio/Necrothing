@@ -26,7 +26,19 @@ const FACES: Array<{ axis: 0 | 1 | 2; sign: 1 | -1; corners: number[][] }> = [
 const TRANSPARENT: Record<Bucket, boolean> = { solid: false, glow: false, water: true, ghost: true };
 
 export function meshVoxels(model: Model, seed = 0, grounded = true): BucketGeometries {
-  const prims = model.prims.filter((p) => p.only !== 'miniature');
+  // Rasterizzazione conservativa: un box più sottile di un voxel occupa
+  // comunque lo strato di voxel che contiene il suo centro (sbarre, aste).
+  const prims = model.prims.filter((p) => p.only !== 'miniature').map((p) => {
+    if (p.kind !== 'box') return p;
+    let min = p.min, max = p.max;
+    for (let a = 0; a < 3; a++) {
+      if (max[a] - min[a] >= 1) continue;
+      const lo = Math.floor((min[a] + max[a]) / 2);
+      min = [...min] as [number, number, number]; max = [...max] as [number, number, number];
+      min[a] = lo; max[a] = lo + 1;
+    }
+    return min === p.min && max === p.max ? p : { ...p, min, max };
+  });
   const additive = prims.filter((p) => !p.carve);
   if (additive.length === 0) return {};
 

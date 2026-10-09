@@ -13,7 +13,7 @@ import { DECAY, EXPANSION, WISPS, XP } from '../src/game/balance.ts';
 const NOW = new Date('2026-10-09T12:00:00Z');
 const later = (days) => new Date(NOW.getTime() + days * 86_400_000);
 
-function spot(s, fp = [2, 2], near = [17, 31]) {
+function spot(s, fp = [2, 2], near = [22, 44]) {
   return nearestFreeSpot(near[0], near[1], fp, buildOccupancy(s), areaForLevel(s.world.expansionLevel));
 }
 
@@ -98,8 +98,9 @@ test('bottega: acquisto, pezzi unici, vendita al 70%', () => {
   assert.equal(s.inventory.lantern, 4);
   assert.equal(s.player.wisps, 100 - 15);
   s.player.xp = 2000; // rango 3
-  R.buy(s, 'well', 1, NOW);
-  assert.throws(() => R.buy(s, 'well', 1, NOW), /unico/);
+  R.buy(s, 'fountain', 1, NOW);
+  assert.throws(() => R.buy(s, 'fountain', 1, NOW), /unico/);
+  assert.throws(() => R.buy(s, 'well', 1, NOW), /unico/, 'il pozzo è già nel cimitero iniziale');
   const w = s.player.wisps;
   R.sell(s, 'lantern', 1);
   assert.equal(s.player.wisps, w + Math.round(5 * 0.7));
@@ -116,7 +117,7 @@ test('modifica: piazza, ruota, sposta, riponi; la bottega non si elimina', () =>
   assert.equal(s.inventory.fence_iron, undefined);
   R.rotateEntity(s, p.id);
   assert.equal(p.rot, 1);
-  const to = spot(s, [1, 1], [30, 33]);
+  const to = spot(s, [1, 1], [40, 46]);
   R.moveEntity(s, p.id, to.x, to.y);
   assert.deepEqual([p.x, p.y], [to.x, to.y]);
   R.storePlaceable(s, p.id);
@@ -196,4 +197,19 @@ test('catalogo: ogni voce ha footprint valido e costi coerenti', () => {
   }
   const area = areaForLevel(4);
   assert.ok(canPlaceAt(area.x, area.y, [3, 3], { owner: new Map(), blocked: new Set() }, area));
+});
+
+test('salvataggio v1 (mappa 48) migrato: oggetti spostati dentro il nuovo recinto', async () => {
+  const { normalizeSave } = await import('../src/game/state.ts');
+  const old = createNewGame(NOW, 3);
+  old.version = 1;
+  old.graves = [{ ...old.graves[0], x: 19, y: 22 }];
+  old.placeables = [{ ...old.placeables[0], x: 14, y: 15 }];
+  old.world.expansionLevel = 2;
+  const s = normalizeSave(JSON.parse(JSON.stringify(old)));
+  assert.equal(s.version, 2);
+  assert.deepEqual([s.graves[0].x, s.graves[0].y], [27, 30]);
+  const area = areaForLevel(s.world.expansionLevel);
+  const p = s.placeables[0];
+  assert.ok(p.x >= area.x && p.y >= area.y, 'la bottega è dentro il recinto');
 });

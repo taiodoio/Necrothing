@@ -221,7 +221,7 @@ export function sceneryTuft(seed: number): Model {
   const b = new MB(`tuft:${seed}`);
   const r = b.rng;
   const n = 1 + r.int(2);
-  for (let i = 0; i < n; i++) grassClump(b, r.range(-2, 2), r.range(-2, 2), 0.8 + r.next() * 0.5, seed === 4 ? DRY : GREENS);
+  for (let i = 0; i < n; i++) grassClump(b, r.range(-2, 2), r.range(-2, 2), 0.65 + r.next() * 0.35, seed === 4 ? DRY : GREENS);
   return b.build();
 }
 /** Erba secca/alta del sottobosco. */

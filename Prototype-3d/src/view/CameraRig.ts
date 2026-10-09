@@ -84,11 +84,15 @@ export class CameraRig {
    * massimo e il pan sono calcolati perché il bordo del terreno non entri mai
    * nell'inquadratura.
    */
-  setWorld(worldHalf: number, scrollHalf: number) {
+  setWorld(worldHalf: number, scrollHalf: number, viewHalf = Infinity) {
     this.worldHalf = worldHalf;
     this.scrollHalf = scrollHalf;
+    this.viewHalf = viewHalf;
     this.updateLimits();
   }
+
+  /** Semi-estensione massima inquadrabile (recinto + una fascia di bosco). */
+  private viewHalf = Infinity;
 
   /** Semi-estensioni (x,z) sul terreno dell'impronta inquadrata per un'altezza di vista. */
   private footprint(viewH: number): [number, number] {
@@ -102,7 +106,7 @@ export class CameraRig {
 
   private updateLimits() {
     // margine per colline e lati del terreno (salgono fino a ~1 unità)
-    const room = this.worldHalf - 2.5;
+    const room = Math.min(this.worldHalf - 2.5, this.viewHalf);
     const [ex, ez] = this.footprint(1);
     this.maxView = Math.max(this.minView + 1, room / Math.max(ex, ez, 1e-3));
     if (this.viewHeight > this.maxView) { this.viewHeight = this.maxView; this.applyProjection(); }
@@ -153,12 +157,22 @@ export class CameraRig {
     this.camera.updateMatrixWorld();
   }
 
-  /** Punto del terreno (y=0) sotto un punto dello schermo in NDC. */
-  groundAt(ndc: THREE.Vector2, raycaster: THREE.Raycaster): THREE.Vector3 | null {
+  /**
+   * Punto del terreno sotto un punto dello schermo in NDC. Con `height` il
+   * suolo non è piano: si interseca il piano alla quota trovata e si ripete
+   * (converge in 3-4 passi sulle colline dolci del cimitero).
+   */
+  groundAt(ndc: THREE.Vector2, raycaster: THREE.Raycaster, height?: (x: number, z: number) => number): THREE.Vector3 | null {
     raycaster.setFromCamera(ndc, this.camera);
     const plane = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);
     const hit = new THREE.Vector3();
-    return raycaster.ray.intersectPlane(plane, hit) ? hit : null;
+    if (!raycaster.ray.intersectPlane(plane, hit)) return null;
+    if (!height) return hit;
+    for (let i = 0; i < 4; i++) {
+      plane.constant = -height(hit.x, hit.z);
+      if (!raycaster.ray.intersectPlane(plane, hit)) return null;
+    }
+    return hit;
   }
 
   get distance() { return DISTANCE; }

@@ -3,10 +3,13 @@
 // (necrothing-docs/prototype/src/shared/domain/balance.ts e
 // progressionService.ts) e adattati al gioco 3D "in tempo reale".
 
-/** Mappa logica: 48×48 celle. 1 cella = 1 unità mondo. */
-export const MAP_SIZE = 48;
-/** Bosco decorativo oltre la mappa (celle per lato): il terreno non "finisce" mai a schermo. */
-export const FOREST_MARGIN = 24;
+/** Mappa logica: 64×64 celle. 1 cella = 1 unità mondo. */
+export const MAP_SIZE = 64;
+/**
+ * Bosco decorativo oltre la mappa (celle per lato). La camera ne mostra solo
+ * una fascia sottile attorno al recinto: il protagonista è il cimitero.
+ */
+export const FOREST_MARGIN = 12;
 export const GRAVE_FOOTPRINT: [number, number] = [2, 2];
 
 export const RANKS = [
@@ -130,14 +133,14 @@ export const MAUSOLEUM_PRESTIGE = 25;
 
 /**
  * Espansione: l'area recintata cresce con il prestigio. Il lato è in celle,
- * centrato nella mappa 32×32. Il resto è terra selvaggia non consacrata.
+ * centrato nella mappa 64×64. Il resto è terra selvaggia non consacrata.
  */
 export const EXPANSION = [
-  { minPrestige: 0, size: 22, label: 'Recinto iniziale' },
-  { minPrestige: 90, size: 26, label: 'Ala orientale' },
-  { minPrestige: 160, size: 30, label: 'Ala occidentale' },
-  { minPrestige: 260, size: 36, label: 'Campo dei dimenticati' },
-  { minPrestige: 400, size: 44, label: 'Cimitero intero' },
+  { minPrestige: 0, size: 34, label: 'Recinto iniziale' },
+  { minPrestige: 160, size: 40, label: 'Ala orientale' },
+  { minPrestige: 260, size: 46, label: 'Ala occidentale' },
+  { minPrestige: 380, size: 52, label: 'Campo dei dimenticati' },
+  { minPrestige: 520, size: 58, label: 'Cimitero intero' },
 ] as const;
 
 export const DISTRICT = { minGraves: 4, adjacency: 3 } as const;

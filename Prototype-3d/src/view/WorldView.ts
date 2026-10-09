@@ -12,7 +12,7 @@ import { graveVisualState } from '../game/graves.ts';
 import { hash3, hashString, createRng } from '../game/rng.ts';
 import type { ArtStyle, Grave, Placed, SaveData } from '../game/state.ts';
 import { areaForLevel, buildOccupancy, gateCells, type Rect } from '../game/world.ts';
-import { getModel, instantiate, lightWorldPos, MATERIALS, type CachedModel } from '../render/modelCache.ts';
+import { getModel, instantiate, LOWPOLY_MATERIALS, lightWorldPos, type CachedModel } from '../render/modelCache.ts';
 import { fencePillar, fenceSegment, gate } from '../render/models/fence.ts';
 import { graveModel } from '../render/models/graves.ts';
 import { deadTree, pine, sceneryBush, sceneryFern, sceneryFlowers, sceneryLeaves, sceneryPebbles, sceneryRock, sceneryShrooms, sceneryTuft, sceneryWildGrass } from '../render/models/nature.ts';
@@ -20,12 +20,9 @@ import { placeableKey, placeableModel, placeableSeed, type PVis } from '../rende
 import { P } from '../render/palette.ts';
 import { drawIcon } from '../ui/icons.ts';
 import type { Atmosphere, AnchorHandle } from './Atmosphere.ts';
-import { buildChunk, CHUNK, groundHeightAtCell, groundType, lowNoise, WORLD_MAX, WORLD_MIN, type Ground, type GroundInput } from './terrain.ts';
+import { buildChunk, CHUNK, groundType, lowNoise, naturalHeight, surfaceHeight, WORLD_MAX, WORLD_MIN, type Ground, type GroundInput } from './terrain.ts';
 import { ChunkBaker } from './baker.ts';
 
-function columnLift(input: GroundInput, x: number, y: number): number {
-  return Math.max(0, groundHeightAtCell(input, x, y));
-}
 
 export const HALF = MAP_SIZE / 2;
 
@@ -125,7 +122,7 @@ export class WorldView {
     this.style = style;
     for (const e of [...this.entities.values()]) this.removeEntity(e.id);
     this.scenerySig = this.decorSig = '';
-    for (const c of this.terrainChunks.values()) { this.terrain.remove(c.mesh); c.mesh.geometry.dispose(); (c.mesh.material as THREE.MeshLambertMaterial).map?.dispose(); (c.mesh.material as THREE.Material).dispose(); }
+    for (const c of this.terrainChunks.values()) { this.terrain.remove(c.mesh); c.mesh.geometry.dispose(); this.disposeChunkMaterial(c.mesh); }
     this.terrainChunks.clear();
     this.sync(state);
   }
@@ -167,6 +164,31 @@ export class WorldView {
     return m;
   }
 
+  /**
+   * Pad piani sotto ogni oggetto: tutte le celle dell'ingombro prendono
+   * l'altezza naturale della cella centrale (le tombe non pendono).
+   */
+  private groundPads(state: SaveData, input: GroundInput): Map<string, number> {
+    const pads = new Map<string, number>();
+    const put = (x: number, y: number, fp: [number, number]) => {
+      const h = naturalHeight(input, x + Math.floor((fp[0] - 1) / 2), y + Math.floor((fp[1] - 1) / 2));
+      for (let dy = 0; dy < fp[1]; dy++) for (let dx = 0; dx < fp[0]; dx++) pads.set(`${x + dx},${y + dy}`, h);
+    };
+    for (const g of state.graves) put(g.x, g.y, GRAVE_FOOTPRINT);
+    for (const p of state.placeables) put(p.x, p.y, rotatedFootprint(p.type, p.rot));
+    return pads;
+  }
+
+  /** Quota a cui poggia un ingombro (pad della sua cella d'origine). */
+  private baseHeight(x: number, y: number): number {
+    return this.groundInput?.pads.get(`${x},${y}`) ?? 0;
+  }
+
+  /** Quota del suolo in un punto del mondo, nello stile attivo. */
+  heightAt(wx: number, wz: number): number {
+    return this.groundInput ? surfaceHeight(this.groundInput, this.style, wx, wz) : 0;
+  }
+
   private chunkKeys(): Array<[number, number]> {
     const out: Array<[number, number]> = [];
     for (let cy = WORLD_MIN; cy < WORLD_MAX; cy += CHUNK) for (let cx = WORLD_MIN; cx < WORLD_MAX; cx += CHUNK) out.push([cx, cy]);
@@ -174,36 +196,46 @@ export class WorldView {
   }
 
   /** Firma del suolo di un chunk (si ricostruisce solo ciò che cambia). */
-  private chunkSig(overrides: Map<string, Ground>, cx0: number, cy0: number): string {
+  private chunkSig(input: GroundInput, cx0: number, cy0: number): string {
     const parts: string[] = [];
     for (let y = cy0 - 1; y <= cy0 + CHUNK; y++) for (let x = cx0 - 1; x <= cx0 + CHUNK; x++) {
-      const g = overrides.get(`${x},${y}`);
-      if (g) parts.push(`${x},${y}${g[0]}`);
+      const k = `${x},${y}`;
+      const g = input.overrides.get(k);
+      const p = input.pads.get(k);
+      if (g || p !== undefined) parts.push(`${k}${g ? g[0] : ''}${p !== undefined ? p.toFixed(2) : ''}`);
     }
     return `${this.style}|${this.area.x},${this.area.w}|${parts.join(';')}`;
   }
 
   private syncTerrain(state: SaveData) {
     const overrides = this.groundOverrides(state);
-    this.groundInput = { seed: state.seed % 100000, area: this.area, overrides };
+    const input: GroundInput = { seed: state.seed % 100000, area: this.area, overrides, pads: new Map() };
+    input.pads = this.groundPads(state, input);
+    this.groundInput = input;
     for (const [cx, cy] of this.chunkKeys()) {
       const key = `${cx},${cy}`;
-      const sig = this.chunkSig(overrides, cx, cy);
+      const sig = this.chunkSig(input, cx, cy);
       const old = this.terrainChunks.get(key);
       if (old && old.sig === sig) continue;
       if (old) {
         this.terrain.remove(old.mesh);
         old.mesh.geometry.dispose();
-        (old.mesh.material as THREE.MeshLambertMaterial).map?.dispose();
-        (old.mesh.material as THREE.Material).dispose();
+        this.disposeChunkMaterial(old.mesh);
       }
-      const chunk = buildChunk(this.groundInput, cx, cy, this.style);
-      const mesh = new THREE.Mesh(chunk.geometry, new THREE.MeshLambertMaterial({ map: chunk.texture, vertexColors: true }));
+      const chunk = buildChunk(input, cx, cy, this.style);
+      const mesh = new THREE.Mesh(chunk.geometry, chunk.texture ? new THREE.MeshLambertMaterial({ map: chunk.texture, vertexColors: true }) : LOWPOLY_MATERIALS.solid);
       mesh.receiveShadow = true;
       mesh.name = `chunk-${key}`;
       this.terrain.add(mesh);
       this.terrainChunks.set(key, { mesh, sig });
     }
+  }
+
+  private disposeChunkMaterial(mesh: THREE.Mesh) {
+    const m = mesh.material as THREE.MeshLambertMaterial;
+    if (m === LOWPOLY_MATERIALS.solid) return; // condiviso
+    m.map?.dispose();
+    m.dispose();
   }
 
   /** Recinto + cancello (instancing) e bosco (cotto per chunk). */
@@ -270,7 +302,8 @@ export class WorldView {
             ? getModel(`wdead:${variant}`, style, () => deadTree({ seed: variant + 90 }, true), variant, true, res)
             : getModel(`wrock:${variant % 3}`, style, () => sceneryRock(variant % 3), variant, true, res);
         const s = 0.85 + rng.next() * 0.55;
-        const pos = new THREE.Vector3(x + 1 + rng.range(-0.6, 0.6) - HALF, columnLift(input, x, y), y + 1 + rng.range(-0.6, 0.6) - HALF);
+        const pos = new THREE.Vector3(x + 1 + rng.range(-0.6, 0.6) - HALF, 0, y + 1 + rng.range(-0.6, 0.6) - HALF);
+        pos.y = this.heightAt(pos.x, pos.z) - 0.04;
         baker.add(model, new THREE.Matrix4().compose(pos, new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), rng.range(0, Math.PI * 2)), new THREE.Vector3(s, s * (0.9 + rng.next() * 0.35), s)), 1, x, y);
       }
     }
@@ -306,6 +339,7 @@ export class WorldView {
     const meadow: Array<[number, keyof typeof M]> = [[0.72, 'tuft'], [0.82, 'flowers'], [0.92, 'pebbles'], [0.97, 'leaves'], [1, 'shrooms']];
     const wood: Array<[number, keyof typeof M]> = [[0.36, 'wgrass'], [0.6, 'fern'], [0.72, 'bush'], [0.86, 'leaves'], [0.93, 'shrooms'], [1, 'pebbles']];
     const reach = 10; // celle oltre il recinto con sottobosco
+    const lowpoly = this.style === 'lowpoly';
     const a = this.area;
     for (let y = a.y - reach; y < a.y + a.h + reach; y++) {
       for (let x = a.x - reach; x < a.x + a.w + reach; x++) {
@@ -314,14 +348,16 @@ export class WorldView {
         if (occ.owner.has(k) || gt === 'path' || gt === 'fence' || gt === 'dirt' || gt === 'mud') continue;
         const wild = gt !== 'grass';
         const dist = Math.max(a.x - x, x - (a.x + a.w - 1), a.y - y, y - (a.y + a.h - 1), 0);
-        const n = (wild ? 1.2 * Math.max(0, 1 - dist / reach) ** 0.7 : 1.7) * per;
+        // in low-poly le piante sono in scala più realistica: ne servono di più
+        const n = (wild ? 1.2 * Math.max(0, 1 - dist / reach) ** 0.7 : 1.7) * per * (lowpoly ? 1.8 : 1);
         let count = Math.floor(n) + (rng.next() < n % 1 ? 1 : 0);
         while (count-- > 0) {
           const r = rng.next();
           const kind = (wild ? wood : meadow).find(([p]) => r <= p)![1];
           const model = M[kind](rng.int(12));
-          const pos = new THREE.Vector3(x + rng.range(0.2, 0.8) - HALF, columnLift(input, x, y), y + rng.range(0.2, 0.8) - HALF);
-          const sc = kind === 'bush' || kind === 'fern' ? 0.9 + rng.next() * 0.5 : 1;
+          const pos = new THREE.Vector3(x + rng.range(0.2, 0.8) - HALF, 0, y + rng.range(0.2, 0.8) - HALF);
+          pos.y = this.heightAt(pos.x, pos.z) - 0.01;
+          const sc = (kind === 'bush' || kind === 'fern' ? 0.9 + rng.next() * 0.5 : 1) * (lowpoly && kind !== 'pebbles' && kind !== 'leaves' ? 1.45 : 1);
           baker.add(model, new THREE.Matrix4().compose(pos, new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), rng.int(4) * Math.PI / 2), new THREE.Vector3(sc, sc, sc)), wild ? 0.75 + rng.next() * 0.2 : 0.9 + rng.next() * 0.15, x, y);
         }
       }
@@ -333,7 +369,7 @@ export class WorldView {
     if (!mats.length) return;
     for (const [bucket, geo] of Object.entries(model.geometries)) {
       if (!geo) continue;
-      const mesh = new THREE.InstancedMesh(geo, MATERIALS[bucket as keyof typeof MATERIALS], mats.length);
+      const mesh = new THREE.InstancedMesh(geo, model.mats[bucket as keyof typeof model.mats], mats.length);
       mats.forEach((mm, i) => mesh.setMatrixAt(i, mm));
       mesh.instanceMatrix.needsUpdate = true;
       mesh.castShadow = cast && bucket === 'solid';
@@ -352,6 +388,7 @@ export class WorldView {
   private syncGrave(g: Grave) {
     const key = this.graveKey(g);
     const center = cellCenter(g.x, g.y, GRAVE_FOOTPRINT);
+    center.y = this.baseHeight(g.x, g.y);
     let e = this.entities.get(g.id);
     if (!e || e.key !== key) {
       if (e) this.removeEntity(g.id);
@@ -379,7 +416,9 @@ export class WorldView {
       if (p.type === 'sign') this.addSignText(e, p.text ?? '');
     }
     e.fp = fp;
-    this.placeEntity(e, cellCenter(p.x, p.y, fp), p.rot);
+    const at = cellCenter(p.x, p.y, fp);
+    at.y = this.baseHeight(p.x, p.y);
+    this.placeEntity(e, at, p.rot);
     const decays = CATALOG[p.type].decays && !['path_stone', 'path_dirt'].includes(p.type);
     this.setBadge(e, decays ? (p.broken ? 'broken' : p.dirty ? 'dirty' : null) : null);
   }
@@ -483,7 +522,7 @@ export class WorldView {
       tip.position.y = 0.24;
       group.add(core, shell, tip);
       const base = cellCenter(w.x, w.y, [1, 1]);
-      base.y = 0.7;
+      base.y = this.heightAt(base.x, base.z) + 0.7;
       group.position.copy(base);
       const hitbox = new THREE.Mesh(new THREE.BoxGeometry(0.9, 1.4, 0.9), hitMaterial);
       hitbox.userData.wispId = w.id;
@@ -508,22 +547,23 @@ export class WorldView {
     this.refreshSelection();
   }
 
-  private setHighlight(id: string, mat: THREE.Material | null) {
+  private setHighlight(id: string, which: 'selected' | 'invalid' | null) {
     const e = this.entities.get(id);
     if (!e) return;
+    const mats = (e.group.userData.model as CachedModel).mats;
     e.visual.traverse((o) => {
       const mesh = o as THREE.Mesh;
       if (!mesh.isMesh || mesh.name !== 'solid') return;
-      mesh.material = mat ?? MATERIALS.solid;
+      mesh.material = which ? mats[which] : mats.solid;
     });
   }
 
   private refreshSelection() {
     const e = this.selectedId ? this.entities.get(this.selectedId) : null;
     if (!e) { this.selectionFrame.visible = false; return; }
-    this.setHighlight(e.id, MATERIALS.selected);
+    this.setHighlight(e.id, 'selected');
     this.selectionFrame.visible = true;
-    this.selectionFrame.position.set(e.group.position.x, 0.06, e.group.position.z);
+    this.selectionFrame.position.set(e.group.position.x, e.group.position.y + 0.06, e.group.position.z);
     this.selectionFrame.scale.set(e.fp[0], 1, e.fp[1]);
   }
 
@@ -532,13 +572,14 @@ export class WorldView {
     const e = this.entities.get(id);
     if (!e) return;
     const c = cellCenter(x, y, e.fp);
+    c.y = this.heightAt(c.x, c.z);
     e.group.position.copy(c);
     this.ghostFrame.visible = true;
-    this.ghostFrame.position.set(c.x, 0.05, c.z);
+    this.ghostFrame.position.set(c.x, c.y + 0.05, c.z);
     this.ghostFrame.scale.set(e.fp[0], 1, e.fp[1]);
     (this.ghostFrame.material as THREE.MeshBasicMaterial).color.set(valid ? '#7fd18b' : '#e0564a');
-    this.setHighlight(id, valid ? MATERIALS.selected : MATERIALS.invalid);
-    this.selectionFrame.position.set(c.x, 0.06, c.z);
+    this.setHighlight(id, valid ? 'selected' : 'invalid');
+    this.selectionFrame.position.set(c.x, c.y + 0.06, c.z);
   }
 
   endPreview() {
@@ -552,19 +593,22 @@ export class WorldView {
   showGhost(key: string, build: () => CachedModel, fp: [number, number], x: number, y: number, rot: number, valid: boolean) {
     if (this.ghostKey !== key) {
       if (this.ghost) this.root.remove(this.ghost);
-      this.ghost = instantiate(build(), { castShadow: false });
+      const gm = build();
+      this.ghost = instantiate(gm, { castShadow: false });
+      this.ghost.userData.mats = gm.mats;
       this.ghostKey = key;
       this.root.add(this.ghost);
     }
     const c = cellCenter(x, y, fp);
+    c.y = this.heightAt(c.x, c.z);
     this.ghost!.position.copy(c);
     this.ghost!.rotation.y = -rot * Math.PI / 2;
     this.ghost!.traverse((o) => {
       const m = o as THREE.Mesh;
-      if (m.isMesh && m.name === 'solid') m.material = valid ? MATERIALS.selected : MATERIALS.invalid;
+      if (m.isMesh && m.name === 'solid') m.material = valid ? this.ghost!.userData.mats.selected : this.ghost!.userData.mats.invalid;
     });
     this.ghostFrame.visible = true;
-    this.ghostFrame.position.set(c.x, 0.05, c.z);
+    this.ghostFrame.position.set(c.x, c.y + 0.05, c.z);
     this.ghostFrame.scale.set(fp[0], 1, fp[1]);
     (this.ghostFrame.material as THREE.MeshBasicMaterial).color.set(valid ? '#7fd18b' : '#e0564a');
   }
@@ -577,13 +621,13 @@ export class WorldView {
   }
 
   ghostTop(): THREE.Vector3 | null {
-    return this.ghost ? this.ghost.position.clone().setY(1.6) : null;
+    return this.ghost ? this.ghost.position.clone().setY(this.ghost.position.y + 1.6) : null;
   }
 
   entityTop(id: string): THREE.Vector3 | null {
     const e = this.entities.get(id);
     if (!e) return null;
-    return e.group.position.clone().setY(e.height + 0.3);
+    return e.group.position.clone().setY(e.group.position.y + e.height + 0.3);
   }
 
   // ── Animazione ───────────────────────────────────────────────────────

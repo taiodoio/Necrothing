@@ -12,7 +12,8 @@ import { catchUpMessage, liveTick, runCatchUp } from '../game/simulation.ts';
 import { createNewGame, type ArtStyle, type CameraMode, type Quality, type SaveData, type TimeOverride } from '../game/state.ts';
 import { dayPhaseForHour, type DayPhase } from '../game/time.ts';
 import { areaForLevel, buildOccupancy, canPlaceAt, gateCells, nearestFreeSpot } from '../game/world.ts';
-import { applyStyleUniforms, cacheStats, clearAll, getModel, MATERIALS } from '../render/modelCache.ts';
+import { applyStyleUniforms, cacheStats, clearAll, getModel, LOWPOLY_MATERIALS, MATERIALS } from '../render/modelCache.ts';
+import '../render/lowpoly/index.ts';
 import { setVoxelResolution, voxelResolution, voxelsPerWorldUnit } from '../render/voxelMesher.ts';
 import { graveModel } from '../render/models/graves.ts';
 import { placeableKey, placeableModel, type PVis } from '../render/models/registry.ts';
@@ -23,7 +24,6 @@ import { Atmosphere } from '../view/Atmosphere.ts';
 import { CameraRig } from '../view/CameraRig.ts';
 import { Effects } from '../view/Effects.ts';
 import { PostFX } from '../view/PostFX.ts';
-import { groundHeightAtCell } from '../view/terrain.ts';
 import { cellCenter, HALF, worldToCell, WorldView } from '../view/WorldView.ts';
 import { Input } from './Input.ts';
 import { loadSave, saveNow, scheduleSave } from './persistence.ts';
@@ -42,6 +42,9 @@ export interface Placement {
   rot: number;
   valid: boolean;
 }
+
+export const STYLE_CYCLE: ArtStyle[] = ['lowpoly', 'voxel', 'miniature'];
+export const STYLE_LABELS: Record<ArtStyle, string> = { lowpoly: 'Gothic Low-Poly', voxel: 'Gothic Voxel', miniature: 'Miniatura' };
 
 /** Densità dei voxel per qualità (voxel per unità di design; 10 unità = 1 cella). */
 const VOXEL_RES: Record<Quality, number> = { low: 1.0, medium: 1.6, high: 2.0 };
@@ -77,8 +80,12 @@ export class Game {
   constructor(canvas: HTMLCanvasElement) {
     this.canvas = canvas;
     const now = new Date();
-    const urlSeed = Number(new URLSearchParams(location.search).get('seed'));
+    const params = new URLSearchParams(location.search);
+    const urlSeed = Number(params.get('seed'));
     this.state = loadSave() ?? createNewGame(now, Number.isFinite(urlSeed) && urlSeed > 0 ? urlSeed : undefined);
+    // flag di sviluppo: ?style=voxel|miniature|lowpoly (alias ?renderer=legacy|lowpoly)
+    const forced = params.get('style') ?? ({ legacy: 'voxel', lowpoly: 'lowpoly' } as Record<string, string>)[params.get('renderer') ?? ''];
+    if (forced === 'voxel' || forced === 'miniature' || forced === 'lowpoly') this.state.settings.style = forced;
     const q = this.state.settings.quality;
     this.renderer = new THREE.WebGLRenderer({ canvas, antialias: q !== 'low', powerPreference: 'high-performance', preserveDrawingBuffer: false });
     this.renderer.outputColorSpace = THREE.SRGBColorSpace;
@@ -121,7 +128,7 @@ export class Game {
     window.addEventListener('resize', this.resize);
     document.addEventListener('visibilitychange', this.onVisibility);
     canvas.addEventListener('webglcontextlost', (e) => { e.preventDefault(); toast('La scena si sta ripristinando…'); });
-    canvas.addEventListener('webglcontextrestored', () => { this.world.setStyle(this.state.settings.style === 'voxel' ? 'miniature' : 'voxel', this.state); this.world.setStyle(this.state.settings.style, this.state); });
+    canvas.addEventListener('webglcontextrestored', () => { this.world.setStyle(this.state.settings.style, this.state, true); this.actors.setStyle(this.state.settings.style); });
     this.resize();
     saveNow(this.state);
     const msg = catchUpMessage(report);
@@ -171,10 +178,7 @@ export class Game {
   };
 
   private groundAt(p: THREE.Vector3): number {
-    const input = this.world.groundInput;
-    if (!input) return 0;
-    const c = worldToCell(p);
-    return Math.max(0, groundHeightAtCell(input, c.x, c.y));
+    return this.world.heightAt(p.x, p.z);
   }
 
   private onLiveTick() {
@@ -453,7 +457,7 @@ export class Game {
   }
 
   groundCell(x: number, y: number) {
-    const p = this.rig.groundAt(this.ndc(x, y), this.raycaster);
+    const p = this.rig.groundAt(this.ndc(x, y), this.raycaster, (wx, wz) => this.world.heightAt(wx, wz));
     return p ? { p, cell: worldToCell(p) } : null;
   }
 
@@ -576,7 +580,7 @@ export class Game {
     if (!down) return;
     if (k === 'escape') { this.ui.escape(); return; }
     if (k === 'c') this.setCamera(this.state.settings.camera === 'angled' ? 'top' : 'angled');
-    else if (k === 'v') this.setStyle(this.state.settings.style === 'voxel' ? 'miniature' : 'voxel');
+    else if (k === 'v') this.setStyle(STYLE_CYCLE[(STYLE_CYCLE.indexOf(this.state.settings.style) + 1) % STYLE_CYCLE.length]);
     else if (k === 'e') this.interactNearest();
   }
 
@@ -621,7 +625,7 @@ export class Game {
     if (this.placement) this.refreshPlacement();
     scheduleSave(this.state);
     this.ui.refreshSettingsButtons();
-    toast(style === 'voxel' ? 'Resa: Gothic Voxel' : 'Resa: Miniatura illustrata');
+    toast(`Resa: ${STYLE_LABELS[style]}`);
   }
 
   setCamera(mode: CameraMode) {
@@ -654,7 +658,9 @@ export class Game {
   private updateCameraWorld() {
     const a = this.world.area;
     const half = Math.max(a.w, a.h) / 2;
-    this.rig.setWorld(HALF + FOREST_MARGIN, half + 7);
+    // si scorre fino a poco oltre il recinto e lo zoom massimo inquadra il
+    // cimitero con una fascia sottile di bosco: il protagonista è il recinto
+    this.rig.setWorld(HALF + FOREST_MARGIN, half + 3, half + 7);
   }
 
   private applyQuality(q: Quality) {
@@ -675,7 +681,7 @@ export class Game {
     this.world.sync(this.state);
     this.resize();
     this.postfx.configure(q !== 'low' && this.state.settings.edgeBlur, q === 'high' ? 5 : 3.5);
-    for (const m of Object.values(MATERIALS)) m.needsUpdate = true;
+    for (const m of [...Object.values(MATERIALS), ...Object.values(LOWPOLY_MATERIALS)]) m.needsUpdate = true;
   }
 
   setTimeOverride(o: TimeOverride) {
@@ -742,8 +748,7 @@ export class Game {
     this.state = next;
     this.select(null);
     this.placement = null;
-    this.world.setStyle(next.settings.style === 'voxel' ? 'miniature' : 'voxel', next);
-    this.world.setStyle(next.settings.style, next);
+    this.world.setStyle(next.settings.style, next, true);
     this.actors.setStyle(next.settings.style);
     const shop = next.placeables.find((p) => p.type === 'shop');
     if (shop) this.actors.teleport(cellCenter(shop.x + 1, shop.y + 4, [1, 1]));

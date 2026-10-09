@@ -11,6 +11,7 @@ import { voxelsPerWorldUnit } from './render/voxelMesher.ts';
 import { graveModel } from './render/models/graves.ts';
 import { gallerySets } from './render/models/registry.ts';
 import { Atmosphere } from './view/Atmosphere.ts';
+import './render/lowpoly/index.ts';
 
 const canvas = document.querySelector<HTMLCanvasElement>('#c')!;
 const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, preserveDrawingBuffer: true });
@@ -43,7 +44,7 @@ const select = document.querySelector<HTMLSelectElement>('#set')!;
 for (const name of Object.keys(sets)) select.add(new Option(name, name));
 const params = new URLSearchParams(location.search);
 if (params.get('set') && sets[params.get('set')!]) select.value = params.get('set')!;
-if (params.get('style') === 'miniature') style = 'miniature';
+if (['miniature', 'lowpoly', 'voxel'].includes(params.get('style') ?? '')) style = params.get('style') as ArtStyle;
 if (params.get('cam') === 'top') cam = 'top';
 if (params.get('time')) phase = params.get('time') as DayPhase;
 
@@ -81,12 +82,12 @@ function placeCamera() {
 }
 
 function refreshLabels() {
-  document.querySelector('#style')!.textContent = `Stile: ${style === 'voxel' ? 'voxel' : 'miniatura'}`;
+  document.querySelector('#style')!.textContent = `Stile: ${style}`;
   document.querySelector('#cam')!.textContent = `Camera: ${cam === 'top' ? 'dall’alto' : 'obliqua'}`;
   document.querySelector('#time')!.textContent = `Ora: ${phase}`;
 }
 
-document.querySelector('#style')!.addEventListener('click', () => { style = style === 'voxel' ? 'miniature' : 'voxel'; rebuild(); refreshLabels(); });
+document.querySelector('#style')!.addEventListener('click', () => { style = style === 'lowpoly' ? 'voxel' : style === 'voxel' ? 'miniature' : 'lowpoly'; rebuild(); refreshLabels(); });
 document.querySelector('#cam')!.addEventListener('click', () => { cam = cam === 'top' ? 'angled' : 'top'; placeCamera(); refreshLabels(); });
 document.querySelector('#time')!.addEventListener('click', () => {
   const order: DayPhase[] = ['dawn', 'day', 'dusk', 'night'];

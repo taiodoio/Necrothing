@@ -58,7 +58,7 @@ SaveData (unico stato) ──► WorldView / Actors (presentazione)
 | `render/lowpoly/architecture.ts` | Componenti: finestra gotica, porta ad arco, tetto a falde con lastre, timpano, cantonali, colonna tornita, inferriata. Edifici: recinto, pilastro, cancello, bottega, casa del becchino, mausoleo, pozzo, statua votiva, angelo. |
 | `render/lowpoly/lights.ts` | Lampioni (3 varianti), lanterne (3), torcia; stati acceso/spento/sporco/rotto. |
 | `render/lowpoly/nature.ts` | Selciato a pietre poligonali, sentiero in terra, alberi morti, pini, cespugli, erba alta, funghi, aiuola, stagno; scenografia (ciuffi, felci, fiori, rocce). |
-| `render/lowpoly/characters.ts` | Custode, becchino, prete, dolente, zombie, scheletro, fantasmi. |
+| `render/lowpoly/kawaii.ts` | Personaggi kawaii: Custode, becchino, prete, dolenti, zombie, scheletro, fantasmi, animali. |
 | `view/FireFlicker.ts` | Tremolio riutilizzabile, deterministico e indipendente per sorgente (aloni e PointLight). |
 | `view/terrain.ts` | Altezze (colline, pad piani sotto gli oggetti), terreno low-poly morbido: griglia indicizzata con normali e colori per vertice (i bordi dei sentieri sfumano nel prato). |
 
@@ -127,3 +127,24 @@ SaveData (unico stato) ──► WorldView / Actors (presentazione)
    sulle torce (solo qualità alta); fumo dai comignoli.
 2. Profilazione su iOS/Android; eventuale LOD per il sottobosco low-poly.
 3. Pipeline GLB opzionale per gli asset eroi (vedi §6).
+
+## 9. Terza passata: correzioni, decorazioni leggibili, prototipi "kawaii"
+
+- **Tetti**: `gableRoof` riscritto (le falde ora si incontrano sul colmo senza
+  sporgere, opzione `alongZ`) e nuovo `frontGable` per chiudere i timpani.
+  Mausoleo, santuario, edicola votiva e casetta degli animali hanno tetto
+  orientato correttamente e timpani davanti e dietro; la tettoia del portico
+  della casa del becchino parte sotto la gronda e non attraversa più il tetto.
+- **Decorazioni da 1 cella** più grandi e leggibili in gioco: vaso su piedistallo
+  (anfora o urna di terracotta), corona su cavalletto alto con nastro, ossa su
+  terra smossa (scala 2), zucca grande con zucchette, teschio con candela
+  (scala 1,7), lanterna da terra (×1,8, cerchio di sassi) e su pietra.
+- **Personaggi kawaii** (in gioco nello stile low-poly): `render/lowpoly/kawaii.ts`
+  e la pagina `lab.html` (confronto con il voxel, pose, ora del giorno, scena del
+  funerale). Testa grande e squadrata a spigoli morbidi, corpo piccolo, arti
+  tozzi con spalle e anche sferiche dentro il busto (non si staccano mai),
+  occhi grandi con riflesso, guance rosa. Stesse parti del rig e stesse
+  animazioni; cambiano solo i perni, dichiarati per tipo: `buildRig` li usa quando
+  lo stile è `lowpoly`, le luci portate arrivano dai modelli delle parti e i
+  sobbalzi sono ridotti (gambe più corte). Il corteo funebre alterna due tipi di
+  dolenti (`mourner`, `mournerB`). Il vecchio `lowpoly/characters.ts` è stato rimosso.

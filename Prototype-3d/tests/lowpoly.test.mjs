@@ -161,3 +161,33 @@ test('FireFlicker: deterministico per seme e indipendente tra sorgenti', () => {
   for (const t of ts) assert.ok(a.value(t) > 0.5 && a.value(t) < 1.5);
   assert.equal(new FireFlicker(5, 0).value(3), 1);
 });
+
+test('prototipi kawaii: ogni parte ha geometria e gli arti partono dentro il busto', async () => {
+  const { KAWAII, buildKawaiiPart } = await import('../src/render/lowpoly/kawaii.ts');
+  for (const [kind, spec] of Object.entries(KAWAII)) {
+    for (const part of Object.keys(spec.parts)) {
+      const m = buildKawaiiPart(kind, part);
+      assert.ok(m && Object.values(m.geometries).some((g) => g && g.getAttribute('position').count > 20), `${kind}:${part}`);
+      assert.ok(spec.pivots[part], `${kind}:${part} ha un perno`);
+    }
+    if (spec.parts.armL && !spec.quadruped && !spec.flier && !spec.ghost) {
+      const body = box(Object.values(buildKawaiiPart(kind, 'body').geometries)[0]);
+      const sx = spec.pivots.armR[0];
+      assert.ok(sx - 0.07 < body.max.x, `${kind}: spalla attaccata al busto`);
+      assert.ok(spec.pivots.legR[1] - spec.pivots.body[1] < 0.05, `${kind}: anche sotto il busto`);
+    }
+  }
+});
+
+test('rig low-poly: personaggi kawaii in gioco, con luci portate dai modelli', async () => {
+  const { buildRig } = await import('../src/view/characters.ts');
+  const { KAWAII } = await import('../src/render/lowpoly/kawaii.ts');
+  const c = buildRig('custode', 'lowpoly');
+  assert.equal(c.lights.length, 1, 'lanterna del Custode');
+  assert.deepEqual(c.parts.armR.position.toArray(), KAWAII.custode.pivots.armR, 'perni kawaii');
+  assert.equal(buildRig('ghost', 'lowpoly').lights.length, 1, 'bagliore del fantasma');
+  assert.equal(buildRig('ghost', 'lowpoly').spec.bucket, 'ghost');
+  for (const kind of ['mourner', 'mournerB', 'priest', 'gravedigger', 'zombie', 'skeleton', 'cat', 'crow', 'petDuck']) {
+    for (const style of ['lowpoly', 'voxel']) assert.ok(Object.keys(buildRig(kind, style).parts).length >= 4, `${kind} ${style}`);
+  }
+});

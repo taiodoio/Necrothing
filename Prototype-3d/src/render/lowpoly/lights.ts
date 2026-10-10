@@ -98,13 +98,15 @@ export function lantern(v: PVis): LPModel {
     lp.pop();
   } else if (v.variant === 2) {
     // su pietra squadrata
-    lp.blob(0, 0.16, 0, 0.3, 0.2, 0.28, LPC.stone, { vary: 0.12, ...(v.dirty ? { topTint: LPC.moss, topAmount: 0.5 } : {}) });
-    lp.push([0, 0.32, 0], 0, 0, v.broken ? 0.5 : 0);
-    lanternBody(lp, 0, on);
+    lp.blob(0, 0.2, 0, 0.36, 0.25, 0.34, LPC.stone, { vary: 0.12, ...(v.dirty ? { topTint: LPC.moss, topAmount: 0.5 } : {}) });
+    lp.push([0, 0.4, 0], 0, 0, v.broken ? 0.5 : 0);
+    lanternBody(lp, 0, on, 1.4);
     lp.pop();
   } else {
+    // da terra: più grande, su un piccolo cerchio di sassi
+    for (let i = 0; i < 7; i++) { const a = (i / 7) * Math.PI * 2; lp.blob(Math.cos(a) * 0.3, 0.03, Math.sin(a) * 0.3, 0.08, 0.05, 0.07, i % 2 ? LPC.stone : LPC.stoneWarm, { vary: 0.1 }); }
     lp.push([0, 0, 0], 0, 0, v.broken ? 1.3 : 0);
-    lanternBody(lp, 0, on);
+    lanternBody(lp, 0, on, 1.8);
     lp.pop();
   }
   decayLP(lp, v, 0.8, 0.8);

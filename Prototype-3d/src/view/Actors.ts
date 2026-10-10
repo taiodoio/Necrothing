@@ -441,7 +441,7 @@ export class Actors {
     const spots = [
       new THREE.Vector3(0, 0, 1.6), new THREE.Vector3(-1.1, 0, 1.4), new THREE.Vector3(1.1, 0, 1.4), new THREE.Vector3(-0.5, 0, 2.2), new THREE.Vector3(0.6, 0, 2.3),
     ];
-    const kinds: CharacterKind[] = ['priest', 'mourner', 'mourner', 'mourner', 'gravedigger'];
+    const kinds: CharacterKind[] = ['priest', 'mourner', 'mournerB', 'mourner', 'gravedigger'];
     const members = kinds.map((k, i) => {
       const w = this.makeWalker(k, gate.clone().add(new THREE.Vector3((i - 2) * 0.4, 0, 0.5 + i * 0.3)), 1.4);
       const dest = graveCenter.clone().add(spots[i]);

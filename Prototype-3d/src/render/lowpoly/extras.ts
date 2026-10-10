@@ -10,7 +10,7 @@ import * as THREE from 'three';
 import { LP, gothicArchShape, irregularShape, roundTopShape, type LPModel } from './kit.ts';
 import { bouquet, candle, cobweb, deadLeaves, flower, grassTuft, hangingLantern, ivy, moss, pebbles, pumpkin, weeds } from './details.ts';
 import { decayLP } from './lights.ts';
-import { column, gableRoof, quoins } from './architecture.ts';
+import { frontGable, gableRoof, quoins } from './architecture.ts';
 import { LPC } from './palette.ts';
 import type { PVis } from '../models/types.ts';
 
@@ -72,10 +72,12 @@ export function ghostLanternLP(v: PVis): LPModel {
 
 export function glowPumpkinLP(v: PVis): LPModel {
   const lp = new LP(`lp:pumpkin:${v.seed}:${v.dirty}${v.broken}`);
-  pumpkin(lp, 0, 0, 0, 0.26, true, on(v));
-  pumpkin(lp, 0.3, 0, -0.22, 0.12, false, false, 1);
-  lp.push([0, 0, 0]).cyl(-0.28, 0, 0.18, 0.012, 0.004, 0.2, 3, '#4d5a2e', { jitter: 0 }).pop();
-  for (let i = 0; i < 3; i++) lp.push([-0.22 + i * 0.1, 0.02, 0.25], i, 0, 0).blob(0, 0, 0, 0.05, 0.012, 0.04, '#4d6640', { jitter: 0 }).pop();
+  // zucca grande intagliata con due zucchette e foglie: deve leggersi da lontano
+  pumpkin(lp, -0.05, 0, 0.02, 0.4, true, on(v));
+  pumpkin(lp, 0.42, 0, -0.32, 0.18, false, false, 1);
+  pumpkin(lp, -0.45, 0, -0.3, 0.13, false, false, 2.2);
+  lp.push([0, 0, 0]).cyl(-0.42, 0, 0.3, 0.018, 0.006, 0.32, 3, '#4d5a2e', { jitter: 0 }).pop();
+  for (let i = 0; i < 4; i++) lp.push([-0.36 + i * 0.2, 0.02, 0.4], i * 1.3, 0, 0).blob(0, 0, 0, 0.1, 0.02, 0.07, '#4d6640', { jitter: 0.01 }).pop();
   decayLP(lp, v, 0.8, 0.8);
   return lp.build();
 }
@@ -83,6 +85,8 @@ export function glowPumpkinLP(v: PVis): LPModel {
 export function skullCandleLP(v: PVis): LPModel {
   const lp = new LP(`lp:skullcandle:${v.seed}:${v.dirty}${v.broken}`);
   const lit = on(v);
+  // tutto in scala 1.7: teschio grande quanto una zucca, leggibile in gioco
+  lp.push([0, 0, 0], 0, 0, 0, 1.7);
   lp.blob(0, 0.06, 0, 0.22, 0.08, 0.2, LPC.stone, { vary: 0.12, ...mossy(v) });
   skull(lp, 0, 0.12, 0, 1.6);
   // candela sul cranio con colature di cera
@@ -90,6 +94,7 @@ export function skullCandleLP(v: PVis): LPModel {
   for (let i = 0; i < 4; i++) { const a = i * 1.6; lp.cyl(Math.cos(a) * 0.05, 0.36, Math.sin(a) * 0.05 - 0.01, 0.014, 0.008, 0.1, 4, '#e2d6bb', { jitter: 0 }); }
   if (lit) { lp.cyl(0, 0.59, -0.01, 0.022, 0, 0.07, 4, LPC.flame, { bucket: 'glow', jitter: 0 }); lp.light(0, 0.64, 0, LPC.flame, 0.6, 3, 0.4, 0.7); }
   for (let i = 0; i < 2; i++) candle(lp, i ? 0.2 : -0.22, 0.05, 0.12, lit, 0.07 + i * 0.03);
+  lp.pop();
   decayLP(lp, v, 0.8, 0.8);
   return lp.build();
 }
@@ -165,7 +170,11 @@ export function shrineLP(v: PVis): LPModel {
   for (const x of [-0.3, -0.18, 0.18, 0.3]) candle(lp, x, 0.54, -0.3, lit, 0.08 + Math.abs(x) * 0.2);
   lp.pop();
   // tetto e campaniletto a vela
-  gableRoof(lp, W + 0.1, D + 0.15, 0.14 + H, 0.75, LPC.roofDark, 0.12);
+  lp.push([0, 0, -0.2]);
+  gableRoof(lp, D + 0.1, W + 0.05, 0.14 + H, 0.75, LPC.roofDark, 0.1, true);
+  frontGable(lp, D / 2 - 0.08, W, 0.14 + H, 0.75, LPC.stone, 0.16);
+  frontGable(lp, -D / 2 + 0.08, W, 0.14 + H, 0.75, LPC.stoneWarm, 0.16);
+  lp.pop();
   lp.push([0, 0.14 + H + 0.6, 0.55]);
   const bell = gothicArchShape(0.42, 0.62, 4);
   bell.holes.push(new THREE.Path(gothicArchShape(0.24, 0.4, 4, 0.08).getPoints().reverse()));
@@ -355,10 +364,9 @@ export function petHouseLP(v: PVis): LPModel {
   lp.box(0, 0, -0.1, 1.15, 0.08, 1.05, LPC.woodDark, { bevel: 0.01, vary: 0.1 });
   lp.box(0, 0.08, -0.12, 0.95, 0.75, 0.85, LPC.wood, { bevel: 0.012, vary: 0.06, ao: 0.2 });
   for (let x = -0.4; x <= 0.4; x += 0.13) for (const s of [-1, 1]) lp.box(x, 0.1, -0.12 + s * 0.428, 0.01, 0.72, 0.01, LPC.charcoal, { jitter: 0, ao: 0 });
-  const g = new THREE.Shape(); g.moveTo(-0.48, 0); g.lineTo(0.48, 0); g.lineTo(0, 0.4); g.closePath();
-  lp.push([0, 0.83, 0.3]).extrude(g, 0.04, LPC.wood, { vary: 0.06 }).pop();
-  lp.push([0, 0.83, -0.12], 0, 0, 0);
-  for (const s of [-1, 1]) lp.push([s * 0.26, 0.2, 0], 0, 0, s * -0.62).box(0, 0, 0, 0.66, 0.05, 1.05, LPC.roofDark, { bevel: 0.008, vary: 0.1 }).pop();
+  lp.push([0, 0, -0.12]);
+  gableRoof(lp, 0.85, 0.95, 0.83, 0.4, LPC.roofDark, 0.09, true);
+  for (const zz of [0.4, -0.4]) frontGable(lp, zz, 0.95, 0.83, 0.4, LPC.wood, 0.05);
   lp.pop();
   lp.push([0, 0.08, 0.31]).plate(gothicArchShape(0.42, 0.52, 5), 0.02, '#141210', { ao: 0 }).pop();
   lp.push([0, 0.75, 0.33]).box(0, 0, 0, 0.36, 0.1, 0.02, LPC.woodLight, { bevel: 0.005 }).box(0, 0.03, 0.012, 0.22, 0.03, 0.006, LPC.charcoal, { jitter: 0 }).pop();

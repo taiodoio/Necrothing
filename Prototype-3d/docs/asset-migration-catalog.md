@@ -103,13 +103,20 @@ frammento caduto, calcinacci.
 | `tuft:*`, `wgrass:*`, `flowers:*`, `fern:*`, `bush:*`, `shroom:*`, `leaves:*`, `pebbles:*` | sottobosco e prato (cotti per chunk) | fili d'erba sottili, felci a raggiera, fiori, funghi, foglie, sassi | ✅ |
 | terreno | suolo dell'intera mappa | superficie sfaccettata (4 triangoli per cella), colline, pad piani sotto gli oggetti | ✅ |
 
-## Personaggi (stesse parti e perni del rig esistente)
+## Personaggi "kawaii" (stesse parti e animazioni del rig, perni propri — `render/lowpoly/kawaii.ts`)
+
+Proporzioni stile vinile: testa grande e squadrata a spigoli morbidi, corpo piccolo,
+arti tozzi con spalle e anche sferiche dentro il busto, occhi grandi con riflesso e
+guance rosa. Anteprima e confronto con il voxel in `/lab.html`.
 
 | Tipo | Rappresentazione low-poly | Animazione | Stato |
 |---|---|---|---|
-| `custode` | cappello a tesa larga, cappotto svasato, borsa, stivali, pala, lanterna accesa | idle, camminata, lavoro (rig a parti) | ✅ |
-| `skeleton` | teschio con orbite e denti, costole ad arco, ossa lunghe | idle, camminata, ballo | ✅ |
-| `ghost`, `ghostRare` | lenzuolo tornito con orlo frastagliato, semitrasparente | fluttuazione | ✅ |
-| `gravedigger`, `priest`, `mourner`, `zombie` | umanoide parametrico (berretto/barba, tonaca e stola, velo, pelle verdastra) | come sopra | ✅ |
-| `cat`, `rat`, `crow` | gatto nero con occhi verdi luminosi, topo con coda lunga, corvo con ali di penne e occhi rossi | camminata, volo (rig a parti) | ✅ |
-| `petDog`, `petCat`, `petRabbit`, `petCrow`, `petDuck` | animali scheletro: colonna, costole, teschio, zampe d'osso (anatra con becco dorato) | come sopra | ✅ |
+| `custode` | cappello a tesa larga, ciuffi, sciarpa a righe, zaino, pala, lanterna accesa | idle, camminata, lavoro | ✅ |
+| `gravedigger` | coppola, barbone, nasone, salopette con toppa, maniche arrotolate, pala grande | come sopra | ✅ |
+| `priest` | tonaca, saturno, occhialetti dorati, collarino, croce, libro rosso | come sopra, preghiera | ✅ |
+| `mourner`, `mournerB` | signora con cappellino, occhi chiusi e lacrimuccia, giglio; signore con cilindro, baffi e ombrello (corteo misto) | come sopra | ✅ |
+| `zombie` | occhio tondo e occhio cucito, bocca cucita, cervello in vista, camicia strappata, bende | camminata a braccia tese | ✅ |
+| `skeleton` | testone con orbite e lucine, dentini, costole, papillon | idle, camminata, ballo | ✅ |
+| `ghost`, `ghostRare` | cupola morbida con orlo a onde (un solo guscio: niente sovrapposizioni additive), faccina; il raro ha il fiocco | fluttuazione | ✅ |
+| `cat`, `rat`, `crow` | chibi: testa enorme, guance, gatto nero con occhi verdi, topo con orecchie rosa, corvo tondo | camminata, volo | ✅ |
+| `petDog`, `petCat`, `petRabbit`, `petCrow`, `petDuck` | animaletti scheletro chibi (costole, orbite, codine) | come sopra | ✅ |

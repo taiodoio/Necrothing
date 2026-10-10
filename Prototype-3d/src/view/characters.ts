@@ -1,15 +1,17 @@
 // Personaggi procedurali composti da parti (busto, testa, braccia, gambe)
 // con pivot alle articolazioni: animazione leggera di idle/camminata/lavoro
-// senza scheletri. Ogni parte è un modello voxel/miniatura in cache.
+// senza scheletri. Ogni parte è un modello voxel/miniatura in cache; nello
+// stile low-poly le parti e i perni sono quelli "kawaii" di render/lowpoly/kawaii.ts.
 
 import * as THREE from 'three';
 import type { ArtStyle } from '../game/state.ts';
 import { getModel, instantiate, lightWorldPos } from '../render/modelCache.ts';
 import { ModelBuilder, VOX, type LightAnchor, type Model } from '../render/shape.ts';
 import { P } from '../render/palette.ts';
+import { KAWAII } from '../render/lowpoly/kawaii.ts';
 
 export type CharacterKind =
-  | 'custode' | 'priest' | 'gravedigger' | 'mourner' | 'ghost' | 'ghostRare'
+  | 'custode' | 'priest' | 'gravedigger' | 'mourner' | 'mournerB' | 'ghost' | 'ghostRare'
   | 'zombie' | 'skeleton' | 'cat' | 'crow' | 'rat'
   | 'petDog' | 'petCat' | 'petRabbit' | 'petDuck' | 'petCrow';
 
@@ -25,6 +27,8 @@ interface Spec {
   hover?: number;
   quadruped?: boolean;
   flier?: boolean;
+  /** Ampiezza dei sobbalzi (personaggi kawaii: gambe più corte). */
+  bob?: number;
 }
 
 /** Umanoide generico: misure in voxel, pivot (anca/spalla) nello spazio personaggio. */
@@ -123,6 +127,15 @@ function spec(kind: CharacterKind): Spec {
           coat: '#22232a', coat2: '#1a1b20', skin: '#c4a089', legs: '#16171b', robe: true,
           hat: (b) => { b.box(-2.6, 2.5, -2.6, 2.6, 4.8, 2.6, '#121318'); b.box(-2.6, 0, -2.6, -1.8, 3, 2.6, '#121318'); b.box(1.8, 0, -2.6, 2.6, 3, 2.6, '#121318'); },
           heldR: (b) => { b.box(-0.2, -9, 0.6, 0.2, -6, 1, P.leaf); b.ell(0, -5.5, 0.8, 1, 1, 1, P.flowerWhite); },
+        }),
+      };
+    case 'mournerB':
+      return {
+        parts: humanoid({
+          coat: '#2a2c33', coat2: '#202228', skin: P.skin, legs: '#1d1e24', boots: '#141418',
+          hat: (b) => { b.box(-3, 3.6, -3, 3, 4.1, 3, '#141418'); b.box(-2, 4.1, -2, 2, 7.4, 2, '#141418'); b.box(-2.1, 4.1, -2.1, 2.1, 4.7, 2.1, '#5a2a30'); },
+          face: (b) => { b.box(-1.3, 2, 1.9, -0.5, 2.6, 2.2, P.ink); b.box(0.5, 2, 1.9, 1.3, 2.6, 2.2, P.ink); b.box(-1.4, 0.9, 1.9, 1.4, 1.4, 2.3, '#5b5550'); },
+          heldR: (b) => { b.box(-0.3, -13, 0.6, 0.3, -1, 1.2, '#1f2026'); },
         }),
       };
     case 'zombie':
@@ -231,6 +244,7 @@ export interface Rig {
 }
 
 export function buildRig(kind: CharacterKind, style: ArtStyle): Rig {
+  if (style === 'lowpoly' && KAWAII[kind]) return buildKawaiiRig(kind);
   const s = spec(kind);
   const root = new THREE.Group();
   root.name = kind;
@@ -258,6 +272,37 @@ export function buildRig(kind: CharacterKind, style: ArtStyle): Rig {
   return { kind, root, parts, lights, spec: s };
 }
 
+/**
+ * Rig low-poly "kawaii": stesse parti (e animazioni) del rig voxel, perni in
+ * unità mondo dal catalogo kawaii; le luci portate (lanterna del Custode,
+ * bagliore dei fantasmi) arrivano dai modelli delle parti.
+ */
+function buildKawaiiRig(kind: CharacterKind): Rig {
+  const k = KAWAII[kind];
+  const voxel = spec(kind);
+  const s: Spec = { parts: voxel.parts, scale: k.scale, bucket: k.ghost ? 'ghost' : undefined, quadruped: k.quadruped, flier: k.flier, bob: 0.6 };
+  const root = new THREE.Group();
+  root.name = kind;
+  const inner = new THREE.Group();
+  inner.scale.setScalar(k.scale);
+  root.add(inner);
+  const parts: Rig['parts'] = {};
+  const lights: Rig['lights'] = [];
+  for (const [name, pv] of Object.entries(k.pivots) as [PartName, [number, number, number]][]) {
+    const key = `char:${kind}:${name}`;
+    const fallback = voxel.parts.find((p) => p.name === name);
+    const model = getModel(key, 'lowpoly', (): Model => { const b = new ModelBuilder(key); fallback?.build(b); return b.build(); }, 1, false);
+    const pivot = new THREE.Group();
+    pivot.position.set(pv[0], pv[1] + (k.hover ?? 0), pv[2]);
+    pivot.add(instantiate(model, { castShadow: !k.ghost }));
+    pivot.userData.base = pivot.position.clone();
+    inner.add(pivot);
+    parts[name] = pivot;
+    for (const anchor of model.lights) lights.push({ part: pivot, anchor });
+  }
+  return { kind, root, parts, lights, spec: s };
+}
+
 /** Posizione mondo di una luce portata (es. lanterna del Custode). */
 export function rigLightPos(rig: Rig, i: number, target = new THREE.Vector3()): THREE.Vector3 {
   const l = rig.lights[i];
@@ -271,7 +316,8 @@ export function animateRig(rig: Rig, pose: Pose, t: number, phase: number) {
   const p = rig.parts;
   const swing = Math.sin(phase * 2.2);
   const set = (part: THREE.Group | undefined, rx: number, rz = 0) => { if (part) { part.rotation.x = rx; part.rotation.z = rz; } };
-  const bob = (part: THREE.Group | undefined, dy: number) => { if (part) part.position.y = (part.userData.base as THREE.Vector3).y + dy * VOX; };
+  const k = rig.spec.bob ?? 1;
+  const bob = (part: THREE.Group | undefined, dy: number) => { if (part) part.position.y = (part.userData.base as THREE.Vector3).y + dy * VOX * k; };
   if (rig.spec.bucket === 'ghost') {
     const f = Math.sin(t * 2);
     bob(p.body, f * 1.2); bob(p.armL, f * 1.2); bob(p.armR, f * 1.2);

@@ -18,6 +18,8 @@ export function h<K extends keyof HTMLElementTagNameMap>(
     else if (k.startsWith('on') && typeof v === 'function') el.addEventListener(k.slice(2).toLowerCase(), v as EventListener);
     else if (k === 'html') el.innerHTML = String(v);
     else if (v === true) el.setAttribute(k, '');
+    // data-* e aria-* sono attributi, non proprietà: altrimenti i selettori come [data-settings] non li trovano
+    else if (k.startsWith('data-') || k.startsWith('aria-')) el.setAttribute(k, String(v));
     else (el as unknown as Record<string, unknown>)[k] = v;
   }
   for (const c of children) {

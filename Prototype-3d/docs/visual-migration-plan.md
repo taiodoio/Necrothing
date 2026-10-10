@@ -178,3 +178,21 @@ SaveData (unico stato) ──► WorldView / Actors (presentazione)
   cerchio delle fate); aiuola con digitali, tulipani e paletto col teschietto.
   Costo: circa +15% di triangoli sulla vista standard (≈ 0,73M in SwiftShader).
 - Sviluppo: `necro.debugPlace(tipo, x, y, variante)` piazza un oggetto senza costi.
+
+## 11. Nebbia del bosco
+
+`view/ForestMist.ts`: veli trasparenti che seguono il terreno fuori dal recinto,
+con filamenti che scorrono col vento (rumore fbm deformato nello shader) e colore
+preso dalla nebbia della scena. Sempre presente, con densità che cambia
+gradualmente (qualche secondo) secondo fase e meteo:
+
+| | Sereno | Nebbia | Pioggia | Temporale |
+|---|---|---|---|---|
+| Alba | fitta (0,95) | molto fitta, entra nel recinto | 0,7 | 0,6 |
+| Giorno | leggera (0,45) | media, entra nel recinto | 0,35 | 0,25 |
+| Tramonto | media (0,8) | fitta, entra nel recinto | 0,6 | 0,5 |
+| Notte | piena (1) | molto fitta, entra nel recinto | 0,75 | 0,6 |
+
+Con pioggia e temporale il vento accelera; con "effetti meteo" spenti vale la
+colonna "Sereno". Veli per qualità: bassa 1, media 2, alta 3. `?mist=0` la spegne
+(solo sviluppo).

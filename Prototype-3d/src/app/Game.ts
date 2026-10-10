@@ -777,6 +777,15 @@ export class Game {
     ].join('\n');
   }
 
+  /** Solo sviluppo/test: piazza un oggetto del catalogo senza pagarlo. */
+  debugPlace(type: string, x: number, y: number, variant = 0, rot = 0) {
+    this.state.inventory[type] = (this.state.inventory[type] ?? 0) + 1;
+    const p = R.placeFromInventory(this.state, type, x, y, rot, this.now());
+    p.variant = variant;
+    this.afterChange();
+    return p.id;
+  }
+
   /** Solo sviluppo/test: forza la comparsa di una presenza. */
   debugSpawn(kind: Parameters<Actors['spawnRoamer']>[0]['kind'], rare = false) {
     const g = this.state.graves[0];

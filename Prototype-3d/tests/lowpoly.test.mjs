@@ -191,3 +191,18 @@ test('rig low-poly: personaggi kawaii in gioco, con luci portate dai modelli', a
     for (const style of ['lowpoly', 'voxel']) assert.ok(Object.keys(buildRig(kind, style).parts).length >= 4, `${kind} ${style}`);
   }
 });
+
+test('parti animate: stagno, presenze, natura; aggiornabili e deterministiche', async () => {
+  const { createAnimated } = await import('../src/render/lowpoly/animated.ts');
+  const types = ['pond', 'zombies_play', 'zombies_dance', 'zombie_walker', 'ghosts_roam', 'toxic_puddle', 'mud', 'hell_hole', 'dead_tree', 'spectral_tree', 'bushes', 'tall_grass', 'flowerbed'];
+  for (const type of types) {
+    const a = createAnimated(vis(type));
+    assert.ok(a && a.root.children.length > 0, type);
+    a.update(0); a.update(3.7);
+  }
+  assert.equal(createAnimated(vis('lamp_post')), null);
+  assert.equal(createAnimated(vis('hell_hole', { broken: true, lit: false })), null, 'buco spento: niente scintille');
+  const p1 = createAnimated(vis('pond')), p2 = createAnimated(vis('pond'));
+  p1.update(2); p2.update(2);
+  assert.deepEqual(p1.root.children[0].position.toArray(), p2.root.children[0].position.toArray());
+});

@@ -12,6 +12,8 @@ import { graveModel } from './render/models/graves.ts';
 import { gallerySets } from './render/models/registry.ts';
 import { Atmosphere } from './view/Atmosphere.ts';
 import './render/lowpoly/index.ts';
+import { createAnimated, type Animated } from './render/lowpoly/animated.ts';
+import { placeableVis } from './render/models/registry.ts';
 
 const canvas = document.querySelector<HTMLCanvasElement>('#c')!;
 const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, preserveDrawingBuffer: true });
@@ -49,23 +51,31 @@ if (params.get('cam') === 'top') cam = 'top';
 if (params.get('time')) phase = params.get('time') as DayPhase;
 
 let extent = 10;
+let anims: Animated[] = [];
 function rebuild() {
+  anims = [];
   applyStyleUniforms(style, voxelsPerWorldUnit());
   for (const c of [...root.children]) root.remove(c);
   atmosphere.clearAnchors();
   const all = sets[select.value];
   const from = Number(params.get('from') ?? 0), count = Number(params.get('n') ?? all.length);
-  const items = all.slice(from, from + count);
-  const cols = Math.ceil(Math.sqrt(items.length * 1.1));
+  // ?quad: ogni modello ripetuto da 4 lati (0/90/180/270°) per i controlli visivi
+  const quad = params.has('quad');
+  const rot = Number(params.get('rot') ?? 0);
+  const items = all.slice(from, from + count).flatMap((it) => (quad ? [0, 90, 180, 270] : [rot]).map((r) => ({ ...it, r })));
+  const cols = quad ? 4 : Math.ceil(Math.sqrt(items.length * 1.1));
   const cell = Math.max(...items.map((i) => Math.max(...i.fp))) + 1.4;
   items.forEach((item, i) => {
     const m = getModel(item.key, style, item.build, i);
     const g = instantiate(m);
     const cx = (i % cols) - (cols - 1) / 2, cz = Math.floor(i / cols) - (Math.ceil(items.length / cols) - 1) / 2;
     g.position.set(cx * cell, 0, cz * cell);
-    g.rotation.y = (Number(params.get('rot') ?? 0) * Math.PI) / 180;
+    g.rotation.y = (item.r * Math.PI) / 180;
     root.add(g);
-    for (const a of m.lights) atmosphere.addAnchor(lightWorldPos(a).add(g.position), a);
+    const pv = style === 'lowpoly' ? placeableVis(item.key) : null;
+    const anim = pv ? createAnimated(pv) : null;
+    if (anim) { g.add(anim.root); anims.push(anim); }
+    for (const a of m.lights) atmosphere.addAnchor(lightWorldPos(a).applyAxisAngle(new THREE.Vector3(0, 1, 0), g.rotation.y).add(g.position), a);
   });
   extent = (cols * cell) / 2 + 1;
   document.querySelector('#info')!.textContent = `${items.length} modelli · stile ${style} · ${renderer.info.render.triangles} tri`;
@@ -101,7 +111,10 @@ renderer.setSize(innerWidth, innerHeight, false);
 atmosphere.setPhase(phase, 'clear');
 rebuild(); placeCamera(); refreshLabels();
 const clock = new THREE.Clock();
+const frozen = params.has('t') ? Number(params.get('t')) : null;
 renderer.setAnimationLoop(() => {
+  const t = frozen ?? clock.elapsedTime;
+  for (const a of anims) a.update(t);
   atmosphere.update(clock.getDelta(), clock.elapsedTime, camera);
   renderer.render(scene, camera);
 });

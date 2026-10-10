@@ -29,6 +29,8 @@ interface Spec {
   flier?: boolean;
   /** Ampiezza dei sobbalzi (personaggi kawaii: gambe più corte). */
   bob?: number;
+  /** Spostamento verticale del busto da seduti (unità di design; default -2.6). */
+  sitDy?: number;
 }
 
 /** Umanoide generico: misure in voxel, pivot (anca/spalla) nello spazio personaggio. */
@@ -280,7 +282,8 @@ export function buildRig(kind: CharacterKind, style: ArtStyle): Rig {
 function buildKawaiiRig(kind: CharacterKind): Rig {
   const k = KAWAII[kind];
   const voxel = spec(kind);
-  const s: Spec = { parts: voxel.parts, scale: k.scale, bucket: k.ghost ? 'ghost' : undefined, quadruped: k.quadruped, flier: k.flier, bob: 0.6 };
+  // da seduti il busto resta all'altezza di uno sgabello (≈0,26) invece di affondare
+  const s: Spec = { parts: voxel.parts, scale: k.scale, bucket: k.ghost ? 'ghost' : undefined, quadruped: k.quadruped, flier: k.flier, bob: 0.6, sitDy: 0.67 };
   const root = new THREE.Group();
   root.name = kind;
   const inner = new THREE.Group();
@@ -318,10 +321,13 @@ export function animateRig(rig: Rig, pose: Pose, t: number, phase: number) {
   const set = (part: THREE.Group | undefined, rx: number, rz = 0) => { if (part) { part.rotation.x = rx; part.rotation.z = rz; } };
   const k = rig.spec.bob ?? 1;
   const bob = (part: THREE.Group | undefined, dy: number) => { if (part) part.position.y = (part.userData.base as THREE.Vector3).y + dy * VOX * k; };
+  /** Busto, testa e braccia sobbalzano insieme: le braccia restano attaccate alle spalle. */
+  const torso = (dy: number) => { bob(p.body, dy); bob(p.head, dy); bob(p.armL, dy); bob(p.armR, dy); };
   if (rig.spec.bucket === 'ghost') {
     const f = Math.sin(t * 2);
     bob(p.body, f * 1.2); bob(p.armL, f * 1.2); bob(p.armR, f * 1.2);
-    set(p.armL, 0, -0.6 + Math.sin(t * 3) * 0.3); set(p.armR, 0, 0.6 - Math.sin(t * 3) * 0.3);
+    if (pose === 'cheer') { const c = Math.sin(t * 10) * 0.3; set(p.armL, 0, -2.4 + c); set(p.armR, 0, 2.4 - c); }
+    else { set(p.armL, 0, -0.6 + Math.sin(t * 3) * 0.3); set(p.armR, 0, 0.6 - Math.sin(t * 3) * 0.3); }
     return;
   }
   if (rig.spec.flier) {
@@ -340,38 +346,38 @@ export function animateRig(rig: Rig, pose: Pose, t: number, phase: number) {
     case 'walk':
       set(p.legL, swing * 0.6); set(p.legR, -swing * 0.6);
       set(p.armL, -swing * 0.45); set(p.armR, swing * 0.45);
-      bob(p.body, Math.abs(Math.cos(phase * 2.2)) * 0.5); bob(p.head, Math.abs(Math.cos(phase * 2.2)) * 0.5);
+      torso(Math.abs(Math.cos(phase * 2.2)) * 0.5);
       set(p.head, 0);
       break;
     case 'work': {
       const w = Math.sin(t * 7);
       set(p.armR, -1.1 + w * 0.7); set(p.armL, -0.6 + w * 0.4);
       set(p.legL, 0); set(p.legR, 0); set(p.head, 0.25 + w * 0.05);
-      bob(p.body, -0.4 + w * 0.2); bob(p.head, -0.4 + w * 0.2);
+      torso(-0.4 + w * 0.2);
       break;
     }
     case 'dance': {
       const d = Math.sin(t * 6);
       set(p.armL, -2.4 + d * 0.5, -0.3); set(p.armR, -2.4 - d * 0.5, 0.3);
       set(p.legL, d * 0.4); set(p.legR, -d * 0.4);
-      bob(p.body, Math.abs(d) * 1); bob(p.head, Math.abs(d) * 1); set(p.head, 0, d * 0.2);
+      torso(Math.abs(d) * 1); set(p.head, 0, d * 0.2);
       break;
     }
     case 'sit':
       set(p.legL, -1.4); set(p.legR, -1.4);
       set(p.armL, -0.9 + Math.sin(t * 2) * 0.15); set(p.armR, -0.9 - Math.sin(t * 2.3) * 0.15);
-      bob(p.body, -2.6); bob(p.head, -2.6); set(p.head, Math.sin(t * 0.7) * 0.15);
+      torso(rig.spec.sitDy ?? -2.6); set(p.head, Math.sin(t * 0.7) * 0.15);
       break;
     case 'pray':
-      set(p.armL, -0.9, 0.35); set(p.armR, -0.9, -0.35); set(p.head, 0.35); set(p.legL, 0); set(p.legR, 0);
+      set(p.armL, -0.9, 0.35); set(p.armR, -0.9, -0.35); set(p.head, 0.35); set(p.legL, 0); set(p.legR, 0); torso(0);
       break;
     case 'cheer':
-      set(p.armL, -2.6, -0.2); set(p.armR, -2.6, 0.2); bob(p.body, Math.abs(Math.sin(t * 8)) * 1); bob(p.head, Math.abs(Math.sin(t * 8)) * 1);
+      set(p.armL, -2.6, -0.2); set(p.armR, -2.6, 0.2); torso(Math.abs(Math.sin(t * 8)) * 1);
       break;
     default: {
       const br = Math.sin(t * 1.6) * 0.04;
       set(p.legL, 0); set(p.legR, 0); set(p.armL, br); set(p.armR, -br); set(p.head, Math.sin(t * 0.6) * 0.08);
-      bob(p.body, Math.sin(t * 1.6) * 0.15); bob(p.head, Math.sin(t * 1.6) * 0.15);
+      torso(Math.sin(t * 1.6) * 0.15);
     }
   }
   if (rig.kind === 'zombie' && pose === 'walk') { set(p.armL, -1.5 + swing * 0.1); set(p.armR, -1.5 - swing * 0.1); }

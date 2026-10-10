@@ -25,6 +25,10 @@ sfaccettato, materiali opachi e luci calde), **Gothic Voxel** (la resa precedent
 |---|---|
 | ![](screenshots/F-zoom-massimo.jpg) | ![](screenshots/dettaglio-notte.jpg) |
 
+| Stagno animato (pesci a pancia in su, ninfee, rana, cerchi nell'acqua) | Presenze animate (carte, ballo col grammofono, palla-teschio) |
+|---|---|
+| ![](screenshots/stagno.jpg) | ![](screenshots/presenze-animate.jpg) |
+
 Documentazione della migrazione allo stile low-poly:
 [`docs/visual-migration-plan.md`](docs/visual-migration-plan.md) (audit, architettura,
 fasi, valutazione voxel vs low-poly vs GLB) e

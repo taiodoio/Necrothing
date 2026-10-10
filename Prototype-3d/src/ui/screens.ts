@@ -297,8 +297,22 @@ export function openPlayer(ui: UI) {
 export function openSettings(ui: UI) {
   const game = ui.game;
   const s = game.state.settings;
-  const seg = <T extends string>(value: T, options: Array<[T, string]>, on: (v: T) => void) =>
-    h('div', { class: 'seg' }, ...options.map(([v, label]) => h('button', { class: v === value ? 'active' : '', onclick: () => on(v) }, label)));
+  // il pulsante scelto si evidenzia subito (prima l'evidenza restava sul vecchio finché non si riapriva il pannello)
+  const seg = <T extends string>(value: T, options: Array<[T, string]>, on: (v: T) => void) => {
+    const box = h('div', { class: 'seg' });
+    for (const [v, label] of options) {
+      const btn = h('button', { class: v === value ? 'active' : '', 'aria-pressed': String(v === value), onclick: () => {
+        for (const b of Array.from(box.children)) { b.classList.toggle('active', b === btn); b.setAttribute('aria-pressed', String(b === btn)); }
+        on(v);
+        syncEdgeBlur();
+      } }, label);
+      box.append(btn);
+    }
+    return box;
+  };
+  const edgeBlur = h('input', { type: 'checkbox', checked: s.edgeBlur, disabled: s.quality === 'low', onchange: (e: Event) => game.setEdgeBlur((e.target as HTMLInputElement).checked) }) as HTMLInputElement;
+  // la sfocatura non è disponibile in qualità bassa: lo stato segue la qualità scelta
+  const syncEdgeBlur = () => { edgeBlur.disabled = s.quality === 'low'; edgeBlur.checked = s.edgeBlur; };
   const fileInput = h('input', {
     type: 'file', accept: '.necro3d,application/json', style: 'display:none',
     onchange: async (e: Event) => {
@@ -313,7 +327,7 @@ export function openSettings(ui: UI) {
     h('div', { class: 'setting' }, 'Vista', seg(s.camera, [['angled', 'Obliqua'], ['top', 'Dall’alto']], (v) => game.setCamera(v))),
     h('div', { class: 'setting' }, 'Qualità', seg(s.quality, [['low', 'Bassa'], ['medium', 'Media'], ['high', 'Alta']], (v) => game.setQuality(v))),
     h('div', { class: 'setting' }, 'Ora del giorno', seg<TimeOverride>(s.timeOverride, [['auto', 'Reale'], ['day', 'Giorno'], ['dusk', 'Sera'], ['night', 'Notte']], (v) => game.setTimeOverride(v))),
-    h('label', { class: 'setting' }, 'Sfocatura ai bordi', h('input', { type: 'checkbox', checked: s.edgeBlur, disabled: s.quality === 'low', onchange: (e: Event) => game.setEdgeBlur((e.target as HTMLInputElement).checked) })),
+    h('label', { class: 'setting' }, 'Sfocatura ai bordi', edgeBlur),
     h('label', { class: 'setting' }, 'Effetti meteo', h('input', { type: 'checkbox', checked: s.weatherEffects, onchange: (e: Event) => game.setWeatherEffects((e.target as HTMLInputElement).checked) })),
     h('label', { class: 'setting' }, 'Statistiche tecniche', h('input', { type: 'checkbox', checked: s.showDebug, onchange: (e: Event) => { s.showDebug = (e.target as HTMLInputElement).checked; game.afterChange(); } })),
     h('div', { class: 'section-title' }, 'Notifiche'),

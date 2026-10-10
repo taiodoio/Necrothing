@@ -84,7 +84,8 @@ function bracketFungus(lp: LP, x: number, y: number, z: number, yaw: number, s =
 /** Lettiera alla base: foglie secche, muschio, sassolini, funghetti. */
 function treeBase(lp: LP, radius: number, needles = false) {
   const r = lp.rng;
-  if (needles) lp.push([0, 0.004, 0], r.range(0, 6), -Math.PI / 2).plate(irregularShape(r, radius, 9), 0.006, '#3f3a2a', { ao: 0, vary: 0.1 }).pop();
+  // aghi caduti: poche chiazze basse, di un bruno-verde vicino al prato (un disco unico sembrava un vaso)
+  if (needles) for (let i = 0; i < 4; i++) { const a = r.range(0, 6.28), d = r.range(0.1, radius * 0.7); lp.push([Math.cos(a) * d, 0.003, Math.sin(a) * d], r.range(0, 6), -Math.PI / 2).plate(irregularShape(r, 0.16 + r.next() * 0.1, 7), 0.004, r.pick(['#4b4a30', '#55503a']), { ao: 0, vary: 0.1 }).pop(); }
   else deadLeaves(lp, -radius, -radius, radius, radius, 7);
   for (let i = 0; i < 3; i++) { const a = r.range(0, 6.28); moss(lp, Math.cos(a) * radius * 0.5, 0.02, Math.sin(a) * radius * 0.5, 0.09); }
   pebbles(lp, -radius, -radius, radius, radius, 2);
@@ -160,9 +161,10 @@ export function deadTreeLP(seed: number, autumn = true, scale = 1): LPModel {
 }
 
 /**
- * Pino a palchi: ogni palco ha un cono esterno scuro e uno interno più
- * chiaro con punte irregolari, pigne appese, corteccia, lettiera di aghi e
- * pigne a terra. `half` = mezzo secco con palchi mancanti.
+ * Pino a palchi: tronco visibile, ogni palco ha un cono esterno scuro e uno
+ * interno più chiaro con punte irregolari, pigne appese e a terra, lettiera
+ * di aghi. `half` = mezzo morto: i palchi bassi sono sbilanciati verso il
+ * lato vivo e sul lato morto restano rami secchi spogli; un palco è tutto spoglio.
  */
 export function pineLP(seed: number, half = false, scale = 1): LPModel {
   const lp = new LP(`lp:pine:${seed}:${half}`);
@@ -170,33 +172,54 @@ export function pineLP(seed: number, half = false, scale = 1): LPModel {
   lp.push([0, 0, 0], 0, 0, 0, scale);
   treeBase(lp, 0.55, true);
   for (let i = 0; i < 3; i++) { const a = r.range(0, 6.28), d = r.range(0.3, 0.7); lp.push([Math.cos(a) * d, 0.03, Math.sin(a) * d], r.range(0, 6), 1.4).lathe(0, -0.04, 0, [[0, 0], [0.03, 0.02], [0.028, 0.06], [0, 0.08]], 6, '#6b4e38', { jitter: 0 }).pop(); }
-  const h = 2.2 + r.next() * 0.6;
-  lp.cyl(0, 0, 0, 0.13, 0.05, h * 0.9, 6, LPC.woodDark, { vary: 0.1 });
-  for (let k = 0; k < 4; k++) { const a = (k / 4) * Math.PI * 2; lp.push([Math.cos(a) * 0.1, 0.05, Math.sin(a) * 0.1], -a).box(0, 0, 0, 0.03, 0.45, 0.02, '#3a2c22', { jitter: 0.004, ao: 0 }).pop(); }
+  const h = 2.5 + r.next() * 0.6;
+  // tronco visibile sotto il primo palco, con strisce di corteccia
+  lp.cyl(0, 0, 0, 0.13, 0.05, h * 0.92, 6, LPC.woodDark, { vary: 0.1 });
+  for (let k = 0; k < 4; k++) { const a = (k / 4) * Math.PI * 2; lp.push([Math.cos(a) * 0.1, 0.05, Math.sin(a) * 0.1], -a).box(0, 0, 0, 0.03, 0.5, 0.02, '#3a2c22', { jitter: 0.004, ao: 0 }).pop(); }
   const tiers = 5;
+  const y0 = 0.78, span = h - y0 - 0.4;
+  // il pino "mezzo morto" ha il lato morto (-z) spoglio sui palchi bassi
+  const deadSide = r.range(0, Math.PI * 2);
   for (let i = 0; i < tiers; i++) {
     const t = i / tiers;
-    const y = 0.45 + t * (h - 0.7);
-    const rad = (0.85 - t * 0.6) * (0.9 + r.next() * 0.2);
-    const dry = half && (i === 1 || (i === 3 && r.chance(0.5)));
-    if (half && i === 2 && r.chance(0.6)) {
-      for (let k = 0; k < 4; k++) lp.push([0, y + 0.1, 0], r.range(0, 6.28), 1.3).cyl(0, 0, 0, 0.025, 0.01, rad * 0.8, 3, LPC.woodDark, { jitter: 0.01 }).pop();
-      continue;
+    const y = y0 + t * span;
+    const rad = (0.82 - t * 0.6) * (0.92 + r.next() * 0.16);
+    const tall = (span / tiers) * 1.75;
+    lp.push([0, y, 0], deadSide);
+    const bare = half && i === 1;
+    const lopsided = half && i < 3 && !bare;
+    // nel pino mezzo morto i palchi bassi ingialliscono un po'
+    const outer = lopsided ? r.pick(['#3f4a30', '#4a5134']) : r.pick([LPC.pineDark, '#2b3f30']);
+    const inner = lopsided ? r.pick(['#5e6440', '#6b6a44']) : r.pick([LPC.pine, '#3d5a40', '#46613f']);
+    if (!bare) {
+      // palco verde; nel pino mezzo morto è sbilanciato verso il lato vivo
+      lp.push([0, 0, lopsided ? rad * 0.28 : 0], 0, 0, 0, lopsided ? [1, 1, 0.62] : 1);
+      lp.cyl(0, 0, 0, rad, rad * 0.12, tall, 9, outer, { vary: 0.1, ao: 0.35, jitter: 0.06 });
+      lp.cyl(0, tall * 0.18, 0, rad * 0.78, rad * 0.1, tall * 0.9, 7, inner, { vary: 0.12, ao: 0.2, jitter: 0.04 });
+      for (let k = 0; k < 5; k++) {
+        const a = (k / 5) * Math.PI * 2 + r.next();
+        lp.push([Math.cos(a) * rad * 0.8, 0.06, Math.sin(a) * rad * 0.8], -a, 0, -0.35).blob(0.04, 0, 0, 0.13, 0.035, 0.08, outer, { jitter: 0.012, vary: 0.1 }).pop();
+      }
+      if (r.chance(0.6)) lp.push([Math.cos(i * 2.1) * rad * 0.6, -0.02, Math.sin(i * 2.1) * rad * 0.6]).lathe(0, -0.09, 0, [[0, 0], [0.028, 0.02], [0.03, 0.06], [0.012, 0.09], [0, 0.095]], 6, '#6b4e38', { jitter: 0 }).pop();
+      lp.pop();
     }
-    const outer = dry ? r.pick([LPC.dryDark, '#6a5a3a', '#5e5434']) : r.pick([LPC.pineDark, '#2b3f30']);
-    const inner = dry ? '#7a6a44' : r.pick([LPC.pine, '#3d5a40', '#46613f']);
-    lp.push([0, y, 0], r.range(0, 1));
-    lp.cyl(0, 0, 0, rad, rad * 0.12, 0.62 - t * 0.12, 9, outer, { vary: 0.1, ao: 0.35, jitter: 0.07 });
-    lp.cyl(0, 0.1, 0, rad * 0.78, rad * 0.1, 0.55 - t * 0.1, 7, inner, { vary: 0.12, ao: 0.2, jitter: 0.05 });
-    // punte dei rami che ricadono
-    for (let k = 0; k < 5; k++) {
-      const a = (k / 5) * Math.PI * 2 + r.next();
-      lp.push([Math.cos(a) * rad * 0.8, 0.06, Math.sin(a) * rad * 0.8], -a, 0, -0.35).blob(0.04, 0, 0, 0.13, 0.035, 0.08, outer, { jitter: 0.012, vary: 0.1 }).pop();
+    if (bare || lopsided) {
+      // rami secchi spogli sul lato morto, con qualche ciuffo di aghi rossicci
+      const n = bare ? 6 : 3;
+      for (let k = 0; k < n; k++) {
+        // yaw π = lato morto (-z locale), opposto al palco sbilanciato verso +z
+        const yaw = bare ? (k / n) * Math.PI * 2 + r.next() * 0.5 : Math.PI + r.range(-0.9, 0.9);
+        const len = rad * (bare ? 0.95 : 1.05);
+        lp.push([0, 0.08 + r.range(0, 0.12), 0], yaw, 0, 0).push([0, 0, 0], 0, 1.2 + r.range(-0.15, 0.2));
+        lp.cyl(0, 0, 0, 0.03, 0.006, len, 4, LPC.woodDark, { jitter: 0.008 });
+        for (const f of [0.45, 0.75]) lp.push([0, len * f, 0], r.range(0, 6), 0.9).cyl(0, 0, 0, 0.012, 0.002, len * 0.3, 3, LPC.woodDark, { jitter: 0 }).pop();
+        if (r.chance(0.5)) lp.blob(0, len * 0.85, 0, 0.07, 0.03, 0.05, r.pick(['#7a5a34', '#6b5a3a']), { jitter: 0.01 });
+        lp.pop().pop();
+      }
     }
-    if (!dry && r.chance(0.6)) lp.push([Math.cos(i * 2.1) * rad * 0.6, -0.02, Math.sin(i * 2.1) * rad * 0.6]).lathe(0, -0.09, 0, [[0, 0], [0.028, 0.02], [0.03, 0.06], [0.012, 0.09], [0, 0.095]], 6, '#6b4e38', { jitter: 0 }).pop();
     lp.pop();
   }
-  lp.cyl(0, 0.45 + (h - 0.7), 0, 0.14, 0, 0.35, 5, half ? LPC.dryDark : LPC.pine, { vary: 0.1 });
+  lp.cyl(0, y0 + span, 0, 0.14, 0, 0.4, 5, LPC.pine, { vary: 0.1 });
   lp.pop();
   return lp.build();
 }

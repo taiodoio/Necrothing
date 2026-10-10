@@ -23,6 +23,7 @@ import { Actors, graveSpots } from '../view/Actors.ts';
 import { Atmosphere } from '../view/Atmosphere.ts';
 import { CameraRig } from '../view/CameraRig.ts';
 import { Effects } from '../view/Effects.ts';
+import { ForestMist, type MistMode } from '../view/ForestMist.ts';
 import { PostFX } from '../view/PostFX.ts';
 import { cellCenter, HALF, worldToCell, WorldView } from '../view/WorldView.ts';
 import { Input } from './Input.ts';
@@ -67,6 +68,8 @@ export class Game {
   private drag: { id: string; x: number; y: number; valid: boolean; grab: THREE.Vector3 } | null = null;
   private clock = new THREE.Clock();
   private phase: DayPhase = 'night';
+  /** Prototipo: nebbia nel bosco (?mist=layers|puffs), spenta di default. */
+  private mist: ForestMist | null = null;
   private liveTimer = 6;
   private liveSalt = 0;
   private phaseTimer = 0;
@@ -102,6 +105,8 @@ export class Game {
     this.effects = new Effects(this.scene, q);
     this.world = new WorldView(this.scene, this.atmosphere, this.state.settings.style);
     this.world.quality = q;
+    const mist = params.get('mist');
+    if (mist === 'layers' || mist === 'puffs') this.mist = new ForestMist(this.scene, mist as MistMode);
     const report = runCatchUp(this.state, now);
     R.afterAction(this.state, now);
     this.world.sync(this.state);
@@ -154,6 +159,7 @@ export class Game {
     this.actors.update(dt, t, graveSpots(this.state), (p) => this.groundAt(p));
     this.collectNearbyWisps();
     this.world.update(dt, t);
+    this.mist?.update(t, (this.scene.fog as THREE.Fog).color, this.phase === 'night' ? 1 : this.phase === 'dusk' ? 0.5 : 0);
     this.rig.update(dt);
     const radius = this.rig.groundRadius();
     this.atmosphere.focus(this.rig.target, radius, this.rig.distance);
@@ -661,6 +667,7 @@ export class Game {
     // si scorre fino a poco oltre il recinto e lo zoom massimo inquadra il
     // cimitero con una fascia sottile di bosco: il protagonista è il recinto
     this.rig.setWorld(HALF + FOREST_MARGIN, half + 3, half + 7);
+    this.mist?.setWorld(a, HALF, HALF + FOREST_MARGIN, (x, z) => this.world.heightAt(x, z));
   }
 
   private applyQuality(q: Quality) {

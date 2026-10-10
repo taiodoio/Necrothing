@@ -161,3 +161,20 @@ test('FireFlicker: deterministico per seme e indipendente tra sorgenti', () => {
   for (const t of ts) assert.ok(a.value(t) > 0.5 && a.value(t) < 1.5);
   assert.equal(new FireFlicker(5, 0).value(3), 1);
 });
+
+test('prototipi kawaii: ogni parte ha geometria e gli arti partono dentro il busto', async () => {
+  const { KAWAII, buildKawaiiPart } = await import('../src/render/lowpoly/kawaii.ts');
+  for (const [kind, spec] of Object.entries(KAWAII)) {
+    for (const part of Object.keys(spec.parts)) {
+      const m = buildKawaiiPart(kind, part);
+      assert.ok(m && Object.values(m.geometries).some((g) => g && g.getAttribute('position').count > 20), `${kind}:${part}`);
+      assert.ok(spec.pivots[part], `${kind}:${part} ha un perno`);
+    }
+    if (spec.parts.armL && !spec.quadruped && !spec.flier && !spec.ghost) {
+      const body = box(Object.values(buildKawaiiPart(kind, 'body').geometries)[0]);
+      const sx = spec.pivots.armR[0];
+      assert.ok(sx - 0.07 < body.max.x, `${kind}: spalla attaccata al busto`);
+      assert.ok(spec.pivots.legR[1] - spec.pivots.body[1] < 0.05, `${kind}: anche sotto il busto`);
+    }
+  }
+});

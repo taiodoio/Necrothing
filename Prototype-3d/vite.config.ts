@@ -10,6 +10,7 @@ export default defineConfig({
       input: {
         main: 'index.html',
         gallery: 'gallery.html',
+        lab: 'lab.html',
       },
       output: { manualChunks: { three: ['three'] } },
     },

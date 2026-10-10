@@ -63,6 +63,7 @@ function rebuild() {
     const g = instantiate(m);
     const cx = (i % cols) - (cols - 1) / 2, cz = Math.floor(i / cols) - (Math.ceil(items.length / cols) - 1) / 2;
     g.position.set(cx * cell, 0, cz * cell);
+    g.rotation.y = (Number(params.get('rot') ?? 0) * Math.PI) / 180;
     root.add(g);
     for (const a of m.lights) atmosphere.addAnchor(lightWorldPos(a).add(g.position), a);
   });
@@ -72,7 +73,7 @@ function rebuild() {
 
 function placeCamera() {
   const aspect = innerWidth / innerHeight;
-  const h = extent * (cam === 'top' ? 1.0 : 0.8);
+  const h = extent * (cam === 'top' ? 1.0 : 0.8) * Number(params.get('zoom') ?? 1);
   camera.left = -h * aspect; camera.right = h * aspect; camera.top = h; camera.bottom = -h;
   camera.updateProjectionMatrix();
   if (cam === 'top') { camera.up.set(0, 0, -1); camera.position.set(0, 60, 0); }

@@ -206,3 +206,27 @@ test('parti animate: stagno, presenze, natura; aggiornabili e deterministiche', 
   p1.update(2); p2.update(2);
   assert.deepEqual(p1.root.children[0].position.toArray(), p2.root.children[0].position.toArray());
 });
+
+test('nebbia del bosco: più fitta all\'alba e di notte, col meteo nebbioso entra nel recinto, veli per qualità', async () => {
+  const { ForestMist, mistTarget, mistLayers } = await import('../src/view/ForestMist.ts');
+  const d = (p, w = 'clear') => mistTarget(p, w).density;
+  assert.ok(d('day') < d('dusk') && d('dusk') < d('night') && d('day') < d('dawn'));
+  assert.ok(d('night', 'fog') > d('night') && d('night', 'storm') < d('night'));
+  assert.equal(mistTarget('day', 'clear').creep, 0);
+  assert.ok(mistTarget('day', 'fog').creep > 0, 'col meteo nebbia scavalca le inferriate');
+  assert.deepEqual(['low', 'medium', 'high'].map(mistLayers), [1, 2, 3]);
+  const scene = new THREE.Scene();
+  const mist = new ForestMist(scene, 'medium');
+  mist.setWorld(areaForLevel(0), 32, 44, () => 0);
+  assert.equal(mist.layerCount, 2);
+  mist.setConditions('night', 'clear', true);
+  mist.update(0.016, new THREE.Color('#151d29'));
+  assert.ok(mist.group.visible);
+  mist.setQuality('high');
+  assert.equal(mist.layerCount, 3);
+  mist.update(0.016, new THREE.Color('#151d29'));
+  const before = mist.group.children[0].material.uniforms.uOpacity.value;
+  mist.setConditions('day', 'clear');
+  for (let i = 0; i < 300; i++) mist.update(0.05, new THREE.Color('#8b928a'));
+  assert.ok(mist.group.children[0].material.uniforms.uOpacity.value < before, 'di giorno si dirada, gradualmente');
+});

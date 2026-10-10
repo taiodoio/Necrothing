@@ -29,6 +29,10 @@ sfaccettato, materiali opachi e luci calde), **Gothic Voxel** (la resa precedent
 |---|---|
 | ![](screenshots/stagno.jpg) | ![](screenshots/presenze-animate.jpg) |
 
+| Nebbia in movimento nel bosco (notte) |
+|---|
+| ![](screenshots/nebbia-notte.jpg) |
+
 Documentazione della migrazione allo stile low-poly:
 [`docs/visual-migration-plan.md`](docs/visual-migration-plan.md) (audit, architettura,
 fasi, valutazione voxel vs low-poly vs GLB) e

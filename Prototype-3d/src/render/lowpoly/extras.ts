@@ -507,10 +507,9 @@ export function npcHomeLP(v: PVis): LPModel {
     }
     case 'zombie_walker': {
       lp.blob(0, 0.0, 0, 0.42, 0.12, 0.42, LPC.soil, { detail: 1, jitter: 0.03 });
-      lp.push([0.05, 0.08, 0.1], 0, -0.2, 0.15);
-      lp.cyl(0, 0, 0, 0.04, 0.035, 0.3, 6, '#7c9a63', { jitter: 0 });
-      for (let i = 0; i < 4; i++) lp.push([-0.03 + i * 0.02, 0.32, 0], 0, 0, -0.3 + i * 0.2).cyl(0, 0, 0, 0.01, 0.008, 0.08, 4, '#7c9a63', { jitter: 0 }).pop();
-      lp.pop();
+      // la mano che saluta è una parte animata (animated.ts); qui terra smossa e lapide storta
+      lp.push([-0.25, 0.05, -0.32], 0.3, -0.25).extrude(roundTopShape(0.32, 0.42, 6), 0.08, LPC.stone, { bevel: 0.01, topTint: LPC.moss, topAmount: 0.4 }).pop();
+      for (let i = 0; i < 5; i++) lp.blob(r.range(-0.3, 0.3), 0.08, r.range(-0.2, 0.3), 0.06, 0.04, 0.06, LPC.soilDark, { jitter: 0.01 });
       pebbles(lp, -0.4, -0.4, 0.4, 0.4, 4);
       break;
     }
@@ -526,7 +525,8 @@ export function npcHomeLP(v: PVis): LPModel {
         lp.push([x, 0.52, 0], 0, Math.PI / 2).cyl(0, -0.3, 0, 0.028, 0.028, 0.6, 5, LPC.bone, { jitter: 0 }).pop();
         for (const z of [-0.28, 0.28]) lp.blob(x, 0.52, z, 0.045, 0.04, 0.045, LPC.bone, { jitter: 0 });
       }
-      skull(lp, r.range(-0.1, 0.1), 0, 0.1, 0.9);
+      // il teschio-palla è animato dai fantasmi (Actors)
+      for (const x of [-0.8, 0.8]) lp.box(x, 0.0, 0, 0.06, 0.012, 0.62, LPC.bone, { jitter: 0, ao: 0 });
       break;
     }
     case 'skeleton_pet': {

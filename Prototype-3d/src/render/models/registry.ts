@@ -81,6 +81,12 @@ export function placeableModel(v: PVis): Model {
   return build(v);
 }
 
+/** Inverso di placeableKey (galleria): null se la chiave non è di un oggetto. */
+export function placeableVis(key: string): PVis | null {
+  const m = key.match(/^p:([a-z_]+):(\d+):(\d+):([01])([01])([01])$/);
+  return m ? { type: m[1], variant: +m[2], seed: +m[3], dirty: m[4] === '1', broken: m[5] === '1', lit: m[6] === '1' } : null;
+}
+
 export function placeableKey(v: PVis): string {
   return `p:${v.type}:${v.variant}:${v.seed}:${+v.dirty}${+v.broken}${+v.lit}`;
 }

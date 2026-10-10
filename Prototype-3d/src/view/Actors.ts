@@ -12,6 +12,9 @@ import type { ArtStyle, Placed, SaveData } from '../game/state.ts';
 import type { Rect } from '../game/world.ts';
 import type { Atmosphere, AnchorHandle } from './Atmosphere.ts';
 import { animateRig, buildRig, rigLightPos, type CharacterKind, type Pose, type Rig } from './characters.ts';
+import { LP } from '../render/lowpoly/kit.ts';
+import { skull } from '../render/lowpoly/extras.ts';
+import { instantiate, LOWPOLY_MATERIALS } from '../render/modelCache.ts';
 import { findPath, type Cell } from './pathfinding.ts';
 import { cellCenter, HALF, worldToCell } from './WorldView.ts';
 
@@ -374,8 +377,12 @@ export class Actors {
       case 'ghosts_ball': {
         const g1 = add('ghost', 'goalie', new THREE.Vector3(-0.6, 0, 0)); g1.facing = Math.PI / 2;
         const g2 = add('ghost', 'goalie', new THREE.Vector3(0.6, 0, 0)); g2.facing = -Math.PI / 2;
-        const ball = new THREE.Mesh(new THREE.BoxGeometry(0.22, 0.22, 0.22), new THREE.MeshLambertMaterial({ color: '#d6cfbd' }));
-        ball.castShadow = true;
+        // la "palla" è un teschio (vedi descrizione del catalogo)
+        const ball = new THREE.Group();
+        const skullLP = new LP('ghostball:skull');
+        skull(skullLP, 0, -0.1, -0.02, 1);
+        const sk = skullLP.build();
+        ball.add(instantiate({ geometries: sk.geometries, lights: [], height: 0.25, mats: LOWPOLY_MATERIALS, dedicated: true }));
         this.group.add(ball);
         g1.extra = ball;
         break;
@@ -410,14 +417,17 @@ export class Actors {
         pr.facing = Math.atan2(-Math.sin(pr.angle), Math.cos(pr.angle));
         pr.pose = 'walk';
         break;
-      case 'goalie':
-        pr.pose = 'idle';
+      case 'goalie': {
+        // il teschio rimbalza da un fantasma all'altro: chi lo colpisce alza le braccia
+        const k = (Math.sin(t * 1.6) + 1) / 2;
+        const mine = pr.facing > 0 ? 1 - k : k;
+        pr.pose = mine > 0.85 ? 'cheer' : 'idle';
         if (pr.extra) {
-          const k = (Math.sin(t * 1.6) + 1) / 2;
           pr.extra.position.set(pr.home.x - 0.55 + k * 1.1, 0.35 + Math.abs(Math.sin(t * 3.2)) * 0.7, pr.home.z);
           pr.extra.rotation.set(t * 3, t * 2, 0);
         }
         break;
+      }
       case 'wander':
         if (!pr.path.length) {
           if (Math.random() < dt * 0.5) {

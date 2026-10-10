@@ -148,3 +148,33 @@ SaveData (unico stato) ──► WorldView / Actors (presentazione)
   lo stile è `lowpoly`, le luci portate arrivano dai modelli delle parti e i
   sobbalzi sono ridotti (gambe più corte). Il corteo funebre alterna due tipi di
   dolenti (`mourner`, `mournerB`). Il vecchio `lowpoly/characters.ts` è stato rimosso.
+
+## 10. Quarta passata: tetti, animazioni, natura
+
+- **Tetti**: il tetto del mausoleo copre tutta la cella (prima lasciava scoperto il
+  muro di fondo) e ha il timpano posteriore; l'edicola votiva ha cantonali più
+  piccoli, una cornice sotto il tetto e falde più ampie; il pozzo ha un tetto a due
+  falde vero (prima due lastre storte che non si incontravano); la tettoia del
+  portico del becchino è larga quanto la casa. La galleria ha `?quad` per vedere
+  ogni modello da 4 lati.
+- **Parti animate** (`render/lowpoly/animated.ts`, solo stile low-poly): gruppi di
+  mesh agganciati all'oggetto e aggiornati da `WorldView.update`. Stagno: pesci
+  morti a pancia in su che vanno alla deriva, ninfee fiorite, rana con la gola che
+  si gonfia, canne che ondeggiano, cerchi nell'acqua. Presenze: carta che vola tra
+  gli zombie al tavolo, disco che gira e note musicali dal grammofono, mano che
+  saluta dalla tomba, fuochi fatui attorno alla lapide; la palla dei fantasmi è un
+  teschio e chi lo colpisce alza le braccia. Natura: foglie che cadono dagli
+  alberi morti, lucciole su cespugli ed erba alta, farfalle sull'aiuola, fuochi
+  fatui sull'albero spettrale; bolle nella pozza tossica e nel fango, scintille dal
+  buco infernale.
+- **Personaggi seduti**: i kawaii restano all'altezza degli sgabelli; busto,
+  testa e braccia sobbalzano insieme (le braccia non si staccano mai).
+- **Natura più ricca**: chiome a ciuffi in due toni con foglie che sporgono;
+  alberi morti con strisce di corteccia, funghi a mensola, nodi, edera, cavità
+  (a volte con due occhietti), lettiera di foglie, muschio e funghetti; pini con
+  doppio cono per palco, punte che ricadono, pigne appese e a terra, lettiera di
+  aghi; cespugli con bacche, fiorellini o toni autunnali; erba alta con spighe,
+  margherite e un soffione; funghi velenosi più grandi (amanita, funghi luminosi,
+  cerchio delle fate); aiuola con digitali, tulipani e paletto col teschietto.
+  Costo: circa +15% di triangoli sulla vista standard (≈ 0,73M in SwiftShader).
+- Sviluppo: `necro.debugPlace(tipo, x, y, variante)` piazza un oggetto senza costi.

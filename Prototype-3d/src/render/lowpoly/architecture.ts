@@ -78,13 +78,13 @@ export function gable(lp: LP, x: number, d: number, y: number, rise: number, col
 }
 
 /** Cantonali: blocchi di pietra alternati agli spigoli di un muro. */
-export function quoins(lp: LP, w: number, d: number, h: number, y0: number, color: string = LPC.stoneLight) {
+export function quoins(lp: LP, w: number, d: number, h: number, y0: number, color: string = LPC.stoneLight, size = 1) {
   let y = y0, k = 0;
-  while (y < y0 + h - 0.05) {
-    const bh = 0.17;
+  while (y < y0 + h - 0.05 * size) {
+    const bh = Math.min(0.17 * size, y0 + h - y);
     const long = k % 2 === 0;
     for (const sx of [-1, 1]) for (const sz of [-1, 1]) {
-      const bx = long ? 0.22 : 0.13, bz = long ? 0.13 : 0.22;
+      const bx = (long ? 0.22 : 0.13) * size, bz = (long ? 0.13 : 0.22) * size;
       lp.box(sx * (w / 2 - bx / 2 + 0.015), y, sz * (d / 2 - bz / 2 + 0.015), bx, bh - 0.015, bz, color, { bevel: 0.012, vary: 0.08, ao: 0.1 });
     }
     y += bh; k++;
@@ -360,7 +360,7 @@ export function gravediggerHouseLP(v: PVis): LPModel {
   // la tettoia parte sotto la gronda del tetto principale e scende verso l'esterno
   for (const x of [-0.95, 0.95]) lp.cyl(x, 0, front + 0.7, 0.045, 0.04, 1.0, 5, LPC.woodDark, { vary: 0.12 });
   lp.box(0, 0.96, front + 0.7, 2.0, 0.05, 0.06, LPC.woodDark, { jitter: 0, vary: 0.1 });
-  lp.push([0, 1.1, front + 0.42], 0, 0.27).box(0, 0, 0, 2.2, 0.05, 0.86, '#2f3540', { bevel: 0.008, vary: 0.08 }).pop();
+  lp.push([0, 1.1, front + 0.42], 0, 0.27).box(0, 0, 0, 2.34, 0.05, 0.86, '#2f3540', { bevel: 0.008, vary: 0.08 }).pop();
   hangingLantern(lp, 0.95, 0.96, front + 0.7, lit, 0.9);
   chimney(lp, -w * 0.32, 0.2 + wallH + rise * 0.15, -d * 0.15, rise * 1.1);
   lp.pop();
@@ -388,18 +388,20 @@ export function mausoleumLP(v: PVis): LPModel {
   lp.box(0, y0, -0.15, 1.8, 1.45, 1.75, LPC.stone, { bevel: 0.02, vary: 0.05, ao: 0.25 });
   quoins(lp, 1.8, 1.75, 1.4, y0, LPC.stoneLight);
   for (const sx of [-1, 1]) column(lp, sx * 0.72, y0, 0.85, 1.38, 0.075);
-  lp.box(0, y0 + 1.45, 0.25, 1.95, 0.14, 1.95, LPC.stoneLight, { bevel: 0.015, ...o });
+  // trabeazione e tetto coprono tutta la cella, dal muro di fondo al portico
+  const zc = 0.025, rl = 2.15;
+  lp.box(0, y0 + 1.45, zc, 1.95, 0.14, rl, LPC.stoneLight, { bevel: 0.015, ...o });
   const tri = new THREE.Shape();
   tri.moveTo(-1.0, 0); tri.lineTo(1.0, 0); tri.lineTo(0, 0.55); tri.closePath();
   lp.push([0, y0 + 1.59, 1.0]).extrude(tri, 0.16, LPC.stone, { bevel: 0.01, ...o }).pop();
   lp.push([0, y0 + 1.73, 1.08]).add(new THREE.TorusGeometry(0.11, 0.025, 4, 10), LPC.stoneLight, { jitter: 0 }).pop();
   lp.blob(0, y0 + 1.73, 1.07, 0.08, 0.08, 0.02, lit ? '#3f8f7c' : LPC.charcoal, { bucket: lit ? 'glow' : 'solid', jitter: 0 });
-  lp.push([0, 0, 0.25]);
-  gableRoof(lp, 1.95, 2.0, y0 + 1.59, 0.55, LPC.stoneDark, 0.06, true);
-  frontGable(lp, -0.9, 1.95, y0 + 1.59, 0.55, LPC.stone, 0.12);
+  lp.push([0, 0, zc]);
+  gableRoof(lp, rl, 2.0, y0 + 1.59, 0.55, LPC.stoneDark, 0.06, true);
+  frontGable(lp, -rl / 2 + 0.07, 1.98, y0 + 1.59, 0.54, LPC.stone, 0.12);
   lp.pop();
-  lp.box(0, y0 + 2.14, 0.25, 0.06, 0.4, 0.06, LPC.stoneLight, { jitter: 0 });
-  lp.box(0, y0 + 2.38, 0.25, 0.24, 0.06, 0.06, LPC.stoneLight, { jitter: 0 });
+  lp.box(0, y0 + 2.14, zc, 0.06, 0.4, 0.06, LPC.stoneLight, { jitter: 0 });
+  lp.box(0, y0 + 2.38, zc, 0.24, 0.06, 0.06, LPC.stoneLight, { jitter: 0 });
   // piccoli gargoyle agli angoli del frontone
   for (const sx of [-1, 1]) {
     lp.push([sx * 0.92, y0 + 1.6, 1.05], sx * -0.4);
@@ -450,16 +452,12 @@ export function wellLP(v: PVis): LPModel {
   // manovella
   lp.box(0.66, 1.12, 0.06, 0.03, 0.03, 0.12, LPC.iron, { jitter: 0 });
   lp.box(0.66, 1.04, 0.12, 0.03, 0.16, 0.03, LPC.iron, { jitter: 0 });
-  // tettuccio storto a scandole con muschio
-  lp.push([0, 1.32, 0], 0.05, 0, 0.06);
-  for (const s of [-1, 1]) {
-    lp.push([0, 0.12, s * 0.2], 0, s * 0.55);
-    lp.box(0, 0, 0, 1.45, 0.04, 0.58, LPC.roofDark, { bevel: 0.008, vary: 0.1 });
-    for (let k = 0; k < 3; k++) lp.box(r.range(-0.02, 0.02), 0.03, (-0.2 + k * 0.2) * -s, 1.42, 0.025, 0.14, k % 2 ? LPC.roof : LPC.roofDark, { bevel: 0.004, ao: 0 });
-    moss(lp, r.range(-0.5, 0.5), 0.05, 0, 0.12);
-    lp.pop();
+  // tettuccio a due falde (colmo lungo x) appoggiato sui pali, con muschio
+  gableRoof(lp, 1.22, 0.86, 1.34, 0.34, LPC.roofDark, 0.1);
+  for (let i = 0; i < 3; i++) {
+    const s = i % 2 ? 1 : -1;
+    lp.push([r.range(-0.45, 0.45), 1.34 + 0.34 * 0.45 + 0.05, s * 0.43 * 0.55], 0, s * Math.atan2(0.34, 0.43)).blob(0, 0, 0, 0.1, 0.025, 0.07, LPC.moss, { jitter: 0.01, vary: 0.15, ao: 0 }).pop();
   }
-  lp.pop();
   hangingLantern(lp, -0.3, 1.25, 0.15, lit, 0.8);
   lp.box(0.12, 0.72, 0, 0.012, 0.4, 0.012, LPC.dry, { jitter: 0 });
   lp.lathe(0.12, 0.58, 0, [[0, 0], [0.07, 0], [0.09, 0.13], [0, 0.13]], 7, LPC.wood, { vary: 0.1 });
@@ -481,8 +479,10 @@ export function votiveStatueLP(v: PVis): LPModel {
   lp.box(0, 0.1, -0.05, 0.95, 0.1, 0.8, LPC.stone, { bevel: 0.015, ...o });
   const W = 0.7, D = 0.5, H = 1.3;
   lp.box(0, 0.2, -0.15, W, H, D, LPC.stoneWarm, { bevel: 0.02, ...o });
-  quoins(lp, W, D, H - 0.05, 0.2, LPC.stoneLight);
+  quoins(lp, W, D, H - 0.08, 0.2, LPC.stoneLight, 0.6);
   const zf = -0.15 + D / 2;
+  // cornice sotto il tetto: chiude in modo pulito la sommità dei muri
+  lp.box(0, 0.2 + H - 0.07, -0.15, W + 0.08, 0.08, D + 0.08, LPC.stoneLight, { bevel: 0.012, vary: 0.05 });
   // nicchia
   lp.push([0, 0.52, zf]);
   lp.plate(gothicArchShape(0.5, 0.74, 5), 0.03, LPC.stoneLight, { ao: 0.1 });
@@ -499,10 +499,10 @@ export function votiveStatueLP(v: PVis): LPModel {
   lp.pop();
   // tettuccio a due falde (colmo lungo z) con timpani e croce
   lp.push([0, 0, -0.15]);
-  gableRoof(lp, D + 0.1, W, 0.2 + H, 0.3, LPC.roofDark, 0.08, true);
-  for (const zz of [D / 2 - 0.05, -D / 2 + 0.05]) frontGable(lp, zz, W, 0.2 + H, 0.3, LPC.stoneWarm, 0.06);
-  lp.box(0, 0.2 + H + 0.3, 0, 0.04, 0.3, 0.04, LPC.iron, { jitter: 0 });
-  lp.box(0, 0.2 + H + 0.5, 0, 0.17, 0.035, 0.035, LPC.iron, { jitter: 0 });
+  gableRoof(lp, D + 0.12, W + 0.04, 0.2 + H, 0.32, LPC.roofDark, 0.12, true);
+  for (const zz of [D / 2 - 0.02, -D / 2 + 0.02]) frontGable(lp, zz, W + 0.04, 0.2 + H, 0.31, LPC.stoneWarm, 0.06);
+  lp.box(0, 0.2 + H + 0.32, 0, 0.04, 0.3, 0.04, LPC.iron, { jitter: 0 });
+  lp.box(0, 0.2 + H + 0.52, 0, 0.17, 0.035, 0.035, LPC.iron, { jitter: 0 });
   lp.pop();
   // davanzale con fiori, lumini ed ex-voto
   lp.box(0, 0.42, zf + 0.08, 0.6, 0.04, 0.18, LPC.stoneLight, { bevel: 0.008 });

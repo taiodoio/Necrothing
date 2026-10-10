@@ -17,6 +17,7 @@ import { fencePillar, fenceSegment, gate } from '../render/models/fence.ts';
 import { graveModel } from '../render/models/graves.ts';
 import { deadTree, pine, sceneryBush, sceneryFern, sceneryFlowers, sceneryLeaves, sceneryPebbles, sceneryRock, sceneryShrooms, sceneryTuft, sceneryWildGrass } from '../render/models/nature.ts';
 import { placeableKey, placeableModel, placeableSeed, type PVis } from '../render/models/registry.ts';
+import { createAnimated, type Animated } from '../render/lowpoly/animated.ts';
 import { P } from '../render/palette.ts';
 import { drawIcon } from '../ui/icons.ts';
 import type { Atmosphere, AnchorHandle } from './Atmosphere.ts';
@@ -48,6 +49,8 @@ export interface EntityView {
   anchors: AnchorHandle[];
   height: number;
   fp: [number, number];
+  /** Parti animate (stagno, case delle presenze…), solo stile low-poly. */
+  anim?: Animated;
 }
 
 interface WispView { group: THREE.Group; hitbox: THREE.Mesh; anchor: AnchorHandle; phase: number; base: THREE.Vector3 }
@@ -452,6 +455,10 @@ export class WorldView {
       const model = getModel(placeableKey(v), this.style, () => placeableModel(v), v.seed);
       e = this.createEntity(p.id, 'placeable', key, model, CATALOG[p.type].footprint, p.rot);
       if (p.type === 'sign') this.addSignText(e, p.text ?? '');
+      if (this.style === 'lowpoly') {
+        e.anim = createAnimated(v) ?? undefined;
+        if (e.anim) e.visual.add(e.anim.root);
+      }
     }
     e.fp = fp;
     const at = cellCenter(p.x, p.y, fp);
@@ -678,6 +685,7 @@ export class WorldView {
       w.group.scale.set(s, s * 1.05, s);
       this.atmosphere.moveAnchor(w.anchor, w.group.position);
     }
+    for (const e of this.entities.values()) e.anim?.update(t + e.group.position.x * 0.37);
     for (const e of this.entities.values()) if (e.badge) e.badge.position.y = e.height + 0.45 + Math.sin(t * 2.5 + e.group.position.x) * 0.06;
     if (this.selectionFrame.visible) {
       (this.selectionFrame.material as THREE.LineBasicMaterial).opacity = 0.55 + Math.sin(t * 4) * 0.4;

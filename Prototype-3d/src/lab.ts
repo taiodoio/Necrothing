@@ -1,16 +1,14 @@
-// Laboratorio personaggi (sviluppo): confronta i personaggi low-poly attuali
-// con i prototipi "kawaii" prima di collegarli al gioco. Stesse animazioni
-// del gioco (animateRig), stessi materiali e luci.
+// Laboratorio personaggi (sviluppo): i personaggi kawaii dello stile low-poly
+// con le animazioni del gioco, a confronto con lo stile voxel.
 // Apri /lab.html con `npm run dev`. Parametri: ?set=town|spooky|animals|funeral
 // &pose=idle|walk|work &time=day|night &compare=0|1 &t=<secondi, ferma il tempo> &zoom=
 
 import * as THREE from 'three';
 import type { DayPhase } from './game/time.ts';
-import { LOWPOLY_MATERIALS, applyStyleUniforms, getModel, instantiate, lightWorldPos } from './render/modelCache.ts';
+import { applyStyleUniforms, getModel, instantiate, lightWorldPos } from './render/modelCache.ts';
 import { voxelsPerWorldUnit } from './render/voxelMesher.ts';
 import { resolveLowpoly } from './render/lowpoly/index.ts';
-import { KAWAII, buildKawaiiPart, type KPart } from './render/lowpoly/kawaii.ts';
-import { animateRig, buildRig, type CharacterKind, type Pose, type Rig } from './view/characters.ts';
+import { animateRig, buildRig, rigLightPos, type CharacterKind, type Pose, type Rig } from './view/characters.ts';
 import { Atmosphere } from './view/Atmosphere.ts';
 
 const canvas = document.querySelector<HTMLCanvasElement>('#c')!;
@@ -53,34 +51,9 @@ interface Actor { rig: Rig; label: string; at: THREE.Vector3; pose: Pose; phase:
 let actors: Actor[] = [];
 let extent = 6;
 
-/** Rig "kawaii" con le stesse convenzioni di buildRig (perni in gruppi, base per il bob). */
-function kawaiiRig(kind: string): Rig {
-  const spec = KAWAII[kind];
-  const rootG = new THREE.Group();
-  const inner = new THREE.Group();
-  inner.scale.setScalar(spec.scale);
-  rootG.add(inner);
-  const parts: Rig['parts'] = {};
-  for (const [name, pivot] of Object.entries(spec.pivots) as [KPart, [number, number, number]][]) {
-    const m = buildKawaiiPart(kind, name);
-    if (!m) continue;
-    const g = instantiate({ geometries: m.geometries, lights: m.lights, height: 1, mats: LOWPOLY_MATERIALS, dedicated: true }, { castShadow: !spec.ghost });
-    const p = new THREE.Group();
-    p.position.set(pivot[0], pivot[1] + (spec.hover ?? 0), pivot[2]);
-    p.userData.base = p.position.clone();
-    p.userData.lights = m.lights;
-    p.add(g);
-    inner.add(p);
-    parts[name] = p;
-  }
-  const fakeSpec = { parts: [], bucket: spec.ghost ? 'ghost' : undefined, quadruped: spec.quadruped, flier: spec.flier };
-  return { kind: kind as CharacterKind, root: rootG, parts, lights: [], spec: fakeSpec } as unknown as Rig;
-}
-
-function oldRig(kind: string): Rig | null {
-  const k = kind === 'mournerB' ? 'mourner' : kind;
-  try { return buildRig(k as CharacterKind, 'lowpoly'); } catch { return null; }
-}
+const kawaiiRig = (kind: string) => buildRig(kind as CharacterKind, 'lowpoly');
+/** Riga di confronto: lo stesso personaggio nello stile voxel. */
+const oldRig = (kind: string) => buildRig(kind as CharacterKind, 'voxel');
 
 function addStatic(key: string, pos: THREE.Vector3, rot = 0) {
   const gen = resolveLowpoly(key);
@@ -131,9 +104,7 @@ function rebuild() {
   }
   // luci portate (lanterna del Custode, fantasmi): ancore alla posa iniziale
   root.updateMatrixWorld(true);
-  for (const a of actors) for (const part of Object.values(a.rig.parts)) {
-    for (const l of (part?.userData.lights ?? [])) atmosphere.addAnchor(lightWorldPos(l).applyMatrix4(part!.matrixWorld), l);
-  }
+  for (const a of actors) a.rig.lights.forEach((l, i) => atmosphere.addAnchor(rigLightPos(a.rig, i), l.anchor));
   placeCamera();
 }
 
@@ -162,7 +133,7 @@ function drawLabels() {
     labels.append(s);
   }
   if (compare && set !== 'funeral') {
-    for (const [txt, z] of [['dopo (kawaii)', 1.0], ['prima', -1.4]] as const) {
+    for (const [txt, z] of [['low-poly (kawaii)', 1.0], ['voxel', -1.4]] as const) {
       const xs = actors.filter((a) => Math.abs(a.at.z - z) < 0.01).map((a) => a.at.x);
       v.set(Math.min(...xs) - 0.2, 2.1, z).project(camera);
       const s = document.createElement('span');

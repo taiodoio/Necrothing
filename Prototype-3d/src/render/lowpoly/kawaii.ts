@@ -1,10 +1,10 @@
-// Personaggi "kawaii" (prototipo, non ancora collegato al gioco): proporzioni
+// Personaggi "kawaii" dello stile low-poly: proporzioni
 // stile vinile/funko — testa grande e squadrata con spigoli morbidi, corpo
 // piccolo, arti corti e tozzi che partono DENTRO il busto (spalle e anche
 // sferiche), così nelle animazioni non si staccano mai. Faccia espressiva:
 // occhi grandi con riflesso, guance rosa, bocca piccola.
-// Stesse parti del rig esistente (body, head, armL/R, legL/R): cambiano i
-// perni, che qui sono dichiarati per ogni tipo in unità mondo.
+// Stesse parti e stesse animazioni del rig (view/characters.ts): cambiano la
+// geometria e i perni, dichiarati qui per ogni tipo in unità mondo.
 
 import * as THREE from 'three';
 import { LP, type LPModel, type LPOpts } from './kit.ts';
@@ -532,4 +532,13 @@ export function buildKawaiiPart(kind: string, part: KPart): LPModel | null {
   const lp = new LP(`kawaii:${kind}:${part}`);
   build(lp);
   return lp.build();
+}
+
+/** Generatori per chiave "tipo:parte" (registrati dall'adapter low-poly). */
+export function kawaiiGenerators(): Record<string, () => LPModel> {
+  const out: Record<string, () => LPModel> = {};
+  for (const [kind, spec] of Object.entries(KAWAII)) {
+    for (const part of Object.keys(spec.parts) as KPart[]) out[`${kind}:${part}`] = () => buildKawaiiPart(kind, part)!;
+  }
+  return out;
 }

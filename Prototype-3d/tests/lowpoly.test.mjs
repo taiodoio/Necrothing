@@ -178,3 +178,16 @@ test('prototipi kawaii: ogni parte ha geometria e gli arti partono dentro il bus
     }
   }
 });
+
+test('rig low-poly: personaggi kawaii in gioco, con luci portate dai modelli', async () => {
+  const { buildRig } = await import('../src/view/characters.ts');
+  const { KAWAII } = await import('../src/render/lowpoly/kawaii.ts');
+  const c = buildRig('custode', 'lowpoly');
+  assert.equal(c.lights.length, 1, 'lanterna del Custode');
+  assert.deepEqual(c.parts.armR.position.toArray(), KAWAII.custode.pivots.armR, 'perni kawaii');
+  assert.equal(buildRig('ghost', 'lowpoly').lights.length, 1, 'bagliore del fantasma');
+  assert.equal(buildRig('ghost', 'lowpoly').spec.bucket, 'ghost');
+  for (const kind of ['mourner', 'mournerB', 'priest', 'gravedigger', 'zombie', 'skeleton', 'cat', 'crow', 'petDuck']) {
+    for (const style of ['lowpoly', 'voxel']) assert.ok(Object.keys(buildRig(kind, style).parts).length >= 4, `${kind} ${style}`);
+  }
+});

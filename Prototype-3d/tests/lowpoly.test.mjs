@@ -269,8 +269,14 @@ test('Custode personalizzabile: aspetto validato, chiave stabile, rig con tutte 
     assert.equal(rig.lights.length, 1, 'lanterna accesa');
   }
   assert.equal(normalizeLook({ beard: 'braid', mustache: 'handlebar' }).beard, 'braid');
+  // colore della barba: proprio, oppure (salvataggi vecchi) quello dei capelli
+  assert.equal(normalizeLook({ hairColor: '#e0c27a' }).beardColor, '#e0c27a');
+  assert.equal(normalizeLook({ hairColor: '#e0c27a', beardColor: '#8a8580' }).beardColor, '#8a8580');
+  assert.notEqual(lookKey({ ...DEFAULT_LOOK, beardColor: '#8a8580' }), lookKey(DEFAULT_LOOK));
   // con il cappello nessuna ciocca supera la tesa (o il bordo del berretto)
-  const { hairBuild, HAIR_CEILING } = await import('../src/render/lowpoly/kawaii.ts');
+  // (per i cappelli inclinati si misura rispetto al piano della tesa: i capelli
+  // possono seguirla da sotto, mai uscire sopra il suo spessore)
+  const { hairBuild, HAIR_CEILING, HAT_TILT } = await import('../src/render/lowpoly/kawaii.ts');
   const { LP } = await import('../src/render/lowpoly/kit.ts');
   for (const [hair] of LOOK_STYLES.hair) for (const hat of ['wide', 'top', 'beanie']) {
     const build = hairBuild(hair, '#6b4a33', hat);
@@ -278,8 +284,15 @@ test('Custode personalizzabile: aspetto validato, chiave stabile, rig con tutte 
     const lp = new LP('t');
     build(lp);
     const g = lp.build().geometries.solid;
-    g.computeBoundingBox();
-    assert.ok(g.boundingBox.max.y <= HAIR_CEILING[hat] + 0.012, `${hair} sotto ${hat}: ${g.boundingBox.max.y.toFixed(3)}`);
+    const tilt = HAT_TILT[hat];
+    const inv = tilt && new THREE.Matrix4().compose(new THREE.Vector3(0, tilt[0], 0), new THREE.Quaternion().setFromEuler(new THREE.Euler(tilt[1], 0, tilt[2], 'YXZ')), new THREE.Vector3(1, 1, 1)).invert();
+    const p = g.attributes.position, v = new THREE.Vector3();
+    let max = -Infinity;
+    for (let i = 0; i < p.count; i++) {
+      v.fromBufferAttribute(p, i);
+      max = Math.max(max, inv ? v.applyMatrix4(inv).y : v.y - HAIR_CEILING[hat]);
+    }
+    assert.ok(max <= (inv ? 0.03 : 0.012), `${hair} sotto ${hat}: ${max.toFixed(3)}`);
   }
   const sparkly = buildRig('custode', 'lowpoly', custom);
   assert.ok(sparkly.parts.head.children[0].children.some((m) => m.name === 'glow'), 'brillantini luminosi sul viso');

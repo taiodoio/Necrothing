@@ -44,6 +44,23 @@ function softBoxGeo(w: number, h: number, d: number, r: number): THREE.BufferGeo
   return g;
 }
 
+/**
+ * Lastra con gli angoli arrotondati visti dall'alto (raggio rc indipendente
+ * dall'altezza) e bordi appena smussati: capelli sotto cappelli tondi.
+ */
+function roundSlabGeo(w: number, d: number, h: number, rc: number): THREE.BufferGeometry {
+  const bv = Math.min(0.015, h / 3);
+  const iw = w - 2 * bv, id = d - 2 * bv, r = Math.min(rc, iw / 2 - 0.001, id / 2 - 0.001);
+  const s = new THREE.Shape();
+  const x0 = -iw / 2, x1 = iw / 2, y0 = -id / 2, y1 = id / 2;
+  s.moveTo(x0 + r, y0); s.lineTo(x1 - r, y0); s.absarc(x1 - r, y0 + r, r, -Math.PI / 2, 0, false);
+  s.lineTo(x1, y1 - r); s.absarc(x1 - r, y1 - r, r, 0, Math.PI / 2, false);
+  s.lineTo(x0 + r, y1); s.absarc(x0 + r, y1 - r, r, Math.PI / 2, Math.PI, false);
+  s.lineTo(x0, y0 + r); s.absarc(x0 + r, y0 + r, r, Math.PI, Math.PI * 1.5, false);
+  const g = new THREE.ExtrudeGeometry(s, { depth: Math.max(0.001, h - 2 * bv), bevelEnabled: true, bevelThickness: bv, bevelSize: bv, bevelSegments: 1, curveSegments: 3 });
+  return g.rotateX(-Math.PI / 2).translate(0, bv, 0);
+}
+
 function sbox(lp: LP, cx: number, y0: number, cz: number, w: number, h: number, d: number, r: number, color: string, o: Parameters<LP['add']>[2] = {}) {
   lp.add(softBoxGeo(w, h, d, r).translate(cx, y0 + h / 2, cz), color, { jitter: 0, vary: 0.04, ao: 0.08, ...o });
 }
@@ -105,6 +122,131 @@ function face(lp: LP, o: FaceOpts) {
 const HIP = 0.2, SHOULDER = 0.5, NECK = 0.56, ARM_X = 0.215, LEG_X = 0.085;
 const HEAD_W = 0.56, HEAD_H = 0.48, HEAD_D = 0.48;
 
+// ── Superficie della testa ──────────────────────────────────────────────
+// La testa (softBoxGeo) è un prisma dal profilo frontale arrotondato
+// (0,3 × 0,22, raggio 0,109) allargato di 0,13 in ogni direzione. Con la sua
+// distanza con segno si appoggiano barba, catenelle, cerotti e brillantini
+// esattamente sul volto invece che su un piano davanti.
+
+const HEAD_CY = -0.02 + HEAD_H / 2;
+const HEAD_BEVEL = 0.13;
+
+function headSdf(x: number, y: number, z: number): number {
+  const rc = 0.109;
+  const qx = Math.abs(x) - (0.15 - rc), qy = Math.abs(y - HEAD_CY) - (0.11 - rc);
+  const d2 = Math.hypot(Math.max(qx, 0), Math.max(qy, 0)) + Math.min(Math.max(qx, qy), 0) - rc;
+  const wz = Math.abs(z) - (HEAD_D / 2 - HEAD_BEVEL);
+  return Math.hypot(Math.max(d2, 0), Math.max(wz, 0)) + Math.min(Math.max(d2, wz), 0) - HEAD_BEVEL;
+}
+
+function headNormal(p: THREE.Vector3): THREE.Vector3 {
+  const e = 1e-3;
+  return new THREE.Vector3(
+    headSdf(p.x + e, p.y, p.z) - headSdf(p.x - e, p.y, p.z),
+    headSdf(p.x, p.y + e, p.z) - headSdf(p.x, p.y - e, p.z),
+    headSdf(p.x, p.y, p.z + e) - headSdf(p.x, p.y, p.z - e),
+  ).normalize();
+}
+
+/** Punto della testa nella direzione (θ attorno a y da +z, φ in alto), con la normale. */
+function headAt(theta: number, phi: number): { p: THREE.Vector3; n: THREE.Vector3 } {
+  const dir = new THREE.Vector3(Math.sin(theta) * Math.cos(phi), Math.sin(phi), Math.cos(theta) * Math.cos(phi));
+  let lo = 0, hi = 0.6;
+  for (let i = 0; i < 24; i++) {
+    const m = (lo + hi) / 2;
+    if (headSdf(dir.x * m, HEAD_CY + dir.y * m, dir.z * m) < 0) lo = m; else hi = m;
+  }
+  const p = new THREE.Vector3(dir.x * lo, HEAD_CY + dir.y * lo, dir.z * lo);
+  return { p, n: headNormal(p) };
+}
+
+/** Elevazione φ alla quale, nella direzione θ, la superficie della testa è all'altezza y. */
+function phiForY(theta: number, y: number): number {
+  let lo = -80 * DEG, hi = 88 * DEG;
+  for (let i = 0; i < 22; i++) { const m = (lo + hi) / 2; if (headAt(theta, m).p.y < y) lo = m; else hi = m; }
+  return (lo + hi) / 2;
+}
+
+/** Punto della faccia davanti a (x, y), con la normale. */
+function headFront(x: number, y: number): { p: THREE.Vector3; n: THREE.Vector3 } {
+  let lo = 0, hi = 0.4;
+  for (let i = 0; i < 22; i++) { const m = (lo + hi) / 2; if (headSdf(x, y, m) < 0) lo = m; else hi = m; }
+  const p = new THREE.Vector3(x, y, lo);
+  return { p, n: headNormal(p) };
+}
+
+/** Disegna un dettaglio piatto (sul piano xy, verso +z) adagiato sulla pelle. */
+function onSkin(lp: LP, at: { p: THREE.Vector3; n: THREE.Vector3 }, lift: number, rz: number, build: Build) {
+  const { p, n } = at;
+  lp.push([p.x + n.x * lift, p.y + n.y * lift, p.z + n.z * lift], Math.atan2(n.x, n.z), -Math.asin(THREE.MathUtils.clamp(n.y, -1, 1)), rz);
+  build(lp);
+  lp.pop();
+}
+
+/**
+ * Velo che aderisce alla testa: griglia (u ∈ −1..1 attorno al viso, v ∈ 0..1
+ * dal basso in alto) proiettata sulla superficie e sollevata di `thick(u, v)`
+ * lungo la normale. Lo spessore va a zero sui bordi, così il velo si fonde
+ * con la pelle (barbe che seguono mento, mandibola e basette).
+ */
+function headSheet(lp: LP, nu: number, nv: number, at: (u: number, v: number) => [number, number], thick: (u: number, v: number) => number, color: string, o: LPOpts = {}) {
+  const pos: number[] = [];
+  for (let j = 0; j <= nv; j++) for (let i = 0; i <= nu; i++) {
+    const u = -1 + (2 * i) / nu, v = j / nv;
+    const { p, n } = headAt(...at(u, v));
+    const t = 0.003 + thick(u, v);
+    pos.push(p.x + n.x * t, p.y + n.y * t, p.z + n.z * t);
+  }
+  const idx: number[] = [];
+  const k = (i: number, j: number) => j * (nu + 1) + i;
+  for (let j = 0; j < nv; j++) for (let i = 0; i < nu; i++) idx.push(k(i, j), k(i + 1, j), k(i + 1, j + 1), k(i, j), k(i + 1, j + 1), k(i, j + 1));
+  const g = new THREE.BufferGeometry();
+  g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+  g.setIndex(idx);
+  lp.add(g, color, { jitter: 0, vary: 0.05, ao: 0, ...o });
+}
+
+const DEG = Math.PI / 180;
+const smooth = (a: number, b: number, x: number) => { const t = THREE.MathUtils.clamp((x - a) / (b - a), 0, 1); return t * t * (3 - 2 * t); };
+
+/** Generatore pseudo-casuale deterministico (stessi brillantini a ogni build). */
+function prng(seed: number) {
+  let s = seed >>> 0;
+  return () => { s = (Math.imul(s ^ (s >>> 15), 2246822519) + 0x9e3779b9) >>> 0; return (s >>> 8) / 16777216; };
+}
+
+/**
+ * Posizioni dei brillantini sulla pelle del viso e dei lati della testa
+ * (lontano da occhi e bocca), già staccate di poco dalla superficie.
+ */
+export function sparklePoints(count = 46): Array<{ p: THREE.Vector3; n: THREE.Vector3; r: number }> {
+  const rnd = prng(7);
+  const out: Array<{ p: THREE.Vector3; n: THREE.Vector3; r: number }> = [];
+  for (let tries = 0; out.length < count && tries < count * 20; tries++) {
+    const at = headAt((rnd() * 2 - 1) * 105 * DEG, (-45 + rnd() * 75) * DEG);
+    const { p } = at;
+    if (p.z > 0.15 && Math.abs(Math.abs(p.x) - 0.11) < 0.085 && Math.abs(p.y - 0.18) < 0.085) continue; // occhi
+    if (p.z > 0.15 && Math.abs(p.x) < 0.06 && Math.abs(p.y - 0.095) < 0.035) continue; // bocca
+    out.push({ ...at, r: rnd() });
+  }
+  return out;
+}
+
+/** Stellina a quattro punte, piatta, adagiata sulla pelle. */
+function starFacet(size: number): THREE.BufferGeometry {
+  const s = new THREE.Shape();
+  const w = size * 0.28;
+  s.moveTo(0, size); s.lineTo(w, w); s.lineTo(size, 0); s.lineTo(w, -w); s.lineTo(0, -size); s.lineTo(-w, -w); s.lineTo(-size, 0); s.lineTo(-w, w); s.closePath();
+  return new THREE.ShapeGeometry(s);
+}
+
+/** Pelle brillantinata: stelline luminose sparse che seguono le curve della testa. */
+function skinGlitter(lp: LP) {
+  sparklePoints().forEach(({ p, n, r }, i) => {
+    onSkin(lp, { p, n }, 0.0025, r * Math.PI, (q) => q.add(starFacet(0.011 + r * 0.015), GLITTER[i % GLITTER.length], { bucket: 'glow', jitter: 0, ao: 0 }));
+  });
+}
+
 interface KH {
   coat: string; coat2: string; skin: string; pants: string; boots: string; arm?: string; cuff?: string;
   robe?: boolean;
@@ -113,16 +255,38 @@ interface KH {
   heldL?: Build; heldR?: Build; back?: Build; chest?: Build;
   /** Pelle "brillantinata": brillantini luminosi su viso e mani. */
   sparkle?: boolean;
+  /** Falda svasata sotto il busto: lunga (predefinita), corta o assente. */
+  skirt?: 'long' | 'short' | 'none';
+  /** Pantaloni rifiniti: piega davanti, risvolto sopra lo stivale, suola chiara. */
+  trousers?: boolean;
+  /** Colore della veste lunga (predefinito: coat2). */
+  robeColor?: string;
 }
 
 const GLITTER = ['#fff4fb', '#ffd6f0', '#d6f6ff', '#fff2c4'];
-function glitter(lp: LP, pts: Array<[number, number, number]>) {
-  pts.forEach(([x, y, z], i) => lp.blob(x, y, z, 0.011, 0.011, 0.006, GLITTER[i % GLITTER.length], { bucket: 'glow', jitter: 0, ao: 0 }));
+/** Brillantini sulla manina (sfera): stelline adagiate sulla superficie. */
+function handGlitter(lp: LP, c: [number, number, number], r: number) {
+  const rnd = prng(3);
+  for (let i = 0; i < 7; i++) {
+    const th = (rnd() * 2 - 1) * 2, ph = (rnd() * 1.4 - 0.7);
+    const n = new THREE.Vector3(Math.sin(th) * Math.cos(ph), Math.sin(ph), Math.cos(th) * Math.cos(ph));
+    const p = new THREE.Vector3(...c).addScaledVector(n, r * 0.97);
+    onSkin(lp, { p, n }, 0.004, rnd() * Math.PI, (q) => q.add(starFacet(0.008 + rnd() * 0.007), GLITTER[i % GLITTER.length], { bucket: 'glow', jitter: 0, ao: 0 }));
+  }
 }
 
 function kHumanoid(o: KH): KawaiiSpec {
   const arm = o.arm ?? o.coat;
-  const leg: Build = (lp) => {
+  const leg: Build = o.trousers ? (lp) => {
+    ball(lp, 0, -0.01, 0, 0.07, 0.06, 0.07, o.pants); // anca dentro il busto
+    lp.cyl(0, -0.15, 0, 0.064, 0.069, 0.15, 8, o.pants, { jitter: 0, vary: 0.03, ao: 0.08 });
+    lp.box(0, -0.075, 0.066, 0.008, 0.12, 0.006, shade(o.pants, -0.07), { jitter: 0, ao: 0 }); // piega
+    lp.cyl(0, -0.15, 0, 0.074, 0.073, 0.035, 8, shade(o.pants, -0.05), { jitter: 0, ao: 0 }); // risvolto
+    // stivaletto basso con punta arrotondata e suola chiara
+    sbox(lp, 0, -0.185, 0.02, 0.14, 0.075, 0.19, 0.04, o.boots);
+    sbox(lp, 0, -0.2, 0.02, 0.142, 0.018, 0.192, 0.008, '#4d4239'); // suola
+    ball(lp, 0, -0.165, 0.09, 0.05, 0.035, 0.035, shade(o.boots, 0.04)); // punta
+  } : (lp) => {
     ball(lp, 0, -0.01, 0, 0.07, 0.06, 0.07, o.pants); // anca dentro il busto
     lp.cyl(0, -0.17, 0, 0.064, 0.068, 0.17, 7, o.pants, { jitter: 0, vary: 0.04, ao: 0.1 });
     sbox(lp, 0, -0.2, 0.025, 0.145, 0.1, 0.2, 0.045, o.boots);
@@ -132,7 +296,7 @@ function kHumanoid(o: KH): KawaiiSpec {
     lp.cyl(0, -0.22, 0, 0.07, 0.068, 0.22, 7, arm, { jitter: 0, vary: 0.04, ao: 0.08 });
     lp.cyl(0, -0.235, 0, 0.074, 0.074, 0.04, 7, o.cuff ?? o.coat2, { jitter: 0, ao: 0 });
     ball(lp, 0, -0.275, 0.005, 0.064, 0.064, 0.064, o.skin); // manina
-    if (o.sparkle) glitter(lp, [[0.03, -0.25, 0.055], [-0.035, -0.29, 0.05], [0.0, -0.32, 0.045], [0.05, -0.29, 0.02]]);
+    if (o.sparkle) handGlitter(lp, [0, -0.275, 0.005], 0.064);
     held?.(lp);
   };
   return {
@@ -146,12 +310,13 @@ function kHumanoid(o: KH): KawaiiSpec {
       armL: armB(o.heldL), armR: armB(o.heldR),
       body: (lp) => {
         if (o.robe) {
-          lp.lathe(0, -0.195, 0, [[0.25, 0], [0.245, 0.06], [0.22, 0.2], [0.2, 0.36], [0.17, 0.39], [0, 0.4]], 10, o.coat2, { jitter: 0, vary: 0.04, ao: 0.15 });
+          lp.lathe(0, -0.195, 0, [[0.25, 0], [0.245, 0.06], [0.22, 0.2], [0.2, 0.36], [0.17, 0.39], [0, 0.4]], 10, o.robeColor ?? o.coat2, { jitter: 0, vary: 0.04, ao: o.robeColor ? 0.06 : 0.15 });
           sbox(lp, 0, -0.02, 0, 0.4, 0.39, 0.31, 0.09, o.coat);
         } else {
           sbox(lp, 0, -0.03, 0, 0.4, 0.4, 0.3, 0.09, o.coat);
-          // falda del cappotto appena svasata
-          lp.lathe(0, -0.07, 0, [[0.225, 0], [0.22, 0.05], [0.205, 0.12], [0, 0.12]], 10, o.coat2, { jitter: 0, vary: 0.04, ao: 0.12 });
+          // falda del cappotto appena svasata (corta: lascia vedere i pantaloni)
+          if ((o.skirt ?? 'long') === 'long') lp.lathe(0, -0.07, 0, [[0.225, 0], [0.22, 0.05], [0.205, 0.12], [0, 0.12]], 10, o.coat2, { jitter: 0, vary: 0.04, ao: 0.12 });
+          else if (o.skirt === 'short') lp.lathe(0, -0.05, 0, [[0.218, 0], [0.214, 0.035], [0.205, 0.07], [0, 0.07]], 10, o.coat2, { jitter: 0, vary: 0.04, ao: 0.12 });
         }
         o.chest?.(lp);
         o.back?.(lp);
@@ -160,7 +325,7 @@ function kHumanoid(o: KH): KawaiiSpec {
         sbox(lp, 0, -0.02, 0, HEAD_W, HEAD_H, HEAD_D, 0.13, o.skin, { ao: 0.04 });
         for (const s of [-1, 1]) ball(lp, s * (HEAD_W / 2 + 0.005), 0.18, 0, 0.035, 0.05, 0.035, o.skin); // orecchie
         face(lp, { z: HEAD_D / 2, y: 0.18, ...o.face });
-        if (o.sparkle) glitter(lp, [[-0.2, 0.08, 0.2], [0.21, 0.12, 0.19], [-0.15, 0.3, 0.235], [0.17, 0.27, 0.235], [0.0, 0.32, 0.242], [-0.24, 0.2, 0.15], [0.24, 0.05, 0.15], [0.09, 0.05, 0.242]]);
+        if (o.sparkle) skinGlitter(lp);
         o.hair?.(lp);
         o.hat?.(lp);
         o.extraHead?.(lp);
@@ -233,6 +398,8 @@ const shade = (c: string, k: number) => `#${new THREE.Color(c).offsetHSL(0, 0, k
 
 /** Altezza sotto cui devono restare i capelli quando c'è un cappello (tesa o bordo). */
 export const HAIR_CEILING: Record<HatStyle, number> = { wide: 0.385, top: 0.395, beanie: 0.285, none: 9 };
+/** Assetto (altezza, rotazioni x e z) dei cappelli inclinati: tesa e cilindro. */
+export const HAT_TILT = { wide: [0.39, -0.05, 0.08], top: [0.4, -0.04, -0.07] } as const;
 
 /**
  * Capelli (coordinate della testa: faccia su z = 0,24, sommità a y = 0,46).
@@ -247,68 +414,236 @@ export function hairBuild(style: HairStyle, c: string, hat: HatStyle): Build | u
     const bottom = y - ry;
     ball(lp, x, (top + bottom) / 2, z, rx, (top - bottom) / 2, rz, col);
   };
-  const cap = (lp: LP) => lump(lp, 0, 0.37, -0.02, 0.305, 0.15, 0.27);
-  const sides = (lp: LP, low = 0.2) => { for (const s of [-1, 1]) lump(lp, s * 0.27, low, -0.03, 0.06, 0.15, 0.19); };
-  const back = (lp: LP) => lump(lp, 0, 0.22, -0.2, 0.28, 0.2, 0.08);
-  const fringe = (lp: LP) => { if (0.33 + 0.1 < ceil) sbox(lp, 0, 0.33, 0.19, 0.46, 0.1, 0.08, 0.04, c); else lump(lp, 0, 0.32, 0.2, 0.22, 0.05, 0.05); };
+  const build = hairStyle(style, c, hat, lump);
+  const tilt = hat === 'wide' || hat === 'top' ? HAT_TILT[hat] : null;
+  if (!build || !tilt) return build;
+  // la tesa è inclinata: una fascia di capelli la segue da sotto, così tra
+  // tesa e capelli non resta una striscia di pelle sul lato rialzato
+  return (lp) => {
+    build(lp);
+    lp.push([0, tilt[0], 0], 0, tilt[1], tilt[2]);
+    lp.add(roundSlabGeo(0.6, 0.53, 0.05, 0.15).translate(0, -0.05, -0.005), c, { jitter: 0, vary: 0.04, ao: 0.05 }); // arriva fino alla fronte
+    lp.pop();
+  };
+}
+
+type Lump = (lp: LP, x: number, y: number, z: number, rx: number, ry: number, rz: number, col?: string) => void;
+
+function hairStyle(style: HairStyle, c: string, hat: HatStyle, lump: Lump): Build | undefined {
+  const ceil = HAIR_CEILING[hat];
+  /** Fin dove salgono i capelli: la sommità o, con il cappello, appena sotto la tesa. */
+  const topY = hat === 'none' ? 0.455 : ceil - 0.035;
+  const front = (th: number) => { const a = Math.abs(Math.atan2(Math.sin(th), Math.cos(th))); return a; }; // 0 davanti, π dietro
+
+  /**
+   * Calotta: velo sottile che avvolge tutta la testa (sommità, lati, nuca)
+   * aderendo alla superficie; davanti si ferma sotto la frangia, dietro scende
+   * fino a `backY`. Sotto le ciocche non resta mai pelle scoperta.
+   */
+  const cap = (lp: LP, backY: number, col = shade(c, -0.03)) => {
+    headSheet(lp, 28, 8,
+      (u, v) => {
+        const th = Math.PI + u * Math.PI;
+        // davanti mai sotto 0,27 (gli occhi arrivano a ~0,25)
+        const fy = Math.min(Math.max(0.27, Math.min(0.38, topY - 0.04)), topY);
+        const yb = THREE.MathUtils.lerp(fy, backY, smooth(0.3 * Math.PI, 0.62 * Math.PI, front(th)));
+        const pt = hat === 'none' ? 89 * DEG : phiForY(th, topY + 0.01);
+        return [th, THREE.MathUtils.lerp(phiForY(th, yb), pt, v)];
+      },
+      (_u, v) => 0.028 * (0.3 + 0.7 * smooth(0, 0.25, v)), col, { vary: 0.04 });
+  };
+
+  /**
+   * Ciocche che aderiscono alla testa, centrate in `center` (0 = fronte,
+   * π = nuca) su ±`span`: ognuna è un velo a sé, bombato al centro e sottile
+   * sui bordi, con la punta all'altezza `tip(t)` (t ∈ −1..1 lungo l'arco) e
+   * una tonalità appena diversa, così tra due ciocche resta un solco.
+   */
+  const locks = (lp: LP, o: { center: number; span: number; n: number; tip: (t: number) => number; depth: number; root?: number; seed?: number; col?: string; edgeTaper?: boolean; minTip?: number }) => {
+    const rnd = prng(o.seed ?? 11);
+    const lens = Array.from({ length: o.n }, () => 0.65 + rnd() * 0.35);
+    const root = o.root ?? 0.05;
+    const tipY = (t: number) => {
+      const sx = ((t + 1) / 2) * o.n, i = Math.min(o.n - 1, Math.floor(sx)), f = sx - Math.floor(sx);
+      const peak = Math.pow(1 - Math.abs(2 * f - 1), 0.75); // 1 al centro della ciocca, 0 tra due ciocche
+      return Math.max(o.minTip ?? 0, Math.min(topY - 0.05, o.tip(t) - o.depth * lens[i] * peak));
+    };
+    for (let i = 0; i < o.n; i++) {
+      const t0 = -1 + (2 * i) / o.n, t1 = -1 + (2 * (i + 1)) / o.n;
+      const tg = (u: number) => t0 + ((u + 1) / 2) * (t1 - t0);
+      headSheet(lp, 6, 6,
+        (u, v) => {
+          const th = o.center + tg(u) * o.span * DEG;
+          return [th, THREE.MathUtils.lerp(phiForY(th, tipY(tg(u))), hat === 'none' && o.center === Math.PI ? 62 * DEG : phiForY(th, topY), v)];
+        },
+        (u, v) => {
+          const bulge = Math.pow(Math.sin(((u + 1) / 2) * Math.PI), 0.7);
+          const edge = o.edgeTaper === false ? 1 : smooth(0, 0.22, 1 - Math.abs(tg(u)));
+          return root * (0.15 + 0.85 * bulge) * edge * (0.25 + 0.75 * smooth(0, 0.45, v)) * (1 - 0.8 * smooth(0.65, 1, v));
+        }, shade(o.col ?? c, [0, 0.035, -0.03, 0.015][(i + (o.seed ?? 0)) % 4]), { vary: 0.05 });
+    }
+  };
+
+  /** Frangia: ciocche sulla fronte; `sweep` la porta di lato, `base` è l'attaccatura. */
+  const fringe = (lp: LP, o: { n: number; base: number; depth: number; sweep?: number; wrap?: number; root?: number; seed?: number; col?: string }) => {
+    // sotto un cappello la frangia scende un po' (il cappello la schiaccia)
+    // ma le punte non scendono mai sugli occhi: col berretto non c'è posto e si omette
+    if (topY - 0.05 < 0.29) return;
+    const shift = Math.min(0, topY - 0.07 - (o.base + Math.abs(o.sweep ?? 0)));
+    locks(lp, { center: 0, span: o.wrap ?? 80, n: o.n, depth: o.depth, root: o.root, seed: o.seed, col: o.col, minTip: 0.28,
+      tip: (t) => o.base + shift + (o.sweep ?? 0) * t + 0.03 * smooth(0.75, 1, Math.abs(t)) });
+  };
+
+  /** Ciocche su lati e nuca: punte a `back` dietro e a `side` accanto al viso. */
+  const nape = (lp: LP, o: { n: number; back: number; side: number; depth?: number; span?: number; seed?: number }) =>
+    locks(lp, { center: Math.PI, span: o.span ?? 105, n: o.n, depth: o.depth ?? 0.05, seed: o.seed, edgeTaper: false,
+      tip: (t) => THREE.MathUtils.lerp(o.back, o.side, Math.abs(t) ** 1.5) });
+
+  /**
+   * Ciocche lunghe che pendono sotto la testa (lame affusolate), con la
+   * radice infilata sotto le ciocche della nuca e la punta un po' aperta.
+   */
+  const hanging = (lp: LP, o: { n: number; span: number; bottom: number; sideBottom: number; top?: number; seed?: number; lean?: number }) => {
+    const rnd = prng(o.seed ?? 4);
+    const yTop = o.top ?? 0.2;
+    const w = 0.13, thick = 0.026;
+    for (let i = 0; i < o.n; i++) {
+      const t = -1 + (2 * i) / (o.n - 1);
+      const th = Math.PI + t * o.span * DEG;
+      const { p, n } = headAt(th, phiForY(th, yTop));
+      const nh = new THREE.Vector3(n.x, 0, n.z).normalize();
+      const L = yTop - (THREE.MathUtils.lerp(o.bottom, o.sideBottom, Math.abs(t) ** 1.5) - rnd() * 0.04);
+      const shape = new THREE.Shape();
+      shape.moveTo(-w / 2, 0); shape.lineTo(w / 2, 0);
+      shape.quadraticCurveTo(w * 0.5, -L * 0.55, w * 0.08, -L);
+      shape.lineTo(-w * 0.04, -L + 0.01);
+      shape.quadraticCurveTo(-w * 0.5, -L * 0.5, -w / 2, 0);
+      const g = new THREE.ExtrudeGeometry(shape, { depth: thick - 0.01, bevelEnabled: true, bevelThickness: 0.005, bevelSize: 0.005, bevelSegments: 1, curveSegments: 3 });
+      g.translate(0, 0, 0.005);
+      lp.push([p.x + nh.x * 0.004, yTop, p.z + nh.z * 0.004], Math.atan2(nh.x, nh.z), -(o.lean ?? 0.12) - rnd() * 0.05, (rnd() - 0.5) * 0.08);
+      lp.add(g, shade(c, [0, 0.03, -0.035, 0.015][i % 4]), { jitter: 0, vary: 0.05, ao: 0.04 });
+      lp.pop();
+    }
+  };
+
   switch (style) {
     case 'none': return undefined;
     case 'tufts': return (lp) => {
-      for (const [x, y, r] of [[-0.2, 0.34, 0.07], [0.2, 0.33, 0.065], [-0.08, 0.36, 0.06], [0.07, 0.365, 0.055]] as const) lump(lp, x, y, 0.2, r, r * 0.8, 0.05);
-      for (const s of [-1, 1]) lump(lp, s * 0.27, 0.28, -0.02, 0.05, 0.08, 0.12);
-      if (hat === 'none') for (let i = 0; i < 3; i++) lp.push([-0.06 + i * 0.06, 0.45, 0], 0, 0, (i - 1) * 0.4).cyl(0, 0, 0, 0.035, 0, 0.1, 4, c, { jitter: 0 }).pop();
+      cap(lp, 0.22);
+      nape(lp, { n: 9, back: 0.24, side: 0.3, seed: 3 });
+      fringe(lp, { n: 5, base: 0.39, depth: 0.1, wrap: 82, seed: 3 }); // ciuffi a punta sulla fronte
+      if (hat === 'none') for (let i = 0; i < 3; i++) lp.push([-0.06 + i * 0.06, 0.47, 0.02], 0, 0, (i - 1) * 0.4).cyl(0, 0, 0, 0.035, 0, 0.1, 4, c, { jitter: 0 }).pop();
     };
-    case 'bob': return (lp) => { cap(lp); sides(lp); fringe(lp); back(lp); };
+    case 'bob': return (lp) => {
+      cap(lp, 0.1);
+      nape(lp, { n: 11, back: 0.1, side: 0.12, depth: 0.03, span: 112, seed: 5 });
+      fringe(lp, { n: 9, base: 0.34, depth: 0.035, wrap: 96, seed: 5 }); // frangia dritta appena smerlata
+    };
     case 'long': return (lp) => {
-      cap(lp); sides(lp, 0.16); fringe(lp); back(lp);
-      sbox(lp, 0, -0.16, -0.2, 0.5, Math.min(0.5, ceil + 0.155), 0.1, 0.05, c); // ricade sulla schiena, sotto l'eventuale cappello
-      for (const s of [-1, 1]) lump(lp, s * 0.26, 0.04, 0.04, 0.055, 0.17, 0.07);
+      cap(lp, 0.02);
+      // ciocche lunghe che ricadono sulla schiena e accanto al viso
+      hanging(lp, { n: 11, span: 108, bottom: -0.2, sideBottom: -0.04, seed: 8 });
+      nape(lp, { n: 11, back: 0.04, side: 0.08, depth: 0.04, span: 110, seed: 8 });
+      fringe(lp, { n: 5, base: 0.37, depth: 0.09, sweep: -0.05, wrap: 92, seed: 8 }); // frangia di lato
     };
     case 'curly': return (lp) => {
+      cap(lp, 0.12, shade(c, -0.05));
+      fringe(lp, { n: 7, base: 0.37, depth: 0.03, wrap: 90, seed: 2, col: shade(c, -0.04) });
       // riccioli su tutta la calotta: sommità, nuca, lati e frangia
       const pts: Array<[number, number, number]> = [];
-      for (let ix = -2; ix <= 2; ix++) for (let iz = -2; iz <= 2; iz++) pts.push([ix * 0.105, 0.45 - (Math.abs(ix) + Math.abs(iz)) * 0.012, iz * 0.095 - 0.02]);
-      for (let ix = -2; ix <= 2; ix++) for (const y of [0.1, 0.22, 0.34]) pts.push([ix * 0.11, y, -0.235]);
-      for (const sx of [-1, 1]) for (const z of [-0.16, -0.05, 0.06]) for (const y of [0.24, 0.36]) pts.push([sx * 0.285, y, z]);
-      for (let ix = -2; ix <= 2; ix++) pts.push([ix * 0.1, 0.4, 0.19]);
+      for (let ix = -2; ix <= 2; ix++) for (let iz = -2; iz <= 2; iz++) pts.push([ix * 0.11, 0.49 - (Math.abs(ix) + Math.abs(iz)) * 0.012, iz * 0.1 - 0.03]);
+      for (let ix = -2; ix <= 2; ix++) for (const y of [0.12, 0.23, 0.34]) pts.push([ix * 0.115, y, -0.265]);
+      for (const sx of [-1, 1]) for (const z of [-0.18, -0.07, 0.04, 0.14]) for (const y of [0.16, 0.27, 0.38]) pts.push([sx * 0.3, y, z]);
+      for (let ix = -2; ix <= 2; ix++) pts.push([ix * 0.105, 0.37, 0.25]);
       pts.forEach(([x, y, z], i) => lump(lp, x, y, z, 0.07 + (i % 3) * 0.008, 0.07, 0.07, i % 4 ? c : shade(c, -0.05)));
     };
-    case 'bun': return (lp) => { cap(lp); sides(lp); fringe(lp); back(lp); lump(lp, 0, hat === 'none' ? 0.52 : 0.27, -0.24, 0.11, 0.1, 0.11); };
+    // ciocche corte tirate di lato verso lo chignon
+    case 'bun': return (lp) => {
+      cap(lp, 0.18);
+      nape(lp, { n: 9, back: 0.2, side: 0.26, depth: 0.03, seed: 6 });
+      fringe(lp, { n: 4, base: 0.39, depth: 0.05, sweep: 0.03, wrap: 85, seed: 6 });
+      lump(lp, 0, hat === 'none' ? 0.54 : 0.27, -0.26, 0.11, 0.1, 0.11);
+    };
+    // spettinati: ciocche morbide che partono dal vortice in cima e cadono in
+    // direzioni diverse, qualcuna sollevata (non aculei tutt'attorno)
     case 'spiky': return (lp) => {
-      cap(lp); sides(lp); back(lp);
+      cap(lp, 0.18);
+      nape(lp, { n: 9, back: 0.22, side: 0.27, depth: 0.05, seed: 9 });
+      fringe(lp, { n: 5, base: 0.39, depth: 0.075, sweep: 0.025, wrap: 86, seed: 9 });
       if (hat === 'none') {
-        for (let i = 0; i < 6; i++) lp.push([-0.2 + i * 0.08, 0.36, 0.2], 0, 0.5, (i - 2.5) * 0.18).cyl(0, 0, 0, 0.05, 0, 0.12, 4, c, { jitter: 0 }).pop();
-        for (let i = 0; i < 7; i++) { const a = (i / 7) * Math.PI * 2; lp.push([Math.cos(a) * 0.15, 0.44, Math.sin(a) * 0.12], 0, Math.sin(a) * 0.6, -Math.cos(a) * 0.6).cyl(0, 0, 0, 0.06, 0, 0.16, 4, c, { jitter: 0 }).pop(); }
-      } else fringe(lp);
+        const rnd = prng(21);
+        // direzione (0 = avanti), lunghezza, quanto si solleva dalla testa, curva
+        // ciocche che partono dal vortice in cima e scendono aderendo alla testa,
+        // girando un po' (mulinello) e con le punte sollevate: arruffate, non aculei
+        const crown: Array<[number, number, number, number]> = [ // direzione, punta (φ°), larghezza (°), giro
+          [0.2, 34, 34, 0.5], [-0.9, 40, 30, 0.6], [1.3, 30, 32, 0.45], [2.4, 42, 34, 0.55], [-2.2, 36, 30, 0.5], [3.1, 30, 28, 0.4], [-0.25, 46, 26, -0.5],
+        ];
+        crown.forEach(([dir, tipPhi, width, swirl], i) => {
+          headSheet(lp, 4, 6,
+            (u, v) => {
+              const narrow = Math.sin(Math.max(0.12, v) * Math.PI * 0.62); // punta stretta, larga a metà, più stretta al vortice
+              return [dir + swirl * (1 - v) + u * width * DEG * narrow, THREE.MathUtils.lerp(tipPhi, 86, v) * DEG];
+            },
+            (u, v) => (0.018 + 0.04 * (1 - smooth(0, 0.6, v)) * (1 - 0.6 * Math.abs(u))) * smooth(0, 0.08, v + 0.02),
+            shade(c, [0.03, 0, -0.025, 0.015, -0.01][i % 5]), { vary: 0.05 });
+        });
+        // un solo ciuffo ribelle che si alza
+        const sh = new THREE.Shape();
+        sh.moveTo(-0.065, 0); sh.lineTo(0.065, 0);
+        sh.quadraticCurveTo(0.08, 0.1, 0.045, 0.16);
+        sh.quadraticCurveTo(-0.01, 0.1, -0.065, 0);
+        const g = new THREE.ExtrudeGeometry(sh, { depth: 0.02, bevelEnabled: true, bevelThickness: 0.007, bevelSize: 0.007, bevelSegments: 1, curveSegments: 4 });
+        lp.push([0.02, 0.47, -0.05], 2.6, Math.PI / 2 - 0.75, 0.15);
+        lp.add(g.translate(0, 0, -0.017), shade(c, 0.02), { jitter: 0, vary: 0.05, ao: 0.04 });
+        lp.pop();
+      }
     };
   }
 }
 
-/** Barba (corta, folta, con treccia) e baffi, nel colore dei capelli. */
+/**
+ * Barba (corta, folta, con treccia) e baffi. La barba è un velo che aderisce
+ * alla testa: segue mento, mandibola e basette, si assottiglia sui bordi e
+ * lascia libera la bocca; quella folta scende un po' sotto il mento.
+ */
 function facialHair(l: CustodeLook): Build {
-  const c = l.hairColor, z = HEAD_D / 2;
+  const c = l.beardColor;
   return (lp) => {
     if (l.beard === 'short') {
-      // barbetta che segue la mandibola, lascia libero il sorriso
-      for (let i = -3; i <= 3; i++) ball(lp, i * 0.06, 0.02 + Math.abs(i) * 0.025, z - 0.01 - Math.abs(i) * 0.012, 0.045, 0.04, 0.03, i % 2 ? c : shade(c, -0.04));
+      headSheet(lp, 16, 5,
+        (u, v) => [u * 94 * DEG, THREE.MathUtils.lerp(-58, THREE.MathUtils.lerp(-36, -4, smooth(0.5, 0.92, Math.abs(u))), v) * DEG],
+        (u, v) => 0.016 * smooth(0, 0.18, 1 - Math.abs(u)) * smooth(0, 0.3, v) * smooth(0, 0.3, 1 - v), c);
     } else if (l.beard === 'full' || l.beard === 'braid') {
-      ball(lp, 0, -0.01, z - 0.02, 0.24, 0.09, 0.08, c); // lascia libero il sorriso
-      for (const s of [-1, 1]) ball(lp, s * 0.2, 0.1, z - 0.07, 0.07, 0.1, 0.07, c); // basette
-      ball(lp, 0, -0.06, z - 0.01, 0.15, 0.07, 0.07, shade(c, -0.03));
+      headSheet(lp, 18, 7,
+        (u, v) => [u * 96 * DEG, THREE.MathUtils.lerp(-72, THREE.MathUtils.lerp(-34, 10, smooth(0.5, 0.92, Math.abs(u))), v) * DEG],
+        (u, v) => {
+          const edge = smooth(0, 0.2, 1 - Math.abs(u)) * smooth(0, 0.22, v) * smooth(0, 0.25, 1 - v);
+          const chin = (1 - Math.abs(u)) ** 2 * Math.exp(-(((v - 0.38) / 0.22) ** 2)); // ciuffo sotto il mento
+          return edge * (0.04 + 0.045 * chin);
+        }, c);
       if (l.beard === 'braid') {
-        // treccia che scende sul petto, con fermaglio nel colore dei dettagli
-        for (let i = 0; i < 4; i++) ball(lp, (i % 2 ? 0.012 : -0.012), -0.12 - i * 0.065, z - 0.0 - i * 0.004, 0.05 - i * 0.006, 0.04, 0.035, i % 2 ? c : shade(c, -0.06));
-        lp.cyl(0, -0.39, z - 0.01, 0.028, 0.028, 0.035, 6, l.accentColor, { jitter: 0 });
-        ball(lp, 0, -0.42, z - 0.01, 0.03, 0.035, 0.028, c);
+        // treccia che parte dal mento e scende sul petto, con fermaglio
+        const { p, n } = headAt(0, -50 * DEG);
+        const top = p.clone().addScaledVector(n, 0.05);
+        const end = new THREE.Vector3(0, -0.27, 0.2);
+        for (let i = 0; i < 4; i++) {
+          const q = top.clone().lerp(end, i / 3.4);
+          ball(lp, q.x + (i % 2 ? 0.01 : -0.01), q.y, q.z, 0.042 - i * 0.004, 0.036, 0.032, i % 2 ? c : shade(c, -0.06));
+        }
+        lp.cyl(end.x, end.y - 0.035, end.z - 0.004, 0.024, 0.024, 0.032, 6, l.accentColor, { jitter: 0 });
+        ball(lp, end.x, end.y - 0.06, end.z - 0.006, 0.026, 0.032, 0.024, c);
       }
     }
-    const my = 0.115; // sopra la bocca
-    if (l.mustache === 'thin') for (const s of [-1, 1]) lp.push([s * 0.035, my, z + 0.006], 0, 0, s * 0.25).box(0, 0, 0, 0.06, 0.016, 0.012, c, { jitter: 0, ao: 0 }).pop();
-    else if (l.mustache === 'bushy') { for (const s of [-1, 1]) ball(lp, s * 0.045, my, z + 0.005, 0.055, 0.028, 0.025, c); }
-    else if (l.mustache === 'handlebar') {
+    // baffi appena sopra la bocca, adagiati sulla faccia
+    const my = 0.118;
+    if (l.mustache === 'thin') {
+      for (const s of [-1, 1]) onSkin(lp, headFront(s * 0.038, my), 0.004, s * 0.25, (q) => q.box(0, 0, 0, 0.064, 0.016, 0.01, c, { jitter: 0, ao: 0 }));
+    } else if (l.mustache === 'bushy') {
+      for (const s of [-1, 1]) onSkin(lp, headFront(s * 0.046, my), 0.006, s * -0.12, (q) => ball(q, 0, 0, 0, 0.056, 0.028, 0.02, c));
+    } else if (l.mustache === 'handlebar') {
       for (const s of [-1, 1]) {
-        ball(lp, s * 0.04, my, z + 0.006, 0.045, 0.02, 0.02, c);
-        lp.add(new THREE.TorusGeometry(0.03, 0.009, 4, 8, Math.PI * 1.2).rotateZ(s > 0 ? -0.3 : Math.PI * -0.9).translate(s * 0.1, my + 0.02, z + 0.006), c, { jitter: 0, ao: 0 });
+        onSkin(lp, headFront(s * 0.04, my), 0.005, 0, (q) => ball(q, 0, 0, 0, 0.045, 0.02, 0.016, c));
+        onSkin(lp, headFront(s * 0.1, my + 0.02), 0.004, 0, (q) => q.add(new THREE.TorusGeometry(0.03, 0.009, 4, 8, Math.PI * 1.2).rotateZ(s > 0 ? -0.3 : Math.PI * -0.9), c, { jitter: 0, ao: 0 }));
       }
     }
   };
@@ -317,9 +652,9 @@ function facialHair(l: CustodeLook): Build {
 function hatBuild(style: HatStyle, c: string): Build | undefined {
   switch (style) {
     case 'none': return undefined;
-    case 'wide': return wideHat(c, shade(c, -0.12));
+    case 'wide': return wideHat(c, shade(c, -0.12), HAT_TILT.wide[2]);
     case 'top': return (lp) => {
-      lp.push([0, 0.4, 0], 0, -0.04, -0.07);
+      lp.push([0, HAT_TILT.top[0], 0], 0, HAT_TILT.top[1], HAT_TILT.top[2]);
       lp.cyl(0, 0, 0, 0.33, 0.33, 0.035, 14, c, { jitter: 0 });
       lp.cyl(0, 0.02, 0, 0.2, 0.21, 0.32, 12, c, { jitter: 0, vary: 0.05 });
       lp.cyl(0, 0.04, 0, 0.215, 0.21, 0.055, 12, shade(c, -0.15), { jitter: 0, ao: 0 });
@@ -338,25 +673,35 @@ function hatBuild(style: HatStyle, c: string): Build | undefined {
 /** Busto per vestito: sciarpa, mantella con fermaglio, salopette, maglione a righe. */
 function outfitChest(l: CustodeLook): Build {
   const acc = l.accentColor;
+  const z = 0.152; // faccia piatta davanti al busto
   switch (l.outfit) {
     case 'cloak': return (lp) => {
       lp.push([0, 0.37, 0]).add(new THREE.TorusGeometry(0.19, 0.05, 5, 12).rotateX(Math.PI / 2), shade(l.outfitColor, -0.06), { jitter: 0 }).pop();
+      // apertura della mantella al centro, con fermaglio in alto
+      lp.box(0, 0.12, z, 0.012, 0.24, 0.006, shade(l.outfitColor, -0.12), { jitter: 0, ao: 0 });
       ball(lp, 0, 0.33, 0.17, 0.035, 0.035, 0.02, acc);
       ball(lp, 0, 0.33, 0.19, 0.015, 0.015, 0.01, LPC.gold);
     };
     case 'overalls': return (lp) => {
-      sbox(lp, 0, 0.02, 0.148, 0.24, 0.2, 0.012, 0.01, shade(l.outfitColor, -0.04));
-      for (const s of [-1, 1]) { lp.box(s * 0.1, 0.2, 0.152, 0.05, 0.18, 0.01, l.outfitColor, { jitter: 0, ao: 0 }); ball(lp, s * 0.1, 0.22, 0.158, 0.016, 0.016, 0.008, LPC.gold); }
-      sbox(lp, 0.06, 0.05, 0.156, 0.07, 0.06, 0.008, 0.006, acc);
+      // camicia: colletto a punte sopra la pettorina
+      for (const s of [-1, 1]) lp.push([s * 0.05, 0.345, 0.14], 0, 0.5, s * -0.5).box(0, 0, 0, 0.07, 0.05, 0.012, '#e6dcc6', { jitter: 0, ao: 0 }).pop();
+      sbox(lp, 0, 0.0, z - 0.004, 0.24, 0.22, 0.012, 0.01, shade(l.outfitColor, -0.04)); // pettorina
+      lp.box(0, 0.16, z + 0.004, 0.08, 0.008, 0.004, shade(l.outfitColor, -0.12), { jitter: 0, ao: 0 }); // cucitura della tasca
+      for (const s of [-1, 1]) { lp.box(s * 0.1, 0.25, z, 0.05, 0.16, 0.01, l.outfitColor, { jitter: 0, ao: 0 }); ball(lp, s * 0.1, 0.2, z + 0.008, 0.016, 0.016, 0.008, LPC.gold); }
+      sbox(lp, 0.06, 0.05, z + 0.006, 0.07, 0.06, 0.008, 0.006, acc); // toppa
+      lp.box(-0.06, 0.06, z + 0.006, 0.04, 0.004, 0.003, shade(l.outfitColor, -0.15), { jitter: 0, ao: 0 }); // rammendo
     };
     case 'sweater': return (lp) => {
       // righe "dipinte" davanti e dietro, aderenti alla parte piatta del busto
-      for (const y of [0.04, 0.16, 0.28]) for (const s of [-1, 1]) lp.box(0, y, s * 0.151, 0.22, 0.045, 0.006, acc, { jitter: 0, ao: 0 });
+      for (const y of [0.07, 0.17, 0.27]) for (const s of [-1, 1]) lp.box(0, y, s * 0.151, 0.22, 0.045, 0.006, acc, { jitter: 0, ao: 0 });
       lp.cyl(0, 0.34, 0, 0.17, 0.15, 0.08, 12, shade(l.outfitColor, -0.05), { jitter: 0 });
     };
     default: return (lp) => {
       scarf(acc, shade(acc, 0.25))(lp);
-      for (const y of [0.06, 0.16]) ball(lp, 0.05, y, 0.155, 0.014, 0.014, 0.008, LPC.gold);
+      // abbottonatura al centro: listino, tre bottoni allineati, due tasche con patta
+      lp.box(0, 0.11, z, 0.03, 0.26, 0.005, shade(l.outfitColor, -0.05), { jitter: 0, ao: 0 });
+      for (const y of [0.02, 0.1, 0.18]) ball(lp, 0, y, z + 0.006, 0.016, 0.016, 0.008, LPC.gold);
+      for (const s of [-1, 1]) lp.box(s * 0.105, 0.05, z + 0.002, 0.07, 0.022, 0.008, shade(l.outfitColor, -0.09), { jitter: 0, ao: 0 });
     };
   }
 }
@@ -369,7 +714,20 @@ function faceDetails(l: CustodeLook): Build {
     if (l.glasses === 'round' || l.glasses === 'monocle') {
       for (const s of l.glasses === 'monocle' ? [1] : [-1, 1]) lp.add(new THREE.TorusGeometry(0.07, 0.01, 4, 12).translate(s * 0.11, 0.18, z), frame, { jitter: 0, ao: 0 });
       if (l.glasses === 'round') lp.box(0, 0.19, z, 0.06, 0.012, 0.01, frame, { jitter: 0, ao: 0 });
-      else lp.push([0.17, 0.12, z], 0, 0, 0.4).cyl(0, -0.22, 0, 0.005, 0.005, 0.22, 3, LPC.gold, { jitter: 0 }).pop();
+      else {
+        // catenella: scende lungo la guancia, segue la mandibola e ricade sul petto
+        const lift = (at: { p: THREE.Vector3; n: THREE.Vector3 }, d: number) => at.p.clone().addScaledVector(at.n, d);
+        const curve = new THREE.CatmullRomCurve3([
+          new THREE.Vector3(0.11 + 0.07 * Math.cos(-0.9), 0.18 + 0.07 * Math.sin(-0.9), z - 0.004),
+          lift(headFront(0.19, 0.08), 0.012),
+          lift(headAt(52 * DEG, -40 * DEG), 0.012),
+          lift(headAt(48 * DEG, -68 * DEG), 0.014),
+          new THREE.Vector3(0.15, -0.1, 0.19),
+          new THREE.Vector3(0.09, -0.16, 0.19),
+        ]);
+        lp.add(new THREE.TubeGeometry(curve, 24, 0.0055, 3, false), LPC.gold, { jitter: 0, ao: 0 });
+        ball(lp, 0.09, -0.17, 0.19, 0.016, 0.016, 0.01, LPC.gold);
+      }
     } else if (l.glasses === 'square') {
       for (const s of [-1, 1]) {
         lp.box(s * 0.11, 0.24, z, 0.15, 0.016, 0.012, frame, { jitter: 0, ao: 0 });
@@ -378,12 +736,15 @@ function faceDetails(l: CustodeLook): Build {
       }
       lp.box(0, 0.2, z, 0.06, 0.014, 0.01, frame, { jitter: 0, ao: 0 });
     }
-    if (l.freckles) for (const s of [-1, 1]) for (const [x, y] of [[0.12, 0.13], [0.15, 0.115], [0.135, 0.095], [0.165, 0.135]] as const) lp.blob(s * x, y, HEAD_D / 2 + 0.003, 0.008, 0.008, 0.004, shade(l.skin, -0.2), { jitter: 0, ao: 0 });
+    if (l.freckles) for (const s of [-1, 1]) for (const [x, y] of [[0.12, 0.13], [0.15, 0.115], [0.135, 0.095], [0.165, 0.135]] as const) {
+      onSkin(lp, headFront(s * x, y), 0.001, 0, (q) => q.blob(0, 0, 0, 0.008, 0.008, 0.003, shade(l.skin, -0.2), { jitter: 0, ao: 0 }));
+    }
     if (l.bandaid) {
-      lp.push([-0.13, 0.33, HEAD_D / 2 + 0.004], 0, 0, 0.5);
-      sbox(lp, 0, -0.018, 0, 0.11, 0.036, 0.008, 0.008, '#e8c9a0');
-      lp.box(0, -0.012, 0.005, 0.035, 0.024, 0.004, '#d9b48a', { jitter: 0, ao: 0 });
-      lp.pop();
+      // sulla guancia (la fronte è coperta dai capelli), adagiato sulla curva
+      onSkin(lp, headFront(-0.16, 0.07), 0.003, 0.45, (q) => {
+        sbox(q, 0, -0.018, 0, 0.11, 0.036, 0.008, 0.008, '#e8c9a0');
+        q.box(0, -0.012, 0.005, 0.035, 0.024, 0.004, '#d9b48a', { jitter: 0, ao: 0 });
+      });
     }
   };
 }
@@ -392,7 +753,13 @@ function faceDetails(l: CustodeLook): Build {
 export function custodeSpec(l: CustodeLook): KawaiiSpec {
   const coat = l.outfitColor;
   return kHumanoid({
-    coat, coat2: shade(coat, -0.07), skin: l.skin, pants: l.outfit === 'overalls' ? coat : '#3a3230', boots: '#2b211c',
+    coat, coat2: shade(coat, -0.07), skin: l.skin, boots: '#3a2a22',
+    // pantaloni che si staccano da stivali e giacca: grigio fumo col cappotto,
+    // tela blu col maglione, il tessuto della salopette
+    pants: l.outfit === 'overalls' ? coat : l.outfit === 'sweater' ? '#46566a' : '#57524c',
+    skirt: l.outfit === 'coat' ? 'short' : l.outfit === 'cloak' ? 'long' : 'none',
+    trousers: true,
+    robeColor: l.outfit === 'cloak' ? shade(coat, -0.03) : undefined,
     arm: l.outfit === 'overalls' ? '#d8cdb8' : undefined, cuff: l.outfit === 'sweater' ? l.accentColor : l.outfit === 'overalls' ? '#c4b8a0' : undefined,
     robe: l.outfit === 'cloak',
     face: { mouth: 'smile', eye: l.eyes },

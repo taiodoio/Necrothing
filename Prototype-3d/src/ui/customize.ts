@@ -5,8 +5,48 @@
 import * as THREE from 'three';
 import { DEFAULT_LOOK, LOOK_COLORS, LOOK_STYLES, type CustodeLook } from '../game/look.ts';
 import { animateRig, buildRig, type Rig } from '../view/characters.ts';
+import { LP } from '../render/lowpoly/kit.ts';
+import { GRASS, LPC } from '../render/lowpoly/palette.ts';
+import { flower, grassTuft, moss, pebbles } from '../render/lowpoly/details.ts';
+import { mushroom } from '../render/lowpoly/nature.ts';
+import { instantiate, LOWPOLY_MATERIALS, type CachedModel } from '../render/modelCache.ts';
 import { h, openDrawer } from './dom.ts';
 import type { UI } from './UI.ts';
+
+let groundModel: CachedModel | null = null;
+
+/**
+ * Zolla di prato sotto il Custode: bordo di terra, ciuffi d'erba, fiorellini,
+ * sassi, muschio e funghetti tutt'intorno (il centro resta libero per i piedi).
+ */
+function previewGround(): CachedModel {
+  if (groundModel) return groundModel;
+  const lp = new LP('preview:prato');
+  const r = lp.rng;
+  lp.cyl(0, -0.09, 0, 0.6, 0.56, 0.08, 14, '#4b3a2c', { jitter: 0.01, vary: 0.08 });
+  lp.cyl(0, -0.012, 0, 0.6, 0.6, 0.016, 14, GRASS[1], { jitter: 0.006, vary: 0.1, ao: 0 });
+  /** Punto sull'anello libero attorno al personaggio. */
+  const ring = (a: number, d0 = 0.27, d1 = 0.54): [number, number] => { const d = r.range(d0, d1); return [Math.cos(a) * d, Math.sin(a) * d]; };
+  // erba più bassa sul davanti (verso la camera), così piedi e pantaloni restano in vista
+  for (let i = 0; i < 16; i++) {
+    const a = (i / 16) * Math.PI * 2 + r.range(-0.2, 0.2);
+    const [x, z] = ring(a, 0.33, 0.56);
+    const front = Math.max(0, Math.cos(a - Math.atan2(2.9, 1.9)));
+    grassTuft(lp, x, z, (0.9 + r.next() * 0.5) * (1 - 0.5 * front));
+  }
+  for (let i = 0; i < 7; i++) { const [x, z] = ring(r.range(0, Math.PI * 2), 0.3, 0.52); flower(lp, x, z, r.pick(LPC.flowers), 0.08 + r.next() * 0.07); }
+  pebbles(lp, -0.5, 0.2, -0.3, 0.45, 3);
+  pebbles(lp, 0.3, -0.5, 0.5, -0.3, 3);
+  lp.blob(-0.42, 0.03, -0.25, 0.07, 0.05, 0.06, LPC.stone, { vary: 0.1 }); // sasso più grande
+  moss(lp, -0.42, 0.06, -0.25, 0.05);
+  moss(lp, 0.35, 0.004, 0.32, 0.07);
+  mushroom(lp, 0.4, -0.18, 0.09, '#a8322e', false, 0.05);
+  mushroom(lp, 0.47, -0.08, 0.06, '#c9a27a', false, 0.035);
+  mushroom(lp, -0.25, 0.42, 0.07, '#8e3a5a', false, 0.04);
+  const { geometries, lights } = lp.build();
+  groundModel = { geometries, lights, height: 0.2, mats: LOWPOLY_MATERIALS, dedicated: true };
+  return groundModel;
+}
 
 /** Piccola scena separata con il Custode che ruota lentamente. */
 class CustodePreview {
@@ -29,10 +69,9 @@ class CustodePreview {
     const sun = new THREE.DirectionalLight('#fff0d8', 2.4);
     sun.position.set(3, 5, 4);
     this.scene.add(sun);
-    const ground = new THREE.Mesh(new THREE.CircleGeometry(0.75, 24).rotateX(-Math.PI / 2), new THREE.MeshStandardMaterial({ color: '#3d5236', roughness: 1 }));
-    this.scene.add(ground);
+    this.scene.add(instantiate(previewGround(), { castShadow: false }));
     this.camera.position.set(1.9, 1.75, 2.9);
-    this.camera.lookAt(0, 0.72, 0);
+    this.camera.lookAt(0, 0.68, 0);
     this.setLook(look);
     const loop = () => {
       this.raf = requestAnimationFrame(loop);
@@ -118,6 +157,8 @@ export function openCustomize(ui: UI) {
     options('beard'),
     h('div', { class: 'muted' }, 'Baffi'),
     options('mustache'),
+    h('div', { class: 'muted' }, 'Colore di barba e baffi'),
+    swatches('beardColor'),
     h('div', { class: 'section-title' }, 'Cappello'),
     options('hat'),
     swatches('hatColor'),

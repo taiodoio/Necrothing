@@ -269,8 +269,14 @@ button.slot:active, .icon-btn:active, .ctx-actions button:active, .big-btn:activ
 }
 
 /* Personalizzazione del Custode */
-.look-stage { display: grid; place-items: center; margin: 0 0 6px; }
-.look-preview { width: 240px; height: 270px; background: radial-gradient(circle at 50% 60%, #2d3a2a, #15181d 70%); }
+/* anteprima sempre visibile in alto mentre si scorrono le opzioni; lo sfondo
+   sfuma nel colore del pannello (niente bordi del canvas) */
+.look-stage {
+  position: sticky; top: -10px; z-index: 2; display: grid; place-items: center; margin: -10px -10px 8px;
+  background: radial-gradient(ellipse 60% 75% at 50% 62%, #2d3a2a, rgba(22, 25, 32, 0) 100%), #161920;
+  border-bottom: 2px solid #2b2418; box-shadow: 0 6px 8px -6px rgba(0, 0, 0, 0.7);
+}
+.look-preview { display: block; height: min(270px, 30vh); width: auto; aspect-ratio: 240 / 270; background: transparent; }
 .look-opts { display: flex; flex-wrap: wrap; gap: 6px; margin: 4px 0 8px; }
 .look-opts button { min-height: 36px; padding: 4px 10px; font-size: 13px; border: 2px solid #07080b; background: #1d2024; color: inherit; }
 .look-opts button.active { background: #4a3a1d; color: var(--gold-bright); border-color: var(--gold); }

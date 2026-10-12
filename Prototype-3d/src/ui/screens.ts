@@ -315,12 +315,15 @@ export function openSettings(ui: UI) {
   const edgeBlur = h('input', { type: 'checkbox', checked: s.edgeBlur, disabled: s.quality === 'low', onchange: (e: Event) => game.setEdgeBlur((e.target as HTMLInputElement).checked) }) as HTMLInputElement;
   // la sfocatura non è disponibile in qualità bassa: lo stato segue la qualità scelta
   const syncEdgeBlur = () => { edgeBlur.disabled = s.quality === 'low'; edgeBlur.checked = s.edgeBlur; };
+  // niente filtro "accept": iOS non conosce l'estensione .necro3d e mostrerebbe
+  // il backup in grigio, non selezionabile. Il contenuto viene comunque validato.
   const fileInput = h('input', {
-    type: 'file', accept: '.necro3d,application/json', style: 'display:none',
+    type: 'file', style: 'display:none',
     onchange: async (e: Event) => {
       const f = (e.target as HTMLInputElement).files?.[0];
       if (!f) return;
       try { game.replaceState(await importBackup(await f.text())); toast('Backup ripristinato.'); closeDrawer(); } catch (err) { toast(err instanceof Error ? err.message : 'Import fallito.'); }
+      (e.target as HTMLInputElement).value = ''; // lo stesso file si può riscegliere
     },
   });
   const body = h('div', { 'data-settings': 'true' },

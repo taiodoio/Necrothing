@@ -692,8 +692,8 @@ export class WorldView {
     for (const w of this.wisps.values()) {
       w.group.position.y = w.base.y + Math.sin(t * 2.2 + w.phase) * 0.12;
       // compare piano (scala da 0) invece di accendersi di colpo
-      w.born ??= t;
-      const grow = Math.min(1, (t - w.born) / 0.8);
+      if (w.born === undefined || t < w.born) w.born = t; // il tempo può ripartire
+      const grow = Math.max(0, Math.min(1, (t - w.born) / 0.8));
       if (w.visual) { w.visual.update(t, w.phase); w.visual.root.scale.setScalar(1.4 * grow * grow * (3 - 2 * grow)); }
       else {
         w.group.rotation.y = t * 0.8 + w.phase;

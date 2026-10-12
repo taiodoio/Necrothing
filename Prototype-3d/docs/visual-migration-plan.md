@@ -214,10 +214,39 @@ colonna "Sereno". Veli per qualità: bassa 1, media 2, alta 3. `?mist=0` la speg
   brillantinata), capelli (7 tagli, 8 colori), occhi, occhiali/monocolo,
   lentiggini, cerotto, barba (corta, folta, con treccia) e baffi (sottili, a
   manubrio, folti), cappello (4) e colore, vestiti (cappotto, mantella, salopette,
-  maglione a righe dipinte) con colore e colore dei dettagli. Con il cappello i
-  capelli restano sempre sotto la tesa (testato per ogni taglio e cappello). Salvato nella partita
-  (`player.look`, validato al caricamento), anteprima 3D nel pannello
-  "Personaggio" (dal profilo o dalle Impostazioni). Solo nello stile low-poly.
+  maglione a righe dipinte) con colore e colore dei dettagli. I capelli sono
+  veli che aderiscono alla testa: una calotta sottile su sommità, lati e nuca,
+  poi ciocche separate (frangia sulla fronte, ciocche su lati e nuca) a punta,
+  bombate al centro e in tonalità alternate, così tra una e l'altra resta un
+  solco; i capelli lunghi aggiungono ciocche che pendono sulla schiena. Ogni
+  taglio ha la sua frangia (ciuffi a punta, dritta smerlata, di lato, tirata
+  verso lo chignon, spettinata) e le punte non scendono mai sugli occhi. Gli
+  spettinati hanno ciocche che partono dal vortice in cima girando un po', con
+  le punte sollevate, e un solo ciuffo ribelle (niente aculei). Con il
+  cappello i capelli restano sempre sotto la tesa e ne seguono l'inclinazione
+  (testato per ogni taglio e cappello).
+  Salvato nella partita (`player.look`, validato al caricamento), anteprima 3D
+  nel pannello "Personaggio", fissa in alto mentre si scorrono le opzioni (dal
+  profilo o dalle Impostazioni), su una zolla di prato con fiorellini, sassi e
+  funghetti. Solo nello stile low-poly.
+- **Vestiti rifiniti**: pantaloni leggibili (falda del cappotto accorciata,
+  tinta che si stacca da stivali e giacca: grigio fumo col cappotto, tela blu
+  col maglione), con piega, risvolto e stivaletti bassi con punta e suola. Il
+  cappotto ha listino e tre bottoni al centro e due tasche con patta; il
+  maglione niente falda; la salopette colletto della
+  camicia, cucitura della tasca e rammendo; la mantella l'apertura al centro e
+  la veste nel suo colore.
+- **Dettagli che seguono il volto**: la testa ha una distanza con segno
+  (`headSdf` in `kawaii.ts`); la barba è un velo che aderisce a mento,
+  mandibola e basette e si assottiglia sui bordi (colore proprio per barba e
+  baffi), la catenella del monocolo scende lungo guancia e mandibola, cerotto,
+  lentiggini e baffi sono adagiati sulla curva. La pelle brillantinata usa
+  stelline sparse sulla superficie più un velo di scintille animate (shader a
+  punti) che si accendono a turno.
+- **Orologio**: tornando nell'app dopo averla lasciata in background il tempo
+  non riparte più da zero (prima un fuoco fatuo che stava comparendo diventava
+  enorme e copriva la mappa con un bagliore). L'import del backup non filtra più
+  l'estensione, così su iPhone il file `.necro3d` è selezionabile.
 - **Ritocchi kawaii**: guance appoggiate alla faccia (prima fluttuavano sugli
   spigoli arrotondati, anche su fantasmi e animali). Il Custode non porta più la
   pala (è del becchino, che la tiene in spalla): solo la lanterna, che di notte lo

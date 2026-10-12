@@ -44,6 +44,18 @@ function softBoxGeo(w: number, h: number, d: number, r: number): THREE.BufferGeo
   return g;
 }
 
+/** Suola: rettangolo con angoli tondi visto dall'alto (w × d), spessa h, smussata appena. */
+function soleGeo(w: number, d: number, h: number, r: number): THREE.BufferGeometry {
+  const b = 0.004, iw = w / 2 - b, id = d / 2 - b, rr = Math.min(r, iw - 0.001, id - 0.001);
+  const s = new THREE.Shape();
+  s.moveTo(-iw + rr, -id); s.lineTo(iw - rr, -id); s.absarc(iw - rr, -id + rr, rr, -Math.PI / 2, 0, false);
+  s.lineTo(iw, id - rr); s.absarc(iw - rr, id - rr, rr, 0, Math.PI / 2, false);
+  s.lineTo(-iw + rr, id); s.absarc(-iw + rr, id - rr, rr, Math.PI / 2, Math.PI, false);
+  s.lineTo(-iw, -id + rr); s.absarc(-iw + rr, -id + rr, rr, Math.PI, Math.PI * 1.5, false);
+  const g = new THREE.ExtrudeGeometry(s, { depth: h - 2 * b, bevelEnabled: true, bevelThickness: b, bevelSize: b, bevelSegments: 1, curveSegments: 3 });
+  return g.rotateX(-Math.PI / 2).translate(0, b, 0);
+}
+
 function sbox(lp: LP, cx: number, y0: number, cz: number, w: number, h: number, d: number, r: number, color: string, o: Parameters<LP['add']>[2] = {}) {
   lp.add(softBoxGeo(w, h, d, r).translate(cx, y0 + h / 2, cz), color, { jitter: 0, vary: 0.04, ao: 0.08, ...o });
 }
@@ -267,7 +279,7 @@ function kHumanoid(o: KH): KawaiiSpec {
     lp.cyl(0, -0.15, 0, 0.074, 0.073, 0.035, 8, shade(o.pants, -0.05), { jitter: 0, ao: 0 }); // risvolto
     // stivaletto basso con punta arrotondata e suola chiara
     sbox(lp, 0, -0.185, 0.02, 0.14, 0.075, 0.19, 0.04, o.boots);
-    sbox(lp, 0, -0.2, 0.02, 0.142, 0.018, 0.192, 0.008, '#4d4239'); // suola
+    lp.add(soleGeo(0.142, 0.212, 0.02, 0.06).translate(0, -0.2, 0.028), shade(o.boots, -0.05), { jitter: 0, vary: 0.03, ao: 0 }); // suola che segue la scarpa
     ball(lp, 0, -0.165, 0.09, 0.05, 0.035, 0.035, shade(o.boots, 0.04)); // punta
   } : (lp) => {
     ball(lp, 0, -0.01, 0, 0.07, 0.06, 0.07, o.pants); // anca dentro il busto

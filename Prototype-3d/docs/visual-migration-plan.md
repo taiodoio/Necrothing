@@ -212,7 +212,7 @@ colonna "Sereno". Veli per qualità: bassa 1, media 2, alta 3. `?mist=0` la speg
   +15%.
 - **Custode personalizzabile** (`game/look.ts`, `ui/customize.ts`): pelle (anche
   brillantinata), capelli (7 tagli, 8 colori), occhi, occhiali/monocolo,
-  lentiggini, cerotto, barba (corta, folta, con treccia) e baffi (sottili, a
+  lentiggini, cerotto, pelle "hoa-boa-hoa" (brillantini), barba (corta, folta, con treccia) e baffi (sottili, a
   manubrio, folti), cappello (4) e colore, vestiti (cappotto, mantella, salopette,
   maglione a righe dipinte) con colore e colore dei dettagli. I capelli sono
   veli che aderiscono alla testa: una calotta sottile su sommità, lati e nuca,
@@ -231,12 +231,14 @@ colonna "Sereno". Veli per qualità: bassa 1, media 2, alta 3. `?mist=0` la speg
   cappello i capelli restano sempre sotto la tesa e ne seguono l'inclinazione
   (testato per ogni taglio e cappello).
   Salvato nella partita (`player.look`, validato al caricamento), anteprima 3D
-  nel pannello "Personaggio", fissa in alto mentre si scorrono le opzioni (dal
+  nel pannello "Personaggio" (schede Aspetto, Capelli, Vestiti), fissa in alto
+  insieme alle schede mentre si scorrono le opzioni (dal
   profilo o dalle Impostazioni), su una zolla di prato con fiorellini, sassi e
   funghetti. Solo nello stile low-poly.
 - **Vestiti rifiniti**: pantaloni leggibili (falda del cappotto accorciata,
   tinta che si stacca da stivali e giacca: grigio fumo col cappotto, tela blu
-  col maglione), con piega, risvolto e stivaletti bassi con punta e suola. Il
+  col maglione), con piega, risvolto e stivaletti bassi con punta e una suola
+  che ne segue la forma. Il
   cappotto ha listino e tre bottoni al centro e due tasche con patta; il
   maglione niente falda; la salopette colletto della
   camicia, cucitura della tasca e rammendo; la mantella l'apertura al centro e

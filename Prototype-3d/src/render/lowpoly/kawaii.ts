@@ -44,23 +44,6 @@ function softBoxGeo(w: number, h: number, d: number, r: number): THREE.BufferGeo
   return g;
 }
 
-/**
- * Lastra con gli angoli arrotondati visti dall'alto (raggio rc indipendente
- * dall'altezza) e bordi appena smussati: capelli sotto cappelli tondi.
- */
-function roundSlabGeo(w: number, d: number, h: number, rc: number): THREE.BufferGeometry {
-  const bv = Math.min(0.015, h / 3);
-  const iw = w - 2 * bv, id = d - 2 * bv, r = Math.min(rc, iw / 2 - 0.001, id / 2 - 0.001);
-  const s = new THREE.Shape();
-  const x0 = -iw / 2, x1 = iw / 2, y0 = -id / 2, y1 = id / 2;
-  s.moveTo(x0 + r, y0); s.lineTo(x1 - r, y0); s.absarc(x1 - r, y0 + r, r, -Math.PI / 2, 0, false);
-  s.lineTo(x1, y1 - r); s.absarc(x1 - r, y1 - r, r, 0, Math.PI / 2, false);
-  s.lineTo(x0 + r, y1); s.absarc(x0 + r, y1 - r, r, Math.PI / 2, Math.PI, false);
-  s.lineTo(x0, y0 + r); s.absarc(x0 + r, y0 + r, r, Math.PI, Math.PI * 1.5, false);
-  const g = new THREE.ExtrudeGeometry(s, { depth: Math.max(0.001, h - 2 * bv), bevelEnabled: true, bevelThickness: bv, bevelSize: bv, bevelSegments: 1, curveSegments: 3 });
-  return g.rotateX(-Math.PI / 2).translate(0, bv, 0);
-}
-
 function sbox(lp: LP, cx: number, y0: number, cz: number, w: number, h: number, d: number, r: number, color: string, o: Parameters<LP['add']>[2] = {}) {
   lp.add(softBoxGeo(w, h, d, r).translate(cx, y0 + h / 2, cz), color, { jitter: 0, vary: 0.04, ao: 0.08, ...o });
 }
@@ -397,7 +380,7 @@ const SKIN = '#f2cfb0';
 const shade = (c: string, k: number) => `#${new THREE.Color(c).offsetHSL(0, 0, k).getHexString()}`;
 
 /** Altezza sotto cui devono restare i capelli quando c'è un cappello (tesa o bordo). */
-export const HAIR_CEILING: Record<HatStyle, number> = { wide: 0.385, top: 0.395, beanie: 0.285, none: 9 };
+export const HAIR_CEILING: Record<HatStyle, number> = { wide: 0.385, top: 0.395, beanie: 0.335, none: 9 };
 /** Assetto (altezza, rotazioni x e z) dei cappelli inclinati: tesa e cilindro. */
 export const HAT_TILT = { wide: [0.39, -0.05, 0.08], top: [0.4, -0.04, -0.07] } as const;
 
@@ -408,31 +391,37 @@ export const HAT_TILT = { wide: [0.39, -0.05, 0.08], top: [0.4, -0.04, -0.07] } 
  */
 export function hairBuild(style: HairStyle, c: string, hat: HatStyle): Build | undefined {
   const ceil = HAIR_CEILING[hat];
+  // le sferette (riccioli) sporgono più dei veli: col berretto si fermano sotto il risvolto
+  const lumpCeil = hat === 'beanie' ? 0.27 : ceil;
   const lump = (lp: LP, x: number, y: number, z: number, rx: number, ry: number, rz: number, col = c) => {
-    if (y - ry * 0.3 > ceil) return;
-    const top = Math.min(y + ry, ceil);
+    if (y - ry * 0.3 > lumpCeil) return;
+    const top = Math.min(y + ry, lumpCeil);
     const bottom = y - ry;
     ball(lp, x, (top + bottom) / 2, z, rx, (top - bottom) / 2, rz, col);
   };
-  const build = hairStyle(style, c, hat, lump);
-  const tilt = hat === 'wide' || hat === 'top' ? HAT_TILT[hat] : null;
-  if (!build || !tilt) return build;
-  // la tesa è inclinata: una fascia di capelli la segue da sotto, così tra
-  // tesa e capelli non resta una striscia di pelle sul lato rialzato
-  return (lp) => {
-    build(lp);
-    lp.push([0, tilt[0], 0], 0, tilt[1], tilt[2]);
-    lp.add(roundSlabGeo(0.6, 0.53, 0.05, 0.15).translate(0, -0.05, -0.005), c, { jitter: 0, vary: 0.04, ao: 0.05 }); // arriva fino alla fronte
-    lp.pop();
-  };
+  return hairStyle(style, c, hat, lump);
+}
+
+/** Altezza della faccia inferiore della tesa sopra il punto (x, z) della testa (cappelli inclinati). */
+function brimY(hat: 'wide' | 'top', x: number, z: number): number {
+  const [y0, rx, rz] = HAT_TILT[hat];
+  const n = new THREE.Vector3(0, 1, 0).applyEuler(new THREE.Euler(rx, 0, rz, 'YXZ'));
+  return y0 - (n.x * x + n.z * z) / n.y;
 }
 
 type Lump = (lp: LP, x: number, y: number, z: number, rx: number, ry: number, rz: number, col?: string) => void;
 
 function hairStyle(style: HairStyle, c: string, hat: HatStyle, lump: Lump): Build | undefined {
   const ceil = HAIR_CEILING[hat];
-  /** Fin dove salgono i capelli: la sommità o, con il cappello, appena sotto la tesa. */
+  /** Fin dove salgono i capelli: la sommità o, con il cappello, appena sotto la tesa (o dentro il risvolto). */
   const topY = hat === 'none' ? 0.455 : ceil - 0.035;
+  /** Dove finisce la calotta in cima: sotto una tesa inclinata ne segue la pendenza, senza fasce. */
+  const capTop = (th: number) => {
+    if (hat === 'none') return 89 * DEG;
+    if (hat === 'beanie') return phiForY(th, topY + 0.01);
+    const { p } = headAt(th, phiForY(th, topY));
+    return phiForY(th, Math.min(0.45, brimY(hat, p.x, p.z) - 0.02));
+  };
   const front = (th: number) => { const a = Math.abs(Math.atan2(Math.sin(th), Math.cos(th))); return a; }; // 0 davanti, π dietro
 
   /**
@@ -447,8 +436,7 @@ function hairStyle(style: HairStyle, c: string, hat: HatStyle, lump: Lump): Buil
         // davanti mai sotto 0,27 (gli occhi arrivano a ~0,25)
         const fy = Math.min(Math.max(0.27, Math.min(0.38, topY - 0.04)), topY);
         const yb = THREE.MathUtils.lerp(fy, backY, smooth(0.3 * Math.PI, 0.62 * Math.PI, front(th)));
-        const pt = hat === 'none' ? 89 * DEG : phiForY(th, topY + 0.01);
-        return [th, THREE.MathUtils.lerp(phiForY(th, yb), pt, v)];
+        return [th, THREE.MathUtils.lerp(phiForY(th, yb), capTop(th), v)];
       },
       (_u, v) => 0.028 * (0.3 + 0.7 * smooth(0, 0.25, v)), col, { vary: 0.04 });
   };
@@ -661,11 +649,15 @@ function hatBuild(style: HatStyle, c: string): Build | undefined {
       lp.pop();
     };
     case 'beanie': return (lp) => {
-      ball(lp, 0, 0.37, -0.01, 0.3, 0.17, 0.27, c);
-      // risvolto a coste, appena più scuro (prima sembrava una fascia nera)
-      lp.cyl(0, 0.29, -0.01, 0.298, 0.292, 0.08, 14, shade(c, -0.03), { jitter: 0, ao: 0 });
-      for (let i = 0; i < 10; i++) { const a = (i / 10) * Math.PI * 2; lp.push([Math.cos(a) * 0.296, 0.295, Math.sin(a) * 0.296 - 0.01], -a).box(0, 0, 0, 0.018, 0.07, 0.008, shade(c, 0.05), { jitter: 0, ao: 0 }).pop(); }
-      ball(lp, 0, 0.56, -0.02, 0.075, 0.07, 0.075, shade(c, 0.12));
+      // maglia che avvolge la testa (nessuno spigolo la buca) e si gonfia un po' in cima
+      headSheet(lp, 28, 6,
+        (u, v) => { const th = Math.PI + u * Math.PI; return [th, THREE.MathUtils.lerp(phiForY(th, 0.33), 89 * DEG, v)]; },
+        (_u, v) => 0.05 + 0.03 * smooth(0.2, 1, v), c, { vary: 0.04 });
+      // risvolto a coste: le costine sono rilievi della stessa maglia (niente pezzi sovrapposti)
+      headSheet(lp, 56, 3,
+        (u, v) => { const th = Math.PI + u * Math.PI; return [th, THREE.MathUtils.lerp(phiForY(th, 0.265), phiForY(th, 0.355), v)]; },
+        (u, v) => (0.064 + 0.006 * Math.cos(u * Math.PI * 28)) * (0.35 + 0.65 * smooth(0, 0.34, v)), shade(c, 0.04), { vary: 0.03, ao: 0 });
+      ball(lp, 0, 0.6, -0.02, 0.075, 0.07, 0.075, shade(c, 0.12)); // pompon
     };
   }
 }

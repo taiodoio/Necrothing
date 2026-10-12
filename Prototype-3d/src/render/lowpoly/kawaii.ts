@@ -255,6 +255,14 @@ interface KH {
   heldL?: Build; heldR?: Build; back?: Build; chest?: Build;
   /** Pelle "brillantinata": brillantini luminosi su viso e mani. */
   sparkle?: boolean;
+  /** Falda svasata sotto il busto: lunga (predefinita), corta o assente. */
+  skirt?: 'long' | 'short' | 'none';
+  /** Pantaloni rifiniti: piega davanti, risvolto sopra lo stivale, suola chiara. */
+  trousers?: boolean;
+  /** Bordo a coste in fondo al busto (maglione). */
+  hem?: string;
+  /** Colore della veste lunga (predefinito: coat2). */
+  robeColor?: string;
 }
 
 const GLITTER = ['#fff4fb', '#ffd6f0', '#d6f6ff', '#fff2c4'];
@@ -271,7 +279,16 @@ function handGlitter(lp: LP, c: [number, number, number], r: number) {
 
 function kHumanoid(o: KH): KawaiiSpec {
   const arm = o.arm ?? o.coat;
-  const leg: Build = (lp) => {
+  const leg: Build = o.trousers ? (lp) => {
+    ball(lp, 0, -0.01, 0, 0.07, 0.06, 0.07, o.pants); // anca dentro il busto
+    lp.cyl(0, -0.15, 0, 0.064, 0.069, 0.15, 8, o.pants, { jitter: 0, vary: 0.03, ao: 0.08 });
+    lp.box(0, -0.075, 0.066, 0.008, 0.12, 0.006, shade(o.pants, -0.07), { jitter: 0, ao: 0 }); // piega
+    lp.cyl(0, -0.15, 0, 0.074, 0.073, 0.035, 8, shade(o.pants, -0.05), { jitter: 0, ao: 0 }); // risvolto
+    // stivaletto basso con punta arrotondata e suola chiara
+    sbox(lp, 0, -0.185, 0.02, 0.14, 0.075, 0.19, 0.04, o.boots);
+    sbox(lp, 0, -0.2, 0.02, 0.142, 0.018, 0.192, 0.008, '#4d4239'); // suola
+    ball(lp, 0, -0.165, 0.09, 0.05, 0.035, 0.035, shade(o.boots, 0.04)); // punta
+  } : (lp) => {
     ball(lp, 0, -0.01, 0, 0.07, 0.06, 0.07, o.pants); // anca dentro il busto
     lp.cyl(0, -0.17, 0, 0.064, 0.068, 0.17, 7, o.pants, { jitter: 0, vary: 0.04, ao: 0.1 });
     sbox(lp, 0, -0.2, 0.025, 0.145, 0.1, 0.2, 0.045, o.boots);
@@ -295,12 +312,18 @@ function kHumanoid(o: KH): KawaiiSpec {
       armL: armB(o.heldL), armR: armB(o.heldR),
       body: (lp) => {
         if (o.robe) {
-          lp.lathe(0, -0.195, 0, [[0.25, 0], [0.245, 0.06], [0.22, 0.2], [0.2, 0.36], [0.17, 0.39], [0, 0.4]], 10, o.coat2, { jitter: 0, vary: 0.04, ao: 0.15 });
+          lp.lathe(0, -0.195, 0, [[0.25, 0], [0.245, 0.06], [0.22, 0.2], [0.2, 0.36], [0.17, 0.39], [0, 0.4]], 10, o.robeColor ?? o.coat2, { jitter: 0, vary: 0.04, ao: o.robeColor ? 0.06 : 0.15 });
           sbox(lp, 0, -0.02, 0, 0.4, 0.39, 0.31, 0.09, o.coat);
         } else {
           sbox(lp, 0, -0.03, 0, 0.4, 0.4, 0.3, 0.09, o.coat);
-          // falda del cappotto appena svasata
-          lp.lathe(0, -0.07, 0, [[0.225, 0], [0.22, 0.05], [0.205, 0.12], [0, 0.12]], 10, o.coat2, { jitter: 0, vary: 0.04, ao: 0.12 });
+          // falda del cappotto appena svasata (corta: lascia vedere i pantaloni)
+          if ((o.skirt ?? 'long') === 'long') lp.lathe(0, -0.07, 0, [[0.225, 0], [0.22, 0.05], [0.205, 0.12], [0, 0.12]], 10, o.coat2, { jitter: 0, vary: 0.04, ao: 0.12 });
+          else if (o.skirt === 'short') lp.lathe(0, -0.05, 0, [[0.218, 0], [0.214, 0.035], [0.205, 0.07], [0, 0.07]], 10, o.coat2, { jitter: 0, vary: 0.04, ao: 0.12 });
+          if (o.hem) {
+            // bordo a coste: fascia appena in rilievo con le costine
+            sbox(lp, 0, -0.035, 0, 0.404, 0.055, 0.304, 0.03, o.hem);
+            for (let i = -4; i <= 4; i++) lp.box(i * 0.04, -0.008, 0.153, 0.008, 0.045, 0.004, shade(o.hem, -0.05), { jitter: 0, ao: 0 });
+          }
         }
         o.chest?.(lp);
         o.back?.(lp);
@@ -657,25 +680,35 @@ function hatBuild(style: HatStyle, c: string): Build | undefined {
 /** Busto per vestito: sciarpa, mantella con fermaglio, salopette, maglione a righe. */
 function outfitChest(l: CustodeLook): Build {
   const acc = l.accentColor;
+  const z = 0.152; // faccia piatta davanti al busto
   switch (l.outfit) {
     case 'cloak': return (lp) => {
       lp.push([0, 0.37, 0]).add(new THREE.TorusGeometry(0.19, 0.05, 5, 12).rotateX(Math.PI / 2), shade(l.outfitColor, -0.06), { jitter: 0 }).pop();
+      // apertura della mantella al centro, con fermaglio in alto
+      lp.box(0, 0.12, z, 0.012, 0.24, 0.006, shade(l.outfitColor, -0.12), { jitter: 0, ao: 0 });
       ball(lp, 0, 0.33, 0.17, 0.035, 0.035, 0.02, acc);
       ball(lp, 0, 0.33, 0.19, 0.015, 0.015, 0.01, LPC.gold);
     };
     case 'overalls': return (lp) => {
-      sbox(lp, 0, 0.02, 0.148, 0.24, 0.2, 0.012, 0.01, shade(l.outfitColor, -0.04));
-      for (const s of [-1, 1]) { lp.box(s * 0.1, 0.2, 0.152, 0.05, 0.18, 0.01, l.outfitColor, { jitter: 0, ao: 0 }); ball(lp, s * 0.1, 0.22, 0.158, 0.016, 0.016, 0.008, LPC.gold); }
-      sbox(lp, 0.06, 0.05, 0.156, 0.07, 0.06, 0.008, 0.006, acc);
+      // camicia: colletto a punte sopra la pettorina
+      for (const s of [-1, 1]) lp.push([s * 0.05, 0.345, 0.14], 0, 0.5, s * -0.5).box(0, 0, 0, 0.07, 0.05, 0.012, '#e6dcc6', { jitter: 0, ao: 0 }).pop();
+      sbox(lp, 0, 0.0, z - 0.004, 0.24, 0.22, 0.012, 0.01, shade(l.outfitColor, -0.04)); // pettorina
+      lp.box(0, 0.16, z + 0.004, 0.08, 0.008, 0.004, shade(l.outfitColor, -0.12), { jitter: 0, ao: 0 }); // cucitura della tasca
+      for (const s of [-1, 1]) { lp.box(s * 0.1, 0.25, z, 0.05, 0.16, 0.01, l.outfitColor, { jitter: 0, ao: 0 }); ball(lp, s * 0.1, 0.2, z + 0.008, 0.016, 0.016, 0.008, LPC.gold); }
+      sbox(lp, 0.06, 0.05, z + 0.006, 0.07, 0.06, 0.008, 0.006, acc); // toppa
+      lp.box(-0.06, 0.06, z + 0.006, 0.04, 0.004, 0.003, shade(l.outfitColor, -0.15), { jitter: 0, ao: 0 }); // rammendo
     };
     case 'sweater': return (lp) => {
       // righe "dipinte" davanti e dietro, aderenti alla parte piatta del busto
-      for (const y of [0.04, 0.16, 0.28]) for (const s of [-1, 1]) lp.box(0, y, s * 0.151, 0.22, 0.045, 0.006, acc, { jitter: 0, ao: 0 });
+      for (const y of [0.07, 0.17, 0.27]) for (const s of [-1, 1]) lp.box(0, y, s * 0.151, 0.22, 0.045, 0.006, acc, { jitter: 0, ao: 0 });
       lp.cyl(0, 0.34, 0, 0.17, 0.15, 0.08, 12, shade(l.outfitColor, -0.05), { jitter: 0 });
     };
     default: return (lp) => {
       scarf(acc, shade(acc, 0.25))(lp);
-      for (const y of [0.06, 0.16]) ball(lp, 0.05, y, 0.155, 0.014, 0.014, 0.008, LPC.gold);
+      // abbottonatura al centro: listino, tre bottoni allineati, due tasche con patta
+      lp.box(0, 0.11, z, 0.03, 0.26, 0.005, shade(l.outfitColor, -0.05), { jitter: 0, ao: 0 });
+      for (const y of [0.02, 0.1, 0.18]) ball(lp, 0, y, z + 0.006, 0.016, 0.016, 0.008, LPC.gold);
+      for (const s of [-1, 1]) lp.box(s * 0.105, 0.05, z + 0.002, 0.07, 0.022, 0.008, shade(l.outfitColor, -0.09), { jitter: 0, ao: 0 });
     };
   }
 }
@@ -727,7 +760,14 @@ function faceDetails(l: CustodeLook): Build {
 export function custodeSpec(l: CustodeLook): KawaiiSpec {
   const coat = l.outfitColor;
   return kHumanoid({
-    coat, coat2: shade(coat, -0.07), skin: l.skin, pants: l.outfit === 'overalls' ? coat : '#3a3230', boots: '#2b211c',
+    coat, coat2: shade(coat, -0.07), skin: l.skin, boots: '#3a2a22',
+    // pantaloni che si staccano da stivali e giacca: grigio fumo col cappotto,
+    // tela blu col maglione, il tessuto della salopette
+    pants: l.outfit === 'overalls' ? coat : l.outfit === 'sweater' ? '#46566a' : '#57524c',
+    skirt: l.outfit === 'coat' ? 'short' : l.outfit === 'cloak' ? 'long' : 'none',
+    trousers: true,
+    robeColor: l.outfit === 'cloak' ? shade(coat, -0.03) : undefined,
+    hem: l.outfit === 'sweater' ? shade(coat, -0.06) : undefined,
     arm: l.outfit === 'overalls' ? '#d8cdb8' : undefined, cuff: l.outfit === 'sweater' ? l.accentColor : l.outfit === 'overalls' ? '#c4b8a0' : undefined,
     robe: l.outfit === 'cloak',
     face: { mouth: 'smile', eye: l.eyes },

@@ -27,7 +27,13 @@ function previewGround(): CachedModel {
   lp.cyl(0, -0.012, 0, 0.6, 0.6, 0.016, 14, GRASS[1], { jitter: 0.006, vary: 0.1, ao: 0 });
   /** Punto sull'anello libero attorno al personaggio. */
   const ring = (a: number, d0 = 0.27, d1 = 0.54): [number, number] => { const d = r.range(d0, d1); return [Math.cos(a) * d, Math.sin(a) * d]; };
-  for (let i = 0; i < 16; i++) { const [x, z] = ring((i / 16) * Math.PI * 2 + r.range(-0.2, 0.2)); grassTuft(lp, x, z, 0.9 + r.next() * 0.5); }
+  // erba più bassa sul davanti (verso la camera), così piedi e pantaloni restano in vista
+  for (let i = 0; i < 16; i++) {
+    const a = (i / 16) * Math.PI * 2 + r.range(-0.2, 0.2);
+    const [x, z] = ring(a, 0.33, 0.56);
+    const front = Math.max(0, Math.cos(a - Math.atan2(2.9, 1.9)));
+    grassTuft(lp, x, z, (0.9 + r.next() * 0.5) * (1 - 0.5 * front));
+  }
   for (let i = 0; i < 7; i++) { const [x, z] = ring(r.range(0, Math.PI * 2), 0.3, 0.52); flower(lp, x, z, r.pick(LPC.flowers), 0.08 + r.next() * 0.07); }
   pebbles(lp, -0.5, 0.2, -0.3, 0.45, 3);
   pebbles(lp, 0.3, -0.5, 0.5, -0.3, 3);

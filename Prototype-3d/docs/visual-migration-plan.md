@@ -229,6 +229,13 @@ colonna "Sereno". Veli per qualità: bassa 1, media 2, alta 3. `?mist=0` la speg
   nel pannello "Personaggio", fissa in alto mentre si scorrono le opzioni (dal
   profilo o dalle Impostazioni), su una zolla di prato con fiorellini, sassi e
   funghetti. Solo nello stile low-poly.
+- **Vestiti rifiniti**: pantaloni leggibili (falda del cappotto accorciata,
+  tinta che si stacca da stivali e giacca: grigio fumo col cappotto, tela blu
+  col maglione), con piega, risvolto e stivaletti bassi con punta e suola. Il
+  cappotto ha listino e tre bottoni al centro e due tasche con patta; il
+  maglione un bordo a coste e niente falda; la salopette colletto della
+  camicia, cucitura della tasca e rammendo; la mantella l'apertura al centro e
+  la veste nel suo colore.
 - **Dettagli che seguono il volto**: la testa ha una distanza con segno
   (`headSdf` in `kawaii.ts`); la barba è un velo che aderisce a mento,
   mandibola e basette e si assottiglia sui bordi (colore proprio per barba e

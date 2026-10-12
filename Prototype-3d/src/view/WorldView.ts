@@ -18,6 +18,7 @@ import { graveModel } from '../render/models/graves.ts';
 import { deadTree, pine, sceneryBush, sceneryFern, sceneryFlowers, sceneryLeaves, sceneryPebbles, sceneryRock, sceneryShrooms, sceneryTuft, sceneryWildGrass } from '../render/models/nature.ts';
 import { placeableKey, placeableModel, placeableSeed, type PVis } from '../render/models/registry.ts';
 import { createAnimated, type Animated } from '../render/lowpoly/animated.ts';
+import { createWispVisual, type WispVisual } from '../render/lowpoly/wisp.ts';
 import { P } from '../render/palette.ts';
 import { drawIcon } from '../ui/icons.ts';
 import type { Atmosphere, AnchorHandle } from './Atmosphere.ts';
@@ -53,7 +54,7 @@ export interface EntityView {
   anim?: Animated;
 }
 
-interface WispView { group: THREE.Group; hitbox: THREE.Mesh; anchor: AnchorHandle; phase: number; base: THREE.Vector3 }
+interface WispView { group: THREE.Group; hitbox: THREE.Mesh; anchor: AnchorHandle; phase: number; base: THREE.Vector3; visual?: WispVisual; born?: number }
 
 const hitMaterial = new THREE.MeshBasicMaterial({ visible: false });
 
@@ -124,6 +125,7 @@ export class WorldView {
     if (style === this.style && !force) return;
     this.style = style;
     for (const e of [...this.entities.values()]) this.removeEntity(e.id);
+    this.syncWisps({ ...state, world: { ...state.world, looseWisps: [] } }); // si ricreano nel nuovo stile
     this.scenerySig = this.decorSig = '';
     for (const c of this.terrainChunks.values()) { this.terrain.remove(c.mesh); c.mesh.geometry.dispose(); this.disposeChunkMaterial(c.mesh); }
     this.terrainChunks.clear();
@@ -325,8 +327,10 @@ export class WorldView {
     if (sig === this.decorSig) return;
     this.decorSig = sig;
     for (const c of [...this.decorLayer.children]) { this.decorLayer.remove(c); (c as THREE.Mesh).geometry.dispose(); }
-    const rng = createRng(state.seed + 5);
-    const per = this.quality === 'low' ? 0.45 : this.quality === 'medium' ? 0.85 : 1.25;
+    // un generatore per cella (dalle sue coordinate): piazzare o togliere un
+    // oggetto cambia solo le sue celle, il resto del prato non si sposta
+    const cellRng = (x: number, y: number, salt: number) => createRng(Math.floor(hash3(x, y, salt, state.seed) * 4294967296));
+    const per = (this.quality === 'low' ? 0.45 : this.quality === 'medium' ? 0.85 : 1.25) * 1.15; // +15% di fiori, sassi, ciuffi
     const baker = new ChunkBaker();
     const st = this.style;
     const M = {
@@ -353,6 +357,7 @@ export class WorldView {
         const k = `${x},${y}`;
         const gt = groundType(input, x, y);
         if (occ.owner.has(k) || gt === 'path' || gt === 'fence' || gt === 'dirt' || gt === 'mud') continue;
+        const rng = cellRng(x, y, 5);
         const wild = gt !== 'grass';
         const dist = Math.max(a.x - x, x - (a.x + a.w - 1), a.y - y, y - (a.y + a.h - 1), 0);
         // in low-poly le piante sono in scala più realistica: ne servono di più
@@ -371,7 +376,7 @@ export class WorldView {
         }
       }
     }
-    if (lowpoly) this.pathEdges(state, occ, baker, M.tuft, M.pebbles, rng);
+    if (lowpoly) this.pathEdges(state, occ, baker, M.tuft, M.pebbles, cellRng);
     for (const mesh of baker.build(false)) this.decorLayer.add(mesh);
   }
 
@@ -379,7 +384,7 @@ export class WorldView {
    * Bordi dei sentieri (low-poly): erba bassa e sassolini a cavallo del
    * confine tra selciato e prato, così il sentiero non è un taglio netto.
    */
-  private pathEdges(state: SaveData, occ: ReturnType<typeof buildOccupancy>, baker: ChunkBaker, tuft: (v: number) => CachedModel, pebbles: (v: number) => CachedModel, rng: ReturnType<typeof createRng>) {
+  private pathEdges(state: SaveData, occ: ReturnType<typeof buildOccupancy>, baker: ChunkBaker, tuft: (v: number) => CachedModel, pebbles: (v: number) => CachedModel, cellRng: (x: number, y: number, salt: number) => ReturnType<typeof createRng>) {
     const path = new Set<string>();
     for (const p of state.placeables) if (p.type === 'path_stone' || p.type === 'path_dirt') path.add(`${p.x},${p.y}`);
     const input = this.groundInput!;
@@ -389,6 +394,7 @@ export class WorldView {
         const nk = `${x + dx},${y + dy}`;
         if (path.has(nk)) continue;
         const free = !occ.owner.has(nk) && groundType(input, x + dx, y + dy) !== 'fence';
+        const rng = cellRng(x * 4 + dx + 1, y * 4 + dy + 1, 9); // un generatore per lato di cella
         const n = 2 + rng.int(3);
         for (let i = 0; i < n; i++) {
           const along = rng.range(0.08, 0.92);
@@ -561,11 +567,16 @@ export class WorldView {
     for (const w of state.world.looseWisps) {
       if (this.wisps.has(w.id)) continue;
       const group = new THREE.Group();
-      const core = new THREE.Mesh(new THREE.BoxGeometry(0.16, 0.22, 0.16), new THREE.MeshBasicMaterial({ color: '#c9fff0', toneMapped: false }));
-      const shell = new THREE.Mesh(new THREE.BoxGeometry(0.28, 0.34, 0.28), new THREE.MeshBasicMaterial({ color: P.spectral, transparent: true, opacity: 0.45, depthWrite: false, blending: THREE.AdditiveBlending }));
-      const tip = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.14, 0.1), core.material);
-      tip.position.y = 0.24;
-      group.add(core, shell, tip);
+      // low-poly: fiammella a goccia con faccina, scintille e alone; voxel/miniatura: cubetti
+      const visual = this.style === 'lowpoly' ? createWispVisual() : undefined;
+      if (visual) group.add(visual.root);
+      else {
+        const core = new THREE.Mesh(new THREE.BoxGeometry(0.16, 0.22, 0.16), new THREE.MeshBasicMaterial({ color: '#c9fff0', toneMapped: false }));
+        const shell = new THREE.Mesh(new THREE.BoxGeometry(0.28, 0.34, 0.28), new THREE.MeshBasicMaterial({ color: P.spectral, transparent: true, opacity: 0.45, depthWrite: false, blending: THREE.AdditiveBlending }));
+        const tip = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.14, 0.1), core.material);
+        tip.position.y = 0.24;
+        group.add(core, shell, tip);
+      }
       const base = cellCenter(w.x, w.y, [1, 1]);
       base.y = this.heightAt(base.x, base.z) + 0.7;
       group.position.copy(base);
@@ -575,8 +586,8 @@ export class WorldView {
       group.add(hitbox);
       this.hitboxes.push(hitbox);
       this.root.add(group);
-      const anchor = this.atmosphere.addAnchor(base.clone(), { pos: [0, 0, 0], color: P.spectral, intensity: 0.6, range: 2.5, flicker: 0.3, halo: 0.9 });
-      this.wisps.set(w.id, { group, hitbox, anchor, phase: hash3(w.x, w.y, 1) * 10, base });
+      const anchor = this.atmosphere.addAnchor(base.clone(), { pos: [0, 0, 0], color: P.spectral, intensity: 0.9, range: 3.2, flicker: 0.3, halo: visual ? 0 : 0.9 });
+      this.wisps.set(w.id, { group, hitbox, anchor, phase: hash3(w.x, w.y, 1) * 10, base, visual });
     }
   }
 
@@ -680,9 +691,15 @@ export class WorldView {
   update(_dt: number, t: number) {
     for (const w of this.wisps.values()) {
       w.group.position.y = w.base.y + Math.sin(t * 2.2 + w.phase) * 0.12;
-      w.group.rotation.y = t * 0.8 + w.phase;
-      const s = 1 + Math.sin(t * 9 + w.phase) * 0.08;
-      w.group.scale.set(s, s * 1.05, s);
+      // compare piano (scala da 0) invece di accendersi di colpo
+      w.born ??= t;
+      const grow = Math.min(1, (t - w.born) / 0.8);
+      if (w.visual) { w.visual.update(t, w.phase); w.visual.root.scale.setScalar(1.4 * grow * grow * (3 - 2 * grow)); }
+      else {
+        w.group.rotation.y = t * 0.8 + w.phase;
+        const s = 1 + Math.sin(t * 9 + w.phase) * 0.08;
+        w.group.scale.set(s, s * 1.05, s);
+      }
       this.atmosphere.moveAnchor(w.anchor, w.group.position);
     }
     for (const e of this.entities.values()) e.anim?.update(t + e.group.position.x * 0.37);

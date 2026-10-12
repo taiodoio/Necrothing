@@ -8,7 +8,10 @@ import type { ArtStyle } from '../game/state.ts';
 import { getModel, instantiate, lightWorldPos } from '../render/modelCache.ts';
 import { ModelBuilder, VOX, type LightAnchor, type Model } from '../render/shape.ts';
 import { P } from '../render/palette.ts';
-import { KAWAII } from '../render/lowpoly/kawaii.ts';
+import { KAWAII, custodeSpec, type KawaiiSpec, type KPart } from '../render/lowpoly/kawaii.ts';
+import { LP } from '../render/lowpoly/kit.ts';
+import { LOWPOLY_MATERIALS, type CachedModel } from '../render/modelCache.ts';
+import { DEFAULT_LOOK, lookKey, type CustodeLook } from '../game/look.ts';
 
 export type CharacterKind =
   | 'custode' | 'priest' | 'gravedigger' | 'mourner' | 'mournerB' | 'ghost' | 'ghostRare'
@@ -245,7 +248,30 @@ export interface Rig {
   spec: Spec;
 }
 
-export function buildRig(kind: CharacterKind, style: ArtStyle): Rig {
+/** Parti del Custode personalizzato, per aspetto (poche: una per look usato). */
+const lookModels = new Map<string, CachedModel>();
+
+function lookPart(spec: KawaiiSpec, key: string, part: KPart): CachedModel | null {
+  let m = lookModels.get(key);
+  if (!m) {
+    const build = spec.parts[part];
+    if (!build) return null;
+    const lp = new LP(`kawaii:custode:${part}`);
+    build(lp);
+    const { geometries, lights } = lp.build();
+    m = { geometries, lights, height: 1, mats: LOWPOLY_MATERIALS, dedicated: true };
+    if (lookModels.size > 120) lookModels.clear();
+    lookModels.set(key, m);
+  }
+  return m;
+}
+
+/**
+ * Rig di un personaggio. Nel low-poly il Custode può avere un aspetto
+ * personalizzato (`look`); negli stili voxel/miniatura resta quello classico.
+ */
+export function buildRig(kind: CharacterKind, style: ArtStyle, look?: CustodeLook): Rig {
+  if (style === 'lowpoly' && kind === 'custode' && look && lookKey(look) !== lookKey(DEFAULT_LOOK)) return buildKawaiiRig(kind, custodeSpec(look), lookKey(look));
   if (style === 'lowpoly' && KAWAII[kind]) return buildKawaiiRig(kind);
   const s = spec(kind);
   const root = new THREE.Group();
@@ -279,8 +305,8 @@ export function buildRig(kind: CharacterKind, style: ArtStyle): Rig {
  * unità mondo dal catalogo kawaii; le luci portate (lanterna del Custode,
  * bagliore dei fantasmi) arrivano dai modelli delle parti.
  */
-function buildKawaiiRig(kind: CharacterKind): Rig {
-  const k = KAWAII[kind];
+function buildKawaiiRig(kind: CharacterKind, custom?: KawaiiSpec, customKey?: string): Rig {
+  const k = custom ?? KAWAII[kind];
   const voxel = spec(kind);
   // da seduti il busto resta all'altezza di uno sgabello (≈0,26) invece di affondare
   const s: Spec = { parts: voxel.parts, scale: k.scale, bucket: k.ghost ? 'ghost' : undefined, quadruped: k.quadruped, flier: k.flier, bob: 0.6, sitDy: 0.67 };
@@ -294,7 +320,8 @@ function buildKawaiiRig(kind: CharacterKind): Rig {
   for (const [name, pv] of Object.entries(k.pivots) as [PartName, [number, number, number]][]) {
     const key = `char:${kind}:${name}`;
     const fallback = voxel.parts.find((p) => p.name === name);
-    const model = getModel(key, 'lowpoly', (): Model => { const b = new ModelBuilder(key); fallback?.build(b); return b.build(); }, 1, false);
+    const model = (custom && lookPart(custom, `${customKey}:${name}`, name as KPart))
+      || getModel(key, 'lowpoly', (): Model => { const b = new ModelBuilder(key); fallback?.build(b); return b.build(); }, 1, false);
     const pivot = new THREE.Group();
     pivot.position.set(pv[0], pv[1] + (k.hover ?? 0), pv[2]);
     pivot.add(instantiate(model, { castShadow: !k.ghost }));

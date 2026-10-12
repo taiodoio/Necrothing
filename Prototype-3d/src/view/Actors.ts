@@ -13,6 +13,7 @@ import type { Rect } from '../game/world.ts';
 import type { Atmosphere, AnchorHandle } from './Atmosphere.ts';
 import { animateRig, buildRig, rigLightPos, type CharacterKind, type Pose, type Rig } from './characters.ts';
 import { LP } from '../render/lowpoly/kit.ts';
+import type { CustodeLook } from '../game/look.ts';
 import { skull } from '../render/lowpoly/extras.ts';
 import { instantiate, LOWPOLY_MATERIALS } from '../render/modelCache.ts';
 import { findPath, type Cell } from './pathfinding.ts';
@@ -85,16 +86,20 @@ export class Actors {
   readonly hitboxes: THREE.Object3D[] = [];
   avatarMoving = false;
 
-  constructor(scene: THREE.Scene, atmosphere: Atmosphere, style: ArtStyle, start: THREE.Vector3) {
+  /** Aspetto del Custode (personalizzazione, solo low-poly). */
+  private look: CustodeLook | undefined;
+
+  constructor(scene: THREE.Scene, atmosphere: Atmosphere, style: ArtStyle, start: THREE.Vector3, look?: CustodeLook) {
     this.atmosphere = atmosphere;
     this.style = style;
+    this.look = look;
     this.group.name = 'attori';
     scene.add(this.group);
     this.avatar = this.makeWalker('custode', start, 3.1);
   }
 
   private makeWalker(kind: CharacterKind, pos: THREE.Vector3, speed: number): Walker {
-    const rig = buildRig(kind, this.style);
+    const rig = buildRig(kind, this.style, kind === 'custode' ? this.look : undefined);
     rig.root.position.copy(pos);
     this.group.add(rig.root);
     rig.root.updateMatrixWorld(true);
@@ -105,6 +110,17 @@ export class Actors {
   private disposeWalker(w: Walker) {
     this.group.remove(w.rig.root);
     for (const h of w.lightHandles) this.atmosphere.removeAnchor(h);
+  }
+
+  /** Nuovo aspetto del Custode: si ricostruisce solo il suo rig. */
+  setAvatarLook(look: CustodeLook) {
+    this.look = look;
+    const w = this.avatar;
+    this.disposeWalker(w);
+    const fresh = this.makeWalker('custode', w.pos, w.speed);
+    w.rig = fresh.rig;
+    w.lightHandles = fresh.lightHandles;
+    w.rig.root.rotation.y = w.facing;
   }
 
   setStyle(style: ArtStyle) {

@@ -10,6 +10,7 @@ import { voxelsPerWorldUnit } from './render/voxelMesher.ts';
 import { resolveLowpoly } from './render/lowpoly/index.ts';
 import { animateRig, buildRig, rigLightPos, type CharacterKind, type Pose, type Rig } from './view/characters.ts';
 import { Atmosphere } from './view/Atmosphere.ts';
+import { DEFAULT_LOOK, type CustodeLook } from './game/look.ts';
 
 const canvas = document.querySelector<HTMLCanvasElement>('#c')!;
 const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, preserveDrawingBuffer: true });
@@ -34,6 +35,7 @@ const SETS: Record<string, string[]> = {
   spooky: ['skeleton', 'ghost', 'ghostRare', 'zombie'],
   animals: ['cat', 'rat', 'crow', 'petDog', 'petCat', 'petRabbit', 'petCrow', 'petDuck'],
   funeral: [],
+  looks: [],
 };
 const NAMES: Record<string, string> = {
   custode: 'Custode', gravedigger: 'Becchino', priest: 'Prete', mourner: 'Dolente', mournerB: 'Dolente (variante)', zombie: 'Zombie',
@@ -77,7 +79,26 @@ function rebuild() {
     root.add(rig.root);
     actors.push({ rig, label, at: new THREE.Vector3(x, 0, z), pose: p, phase: x * 0.7, heading });
   };
-  if (set === 'funeral') {
+  if (set === 'looks') {
+    // alcuni Custodi personalizzati (vedi game/look.ts)
+    const looks: Array<Partial<CustodeLook>> = [
+      {},
+      { skin: '#8d5a3b', hair: 'curly', hairColor: '#2a2226', hat: 'none', glasses: 'round', outfit: 'sweater', outfitColor: '#3a4150', accentColor: '#d9b48a', eyes: '#3b2a1e' },
+      { skin: '#f6dcc7', hair: 'long', hairColor: '#d0607a', hat: 'beanie', hatColor: '#2f3a5a', outfit: 'cloak', outfitColor: '#4a3a5a', freckles: true, eyes: '#1f4a6b' },
+      { skin: '#c9c3e6', sparkle: true, hair: 'bun', hairColor: '#d9d4cc', hat: 'none', outfit: 'overalls', outfitColor: '#4f5a3e', accentColor: '#c9a227', glasses: 'monocle', eyes: '#5a2f6b' },
+      { skin: '#e0b48f', hair: 'spiky', hairColor: '#4f7fb0', hat: 'top', hatColor: '#2a2a30', outfit: 'coat', outfitColor: '#6b2f35', accentColor: '#5f8a4a', bandaid: true, glasses: 'square' },
+      { skin: '#5e3a26', hair: 'bob', hairColor: '#e0c27a', hat: 'wide', hatColor: '#3a4a3a', outfit: 'sweater', outfitColor: '#8a7a5a', accentColor: '#a4473b', sparkle: true },
+      { skin: '#e0b48f', hair: 'curly', hairColor: '#b0774a', hat: 'wide', beard: 'braid', mustache: 'handlebar', outfit: 'coat', accentColor: '#c9a227' },
+      { skin: '#f6dcc7', hair: 'none', hairColor: '#d9d4cc', hat: 'none', beard: 'full', mustache: 'bushy', outfit: 'overalls', outfitColor: '#3a4150', glasses: 'round' },
+      { skin: '#8d5a3b', hair: 'spiky', hairColor: '#2a2226', hat: 'beanie', hatColor: '#5a2f3a', beard: 'short', mustache: 'thin', outfit: 'cloak', outfitColor: '#2b2b30' },
+    ];
+    // ?only=2,5 mostra solo alcuni aspetti (controlli ravvicinati)
+    const only = params.get('only')?.split(',').map(Number);
+    const shown = only ? looks.filter((_, i) => only.includes(i)) : looks;
+    looks.length = 0; looks.push(...shown);
+    looks.forEach((l, i) => place(buildRig('custode', 'lowpoly', { ...DEFAULT_LOOK, ...l }), (i - (looks.length - 1) / 2) * 1.55, 0, ''));
+    extent = (looks.length * 1.55) / 2 + 0.6;
+  } else if (set === 'funeral') {
     // piccolo corteo davanti a una tomba aperta, sotto un lampione
     addStatic('p:open_grave:0:3:001', new THREE.Vector3(0, 0, 0.9));
     addStatic('g:gothic:flowers:4', new THREE.Vector3(-2.7, 0, -1.9));

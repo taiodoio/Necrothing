@@ -35,6 +35,33 @@ interface AnchorEntry {
 
 export interface AnchorHandle { id: number }
 
+/** Valori di luce e colore correnti: si avvicinano gradualmente all'obiettivo (niente stacchi). */
+interface Mix {
+  top: THREE.Color; bottom: THREE.Color; fog: THREE.Color; sky: THREE.Color; ground: THREE.Color; sun: THREE.Color;
+  hemi: number; sunI: number; ambient: number; glow: number; halo: number; pool: number; sunDir: THREE.Vector3;
+}
+
+const DARK_SKY = new THREE.Color('#14181e');
+
+function mixFrom(p: Preset, weather: Weather): Mix {
+  const wet = weather === 'rain' || weather === 'storm';
+  const dim = wet ? 0.72 : weather === 'fog' ? 0.86 : 1;
+  const top = new THREE.Color(p.top), bottom = new THREE.Color(p.bottom);
+  if (wet) { top.lerp(DARK_SKY, 0.35); bottom.lerp(DARK_SKY, 0.35); }
+  return {
+    top, bottom, fog: new THREE.Color(p.fog), sky: new THREE.Color(p.sky), ground: new THREE.Color(p.ground), sun: new THREE.Color(p.sun),
+    hemi: p.hemi * dim, sunI: p.sunI * dim, ambient: p.ambient, glow: p.glow, halo: p.halo, pool: p.pool, sunDir: new THREE.Vector3(...p.sunDir),
+  };
+}
+
+function cloneMix(m: Mix): Mix {
+  return { ...m, top: m.top.clone(), bottom: m.bottom.clone(), fog: m.fog.clone(), sky: m.sky.clone(), ground: m.ground.clone(), sun: m.sun.clone(), sunDir: m.sunDir.clone() };
+}
+
+/** Durata indicativa dei passaggi di fase/meteo e delle accensioni delle luci (secondi). */
+const MIX_RATE = 1.3;
+const LIGHT_IN = 0.6, LIGHT_OUT = 0.45;
+
 let haloTexture: THREE.Texture | null = null;
 function getHaloTexture(): THREE.Texture {
   if (haloTexture) return haloTexture;
@@ -62,6 +89,9 @@ export class Atmosphere {
   private pool: THREE.PointLight[] = [];
   private nextId = 1;
   private preset: Preset = PRESETS.night;
+  private cur: Mix | null = null;
+  private target: Mix = mixFrom(PRESETS.night, 'clear');
+  private mixing = false;
   private phase: DayPhase = 'night';
   private weather: Weather = 'clear';
   private focusPoint = new THREE.Vector3();
@@ -111,30 +141,52 @@ export class Atmosphere {
     return this.quality === 'low' ? 4 : this.quality === 'medium' ? 7 : 10;
   }
 
-  setPhase(phase: DayPhase, weather: Weather) {
+  /**
+   * Nuova fase o meteo: l'atmosfera ci arriva in qualche secondo (prima il
+   * cambio era istantaneo e si vedeva come un lampo). `instant` per l'avvio.
+   */
+  setPhase(phase: DayPhase, weather: Weather, instant = false) {
     this.phase = phase;
     this.weather = weather;
-    const p = (this.preset = PRESETS[phase]);
-    const wet = weather === 'rain' || weather === 'storm';
-    const dim = wet ? 0.72 : weather === 'fog' ? 0.86 : 1;
+    this.preset = PRESETS[phase];
+    this.target = mixFrom(this.preset, weather);
+    if (!this.cur || instant) this.cur = cloneMix(this.target);
+    this.mixing = true;
+    this.applyMix();
+  }
+
+  private applyMix() {
+    const m = this.cur!;
     const g = this.bgCanvas.getContext('2d')!;
     const grad = g.createLinearGradient(0, 0, 0, 256);
-    grad.addColorStop(0, p.top);
-    grad.addColorStop(1, p.bottom);
+    grad.addColorStop(0, `#${m.top.getHexString()}`);
+    grad.addColorStop(1, `#${m.bottom.getHexString()}`);
     g.fillStyle = grad;
     g.fillRect(0, 0, 4, 256);
-    if (wet) { g.fillStyle = 'rgba(20,24,30,0.35)'; g.fillRect(0, 0, 4, 256); }
     this.bgTexture.needsUpdate = true;
-    this.hemi.color.set(p.sky);
-    this.hemi.groundColor.set(p.ground);
-    this.hemi.intensity = p.hemi * dim;
-    this.sun.color.set(p.sun);
-    this.sun.intensity = p.sunI * dim;
-    this.ambient.intensity = p.ambient;
-    (MATERIALS.glow as THREE.MeshBasicMaterial).color.setScalar(p.glow);
-    const fog = this.scene.fog as THREE.Fog;
-    fog.color.set(p.fog);
+    this.hemi.color.copy(m.sky);
+    this.hemi.groundColor.copy(m.ground);
+    this.hemi.intensity = m.hemi + this.flash * 3.5;
+    this.sun.color.copy(m.sun);
+    this.sun.intensity = m.sunI;
+    this.ambient.intensity = m.ambient;
+    (MATERIALS.glow as THREE.MeshBasicMaterial).color.setScalar(m.glow);
+    (this.scene.fog as THREE.Fog).color.copy(m.fog);
     this.applyFocus();
+  }
+
+  /** Avvicina i valori correnti all'obiettivo; true quando è arrivato. */
+  private stepMix(dt: number): boolean {
+    const c = this.cur!, t = this.target;
+    const k = 1 - Math.exp(-dt * MIX_RATE);
+    for (const key of ['top', 'bottom', 'fog', 'sky', 'ground', 'sun'] as const) c[key].lerp(t[key], k);
+    for (const key of ['hemi', 'sunI', 'ambient', 'glow', 'halo', 'pool'] as const) c[key] += (t[key] - c[key]) * k;
+    c.sunDir.lerp(t.sunDir, k);
+    const near = (a: THREE.Color, b: THREE.Color) => Math.abs(a.r - b.r) + Math.abs(a.g - b.g) + Math.abs(a.b - b.b) < 0.006;
+    const done = (['hemi', 'sunI', 'ambient', 'glow', 'halo', 'pool'] as const).every((key) => Math.abs(c[key] - t[key]) < 0.004)
+      && (['top', 'bottom', 'fog', 'sky', 'ground', 'sun'] as const).every((key) => near(c[key], t[key]));
+    if (done) Object.assign(c, cloneMix(t));
+    return done;
   }
 
   getPhase() { return this.phase; }
@@ -157,8 +209,8 @@ export class Atmosphere {
   }
 
   private applyFocus() {
-    const d = this.preset.sunDir;
-    this.sun.position.set(this.focusPoint.x + d[0], d[1], this.focusPoint.z + d[2]);
+    const d = this.cur?.sunDir ?? this.target.sunDir;
+    this.sun.position.set(this.focusPoint.x + d.x, d.y, this.focusPoint.z + d.z);
     this.sun.target.position.copy(this.focusPoint);
     this.sun.target.updateMatrixWorld();
   }
@@ -198,44 +250,70 @@ export class Atmosphere {
 
   update(dt: number, t: number, camera: THREE.Camera) {
     void camera;
-    const p = this.preset;
+    if (!this.cur) this.cur = cloneMix(this.target);
+    if (this.mixing || this.flash > 0) {
+      if (this.mixing && this.stepMix(dt)) this.mixing = false;
+      this.applyMix();
+    }
+    const p = this.cur;
     // Flicker degli aloni e delle luci.
     for (const e of this.anchors.values()) {
       const f = e.flicker.value(t);
       (e.sprite.material as THREE.SpriteMaterial).opacity = e.on ? p.halo * Math.min(1, e.anchor.intensity * 1.4) * f : 0;
       e.sprite.visible = e.on && p.halo > 0.02;
     }
-    // Assegna il pool alle sorgenti più vicine al centro della vista.
+    // Il pool di luci reali segue le sorgenti più vicine al centro della vista.
+    // Assegnazione stabile (una luce resta sulla sua sorgente finché serve) e
+    // dissolvenze in entrata/uscita: niente accensioni di colpo.
     this.poolTimer -= dt;
     if (this.poolTimer <= 0) {
       this.poolTimer = 0.3;
-      const list = [...this.anchors.values()].filter((e) => e.on && e.anchor.intensity > 0.2)
-        .sort((a, b) => a.pos.distanceToSquared(this.focusPoint) - b.pos.distanceToSquared(this.focusPoint));
       const n = this.activePool();
-      this.pool.forEach((light, i) => {
-        const e = i < n ? list[i] : undefined;
-        light.userData.entry = e;
-        if (!e) { light.intensity = 0; return; }
-        light.position.copy(e.pos);
-        light.color.set(e.anchor.color);
-        light.distance = e.anchor.range;
-      });
+      const want = [...this.anchors.values()].filter((e) => e.on && e.anchor.intensity > 0.2)
+        .sort((a, b) => a.pos.distanceToSquared(this.focusPoint) - b.pos.distanceToSquared(this.focusPoint))
+        .slice(0, n);
+      const wanted = new Set(want);
+      const assigned = new Set<AnchorEntry>();
+      for (const light of this.pool) {
+        const e = light.userData.entry as AnchorEntry | undefined;
+        if (!e) continue;
+        if (wanted.has(e) && this.anchors.has(this.idOf(e))) { assigned.add(e); light.userData.leaving = false; }
+        else light.userData.leaving = true;
+      }
+      for (const e of want) {
+        if (assigned.has(e)) continue;
+        const free = this.pool.find((l) => !l.userData.entry);
+        if (!free) break;
+        free.userData.entry = e;
+        free.userData.leaving = false;
+        free.userData.w = 0;
+        free.position.copy(e.pos);
+        free.color.set(e.anchor.color);
+        free.distance = e.anchor.range;
+        assigned.add(e);
+      }
     }
     for (const light of this.pool) {
       const e = light.userData.entry as AnchorEntry | undefined;
-      if (!e) continue;
-      const f = e.flicker.value(t);
-      light.intensity = p.pool * e.anchor.intensity * 4.2 * f;
+      if (!e) { light.intensity = 0; continue; }
+      let w = (light.userData.w as number | undefined) ?? 1;
+      w = light.userData.leaving ? Math.max(0, w - dt / LIGHT_OUT) : Math.min(1, w + dt / LIGHT_IN);
+      light.userData.w = w;
+      if (light.userData.leaving && w <= 0) { light.userData.entry = undefined; light.intensity = 0; continue; }
+      light.position.copy(e.pos);
+      light.intensity = p.pool * e.anchor.intensity * 4.2 * e.flicker.value(t) * w;
     }
-    // Temporale: lampi occasionali.
+    // Temporale: lampi occasionali (solo col temporale).
     if (this.weather === 'storm') {
       this.nextFlash -= dt;
       if (this.nextFlash <= 0) { this.flash = 1; this.nextFlash = 5 + Math.random() * 9; }
     }
-    if (this.flash > 0) {
-      this.flash = Math.max(0, this.flash - dt * 3.2);
-      this.hemi.intensity = p.hemi * 0.72 + this.flash * 3.5;
-    }
+    if (this.flash > 0) this.flash = Math.max(0, this.flash - dt * 3.2);
+  }
+
+  private idOf(e: AnchorEntry): number {
+    for (const [id, x] of this.anchors) if (x === e) return id;
+    return -1;
   }
 
   setAnchorOn(h: AnchorHandle, on: boolean) {

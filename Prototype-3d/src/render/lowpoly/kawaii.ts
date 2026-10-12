@@ -9,6 +9,7 @@
 import * as THREE from 'three';
 import { LP, type LPModel, type LPOpts } from './kit.ts';
 import { LPC } from './palette.ts';
+import { DEFAULT_LOOK, type CustodeLook, type HairStyle, type HatStyle } from '../../game/look.ts';
 
 export type KPart = 'body' | 'head' | 'armL' | 'armR' | 'legL' | 'legR';
 type Build = (lp: LP) => void;
@@ -57,6 +58,10 @@ const WHITE = '#fbf7ef';
 
 interface FaceOpts {
   z: number; y: number; dx?: number; r?: number; ink?: string;
+  /** Colore degli occhi (iride); default inchiostro. */
+  eye?: string;
+  /** Curvatura della superficie (1/2R): sposta occhi e guance indietro ai lati, così restano appoggiati. */
+  curve?: number;
   mouth?: 'smile' | 'o' | 'flat' | 'none' | 'grin';
   eyes?: 'open' | 'closed' | 'sleepy' | 'none';
   blush?: boolean | string; bucket?: 'ghost';
@@ -66,11 +71,13 @@ interface FaceOpts {
 function face(lp: LP, o: FaceOpts) {
   const dx = o.dx ?? 0.11, r = o.r ?? 0.05, ink = o.ink ?? INK, bucket = o.bucket;
   const eyes = o.eyes ?? 'open';
+  const zAt = (x: number) => o.z - (o.curve ?? 0) * x * x;
   for (const s of [-1, 1]) {
     if (eyes === 'open') {
-      ball(lp, s * dx, o.y, o.z, r * 0.85, r * 1.1, 0.02, ink, { bucket });
-      ball(lp, s * dx - r * 0.3, o.y + r * 0.42, o.z + 0.016, r * 0.32, r * 0.32, 0.01, WHITE);
-      ball(lp, s * dx + r * 0.3, o.y - r * 0.4, o.z + 0.014, r * 0.15, r * 0.15, 0.008, WHITE);
+      const ez = zAt(dx);
+      ball(lp, s * dx, o.y, ez, r * 0.85, r * 1.1, 0.02, o.eye ?? ink, { bucket });
+      ball(lp, s * dx - r * 0.3, o.y + r * 0.42, ez + 0.016, r * 0.32, r * 0.32, 0.01, WHITE);
+      ball(lp, s * dx + r * 0.3, o.y - r * 0.4, ez + 0.014, r * 0.15, r * 0.15, 0.008, WHITE);
     } else if (eyes === 'closed' || eyes === 'sleepy') {
       // archetto (occhi chiusi felici / assonnati)
       const arc = new THREE.TorusGeometry(r * 0.75, 0.009, 3, 7, Math.PI);
@@ -78,7 +85,11 @@ function face(lp: LP, o: FaceOpts) {
       lp.add(arc.translate(s * dx, o.y - (eyes === 'sleepy' ? -0.01 : 0.02), o.z + 0.004), ink, { jitter: 0, ao: 0, bucket });
     }
   }
-  if (o.blush !== false) for (const s of [-1, 1]) ball(lp, s * (dx + 0.06), o.y - 0.07, o.z - 0.004, 0.042, 0.022, 0.012, typeof o.blush === 'string' ? o.blush : BLUSH, { bucket });
+  // guance appoggiate sulla faccia: più vicine al centro (la parte piatta) e affondate di poco
+  if (o.blush !== false) for (const s of [-1, 1]) {
+    const bx = dx + 0.03;
+    ball(lp, s * bx, o.y - 0.075, zAt(bx) - 0.007, 0.038, 0.02, 0.014, typeof o.blush === 'string' ? o.blush : BLUSH, { bucket });
+  }
   const my = o.y - 0.085;
   switch (o.mouth ?? 'smile') {
     case 'smile': lp.add(new THREE.TorusGeometry(0.024, 0.008, 3, 7, Math.PI).rotateZ(Math.PI).translate(0, my + 0.012, o.z + 0.004), ink, { jitter: 0, ao: 0, bucket }); break;
@@ -100,6 +111,13 @@ interface KH {
   face?: Partial<FaceOpts>;
   hat?: Build; hair?: Build; extraHead?: Build;
   heldL?: Build; heldR?: Build; back?: Build; chest?: Build;
+  /** Pelle "brillantinata": brillantini luminosi su viso e mani. */
+  sparkle?: boolean;
+}
+
+const GLITTER = ['#fff4fb', '#ffd6f0', '#d6f6ff', '#fff2c4'];
+function glitter(lp: LP, pts: Array<[number, number, number]>) {
+  pts.forEach(([x, y, z], i) => lp.blob(x, y, z, 0.011, 0.011, 0.006, GLITTER[i % GLITTER.length], { bucket: 'glow', jitter: 0, ao: 0 }));
 }
 
 function kHumanoid(o: KH): KawaiiSpec {
@@ -114,6 +132,7 @@ function kHumanoid(o: KH): KawaiiSpec {
     lp.cyl(0, -0.22, 0, 0.07, 0.068, 0.22, 7, arm, { jitter: 0, vary: 0.04, ao: 0.08 });
     lp.cyl(0, -0.235, 0, 0.074, 0.074, 0.04, 7, o.cuff ?? o.coat2, { jitter: 0, ao: 0 });
     ball(lp, 0, -0.275, 0.005, 0.064, 0.064, 0.064, o.skin); // manina
+    if (o.sparkle) glitter(lp, [[0.03, -0.25, 0.055], [-0.035, -0.29, 0.05], [0.0, -0.32, 0.045], [0.05, -0.29, 0.02]]);
     held?.(lp);
   };
   return {
@@ -141,6 +160,7 @@ function kHumanoid(o: KH): KawaiiSpec {
         sbox(lp, 0, -0.02, 0, HEAD_W, HEAD_H, HEAD_D, 0.13, o.skin, { ao: 0.04 });
         for (const s of [-1, 1]) ball(lp, s * (HEAD_W / 2 + 0.005), 0.18, 0, 0.035, 0.05, 0.035, o.skin); // orecchie
         face(lp, { z: HEAD_D / 2, y: 0.18, ...o.face });
+        if (o.sparkle) glitter(lp, [[-0.2, 0.08, 0.2], [0.21, 0.12, 0.19], [-0.15, 0.3, 0.235], [0.17, 0.27, 0.235], [0.0, 0.32, 0.242], [-0.24, 0.2, 0.15], [0.24, 0.05, 0.15], [0.09, 0.05, 0.242]]);
         o.hair?.(lp);
         o.hat?.(lp);
         o.extraHead?.(lp);
@@ -162,14 +182,25 @@ function wideHat(color: string, band = INK, tilt = 0.08): Build {
   };
 }
 
-function shovel(len = 0.78): Build {
+/**
+ * Pala portata in spalla: il manico passa per la mano e sale dietro la
+ * spalla, la lama resta in alto accanto alla testa (leggibile dalla camera;
+ * tenuta in verticale con la lama nell'erba sembrava un bastone).
+ */
+function shovel(len = 0.82): Build {
   return (lp) => {
-    const bottom = -0.62;
-    lp.cyl(0, bottom, 0.07, 0.022, 0.022, len, 6, LPC.woodLight, { jitter: 0 });
-    sbox(lp, 0, bottom + len, 0.07, 0.13, 0.035, 0.045, 0.012, LPC.woodDark);
+    lp.push([0, -0.275, 0.02], 0, -0.53, -0.3);
+    lp.cyl(0, -0.16, 0, 0.022, 0.022, len, 6, LPC.woodLight, { jitter: 0 });
+    // impugnatura a D in fondo
+    lp.add(new THREE.TorusGeometry(0.045, 0.012, 4, 8, Math.PI).rotateZ(Math.PI).translate(0, -0.16, 0), LPC.woodDark, { jitter: 0 });
+    // lama in cima, con colletto e bordo più chiaro
+    const top = -0.16 + len;
+    lp.cyl(0, top - 0.02, 0, 0.032, 0.026, 0.07, 6, '#6f7a84', { jitter: 0 });
     const blade = new THREE.Shape();
-    blade.moveTo(-0.08, 0); blade.lineTo(0.08, 0); blade.quadraticCurveTo(0.09, -0.14, 0, -0.2); blade.quadraticCurveTo(-0.09, -0.14, -0.08, 0);
-    lp.push([0, bottom + 0.02, 0.07]).extrude(blade, 0.03, '#8b96a0', { bevel: 0.008, jitter: 0, curve: 3 }).pop();
+    blade.moveTo(-0.1, 0); blade.lineTo(0.1, 0); blade.lineTo(0.105, 0.17); blade.quadraticCurveTo(0.09, 0.26, 0, 0.29); blade.quadraticCurveTo(-0.09, 0.26, -0.105, 0.17); blade.closePath();
+    lp.push([0, top + 0.04, 0]).extrude(blade, 0.03, '#9aa6b0', { bevel: 0.008, jitter: 0, curve: 3 }).pop();
+    lp.push([0, top + 0.04, 0.017]).plate(new THREE.Shape([new THREE.Vector2(-0.06, 0.03), new THREE.Vector2(0.06, 0.03), new THREE.Vector2(0.05, 0.16), new THREE.Vector2(-0.05, 0.16)]), 0.004, '#c3ccd3', { ao: 0 }).pop();
+    lp.pop();
   };
 }
 
@@ -196,22 +227,190 @@ function scarf(color: string, stripe: string): Build {
 
 const SKIN = '#f2cfb0';
 
+// ── Custode personalizzabile ─────────────────────────────────────────────
+
+const shade = (c: string, k: number) => `#${new THREE.Color(c).offsetHSL(0, 0, k).getHexString()}`;
+
+/** Altezza sotto cui devono restare i capelli quando c'è un cappello (tesa o bordo). */
+export const HAIR_CEILING: Record<HatStyle, number> = { wide: 0.385, top: 0.395, beanie: 0.285, none: 9 };
+
+/**
+ * Capelli (coordinate della testa: faccia su z = 0,24, sommità a y = 0,46).
+ * Con il cappello nessuna ciocca supera la tesa: i pezzi più alti si
+ * schiacciano sotto il "soffitto" o non si disegnano.
+ */
+export function hairBuild(style: HairStyle, c: string, hat: HatStyle): Build | undefined {
+  const ceil = HAIR_CEILING[hat];
+  const lump = (lp: LP, x: number, y: number, z: number, rx: number, ry: number, rz: number, col = c) => {
+    if (y - ry * 0.3 > ceil) return;
+    const top = Math.min(y + ry, ceil);
+    const bottom = y - ry;
+    ball(lp, x, (top + bottom) / 2, z, rx, (top - bottom) / 2, rz, col);
+  };
+  const cap = (lp: LP) => lump(lp, 0, 0.37, -0.02, 0.305, 0.15, 0.27);
+  const sides = (lp: LP, low = 0.2) => { for (const s of [-1, 1]) lump(lp, s * 0.27, low, -0.03, 0.06, 0.15, 0.19); };
+  const back = (lp: LP) => lump(lp, 0, 0.22, -0.2, 0.28, 0.2, 0.08);
+  const fringe = (lp: LP) => { if (0.33 + 0.1 < ceil) sbox(lp, 0, 0.33, 0.19, 0.46, 0.1, 0.08, 0.04, c); else lump(lp, 0, 0.32, 0.2, 0.22, 0.05, 0.05); };
+  switch (style) {
+    case 'none': return undefined;
+    case 'tufts': return (lp) => {
+      for (const [x, y, r] of [[-0.2, 0.34, 0.07], [0.2, 0.33, 0.065], [-0.08, 0.36, 0.06], [0.07, 0.365, 0.055]] as const) lump(lp, x, y, 0.2, r, r * 0.8, 0.05);
+      for (const s of [-1, 1]) lump(lp, s * 0.27, 0.28, -0.02, 0.05, 0.08, 0.12);
+      if (hat === 'none') for (let i = 0; i < 3; i++) lp.push([-0.06 + i * 0.06, 0.45, 0], 0, 0, (i - 1) * 0.4).cyl(0, 0, 0, 0.035, 0, 0.1, 4, c, { jitter: 0 }).pop();
+    };
+    case 'bob': return (lp) => { cap(lp); sides(lp); fringe(lp); back(lp); };
+    case 'long': return (lp) => {
+      cap(lp); sides(lp, 0.16); fringe(lp); back(lp);
+      sbox(lp, 0, -0.16, -0.2, 0.5, Math.min(0.5, ceil + 0.155), 0.1, 0.05, c); // ricade sulla schiena, sotto l'eventuale cappello
+      for (const s of [-1, 1]) lump(lp, s * 0.26, 0.04, 0.04, 0.055, 0.17, 0.07);
+    };
+    case 'curly': return (lp) => {
+      // riccioli su tutta la calotta: sommità, nuca, lati e frangia
+      const pts: Array<[number, number, number]> = [];
+      for (let ix = -2; ix <= 2; ix++) for (let iz = -2; iz <= 2; iz++) pts.push([ix * 0.105, 0.45 - (Math.abs(ix) + Math.abs(iz)) * 0.012, iz * 0.095 - 0.02]);
+      for (let ix = -2; ix <= 2; ix++) for (const y of [0.1, 0.22, 0.34]) pts.push([ix * 0.11, y, -0.235]);
+      for (const sx of [-1, 1]) for (const z of [-0.16, -0.05, 0.06]) for (const y of [0.24, 0.36]) pts.push([sx * 0.285, y, z]);
+      for (let ix = -2; ix <= 2; ix++) pts.push([ix * 0.1, 0.4, 0.19]);
+      pts.forEach(([x, y, z], i) => lump(lp, x, y, z, 0.07 + (i % 3) * 0.008, 0.07, 0.07, i % 4 ? c : shade(c, -0.05)));
+    };
+    case 'bun': return (lp) => { cap(lp); sides(lp); fringe(lp); back(lp); lump(lp, 0, hat === 'none' ? 0.52 : 0.27, -0.24, 0.11, 0.1, 0.11); };
+    case 'spiky': return (lp) => {
+      cap(lp); sides(lp); back(lp);
+      if (hat === 'none') {
+        for (let i = 0; i < 6; i++) lp.push([-0.2 + i * 0.08, 0.36, 0.2], 0, 0.5, (i - 2.5) * 0.18).cyl(0, 0, 0, 0.05, 0, 0.12, 4, c, { jitter: 0 }).pop();
+        for (let i = 0; i < 7; i++) { const a = (i / 7) * Math.PI * 2; lp.push([Math.cos(a) * 0.15, 0.44, Math.sin(a) * 0.12], 0, Math.sin(a) * 0.6, -Math.cos(a) * 0.6).cyl(0, 0, 0, 0.06, 0, 0.16, 4, c, { jitter: 0 }).pop(); }
+      } else fringe(lp);
+    };
+  }
+}
+
+/** Barba (corta, folta, con treccia) e baffi, nel colore dei capelli. */
+function facialHair(l: CustodeLook): Build {
+  const c = l.hairColor, z = HEAD_D / 2;
+  return (lp) => {
+    if (l.beard === 'short') {
+      // barbetta che segue la mandibola, lascia libero il sorriso
+      for (let i = -3; i <= 3; i++) ball(lp, i * 0.06, 0.02 + Math.abs(i) * 0.025, z - 0.01 - Math.abs(i) * 0.012, 0.045, 0.04, 0.03, i % 2 ? c : shade(c, -0.04));
+    } else if (l.beard === 'full' || l.beard === 'braid') {
+      ball(lp, 0, -0.01, z - 0.02, 0.24, 0.09, 0.08, c); // lascia libero il sorriso
+      for (const s of [-1, 1]) ball(lp, s * 0.2, 0.1, z - 0.07, 0.07, 0.1, 0.07, c); // basette
+      ball(lp, 0, -0.06, z - 0.01, 0.15, 0.07, 0.07, shade(c, -0.03));
+      if (l.beard === 'braid') {
+        // treccia che scende sul petto, con fermaglio nel colore dei dettagli
+        for (let i = 0; i < 4; i++) ball(lp, (i % 2 ? 0.012 : -0.012), -0.12 - i * 0.065, z - 0.0 - i * 0.004, 0.05 - i * 0.006, 0.04, 0.035, i % 2 ? c : shade(c, -0.06));
+        lp.cyl(0, -0.39, z - 0.01, 0.028, 0.028, 0.035, 6, l.accentColor, { jitter: 0 });
+        ball(lp, 0, -0.42, z - 0.01, 0.03, 0.035, 0.028, c);
+      }
+    }
+    const my = 0.115; // sopra la bocca
+    if (l.mustache === 'thin') for (const s of [-1, 1]) lp.push([s * 0.035, my, z + 0.006], 0, 0, s * 0.25).box(0, 0, 0, 0.06, 0.016, 0.012, c, { jitter: 0, ao: 0 }).pop();
+    else if (l.mustache === 'bushy') { for (const s of [-1, 1]) ball(lp, s * 0.045, my, z + 0.005, 0.055, 0.028, 0.025, c); }
+    else if (l.mustache === 'handlebar') {
+      for (const s of [-1, 1]) {
+        ball(lp, s * 0.04, my, z + 0.006, 0.045, 0.02, 0.02, c);
+        lp.add(new THREE.TorusGeometry(0.03, 0.009, 4, 8, Math.PI * 1.2).rotateZ(s > 0 ? -0.3 : Math.PI * -0.9).translate(s * 0.1, my + 0.02, z + 0.006), c, { jitter: 0, ao: 0 });
+      }
+    }
+  };
+}
+
+function hatBuild(style: HatStyle, c: string): Build | undefined {
+  switch (style) {
+    case 'none': return undefined;
+    case 'wide': return wideHat(c, shade(c, -0.12));
+    case 'top': return (lp) => {
+      lp.push([0, 0.4, 0], 0, -0.04, -0.07);
+      lp.cyl(0, 0, 0, 0.33, 0.33, 0.035, 14, c, { jitter: 0 });
+      lp.cyl(0, 0.02, 0, 0.2, 0.21, 0.32, 12, c, { jitter: 0, vary: 0.05 });
+      lp.cyl(0, 0.04, 0, 0.215, 0.21, 0.055, 12, shade(c, -0.15), { jitter: 0, ao: 0 });
+      lp.pop();
+    };
+    case 'beanie': return (lp) => {
+      ball(lp, 0, 0.37, -0.01, 0.3, 0.17, 0.27, c);
+      // risvolto a coste, appena più scuro (prima sembrava una fascia nera)
+      lp.cyl(0, 0.29, -0.01, 0.298, 0.292, 0.08, 14, shade(c, -0.03), { jitter: 0, ao: 0 });
+      for (let i = 0; i < 10; i++) { const a = (i / 10) * Math.PI * 2; lp.push([Math.cos(a) * 0.296, 0.295, Math.sin(a) * 0.296 - 0.01], -a).box(0, 0, 0, 0.018, 0.07, 0.008, shade(c, 0.05), { jitter: 0, ao: 0 }).pop(); }
+      ball(lp, 0, 0.56, -0.02, 0.075, 0.07, 0.075, shade(c, 0.12));
+    };
+  }
+}
+
+/** Busto per vestito: sciarpa, mantella con fermaglio, salopette, maglione a righe. */
+function outfitChest(l: CustodeLook): Build {
+  const acc = l.accentColor;
+  switch (l.outfit) {
+    case 'cloak': return (lp) => {
+      lp.push([0, 0.37, 0]).add(new THREE.TorusGeometry(0.19, 0.05, 5, 12).rotateX(Math.PI / 2), shade(l.outfitColor, -0.06), { jitter: 0 }).pop();
+      ball(lp, 0, 0.33, 0.17, 0.035, 0.035, 0.02, acc);
+      ball(lp, 0, 0.33, 0.19, 0.015, 0.015, 0.01, LPC.gold);
+    };
+    case 'overalls': return (lp) => {
+      sbox(lp, 0, 0.02, 0.148, 0.24, 0.2, 0.012, 0.01, shade(l.outfitColor, -0.04));
+      for (const s of [-1, 1]) { lp.box(s * 0.1, 0.2, 0.152, 0.05, 0.18, 0.01, l.outfitColor, { jitter: 0, ao: 0 }); ball(lp, s * 0.1, 0.22, 0.158, 0.016, 0.016, 0.008, LPC.gold); }
+      sbox(lp, 0.06, 0.05, 0.156, 0.07, 0.06, 0.008, 0.006, acc);
+    };
+    case 'sweater': return (lp) => {
+      // righe "dipinte" davanti e dietro, aderenti alla parte piatta del busto
+      for (const y of [0.04, 0.16, 0.28]) for (const s of [-1, 1]) lp.box(0, y, s * 0.151, 0.22, 0.045, 0.006, acc, { jitter: 0, ao: 0 });
+      lp.cyl(0, 0.34, 0, 0.17, 0.15, 0.08, 12, shade(l.outfitColor, -0.05), { jitter: 0 });
+    };
+    default: return (lp) => {
+      scarf(acc, shade(acc, 0.25))(lp);
+      for (const y of [0.06, 0.16]) ball(lp, 0.05, y, 0.155, 0.014, 0.014, 0.008, LPC.gold);
+    };
+  }
+}
+
+/** Occhiali, lentiggini, cerotto. */
+function faceDetails(l: CustodeLook): Build {
+  return (lp) => {
+    const z = HEAD_D / 2 + 0.02;
+    const frame = l.glasses === 'square' ? '#2a2226' : LPC.gold;
+    if (l.glasses === 'round' || l.glasses === 'monocle') {
+      for (const s of l.glasses === 'monocle' ? [1] : [-1, 1]) lp.add(new THREE.TorusGeometry(0.07, 0.01, 4, 12).translate(s * 0.11, 0.18, z), frame, { jitter: 0, ao: 0 });
+      if (l.glasses === 'round') lp.box(0, 0.19, z, 0.06, 0.012, 0.01, frame, { jitter: 0, ao: 0 });
+      else lp.push([0.17, 0.12, z], 0, 0, 0.4).cyl(0, -0.22, 0, 0.005, 0.005, 0.22, 3, LPC.gold, { jitter: 0 }).pop();
+    } else if (l.glasses === 'square') {
+      for (const s of [-1, 1]) {
+        lp.box(s * 0.11, 0.24, z, 0.15, 0.016, 0.012, frame, { jitter: 0, ao: 0 });
+        lp.box(s * 0.11, 0.115, z, 0.15, 0.016, 0.012, frame, { jitter: 0, ao: 0 });
+        for (const e of [-1, 1]) lp.box(s * 0.11 + e * 0.07, 0.115, z, 0.016, 0.14, 0.012, frame, { jitter: 0, ao: 0 });
+      }
+      lp.box(0, 0.2, z, 0.06, 0.014, 0.01, frame, { jitter: 0, ao: 0 });
+    }
+    if (l.freckles) for (const s of [-1, 1]) for (const [x, y] of [[0.12, 0.13], [0.15, 0.115], [0.135, 0.095], [0.165, 0.135]] as const) lp.blob(s * x, y, HEAD_D / 2 + 0.003, 0.008, 0.008, 0.004, shade(l.skin, -0.2), { jitter: 0, ao: 0 });
+    if (l.bandaid) {
+      lp.push([-0.13, 0.33, HEAD_D / 2 + 0.004], 0, 0, 0.5);
+      sbox(lp, 0, -0.018, 0, 0.11, 0.036, 0.008, 0.008, '#e8c9a0');
+      lp.box(0, -0.012, 0.005, 0.035, 0.024, 0.004, '#d9b48a', { jitter: 0, ao: 0 });
+      lp.pop();
+    }
+  };
+}
+
+/** Il Custode costruito da un aspetto personalizzato (stesse parti e perni). */
+export function custodeSpec(l: CustodeLook): KawaiiSpec {
+  const coat = l.outfitColor;
+  return kHumanoid({
+    coat, coat2: shade(coat, -0.07), skin: l.skin, pants: l.outfit === 'overalls' ? coat : '#3a3230', boots: '#2b211c',
+    arm: l.outfit === 'overalls' ? '#d8cdb8' : undefined, cuff: l.outfit === 'sweater' ? l.accentColor : l.outfit === 'overalls' ? '#c4b8a0' : undefined,
+    robe: l.outfit === 'cloak',
+    face: { mouth: 'smile', eye: l.eyes },
+    hair: hairBuild(l.hair, l.hairColor, l.hat),
+    hat: hatBuild(l.hat, l.hatColor),
+    chest: outfitChest(l),
+    back: (lp) => { sbox(lp, 0, 0.04, -0.2, 0.3, 0.28, 0.12, 0.04, '#7a5a3c'); sbox(lp, 0, 0.2, -0.27, 0.22, 0.09, 0.04, 0.02, '#5c4029'); },
+    extraHead: (lp) => { faceDetails(l)(lp); facialHair(l)(lp); },
+    sparkle: l.sparkle,
+    // niente pala (è del becchino): solo la lanterna, che di notte illumina il Custode
+    heldL: handLantern(),
+  });
+}
+
 // ── Catalogo dei prototipi ──────────────────────────────────────────────
 
 export const KAWAII: Record<string, KawaiiSpec> = {
-  custode: kHumanoid({
-    coat: '#6e4c36', coat2: '#5a3d2b', skin: SKIN, pants: '#3a3230', boots: '#2b211c',
-    face: { mouth: 'smile' },
-    hair: (lp) => {
-      for (const [x, y, r] of [[-0.2, 0.36, 0.07], [0.2, 0.35, 0.065], [-0.08, 0.38, 0.06], [0.07, 0.385, 0.055]] as const) ball(lp, x, y, 0.2, r, r * 0.8, 0.05, '#6b4a33');
-      for (const s of [-1, 1]) ball(lp, s * 0.27, 0.3, -0.02, 0.05, 0.08, 0.12, '#6b4a33');
-    },
-    hat: wideHat('#4a3326', '#2a2220'),
-    chest: scarf('#a4473b', '#d9b48a'),
-    back: (lp) => { sbox(lp, 0, 0.04, -0.2, 0.3, 0.28, 0.12, 0.04, '#7a5a3c'); sbox(lp, 0, 0.2, -0.27, 0.22, 0.09, 0.04, 0.02, '#5c4029'); },
-    heldR: shovel(),
-    heldL: handLantern(),
-  }),
+  custode: custodeSpec(DEFAULT_LOOK),
   gravedigger: kHumanoid({
     coat: '#56664b', coat2: '#46543d', skin: '#ebbf9c', pants: '#3b352d', boots: '#2a241e', arm: '#c9b79c', cuff: '#b3a185',
     face: { mouth: 'none', eyes: 'sleepy', y: 0.2 },
@@ -407,7 +606,7 @@ function ghostK(c: string, rare: boolean): KawaiiSpec {
           }
         }
         lp.add(geo, c, { ...g, jitter: 0, vary: 0.03, ao: 0 });
-        face(lp, { z: 0.318, y: 0.36, dx: 0.1, r: 0.055, mouth: 'o' });
+        face(lp, { z: 0.318, y: 0.36, dx: 0.1, r: 0.055, mouth: 'o', curve: 1.5 });
         if (rare) { // fiocco e stelline
           lp.push([0.12, 0.66, 0.08], 0, 0, -0.3);
           for (const s of [-1, 1]) lp.push([s * 0.05, 0, 0], 0, 0, s * Math.PI / 2).cyl(0, -0.05, 0, 0.055, 0.01, 0.1, 3, '#e07a6a', { jitter: 0 }).pop();
@@ -458,7 +657,7 @@ function kQuad(o: KQ): KawaiiSpec {
           if (o.bones) ball(lp, ex, ey, z - 0.006, H * 0.12, H * 0.13, 0.02, '#25232a');
           ball(lp, ex, ey, z, H * 0.08, H * 0.1, 0.015, o.eyes, o.eyes === INK ? {} : { bucket: 'glow' });
           ball(lp, ex - H * 0.025, ey + H * 0.035, z + 0.012, H * 0.03, H * 0.03, 0.008, WHITE);
-          if (!o.bones) ball(lp, s * H * 0.36, H * 0.26, z - 0.004, H * 0.08, H * 0.04, 0.01, BLUSH);
+          if (!o.bones) ball(lp, s * H * 0.27, H * 0.24, z - 0.006, H * 0.07, H * 0.035, 0.012, BLUSH);
         }
         for (const s of [-1, 1]) {
           const ec = o.bones ? LPC.boneDark : o.color;

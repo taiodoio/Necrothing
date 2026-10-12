@@ -214,10 +214,15 @@ colonna "Sereno". Veli per qualità: bassa 1, media 2, alta 3. `?mist=0` la speg
   brillantinata), capelli (7 tagli, 8 colori), occhi, occhiali/monocolo,
   lentiggini, cerotto, barba (corta, folta, con treccia) e baffi (sottili, a
   manubrio, folti), cappello (4) e colore, vestiti (cappotto, mantella, salopette,
-  maglione a righe dipinte) con colore e colore dei dettagli. Ogni taglio ha una
-  calotta piena (sommità, lati, nuca) più una fascia sulla fronte, sotto le
-  ciocche: niente pelle scoperta. Con il cappello i capelli restano sempre sotto
-  la tesa e ne seguono l'inclinazione (testato per ogni taglio e cappello).
+  maglione a righe dipinte) con colore e colore dei dettagli. I capelli sono
+  veli che aderiscono alla testa: una calotta sottile su sommità, lati e nuca,
+  poi ciocche separate (frangia sulla fronte, ciocche su lati e nuca) a punta,
+  bombate al centro e in tonalità alternate, così tra una e l'altra resta un
+  solco; i capelli lunghi aggiungono ciocche che pendono sulla schiena. Ogni
+  taglio ha la sua frangia (ciuffi a punta, dritta smerlata, di lato, tirata
+  verso lo chignon, spettinata) e le punte non scendono mai sugli occhi. Con il
+  cappello i capelli restano sempre sotto la tesa e ne seguono l'inclinazione
+  (testato per ogni taglio e cappello).
   Salvato nella partita (`player.look`, validato al caricamento), anteprima 3D
   nel pannello "Personaggio", fissa in alto mentre si scorrono le opzioni (dal
   profilo o dalle Impostazioni), su una zolla di prato con fiorellini, sassi e

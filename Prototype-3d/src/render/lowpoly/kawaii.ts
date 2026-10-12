@@ -160,6 +160,13 @@ function headAt(theta: number, phi: number): { p: THREE.Vector3; n: THREE.Vector
   return { p, n: headNormal(p) };
 }
 
+/** Elevazione φ alla quale, nella direzione θ, la superficie della testa è all'altezza y. */
+function phiForY(theta: number, y: number): number {
+  let lo = -80 * DEG, hi = 88 * DEG;
+  for (let i = 0; i < 22; i++) { const m = (lo + hi) / 2; if (headAt(theta, m).p.y < y) lo = m; else hi = m; }
+  return (lo + hi) / 2;
+}
+
 /** Punto della faccia davanti a (x, y), con la normale. */
 function headFront(x: number, y: number): { p: THREE.Vector3; n: THREE.Vector3 } {
   let lo = 0, hi = 0.4;
@@ -399,7 +406,7 @@ export function hairBuild(style: HairStyle, c: string, hat: HatStyle): Build | u
   return (lp) => {
     build(lp);
     lp.push([0, tilt[0], 0], 0, tilt[1], tilt[2]);
-    lp.add(roundSlabGeo(0.6, 0.46, 0.05, 0.14).translate(0, -0.05, -0.04), c, { jitter: 0, vary: 0.04, ao: 0.05 });
+    lp.add(roundSlabGeo(0.6, 0.53, 0.05, 0.15).translate(0, -0.05, -0.005), c, { jitter: 0, vary: 0.04, ao: 0.05 }); // arriva fino alla fronte
     lp.pop();
   };
 }
@@ -408,45 +415,124 @@ type Lump = (lp: LP, x: number, y: number, z: number, rx: number, ry: number, rz
 
 function hairStyle(style: HairStyle, c: string, hat: HatStyle, lump: Lump): Build | undefined {
   const ceil = HAIR_CEILING[hat];
-  // calotta piena che segue la testa (sommità, lati, nuca): sotto le ciocche
-  // non resta mai pelle scoperta; il davanti si ferma prima del viso
-  const round = (h: number) => Math.min(hat === 'none' ? 0.13 : 0.04, h / 2.3);
-  const shell = (lp: LP, bottom: number, col = c) => {
-    const top = Math.min(0.5, ceil), h = top - bottom;
-    if (h <= 0.02) return;
-    // senza cappello sommità tonda; sotto un cappello angoli arrotondati visti
-    // dall'alto, così la calotta non sporge dal bordo di berretto o cilindro
-    if (hat === 'none') sbox(lp, 0, bottom, -0.04, 0.6, h, 0.46, round(h), col, { ao: 0.05 });
-    else lp.add(roundSlabGeo(0.6, 0.46, h, 0.14).translate(0, bottom, -0.04), col, { jitter: 0, vary: 0.04, ao: 0.05 });
+  /** Fin dove salgono i capelli: la sommità o, con il cappello, appena sotto la tesa. */
+  const topY = hat === 'none' ? 0.455 : ceil - 0.035;
+  const front = (th: number) => { const a = Math.abs(Math.atan2(Math.sin(th), Math.cos(th))); return a; }; // 0 davanti, π dietro
+
+  /**
+   * Calotta: velo sottile che avvolge tutta la testa (sommità, lati, nuca)
+   * aderendo alla superficie; davanti si ferma sotto la frangia, dietro scende
+   * fino a `backY`. Sotto le ciocche non resta mai pelle scoperta.
+   */
+  const cap = (lp: LP, backY: number, col = shade(c, -0.03)) => {
+    headSheet(lp, 28, 8,
+      (u, v) => {
+        const th = Math.PI + u * Math.PI;
+        // davanti mai sotto 0,27 (gli occhi arrivano a ~0,25)
+        const fy = Math.min(Math.max(0.27, Math.min(0.38, topY - 0.04)), topY);
+        const yb = THREE.MathUtils.lerp(fy, backY, smooth(0.3 * Math.PI, 0.62 * Math.PI, front(th)));
+        const pt = hat === 'none' ? 89 * DEG : phiForY(th, topY + 0.01);
+        return [th, THREE.MathUtils.lerp(phiForY(th, yb), pt, v)];
+      },
+      (_u, v) => 0.028 * (0.3 + 0.7 * smooth(0, 0.25, v)), col, { vary: 0.04 });
   };
-  // fascia sulla fronte, dall'attaccatura fino al cappello (o alla sommità)
-  const band = (lp: LP, y0 = 0.31) => {
-    const top = Math.min(0.495, ceil), h = top - y0;
-    if (h <= 0.02) return;
-    if (hat === 'none') sbox(lp, 0, y0, 0.195, 0.585, h, 0.13, round(h), c, { ao: 0.05 });
-    // sotto un cappello la fascia abbraccia tutta la testa con angoli tondi
-    else lp.add(roundSlabGeo(0.6, 0.53, h, 0.15).translate(0, y0, -0.005), c, { jitter: 0, vary: 0.04, ao: 0.05 });
+
+  /**
+   * Ciocche che aderiscono alla testa, centrate in `center` (0 = fronte,
+   * π = nuca) su ±`span`: ognuna è un velo a sé, bombato al centro e sottile
+   * sui bordi, con la punta all'altezza `tip(t)` (t ∈ −1..1 lungo l'arco) e
+   * una tonalità appena diversa, così tra due ciocche resta un solco.
+   */
+  const locks = (lp: LP, o: { center: number; span: number; n: number; tip: (t: number) => number; depth: number; root?: number; seed?: number; col?: string; edgeTaper?: boolean; minTip?: number }) => {
+    const rnd = prng(o.seed ?? 11);
+    const lens = Array.from({ length: o.n }, () => 0.65 + rnd() * 0.35);
+    const root = o.root ?? 0.05;
+    const tipY = (t: number) => {
+      const sx = ((t + 1) / 2) * o.n, i = Math.min(o.n - 1, Math.floor(sx)), f = sx - Math.floor(sx);
+      const peak = Math.pow(1 - Math.abs(2 * f - 1), 0.75); // 1 al centro della ciocca, 0 tra due ciocche
+      return Math.max(o.minTip ?? 0, Math.min(topY - 0.05, o.tip(t) - o.depth * lens[i] * peak));
+    };
+    for (let i = 0; i < o.n; i++) {
+      const t0 = -1 + (2 * i) / o.n, t1 = -1 + (2 * (i + 1)) / o.n;
+      const tg = (u: number) => t0 + ((u + 1) / 2) * (t1 - t0);
+      headSheet(lp, 6, 6,
+        (u, v) => {
+          const th = o.center + tg(u) * o.span * DEG;
+          return [th, THREE.MathUtils.lerp(phiForY(th, tipY(tg(u))), hat === 'none' && o.center === Math.PI ? 62 * DEG : phiForY(th, topY), v)];
+        },
+        (u, v) => {
+          const bulge = Math.pow(Math.sin(((u + 1) / 2) * Math.PI), 0.7);
+          const edge = o.edgeTaper === false ? 1 : smooth(0, 0.22, 1 - Math.abs(tg(u)));
+          return root * (0.15 + 0.85 * bulge) * edge * (0.25 + 0.75 * smooth(0, 0.45, v)) * (1 - 0.8 * smooth(0.65, 1, v));
+        }, shade(o.col ?? c, [0, 0.035, -0.03, 0.015][(i + (o.seed ?? 0)) % 4]), { vary: 0.05 });
+    }
   };
-  const sides = (lp: LP, low = 0.2) => { for (const s of [-1, 1]) lump(lp, s * 0.28, low, -0.03, 0.06, 0.15, 0.19); };
-  const back = (lp: LP) => lump(lp, 0, 0.22, -0.21, 0.28, 0.2, 0.08);
-  const fringe = (lp: LP) => { if (0.33 + 0.1 < ceil) sbox(lp, 0, 0.33, 0.215, 0.46, 0.1, 0.08, 0.04, c); else lump(lp, 0, 0.32, 0.235, 0.22, 0.05, 0.04); };
+
+  /** Frangia: ciocche sulla fronte; `sweep` la porta di lato, `base` è l'attaccatura. */
+  const fringe = (lp: LP, o: { n: number; base: number; depth: number; sweep?: number; wrap?: number; root?: number; seed?: number; col?: string }) => {
+    // sotto un cappello la frangia scende un po' (il cappello la schiaccia)
+    // ma le punte non scendono mai sugli occhi: col berretto non c'è posto e si omette
+    if (topY - 0.05 < 0.29) return;
+    const shift = Math.min(0, topY - 0.07 - (o.base + Math.abs(o.sweep ?? 0)));
+    locks(lp, { center: 0, span: o.wrap ?? 80, n: o.n, depth: o.depth, root: o.root, seed: o.seed, col: o.col, minTip: 0.28,
+      tip: (t) => o.base + shift + (o.sweep ?? 0) * t + 0.03 * smooth(0.75, 1, Math.abs(t)) });
+  };
+
+  /** Ciocche su lati e nuca: punte a `back` dietro e a `side` accanto al viso. */
+  const nape = (lp: LP, o: { n: number; back: number; side: number; depth?: number; span?: number; seed?: number }) =>
+    locks(lp, { center: Math.PI, span: o.span ?? 105, n: o.n, depth: o.depth ?? 0.05, seed: o.seed, edgeTaper: false,
+      tip: (t) => THREE.MathUtils.lerp(o.back, o.side, Math.abs(t) ** 1.5) });
+
+  /**
+   * Ciocche lunghe che pendono sotto la testa (lame affusolate), con la
+   * radice infilata sotto le ciocche della nuca e la punta un po' aperta.
+   */
+  const hanging = (lp: LP, o: { n: number; span: number; bottom: number; sideBottom: number; top?: number; seed?: number; lean?: number }) => {
+    const rnd = prng(o.seed ?? 4);
+    const yTop = o.top ?? 0.2;
+    const w = 0.13, thick = 0.026;
+    for (let i = 0; i < o.n; i++) {
+      const t = -1 + (2 * i) / (o.n - 1);
+      const th = Math.PI + t * o.span * DEG;
+      const { p, n } = headAt(th, phiForY(th, yTop));
+      const nh = new THREE.Vector3(n.x, 0, n.z).normalize();
+      const L = yTop - (THREE.MathUtils.lerp(o.bottom, o.sideBottom, Math.abs(t) ** 1.5) - rnd() * 0.04);
+      const shape = new THREE.Shape();
+      shape.moveTo(-w / 2, 0); shape.lineTo(w / 2, 0);
+      shape.quadraticCurveTo(w * 0.5, -L * 0.55, w * 0.08, -L);
+      shape.lineTo(-w * 0.04, -L + 0.01);
+      shape.quadraticCurveTo(-w * 0.5, -L * 0.5, -w / 2, 0);
+      const g = new THREE.ExtrudeGeometry(shape, { depth: thick - 0.01, bevelEnabled: true, bevelThickness: 0.005, bevelSize: 0.005, bevelSegments: 1, curveSegments: 3 });
+      g.translate(0, 0, 0.005);
+      lp.push([p.x + nh.x * 0.004, yTop, p.z + nh.z * 0.004], Math.atan2(nh.x, nh.z), -(o.lean ?? 0.12) - rnd() * 0.05, (rnd() - 0.5) * 0.08);
+      lp.add(g, shade(c, [0, 0.03, -0.035, 0.015][i % 4]), { jitter: 0, vary: 0.05, ao: 0.04 });
+      lp.pop();
+    }
+  };
+
   switch (style) {
     case 'none': return undefined;
     case 'tufts': return (lp) => {
-      shell(lp, 0.25); band(lp, 0.35);
-      // ciuffetti che scendono sulla fronte
-      for (const [x, y, r] of [[-0.19, 0.34, 0.07], [0.19, 0.335, 0.065], [-0.07, 0.345, 0.06], [0.07, 0.35, 0.055]] as const) lump(lp, x, y, 0.235, r, r * 0.8, 0.045);
-      for (const s of [-1, 1]) lump(lp, s * 0.285, 0.28, -0.02, 0.05, 0.08, 0.12);
+      cap(lp, 0.22);
+      nape(lp, { n: 9, back: 0.24, side: 0.3, seed: 3 });
+      fringe(lp, { n: 5, base: 0.39, depth: 0.1, wrap: 82, seed: 3 }); // ciuffi a punta sulla fronte
       if (hat === 'none') for (let i = 0; i < 3; i++) lp.push([-0.06 + i * 0.06, 0.47, 0.02], 0, 0, (i - 1) * 0.4).cyl(0, 0, 0, 0.035, 0, 0.1, 4, c, { jitter: 0 }).pop();
     };
-    case 'bob': return (lp) => { shell(lp, 0.1); band(lp); sides(lp, 0.18); fringe(lp); back(lp); };
+    case 'bob': return (lp) => {
+      cap(lp, 0.1);
+      nape(lp, { n: 11, back: 0.1, side: 0.12, depth: 0.03, span: 112, seed: 5 });
+      fringe(lp, { n: 9, base: 0.34, depth: 0.035, wrap: 96, seed: 5 }); // frangia dritta appena smerlata
+    };
     case 'long': return (lp) => {
-      shell(lp, 0.06); band(lp); sides(lp, 0.16); fringe(lp); back(lp);
-      sbox(lp, 0, -0.16, -0.21, 0.52, Math.min(0.5, ceil + 0.155), 0.1, 0.05, c); // ricade sulla schiena, sotto l'eventuale cappello
-      for (const s of [-1, 1]) lump(lp, s * 0.27, 0.04, 0.04, 0.06, 0.18, 0.08);
+      cap(lp, 0.02);
+      // ciocche lunghe che ricadono sulla schiena e accanto al viso
+      hanging(lp, { n: 11, span: 108, bottom: -0.2, sideBottom: -0.04, seed: 8 });
+      nape(lp, { n: 11, back: 0.04, side: 0.08, depth: 0.04, span: 110, seed: 8 });
+      fringe(lp, { n: 5, base: 0.37, depth: 0.09, sweep: -0.05, wrap: 92, seed: 8 }); // frangia di lato
     };
     case 'curly': return (lp) => {
-      shell(lp, 0.12, shade(c, -0.04)); band(lp, 0.33);
+      cap(lp, 0.12, shade(c, -0.05));
+      fringe(lp, { n: 7, base: 0.37, depth: 0.03, wrap: 90, seed: 2, col: shade(c, -0.04) });
       // riccioli su tutta la calotta: sommità, nuca, lati e frangia
       const pts: Array<[number, number, number]> = [];
       for (let ix = -2; ix <= 2; ix++) for (let iz = -2; iz <= 2; iz++) pts.push([ix * 0.11, 0.49 - (Math.abs(ix) + Math.abs(iz)) * 0.012, iz * 0.1 - 0.03]);
@@ -455,14 +541,20 @@ function hairStyle(style: HairStyle, c: string, hat: HatStyle, lump: Lump): Buil
       for (let ix = -2; ix <= 2; ix++) pts.push([ix * 0.105, 0.37, 0.25]);
       pts.forEach(([x, y, z], i) => lump(lp, x, y, z, 0.07 + (i % 3) * 0.008, 0.07, 0.07, i % 4 ? c : shade(c, -0.05)));
     };
-    case 'bun': return (lp) => { shell(lp, 0.16); band(lp); fringe(lp); back(lp); lump(lp, 0, hat === 'none' ? 0.54 : 0.27, -0.26, 0.11, 0.1, 0.11); };
+    // ciocche corte tirate di lato verso lo chignon
+    case 'bun': return (lp) => {
+      cap(lp, 0.18);
+      nape(lp, { n: 9, back: 0.2, side: 0.26, depth: 0.03, seed: 6 });
+      fringe(lp, { n: 4, base: 0.39, depth: 0.05, sweep: 0.03, wrap: 85, seed: 6 });
+      lump(lp, 0, hat === 'none' ? 0.54 : 0.27, -0.26, 0.11, 0.1, 0.11);
+    };
     case 'spiky': return (lp) => {
-      shell(lp, 0.2); back(lp);
+      cap(lp, 0.18);
+      nape(lp, { n: 9, back: 0.2, side: 0.27, depth: 0.09, seed: 9 });
+      fringe(lp, { n: 6, base: 0.39, depth: 0.1, wrap: 86, seed: 9 }); // ciocche lunghe e appuntite
       if (hat === 'none') {
-        band(lp, 0.36);
-        for (let i = 0; i < 6; i++) lp.push([-0.2 + i * 0.08, 0.38, 0.22], 0, 0.5, (i - 2.5) * 0.18).cyl(0, 0, 0, 0.05, 0, 0.12, 4, c, { jitter: 0 }).pop();
         for (let i = 0; i < 7; i++) { const a = (i / 7) * Math.PI * 2; lp.push([Math.cos(a) * 0.15, 0.48, Math.sin(a) * 0.12], 0, Math.sin(a) * 0.6, -Math.cos(a) * 0.6).cyl(0, 0, 0, 0.06, 0, 0.16, 4, c, { jitter: 0 }).pop(); }
-      } else { band(lp); fringe(lp); }
+      }
     };
   }
 }

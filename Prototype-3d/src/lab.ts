@@ -94,9 +94,13 @@ function rebuild() {
     ];
     // ?only=2,5 mostra solo alcuni aspetti (controlli ravvicinati)
     const only = params.get('only')?.split(',').map(Number);
-    const shown = only ? looks.filter((_, i) => only.includes(i)) : looks;
+    // ?looks=[{...},{...}] (JSON) mostra aspetti a piacere
+    const custom = params.get('looks');
+    const shown = custom ? JSON.parse(custom) as Array<Partial<CustodeLook>> : only ? looks.filter((_, i) => only.includes(i)) : looks;
     looks.length = 0; looks.push(...shown);
-    looks.forEach((l, i) => place(buildRig('custode', 'lowpoly', { ...DEFAULT_LOOK, ...l }), (i - (looks.length - 1) / 2) * 1.55, 0, ''));
+    // ?yaw=2.5 gira i personaggi (per guardarli di lato o da dietro)
+    const yaw = Number(params.get('yaw') ?? 0);
+    looks.forEach((l, i) => place(buildRig('custode', 'lowpoly', { ...DEFAULT_LOOK, ...l }), (i - (looks.length - 1) / 2) * 1.55, 0, '', pose, yaw));
     extent = (looks.length * 1.55) / 2 + 0.6;
   } else if (set === 'funeral') {
     // piccolo corteo davanti a una tomba aperta, sotto un lampione

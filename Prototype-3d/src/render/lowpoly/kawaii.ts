@@ -259,8 +259,6 @@ interface KH {
   skirt?: 'long' | 'short' | 'none';
   /** Pantaloni rifiniti: piega davanti, risvolto sopra lo stivale, suola chiara. */
   trousers?: boolean;
-  /** Bordo a coste in fondo al busto (maglione). */
-  hem?: string;
   /** Colore della veste lunga (predefinito: coat2). */
   robeColor?: string;
 }
@@ -319,11 +317,6 @@ function kHumanoid(o: KH): KawaiiSpec {
           // falda del cappotto appena svasata (corta: lascia vedere i pantaloni)
           if ((o.skirt ?? 'long') === 'long') lp.lathe(0, -0.07, 0, [[0.225, 0], [0.22, 0.05], [0.205, 0.12], [0, 0.12]], 10, o.coat2, { jitter: 0, vary: 0.04, ao: 0.12 });
           else if (o.skirt === 'short') lp.lathe(0, -0.05, 0, [[0.218, 0], [0.214, 0.035], [0.205, 0.07], [0, 0.07]], 10, o.coat2, { jitter: 0, vary: 0.04, ao: 0.12 });
-          if (o.hem) {
-            // bordo a coste: fascia appena in rilievo con le costine
-            sbox(lp, 0, -0.035, 0, 0.404, 0.055, 0.304, 0.03, o.hem);
-            for (let i = -4; i <= 4; i++) lp.box(i * 0.04, -0.008, 0.153, 0.008, 0.045, 0.004, shade(o.hem, -0.05), { jitter: 0, ao: 0 });
-          }
         }
         o.chest?.(lp);
         o.back?.(lp);
@@ -767,7 +760,6 @@ export function custodeSpec(l: CustodeLook): KawaiiSpec {
     skirt: l.outfit === 'coat' ? 'short' : l.outfit === 'cloak' ? 'long' : 'none',
     trousers: true,
     robeColor: l.outfit === 'cloak' ? shade(coat, -0.03) : undefined,
-    hem: l.outfit === 'sweater' ? shade(coat, -0.06) : undefined,
     arm: l.outfit === 'overalls' ? '#d8cdb8' : undefined, cuff: l.outfit === 'sweater' ? l.accentColor : l.outfit === 'overalls' ? '#c4b8a0' : undefined,
     robe: l.outfit === 'cloak',
     face: { mouth: 'smile', eye: l.eyes },

@@ -233,7 +233,7 @@ colonna "Sereno". Veli per qualità: bassa 1, media 2, alta 3. `?mist=0` la speg
   tinta che si stacca da stivali e giacca: grigio fumo col cappotto, tela blu
   col maglione), con piega, risvolto e stivaletti bassi con punta e suola. Il
   cappotto ha listino e tre bottoni al centro e due tasche con patta; il
-  maglione un bordo a coste e niente falda; la salopette colletto della
+  maglione niente falda; la salopette colletto della
   camicia, cucitura della tasca e rammendo; la mantella l'apertura al centro e
   la veste nel suo colore.
 - **Dettagli che seguono il volto**: la testa ha una distanza con segno

@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="it">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Custode v2 · prototipo</title>
+  <!-- Prototipo di stile per la valutazione: NON fa parte del gioco né della build. -->
+  <style>
+    html, body { margin: 0; background: #1f2925; }
+    .tavola { position: relative; width: 1448px; height: 1086px; background: radial-gradient(ellipse 70% 65% at 50% 45%, #2b3833, #1b2420 75%); overflow: hidden; }
+    canvas { position: absolute; inset: 0; width: 1448px; height: 1086px; }
+    .label { position: absolute; display: flex; align-items: center; gap: 22px; font: 600 17px/1 system-ui, sans-serif; letter-spacing: 0.12em; color: #9ba59f; transform: translateX(-50%); white-space: nowrap; }
+    .label::before, .label::after { content: ''; width: 70px; height: 1px; background: #55605a; }
+  </style>
+</head>
+<body>
+  <div class="tavola">
+    <canvas id="tavola" width="1448" height="1086"></canvas>
+    <div class="label" style="left:225px;top:503px">FRONTE</div>
+    <div class="label" style="left:225px;top:1010px">RETRO</div>
+    <div class="label" style="left:1223px;top:503px">DESTRA</div>
+    <div class="label" style="left:1223px;top:1010px">SINISTRA</div>
+    <div class="label" style="left:724px;top:1040px">VISTA 3/4 (HERO)</div>
+  </div>
+  <script type="module" src="./src/proto/turnaround.ts"></script>
+</body>
+</html>

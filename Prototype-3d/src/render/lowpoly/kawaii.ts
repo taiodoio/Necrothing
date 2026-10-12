@@ -548,12 +548,38 @@ function hairStyle(style: HairStyle, c: string, hat: HatStyle, lump: Lump): Buil
       fringe(lp, { n: 4, base: 0.39, depth: 0.05, sweep: 0.03, wrap: 85, seed: 6 });
       lump(lp, 0, hat === 'none' ? 0.54 : 0.27, -0.26, 0.11, 0.1, 0.11);
     };
+    // spettinati: ciocche morbide che partono dal vortice in cima e cadono in
+    // direzioni diverse, qualcuna sollevata (non aculei tutt'attorno)
     case 'spiky': return (lp) => {
       cap(lp, 0.18);
-      nape(lp, { n: 9, back: 0.2, side: 0.27, depth: 0.09, seed: 9 });
-      fringe(lp, { n: 6, base: 0.39, depth: 0.1, wrap: 86, seed: 9 }); // ciocche lunghe e appuntite
+      nape(lp, { n: 9, back: 0.22, side: 0.27, depth: 0.05, seed: 9 });
+      fringe(lp, { n: 5, base: 0.39, depth: 0.075, sweep: 0.025, wrap: 86, seed: 9 });
       if (hat === 'none') {
-        for (let i = 0; i < 7; i++) { const a = (i / 7) * Math.PI * 2; lp.push([Math.cos(a) * 0.15, 0.48, Math.sin(a) * 0.12], 0, Math.sin(a) * 0.6, -Math.cos(a) * 0.6).cyl(0, 0, 0, 0.06, 0, 0.16, 4, c, { jitter: 0 }).pop(); }
+        const rnd = prng(21);
+        // direzione (0 = avanti), lunghezza, quanto si solleva dalla testa, curva
+        // ciocche che partono dal vortice in cima e scendono aderendo alla testa,
+        // girando un po' (mulinello) e con le punte sollevate: arruffate, non aculei
+        const crown: Array<[number, number, number, number]> = [ // direzione, punta (φ°), larghezza (°), giro
+          [0.2, 34, 34, 0.5], [-0.9, 40, 30, 0.6], [1.3, 30, 32, 0.45], [2.4, 42, 34, 0.55], [-2.2, 36, 30, 0.5], [3.1, 30, 28, 0.4], [-0.25, 46, 26, -0.5],
+        ];
+        crown.forEach(([dir, tipPhi, width, swirl], i) => {
+          headSheet(lp, 4, 6,
+            (u, v) => {
+              const narrow = Math.sin(Math.max(0.12, v) * Math.PI * 0.62); // punta stretta, larga a metà, più stretta al vortice
+              return [dir + swirl * (1 - v) + u * width * DEG * narrow, THREE.MathUtils.lerp(tipPhi, 86, v) * DEG];
+            },
+            (u, v) => (0.018 + 0.04 * (1 - smooth(0, 0.6, v)) * (1 - 0.6 * Math.abs(u))) * smooth(0, 0.08, v + 0.02),
+            shade(c, [0.03, 0, -0.025, 0.015, -0.01][i % 5]), { vary: 0.05 });
+        });
+        // un solo ciuffo ribelle che si alza
+        const sh = new THREE.Shape();
+        sh.moveTo(-0.065, 0); sh.lineTo(0.065, 0);
+        sh.quadraticCurveTo(0.08, 0.1, 0.045, 0.16);
+        sh.quadraticCurveTo(-0.01, 0.1, -0.065, 0);
+        const g = new THREE.ExtrudeGeometry(sh, { depth: 0.02, bevelEnabled: true, bevelThickness: 0.007, bevelSize: 0.007, bevelSegments: 1, curveSegments: 4 });
+        lp.push([0.02, 0.47, -0.05], 2.6, Math.PI / 2 - 0.75, 0.15);
+        lp.add(g.translate(0, 0, -0.017), shade(c, 0.02), { jitter: 0, vary: 0.05, ao: 0.04 });
+        lp.pop();
       }
     };
   }

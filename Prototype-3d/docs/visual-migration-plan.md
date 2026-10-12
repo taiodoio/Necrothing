@@ -220,7 +220,9 @@ colonna "Sereno". Veli per qualità: bassa 1, media 2, alta 3. `?mist=0` la speg
   bombate al centro e in tonalità alternate, così tra una e l'altra resta un
   solco; i capelli lunghi aggiungono ciocche che pendono sulla schiena. Ogni
   taglio ha la sua frangia (ciuffi a punta, dritta smerlata, di lato, tirata
-  verso lo chignon, spettinata) e le punte non scendono mai sugli occhi. Con il
+  verso lo chignon, spettinata) e le punte non scendono mai sugli occhi. Gli
+  spettinati hanno ciocche che partono dal vortice in cima girando un po', con
+  le punte sollevate, e un solo ciuffo ribelle (niente aculei). Con il
   cappello i capelli restano sempre sotto la tesa e ne seguono l'inclinazione
   (testato per ogni taglio e cappello).
   Salvato nella partita (`player.look`, validato al caricamento), anteprima 3D

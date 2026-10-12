@@ -49,8 +49,10 @@ export function floater(x: number, y: number, text: string, kind: 'wisp' | 'xp')
 // ── Drawer ─────────────────────────────────────────────────────────────
 
 let onCloseCb: (() => void) | null = null;
+/** Se presente e restituisce false, la chiusura (X, sfondo, Esc) viene annullata. */
+let beforeCloseCb: (() => boolean) | null = null;
 
-export function openDrawer(title: string, body: Node, opts: { footer?: Node; onClose?: () => void } = {}) {
+export function openDrawer(title: string, body: Node, opts: { footer?: Node; onClose?: () => void; beforeClose?: () => boolean } = {}) {
   const drawer = $('#drawer');
   $('#drawer-title').textContent = title;
   const b = $('#drawer-body');
@@ -59,6 +61,7 @@ export function openDrawer(title: string, body: Node, opts: { footer?: Node; onC
   const f = $('#drawer-foot');
   if (opts.footer) { f.hidden = false; f.replaceChildren(opts.footer); } else { f.hidden = true; f.replaceChildren(); }
   onCloseCb = opts.onClose ?? null;
+  beforeCloseCb = opts.beforeClose ?? null;
   drawer.hidden = false;
   $('#scrim').hidden = false;
   document.body.classList.add('drawer-open');
@@ -78,8 +81,11 @@ export function drawerOpen(): boolean {
   return !$('#drawer').hidden;
 }
 
-export function closeDrawer() {
+/** Chiude il drawer; `force` salta la conferma (es. dopo aver salvato). */
+export function closeDrawer(force = false) {
   if ($('#drawer').hidden) return;
+  if (!force && beforeCloseCb && !beforeCloseCb()) return;
+  beforeCloseCb = null;
   $('#drawer').hidden = true;
   $('#scrim').hidden = true;
   document.body.classList.remove('drawer-open');

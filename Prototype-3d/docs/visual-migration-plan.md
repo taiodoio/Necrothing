@@ -213,7 +213,7 @@ colonna "Sereno". Veli per qualità: bassa 1, media 2, alta 3. `?mist=0` la speg
 - **Custode personalizzabile** (`game/look.ts`, `ui/customize.ts`): pelle (anche
   brillantinata), capelli (7 tagli, 8 colori), occhi, occhiali/monocolo,
   lentiggini, cerotto, pelle "hoa-boa-hoa" (brillantini), barba (corta, folta, con treccia) e baffi (sottili, a
-  manubrio, folti), cappello (4) e colore, vestiti (cappotto, mantella, salopette,
+  manubrio con i riccioli all'insù, folti), cappello (4) e colore, vestiti (cappotto, mantella, salopette,
   maglione a righe dipinte) con colore e colore dei dettagli. I capelli sono
   veli che aderiscono alla testa: una calotta sottile su sommità, lati e nuca,
   poi ciocche separate (frangia sulla fronte, ciocche su lati e nuca) a punta,
@@ -232,7 +232,9 @@ colonna "Sereno". Veli per qualità: bassa 1, media 2, alta 3. `?mist=0` la speg
   (testato per ogni taglio e cappello).
   Salvato nella partita (`player.look`, validato al caricamento), anteprima 3D
   nel pannello "Personaggio" (schede Aspetto, Capelli, Vestiti), fissa in alto
-  insieme alle schede mentre si scorrono le opzioni (dal
+  insieme alle schede mentre si scorrono le opzioni; le scelte restano una
+  bozza finché non si preme «Salva» («Originale» torna all'aspetto di base) e
+  chiudendo con modifiche non salvate si chiede conferma (dal
   profilo o dalle Impostazioni), su una zolla di prato con fiorellini, sassi e
   funghetti. Solo nello stile low-poly.
 - **Vestiti rifiniti**: pantaloni leggibili (falda del cappotto accorciata,

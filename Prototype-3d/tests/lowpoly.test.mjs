@@ -230,3 +230,67 @@ test('nebbia del bosco: più fitta all\'alba e di notte, col meteo nebbioso entr
   for (let i = 0; i < 300; i++) mist.update(0.05, new THREE.Color('#8b928a'));
   assert.ok(mist.group.children[0].material.uniforms.uOpacity.value < before, 'di giorno si dirada, gradualmente');
 });
+
+test('atmosfera: cambi di fase graduali e luci del pool che si accendono in dissolvenza', async () => {
+  // canvas minimo per lo sfondo a gradiente (in node non c'è il DOM)
+  globalThis.document ??= { createElement: () => ({ width: 0, height: 0, getContext: () => ({ createLinearGradient: () => ({ addColorStop() {} }), createRadialGradient: () => ({ addColorStop() {} }), fillRect() {}, fillStyle: '' }) }) };
+  const { Atmosphere } = await import('../src/view/Atmosphere.ts');
+  const scene = new THREE.Scene();
+  const atm = new Atmosphere(scene, 'high');
+  atm.setPhase('day', 'clear');
+  atm.update(0.016, 0, new THREE.Camera());
+  const dayHemi = atm.hemi.intensity;
+  atm.setPhase('night', 'clear');
+  atm.update(0.1, 0.1, new THREE.Camera());
+  assert.ok(atm.hemi.intensity < dayHemi && atm.hemi.intensity > 1.06, `passaggio graduale (${atm.hemi.intensity})`);
+  for (let i = 0; i < 200; i++) atm.update(0.05, 0.2 + i * 0.05, new THREE.Camera());
+  assert.ok(Math.abs(atm.hemi.intensity - 1.05) < 0.01, 'arriva alla notte');
+  // una sorgente vicina: la sua luce cresce in qualche decimo di secondo, non di colpo
+  atm.focus(new THREE.Vector3(), 10);
+  atm.addAnchor(new THREE.Vector3(1, 1, 1), { pos: [0, 0, 0], color: '#ffaa55', intensity: 1, range: 4, flicker: 0, halo: 1 });
+  atm.update(0.35, 20, new THREE.Camera());
+  const light = scene.getObjectsByProperty('type', 'PointLight').find((l) => l.intensity > 0);
+  assert.ok(light, 'luce assegnata');
+  const first = light.intensity;
+  atm.update(0.3, 20.3, new THREE.Camera());
+  assert.ok(light.intensity > first, 'si accende in dissolvenza');
+});
+
+test('Custode personalizzabile: aspetto validato, chiave stabile, rig con tutte le parti e la lanterna', async () => {
+  const { DEFAULT_LOOK, normalizeLook, lookKey, LOOK_STYLES } = await import('../src/game/look.ts');
+  const { buildRig } = await import('../src/view/characters.ts');
+  assert.deepEqual(normalizeLook({ hair: 'mohawk', skin: '#ff0000', sparkle: 'sì' }), DEFAULT_LOOK, 'valori sconosciuti → predefinito');
+  const custom = { ...DEFAULT_LOOK, hair: 'curly', hairColor: '#d0607a', glasses: 'round', outfit: 'sweater', sparkle: true, hat: 'beanie' };
+  assert.equal(lookKey(custom), lookKey({ ...custom }));
+  assert.notEqual(lookKey(custom), lookKey(DEFAULT_LOOK));
+  for (const hair of LOOK_STYLES.hair.map(([v]) => v)) for (const hat of LOOK_STYLES.hat.map(([v]) => v)) for (const outfit of LOOK_STYLES.outfit.map(([v]) => v)) {
+    const rig = buildRig('custode', 'lowpoly', { ...DEFAULT_LOOK, hair, hat, outfit, glasses: 'square', freckles: true, bandaid: true, beard: 'braid', mustache: 'handlebar' });
+    assert.equal(Object.keys(rig.parts).length, 6, `${hair}/${hat}/${outfit}`);
+    assert.equal(rig.lights.length, 1, 'lanterna accesa');
+  }
+  assert.equal(normalizeLook({ beard: 'braid', mustache: 'handlebar' }).beard, 'braid');
+  // con il cappello nessuna ciocca supera la tesa (o il bordo del berretto)
+  const { hairBuild, HAIR_CEILING } = await import('../src/render/lowpoly/kawaii.ts');
+  const { LP } = await import('../src/render/lowpoly/kit.ts');
+  for (const [hair] of LOOK_STYLES.hair) for (const hat of ['wide', 'top', 'beanie']) {
+    const build = hairBuild(hair, '#6b4a33', hat);
+    if (!build) continue;
+    const lp = new LP('t');
+    build(lp);
+    const g = lp.build().geometries.solid;
+    g.computeBoundingBox();
+    assert.ok(g.boundingBox.max.y <= HAIR_CEILING[hat] + 0.012, `${hair} sotto ${hat}: ${g.boundingBox.max.y.toFixed(3)}`);
+  }
+  const sparkly = buildRig('custode', 'lowpoly', custom);
+  assert.ok(sparkly.parts.head.children[0].children.some((m) => m.name === 'glow'), 'brillantini luminosi sul viso');
+});
+
+test('nuovo salvataggio: aspetto predefinito; salvataggio vecchio senza aspetto viene completato', async () => {
+  const { normalizeSave } = await import('../src/game/state.ts');
+  const { DEFAULT_LOOK } = await import('../src/game/look.ts');
+  const s = createNewGame(new Date('2026-10-09T12:00:00Z'), 717);
+  assert.deepEqual(s.player.look, DEFAULT_LOOK);
+  const old = JSON.parse(JSON.stringify(s));
+  delete old.player.look;
+  assert.deepEqual(normalizeSave(old).player.look, DEFAULT_LOOK);
+});

@@ -1,6 +1,7 @@
 // Stato di gioco serializzabile (salvataggio). Indipendente dallo stile
 // grafico e dalla camera: cambiare resa non tocca mai questi dati.
 
+import { DEFAULT_LOOK, normalizeLook, type CustodeLook } from './look.ts';
 import type { Category, DeathCause, GraveType } from './graves.ts';
 import type { DayPhase } from './time.ts';
 import { MAP_SIZE, WISPS } from './balance.ts';
@@ -86,6 +87,8 @@ export interface Counters {
 
 export interface Player {
   name: string;
+  /** Aspetto del Custode (personalizzazione). */
+  look: CustodeLook;
   xp: number;
   wisps: number;
   lastAbstractBurialDate: string | null;
@@ -242,7 +245,7 @@ export function createNewGame(now: Date, seed = Math.floor(Math.random() * 1e9))
     seed,
     createdAt: iso,
     player: {
-      name: 'Custode', xp: 0, wisps: WISPS.start,
+      name: 'Custode', look: { ...DEFAULT_LOOK }, xp: 0, wisps: WISPS.start,
       lastAbstractBurialDate: null, lastShareDate: null, counters: emptyCounters(),
     },
     graves,
@@ -285,7 +288,7 @@ export function normalizeSave(raw: unknown): SaveData | null {
   return {
     ...base,
     ...data,
-    player: { ...base.player, ...data.player, counters: { ...emptyCounters(), ...(data.player.counters ?? {}) } },
+    player: { ...base.player, ...data.player, look: normalizeLook(data.player.look), counters: { ...emptyCounters(), ...(data.player.counters ?? {}) } },
     world: { ...base.world, ...(data.world ?? {}) },
     settings: { ...DEFAULT_SETTINGS, ...(data.settings ?? {}) },
     inventory: { ...(data.inventory ?? {}) },

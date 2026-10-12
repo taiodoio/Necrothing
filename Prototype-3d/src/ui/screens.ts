@@ -17,6 +17,7 @@ import { $, closeDrawer, fmtDate, h, openDrawer, setDrawerBody, setDrawerFooter,
 import { graveThumb, placeableThumb } from './thumbs.ts';
 import { ACH_ICONS, icon } from './icons.ts';
 import type { UI } from './UI.ts';
+import { openCustomize } from './customize.ts';
 
 const EPITAPHS = [
   'Ha dato tutto. Anche la garanzia.',
@@ -272,6 +273,7 @@ export function openPlayer(ui: UI) {
   const tiers = { gold: 'Oro', silver: 'Argento', bronze: 'Bronzo' } as const;
   openDrawer('Il Custode', h('div', {},
     h('div', { class: 'field' }, h('label', {}, 'Nome'), name),
+    h('button', { class: 'big-btn', style: 'margin:4px 0 10px', onclick: () => openCustomize(ui) }, 'Personalizza aspetto'),
     h('dl', { class: 'kv' },
       h('dt', {}, 'Rango'), h('dd', {}, `${rank.level} · ${rank.name}`),
       h('dt', {}, 'Punti Necro'), h('dd', {}, `${p.xp}${next ? ` / ${next.minXp}` : ''}`),
@@ -322,6 +324,7 @@ export function openSettings(ui: UI) {
     },
   });
   const body = h('div', { 'data-settings': 'true' },
+    h('button', { class: 'big-btn ghost', style: 'margin-bottom:6px', onclick: () => openCustomize(ui) }, 'Personalizza il Custode'),
     h('div', { class: 'section-title' }, 'Resa grafica'),
     h('div', { class: 'setting' }, 'Stile', seg(s.style, [['lowpoly', 'Low-Poly'], ['voxel', 'Voxel'], ['miniature', 'Miniatura']], (v) => game.setStyle(v))),
     h('div', { class: 'setting' }, 'Vista', seg(s.camera, [['angled', 'Obliqua'], ['top', 'Dall’alto']], (v) => game.setCamera(v))),

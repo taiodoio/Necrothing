@@ -196,3 +196,29 @@ gradualmente (qualche secondo) secondo fase e meteo:
 Con pioggia e temporale il vento accelera; con "effetti meteo" spenti vale la
 colonna "Sereno". Veli per qualità: bassa 1, media 2, alta 3. `?mist=0` la spegne
 (solo sviluppo).
+
+## 12. Quinta passata: fuochi fatui, lampi, sottobosco stabile, Custode personalizzabile
+
+- **Fuochi fatui low-poly** (`render/lowpoly/wisp.ts`): fiammella a goccia con
+  faccina, cuore chiaro, scintille che girano e un alone sempre visibile (anche di
+  giorno); compaiono crescendo invece di accendersi di colpo.
+- **Lampi con tempo sereno**: erano stacchi improvvisi. Ora l'atmosfera passa da
+  una fase/meteo all'altra in qualche secondo (cielo, nebbia, luci, sole), e il pool
+  di PointLight assegna le luci in modo stabile con dissolvenze in entrata e uscita
+  (prima una luce che cambiava sorgente si accendeva di colpo a piena potenza). I
+  lampi veri restano solo col temporale.
+- **Sottobosco stabile**: ciuffi, fiori e sassi hanno un generatore per cella
+  (dalle coordinate), quindi piazzare un oggetto cambia solo le sue celle; densità
+  +15%.
+- **Custode personalizzabile** (`game/look.ts`, `ui/customize.ts`): pelle (anche
+  brillantinata), capelli (7 tagli, 8 colori), occhi, occhiali/monocolo,
+  lentiggini, cerotto, barba (corta, folta, con treccia) e baffi (sottili, a
+  manubrio, folti), cappello (4) e colore, vestiti (cappotto, mantella, salopette,
+  maglione a righe dipinte) con colore e colore dei dettagli. Con il cappello i
+  capelli restano sempre sotto la tesa (testato per ogni taglio e cappello). Salvato nella partita
+  (`player.look`, validato al caricamento), anteprima 3D nel pannello
+  "Personaggio" (dal profilo o dalle Impostazioni). Solo nello stile low-poly.
+- **Ritocchi kawaii**: guance appoggiate alla faccia (prima fluttuavano sugli
+  spigoli arrotondati, anche su fantasmi e animali). Il Custode non porta più la
+  pala (è del becchino, che la tiene in spalla): solo la lanterna, che di notte lo
+  illumina.

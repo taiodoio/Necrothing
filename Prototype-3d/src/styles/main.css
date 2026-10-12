@@ -267,3 +267,13 @@ button.slot:active, .icon-btn:active, .ctx-actions button:active, .big-btn:activ
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
 }
+
+/* Personalizzazione del Custode */
+.look-stage { display: grid; place-items: center; margin: 0 0 6px; }
+.look-preview { width: 240px; height: 270px; background: radial-gradient(circle at 50% 60%, #2d3a2a, #15181d 70%); }
+.look-opts { display: flex; flex-wrap: wrap; gap: 6px; margin: 4px 0 8px; }
+.look-opts button { min-height: 36px; padding: 4px 10px; font-size: 13px; border: 2px solid #07080b; background: #1d2024; color: inherit; }
+.look-opts button.active { background: #4a3a1d; color: var(--gold-bright); border-color: var(--gold); }
+.swatches { display: flex; flex-wrap: wrap; gap: 8px; margin: 4px 0 8px; }
+.swatch { width: 36px; height: 36px; padding: 0; border: 3px solid #07080b; box-shadow: inset 0 0 0 2px rgba(255,255,255,0.12); cursor: pointer; }
+.swatch.active { border-color: var(--gold-bright); box-shadow: 0 0 0 2px #07080b, inset 0 0 0 2px rgba(255,255,255,0.25); }

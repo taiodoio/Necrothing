@@ -11,6 +11,7 @@ import * as R from '../game/rules.ts';
 import { catchUpMessage, liveTick, runCatchUp } from '../game/simulation.ts';
 import { createNewGame, type ArtStyle, type CameraMode, type Quality, type SaveData, type TimeOverride } from '../game/state.ts';
 import { dayPhaseForHour, type DayPhase } from '../game/time.ts';
+import type { CustodeLook } from '../game/look.ts';
 import { areaForLevel, buildOccupancy, canPlaceAt, gateCells, nearestFreeSpot } from '../game/world.ts';
 import { applyStyleUniforms, cacheStats, clearAll, getModel, LOWPOLY_MATERIALS, LOWPOLY_TERRAIN, MATERIALS } from '../render/modelCache.ts';
 import '../render/lowpoly/index.ts';
@@ -111,7 +112,7 @@ export class Game {
     this.world.sync(this.state);
     const shop = this.state.placeables.find((p) => p.type === 'shop');
     const start = shop ? cellCenter(shop.x + 1, shop.y + 4, [1, 1]) : new THREE.Vector3();
-    this.actors = new Actors(this.scene, this.atmosphere, this.state.settings.style, start);
+    this.actors = new Actors(this.scene, this.atmosphere, this.state.settings.style, start, this.state.player.look);
     this.refreshWalkable();
     this.actors.syncPresences(this.state, now);
     this.rig.setMode(this.state.settings.camera);
@@ -634,6 +635,13 @@ export class Game {
     toast(`Resa: ${STYLE_LABELS[style]}`);
   }
 
+  /** Personalizzazione del Custode: salva e ricostruisce subito il personaggio. */
+  setLook(look: CustodeLook) {
+    this.state.player.look = look;
+    this.actors.setAvatarLook(look);
+    scheduleSave(this.state);
+  }
+
   setCamera(mode: CameraMode) {
     this.state.settings.camera = mode;
     this.rig.setMode(mode);
@@ -758,6 +766,7 @@ export class Game {
     this.placement = null;
     this.world.setStyle(next.settings.style, next, true);
     this.actors.setStyle(next.settings.style);
+    this.actors.setAvatarLook(next.player.look);
     const shop = next.placeables.find((p) => p.type === 'shop');
     if (shop) this.actors.teleport(cellCenter(shop.x + 1, shop.y + 4, [1, 1]));
     this.rig.setMode(next.settings.camera);

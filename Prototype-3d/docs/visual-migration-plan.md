@@ -214,10 +214,13 @@ colonna "Sereno". Veli per qualità: bassa 1, media 2, alta 3. `?mist=0` la speg
   brillantinata), capelli (7 tagli, 8 colori), occhi, occhiali/monocolo,
   lentiggini, cerotto, barba (corta, folta, con treccia) e baffi (sottili, a
   manubrio, folti), cappello (4) e colore, vestiti (cappotto, mantella, salopette,
-  maglione a righe dipinte) con colore e colore dei dettagli. Con il cappello i
-  capelli restano sempre sotto la tesa (testato per ogni taglio e cappello). Salvato nella partita
-  (`player.look`, validato al caricamento), anteprima 3D nel pannello
-  "Personaggio" (dal profilo o dalle Impostazioni). Solo nello stile low-poly.
+  maglione a righe dipinte) con colore e colore dei dettagli. Ogni taglio ha una
+  calotta piena (sommità, lati, nuca) più una fascia sulla fronte, sotto le
+  ciocche: niente pelle scoperta. Con il cappello i capelli restano sempre sotto
+  la tesa e ne seguono l'inclinazione (testato per ogni taglio e cappello).
+  Salvato nella partita (`player.look`, validato al caricamento), anteprima 3D
+  nel pannello "Personaggio", fissa in alto mentre si scorrono le opzioni (dal
+  profilo o dalle Impostazioni). Solo nello stile low-poly.
 - **Ritocchi kawaii**: guance appoggiate alla faccia (prima fluttuavano sugli
   spigoli arrotondati, anche su fantasmi e animali). Il Custode non porta più la
   pala (è del becchino, che la tiene in spalla): solo la lanterna, che di notte lo

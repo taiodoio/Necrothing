@@ -29,10 +29,10 @@ class CustodePreview {
     const sun = new THREE.DirectionalLight('#fff0d8', 2.4);
     sun.position.set(3, 5, 4);
     this.scene.add(sun);
-    const ground = new THREE.Mesh(new THREE.CircleGeometry(0.75, 24).rotateX(-Math.PI / 2), new THREE.MeshStandardMaterial({ color: '#3d5236', roughness: 1 }));
+    const ground = new THREE.Mesh(new THREE.CircleGeometry(0.58, 24).rotateX(-Math.PI / 2), new THREE.MeshStandardMaterial({ color: '#3d5236', roughness: 1 }));
     this.scene.add(ground);
     this.camera.position.set(1.9, 1.75, 2.9);
-    this.camera.lookAt(0, 0.72, 0);
+    this.camera.lookAt(0, 0.68, 0);
     this.setLook(look);
     const loop = () => {
       this.raf = requestAnimationFrame(loop);

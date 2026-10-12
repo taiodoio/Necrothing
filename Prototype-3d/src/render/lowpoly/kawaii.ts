@@ -44,6 +44,23 @@ function softBoxGeo(w: number, h: number, d: number, r: number): THREE.BufferGeo
   return g;
 }
 
+/**
+ * Lastra con gli angoli arrotondati visti dall'alto (raggio rc indipendente
+ * dall'altezza) e bordi appena smussati: capelli sotto cappelli tondi.
+ */
+function roundSlabGeo(w: number, d: number, h: number, rc: number): THREE.BufferGeometry {
+  const bv = Math.min(0.015, h / 3);
+  const iw = w - 2 * bv, id = d - 2 * bv, r = Math.min(rc, iw / 2 - 0.001, id / 2 - 0.001);
+  const s = new THREE.Shape();
+  const x0 = -iw / 2, x1 = iw / 2, y0 = -id / 2, y1 = id / 2;
+  s.moveTo(x0 + r, y0); s.lineTo(x1 - r, y0); s.absarc(x1 - r, y0 + r, r, -Math.PI / 2, 0, false);
+  s.lineTo(x1, y1 - r); s.absarc(x1 - r, y1 - r, r, 0, Math.PI / 2, false);
+  s.lineTo(x0 + r, y1); s.absarc(x0 + r, y1 - r, r, Math.PI / 2, Math.PI, false);
+  s.lineTo(x0, y0 + r); s.absarc(x0 + r, y0 + r, r, Math.PI, Math.PI * 1.5, false);
+  const g = new THREE.ExtrudeGeometry(s, { depth: Math.max(0.001, h - 2 * bv), bevelEnabled: true, bevelThickness: bv, bevelSize: bv, bevelSegments: 1, curveSegments: 3 });
+  return g.rotateX(-Math.PI / 2).translate(0, bv, 0);
+}
+
 function sbox(lp: LP, cx: number, y0: number, cz: number, w: number, h: number, d: number, r: number, color: string, o: Parameters<LP['add']>[2] = {}) {
   lp.add(softBoxGeo(w, h, d, r).translate(cx, y0 + h / 2, cz), color, { jitter: 0, vary: 0.04, ao: 0.08, ...o });
 }
@@ -233,6 +250,8 @@ const shade = (c: string, k: number) => `#${new THREE.Color(c).offsetHSL(0, 0, k
 
 /** Altezza sotto cui devono restare i capelli quando c'è un cappello (tesa o bordo). */
 export const HAIR_CEILING: Record<HatStyle, number> = { wide: 0.385, top: 0.395, beanie: 0.285, none: 9 };
+/** Assetto (altezza, rotazioni x e z) dei cappelli inclinati: tesa e cilindro. */
+export const HAT_TILT = { wide: [0.39, -0.05, 0.08], top: [0.4, -0.04, -0.07] } as const;
 
 /**
  * Capelli (coordinate della testa: faccia su z = 0,24, sommità a y = 0,46).
@@ -247,39 +266,78 @@ export function hairBuild(style: HairStyle, c: string, hat: HatStyle): Build | u
     const bottom = y - ry;
     ball(lp, x, (top + bottom) / 2, z, rx, (top - bottom) / 2, rz, col);
   };
-  const cap = (lp: LP) => lump(lp, 0, 0.37, -0.02, 0.305, 0.15, 0.27);
-  const sides = (lp: LP, low = 0.2) => { for (const s of [-1, 1]) lump(lp, s * 0.27, low, -0.03, 0.06, 0.15, 0.19); };
-  const back = (lp: LP) => lump(lp, 0, 0.22, -0.2, 0.28, 0.2, 0.08);
-  const fringe = (lp: LP) => { if (0.33 + 0.1 < ceil) sbox(lp, 0, 0.33, 0.19, 0.46, 0.1, 0.08, 0.04, c); else lump(lp, 0, 0.32, 0.2, 0.22, 0.05, 0.05); };
+  const build = hairStyle(style, c, hat, lump);
+  const tilt = hat === 'wide' || hat === 'top' ? HAT_TILT[hat] : null;
+  if (!build || !tilt) return build;
+  // la tesa è inclinata: una fascia di capelli la segue da sotto, così tra
+  // tesa e capelli non resta una striscia di pelle sul lato rialzato
+  return (lp) => {
+    build(lp);
+    lp.push([0, tilt[0], 0], 0, tilt[1], tilt[2]);
+    lp.add(roundSlabGeo(0.6, 0.46, 0.05, 0.14).translate(0, -0.05, -0.04), c, { jitter: 0, vary: 0.04, ao: 0.05 });
+    lp.pop();
+  };
+}
+
+type Lump = (lp: LP, x: number, y: number, z: number, rx: number, ry: number, rz: number, col?: string) => void;
+
+function hairStyle(style: HairStyle, c: string, hat: HatStyle, lump: Lump): Build | undefined {
+  const ceil = HAIR_CEILING[hat];
+  // calotta piena che segue la testa (sommità, lati, nuca): sotto le ciocche
+  // non resta mai pelle scoperta; il davanti si ferma prima del viso
+  const round = (h: number) => Math.min(hat === 'none' ? 0.13 : 0.04, h / 2.3);
+  const shell = (lp: LP, bottom: number, col = c) => {
+    const top = Math.min(0.5, ceil), h = top - bottom;
+    if (h <= 0.02) return;
+    // senza cappello sommità tonda; sotto un cappello angoli arrotondati visti
+    // dall'alto, così la calotta non sporge dal bordo di berretto o cilindro
+    if (hat === 'none') sbox(lp, 0, bottom, -0.04, 0.6, h, 0.46, round(h), col, { ao: 0.05 });
+    else lp.add(roundSlabGeo(0.6, 0.46, h, 0.14).translate(0, bottom, -0.04), col, { jitter: 0, vary: 0.04, ao: 0.05 });
+  };
+  // fascia sulla fronte, dall'attaccatura fino al cappello (o alla sommità)
+  const band = (lp: LP, y0 = 0.31) => {
+    const top = Math.min(0.495, ceil), h = top - y0;
+    if (h <= 0.02) return;
+    if (hat === 'none') sbox(lp, 0, y0, 0.195, 0.585, h, 0.13, round(h), c, { ao: 0.05 });
+    // sotto un cappello la fascia abbraccia tutta la testa con angoli tondi
+    else lp.add(roundSlabGeo(0.6, 0.53, h, 0.15).translate(0, y0, -0.005), c, { jitter: 0, vary: 0.04, ao: 0.05 });
+  };
+  const sides = (lp: LP, low = 0.2) => { for (const s of [-1, 1]) lump(lp, s * 0.28, low, -0.03, 0.06, 0.15, 0.19); };
+  const back = (lp: LP) => lump(lp, 0, 0.22, -0.21, 0.28, 0.2, 0.08);
+  const fringe = (lp: LP) => { if (0.33 + 0.1 < ceil) sbox(lp, 0, 0.33, 0.215, 0.46, 0.1, 0.08, 0.04, c); else lump(lp, 0, 0.32, 0.235, 0.22, 0.05, 0.04); };
   switch (style) {
     case 'none': return undefined;
     case 'tufts': return (lp) => {
-      for (const [x, y, r] of [[-0.2, 0.34, 0.07], [0.2, 0.33, 0.065], [-0.08, 0.36, 0.06], [0.07, 0.365, 0.055]] as const) lump(lp, x, y, 0.2, r, r * 0.8, 0.05);
-      for (const s of [-1, 1]) lump(lp, s * 0.27, 0.28, -0.02, 0.05, 0.08, 0.12);
-      if (hat === 'none') for (let i = 0; i < 3; i++) lp.push([-0.06 + i * 0.06, 0.45, 0], 0, 0, (i - 1) * 0.4).cyl(0, 0, 0, 0.035, 0, 0.1, 4, c, { jitter: 0 }).pop();
+      shell(lp, 0.25); band(lp, 0.35);
+      // ciuffetti che scendono sulla fronte
+      for (const [x, y, r] of [[-0.19, 0.34, 0.07], [0.19, 0.335, 0.065], [-0.07, 0.345, 0.06], [0.07, 0.35, 0.055]] as const) lump(lp, x, y, 0.235, r, r * 0.8, 0.045);
+      for (const s of [-1, 1]) lump(lp, s * 0.285, 0.28, -0.02, 0.05, 0.08, 0.12);
+      if (hat === 'none') for (let i = 0; i < 3; i++) lp.push([-0.06 + i * 0.06, 0.47, 0.02], 0, 0, (i - 1) * 0.4).cyl(0, 0, 0, 0.035, 0, 0.1, 4, c, { jitter: 0 }).pop();
     };
-    case 'bob': return (lp) => { cap(lp); sides(lp); fringe(lp); back(lp); };
+    case 'bob': return (lp) => { shell(lp, 0.1); band(lp); sides(lp, 0.18); fringe(lp); back(lp); };
     case 'long': return (lp) => {
-      cap(lp); sides(lp, 0.16); fringe(lp); back(lp);
-      sbox(lp, 0, -0.16, -0.2, 0.5, Math.min(0.5, ceil + 0.155), 0.1, 0.05, c); // ricade sulla schiena, sotto l'eventuale cappello
-      for (const s of [-1, 1]) lump(lp, s * 0.26, 0.04, 0.04, 0.055, 0.17, 0.07);
+      shell(lp, 0.06); band(lp); sides(lp, 0.16); fringe(lp); back(lp);
+      sbox(lp, 0, -0.16, -0.21, 0.52, Math.min(0.5, ceil + 0.155), 0.1, 0.05, c); // ricade sulla schiena, sotto l'eventuale cappello
+      for (const s of [-1, 1]) lump(lp, s * 0.27, 0.04, 0.04, 0.06, 0.18, 0.08);
     };
     case 'curly': return (lp) => {
+      shell(lp, 0.12, shade(c, -0.04)); band(lp, 0.33);
       // riccioli su tutta la calotta: sommità, nuca, lati e frangia
       const pts: Array<[number, number, number]> = [];
-      for (let ix = -2; ix <= 2; ix++) for (let iz = -2; iz <= 2; iz++) pts.push([ix * 0.105, 0.45 - (Math.abs(ix) + Math.abs(iz)) * 0.012, iz * 0.095 - 0.02]);
-      for (let ix = -2; ix <= 2; ix++) for (const y of [0.1, 0.22, 0.34]) pts.push([ix * 0.11, y, -0.235]);
-      for (const sx of [-1, 1]) for (const z of [-0.16, -0.05, 0.06]) for (const y of [0.24, 0.36]) pts.push([sx * 0.285, y, z]);
-      for (let ix = -2; ix <= 2; ix++) pts.push([ix * 0.1, 0.4, 0.19]);
+      for (let ix = -2; ix <= 2; ix++) for (let iz = -2; iz <= 2; iz++) pts.push([ix * 0.11, 0.49 - (Math.abs(ix) + Math.abs(iz)) * 0.012, iz * 0.1 - 0.03]);
+      for (let ix = -2; ix <= 2; ix++) for (const y of [0.12, 0.23, 0.34]) pts.push([ix * 0.115, y, -0.265]);
+      for (const sx of [-1, 1]) for (const z of [-0.18, -0.07, 0.04, 0.14]) for (const y of [0.16, 0.27, 0.38]) pts.push([sx * 0.3, y, z]);
+      for (let ix = -2; ix <= 2; ix++) pts.push([ix * 0.105, 0.37, 0.25]);
       pts.forEach(([x, y, z], i) => lump(lp, x, y, z, 0.07 + (i % 3) * 0.008, 0.07, 0.07, i % 4 ? c : shade(c, -0.05)));
     };
-    case 'bun': return (lp) => { cap(lp); sides(lp); fringe(lp); back(lp); lump(lp, 0, hat === 'none' ? 0.52 : 0.27, -0.24, 0.11, 0.1, 0.11); };
+    case 'bun': return (lp) => { shell(lp, 0.16); band(lp); fringe(lp); back(lp); lump(lp, 0, hat === 'none' ? 0.54 : 0.27, -0.26, 0.11, 0.1, 0.11); };
     case 'spiky': return (lp) => {
-      cap(lp); sides(lp); back(lp);
+      shell(lp, 0.2); back(lp);
       if (hat === 'none') {
-        for (let i = 0; i < 6; i++) lp.push([-0.2 + i * 0.08, 0.36, 0.2], 0, 0.5, (i - 2.5) * 0.18).cyl(0, 0, 0, 0.05, 0, 0.12, 4, c, { jitter: 0 }).pop();
-        for (let i = 0; i < 7; i++) { const a = (i / 7) * Math.PI * 2; lp.push([Math.cos(a) * 0.15, 0.44, Math.sin(a) * 0.12], 0, Math.sin(a) * 0.6, -Math.cos(a) * 0.6).cyl(0, 0, 0, 0.06, 0, 0.16, 4, c, { jitter: 0 }).pop(); }
-      } else fringe(lp);
+        band(lp, 0.36);
+        for (let i = 0; i < 6; i++) lp.push([-0.2 + i * 0.08, 0.38, 0.22], 0, 0.5, (i - 2.5) * 0.18).cyl(0, 0, 0, 0.05, 0, 0.12, 4, c, { jitter: 0 }).pop();
+        for (let i = 0; i < 7; i++) { const a = (i / 7) * Math.PI * 2; lp.push([Math.cos(a) * 0.15, 0.48, Math.sin(a) * 0.12], 0, Math.sin(a) * 0.6, -Math.cos(a) * 0.6).cyl(0, 0, 0, 0.06, 0, 0.16, 4, c, { jitter: 0 }).pop(); }
+      } else { band(lp); fringe(lp); }
     };
   }
 }
@@ -317,9 +375,9 @@ function facialHair(l: CustodeLook): Build {
 function hatBuild(style: HatStyle, c: string): Build | undefined {
   switch (style) {
     case 'none': return undefined;
-    case 'wide': return wideHat(c, shade(c, -0.12));
+    case 'wide': return wideHat(c, shade(c, -0.12), HAT_TILT.wide[2]);
     case 'top': return (lp) => {
-      lp.push([0, 0.4, 0], 0, -0.04, -0.07);
+      lp.push([0, HAT_TILT.top[0], 0], 0, HAT_TILT.top[1], HAT_TILT.top[2]);
       lp.cyl(0, 0, 0, 0.33, 0.33, 0.035, 14, c, { jitter: 0 });
       lp.cyl(0, 0.02, 0, 0.2, 0.21, 0.32, 12, c, { jitter: 0, vary: 0.05 });
       lp.cyl(0, 0.04, 0, 0.215, 0.21, 0.055, 12, shade(c, -0.15), { jitter: 0, ao: 0 });
@@ -380,7 +438,7 @@ function faceDetails(l: CustodeLook): Build {
     }
     if (l.freckles) for (const s of [-1, 1]) for (const [x, y] of [[0.12, 0.13], [0.15, 0.115], [0.135, 0.095], [0.165, 0.135]] as const) lp.blob(s * x, y, HEAD_D / 2 + 0.003, 0.008, 0.008, 0.004, shade(l.skin, -0.2), { jitter: 0, ao: 0 });
     if (l.bandaid) {
-      lp.push([-0.13, 0.33, HEAD_D / 2 + 0.004], 0, 0, 0.5);
+      lp.push([-0.17, 0.05, HEAD_D / 2 + 0.006], 0, 0, 0.45); // sulla guancia (la fronte è coperta dai capelli)
       sbox(lp, 0, -0.018, 0, 0.11, 0.036, 0.008, 0.008, '#e8c9a0');
       lp.box(0, -0.012, 0.005, 0.035, 0.024, 0.004, '#d9b48a', { jitter: 0, ao: 0 });
       lp.pop();

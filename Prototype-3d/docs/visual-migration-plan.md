@@ -218,7 +218,9 @@ colonna "Sereno". Veli per qualità: bassa 1, media 2, alta 3. `?mist=0` la speg
   veli che aderiscono alla testa: una calotta sottile su sommità, lati e nuca,
   poi ciocche separate (frangia sulla fronte, ciocche su lati e nuca) a punta,
   bombate al centro e in tonalità alternate, così tra una e l'altra resta un
-  solco; i capelli lunghi aggiungono ciocche che pendono sulla schiena. Ogni
+  solco; i capelli lunghi ricadono come una chioma morbida (volume chiuso con
+  ciocche in rilievo, punte arrotondate, più sottile accanto al viso e un po'
+  aperta sulle spalle) e i ricci lunghi aggiungono una cascata di riccioli. Ogni
   taglio ha la sua frangia (ciuffi a punta, dritta smerlata, di lato, tirata
   verso lo chignon, spettinata) e le punte non scendono mai sugli occhi. Sotto
   tesa e cilindro la calotta sale fino alla tesa seguendone l'inclinazione

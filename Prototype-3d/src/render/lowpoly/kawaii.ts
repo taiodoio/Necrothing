@@ -487,31 +487,94 @@ function hairStyle(style: HairStyle, c: string, hat: HatStyle, lump: Lump): Buil
     locks(lp, { center: Math.PI, span: o.span ?? 105, n: o.n, depth: o.depth ?? 0.05, seed: o.seed, edgeTaper: false,
       tip: (t) => THREE.MathUtils.lerp(o.back, o.side, Math.abs(t) ** 1.5) });
 
+  /** Anello attorno alla testa all'altezza della nuca: direzione orizzontale e raggio. */
+  const ring = (th: number) => {
+    const { p } = headAt(th, phiForY(th, 0.08));
+    const r = Math.hypot(p.x, p.z);
+    return { dx: p.x / r, dz: p.z / r, r };
+  };
+
   /**
-   * Ciocche lunghe che pendono sotto la testa (lame affusolate), con la
-   * radice infilata sotto le ciocche della nuca e la punta un po' aperta.
+   * Chioma lunga che ricade sulla schiena e accanto al viso: un volume unico
+   * (strato esterno, interno, punte e fianchi chiusi) con ciocche in rilievo
+   * morbido e punte arrotondate, che si allarga un po' scendendo.
    */
-  const hanging = (lp: LP, o: { n: number; span: number; bottom: number; sideBottom: number; top?: number; seed?: number; lean?: number }) => {
-    const rnd = prng(o.seed ?? 4);
-    const yTop = o.top ?? 0.2;
-    const w = 0.13, thick = 0.026;
-    for (let i = 0; i < o.n; i++) {
-      const t = -1 + (2 * i) / (o.n - 1);
-      const th = Math.PI + t * o.span * DEG;
-      const { p, n } = headAt(th, phiForY(th, yTop));
-      const nh = new THREE.Vector3(n.x, 0, n.z).normalize();
-      const L = yTop - (THREE.MathUtils.lerp(o.bottom, o.sideBottom, Math.abs(t) ** 1.5) - rnd() * 0.04);
-      const shape = new THREE.Shape();
-      shape.moveTo(-w / 2, 0); shape.lineTo(w / 2, 0);
-      shape.quadraticCurveTo(w * 0.5, -L * 0.55, w * 0.08, -L);
-      shape.lineTo(-w * 0.04, -L + 0.01);
-      shape.quadraticCurveTo(-w * 0.5, -L * 0.5, -w / 2, 0);
-      const g = new THREE.ExtrudeGeometry(shape, { depth: thick - 0.01, bevelEnabled: true, bevelThickness: 0.005, bevelSize: 0.005, bevelSegments: 1, curveSegments: 3 });
-      g.translate(0, 0, 0.005);
-      lp.push([p.x + nh.x * 0.004, yTop, p.z + nh.z * 0.004], Math.atan2(nh.x, nh.z), -(o.lean ?? 0.12) - rnd() * 0.05, (rnd() - 0.5) * 0.08);
-      lp.add(g, shade(c, [0, 0.03, -0.035, 0.015][i % 4]), { jitter: 0, vary: 0.05, ao: 0.04 });
-      lp.pop();
+  const curtain = (lp: LP, o: { span: number; locks: number; top: number; bottom: number; sideBottom: number; depth?: number }) => {
+    const N = o.locks * 4, M = 7;
+    const outer: THREE.Vector3[][] = [], inner: THREE.Vector3[][] = [];
+    for (let i = 0; i <= N; i++) {
+      const t = -1 + (2 * i) / N, th = Math.PI + t * o.span * DEG;
+      const { dx, dz, r } = ring(th);
+      const f = ((t + 1) / 2) * o.locks % 1;
+      const bump = 0.5 + 0.5 * Math.cos((f - 0.5) * Math.PI * 2); // 1 al centro di ogni ciocca
+      const tip = THREE.MathUtils.lerp(o.bottom, o.sideBottom, Math.abs(t) ** 1.5) - (o.depth ?? 0.06) * bump;
+      outer.push([]); inner.push([]);
+      for (let j = 0; j <= M; j++) {
+        const v = j / M;
+        const y = THREE.MathUtils.lerp(o.top, tip, v);
+        // ai lati, accanto al viso, la chioma si assottiglia e si stringe alla testa
+        const side = 0.35 + 0.65 * smooth(0, 0.3, 1 - Math.abs(t));
+        const out = r + (0.024 + 0.07 * Math.pow(v, 1.3) + 0.022 * bump) * side; // si apre sulle spalle; solco tra le ciocche
+        const th2 = 0.034 * (1 - 0.55 * v) * (0.6 + 0.4 * bump) * side;
+        outer[i].push(new THREE.Vector3(dx * out, y, dz * out));
+        inner[i].push(new THREE.Vector3(dx * (out - th2), y + 0.004 * v, dz * (out - th2)));
+      }
     }
+    // una geometria per ciocca (tonalità alternate), così i solchi si leggono
+    const per: number[][] = Array.from({ length: o.locks }, () => []);
+    let pos = per[0];
+    const ab = new THREE.Vector3(), ac = new THREE.Vector3(), nrm = new THREE.Vector3();
+    const tri = (a: THREE.Vector3, b: THREE.Vector3, c: THREE.Vector3, want: THREE.Vector3) => {
+      nrm.crossVectors(ab.subVectors(b, a), ac.subVectors(c, a));
+      const [p, q] = nrm.dot(want) >= 0 ? [b, c] : [c, b];
+      pos.push(a.x, a.y, a.z, p.x, p.y, p.z, q.x, q.y, q.z);
+    };
+    const quad = (a: THREE.Vector3, b: THREE.Vector3, c: THREE.Vector3, d: THREE.Vector3, want: THREE.Vector3) => { tri(a, b, c, want); tri(a, c, d, want); };
+    const radial = (p: THREE.Vector3, k = 1) => new THREE.Vector3(p.x, 0, p.z).normalize().multiplyScalar(k);
+    const lockOf = (i: number) => Math.min(o.locks - 1, Math.floor(i / 4));
+    for (let i = 0; i < N; i++) {
+      pos = per[lockOf(i)];
+      for (let j = 0; j < M; j++) {
+        quad(outer[i][j], outer[i + 1][j], outer[i + 1][j + 1], outer[i][j + 1], radial(outer[i][j]));
+        quad(inner[i][j], inner[i + 1][j], inner[i + 1][j + 1], inner[i][j + 1], radial(inner[i][j], -1));
+      }
+      quad(outer[i][M], outer[i + 1][M], inner[i + 1][M], inner[i][M], radial(outer[i][M], 0.3).add(new THREE.Vector3(0, -1, 0)));
+    }
+    for (const [i, k] of [[0, 1], [N, N - 1]] as const) {
+      pos = per[lockOf(Math.min(i, N - 1))];
+      for (let j = 0; j < M; j++) quad(outer[i][j], outer[i][j + 1], inner[i][j + 1], inner[i][j], new THREE.Vector3().subVectors(outer[i][j], outer[k][j]));
+    }
+    per.forEach((arr, l) => {
+      const g = new THREE.BufferGeometry();
+      g.setAttribute('position', new THREE.Float32BufferAttribute(arr, 3));
+      lp.add(g, shade(c, [0, 0.03, -0.03, 0.015][l % 4]), { jitter: 0, vary: 0.04, ao: 0.05 });
+    });
+  };
+
+  /** Cascata di riccioli che scende sotto la testa, a file sfalsate. */
+  const curlCascade = (lp: LP, o: { span: number; cols: number; bottom: number; sideBottom: number }) => {
+    const rnd = prng(17);
+    for (let k = 0; k < o.cols; k++) {
+      const t0 = -1 + (2 * k) / (o.cols - 1);
+      const bottom = THREE.MathUtils.lerp(o.bottom, o.sideBottom, Math.abs(t0) ** 1.5);
+      for (let row = 0, y = 0.17; y > bottom; row++, y -= 0.075) {
+        const t = THREE.MathUtils.clamp(t0 + (row % 2 ? 0.5 : 0) / (o.cols - 1), -1, 1);
+        const { dx, dz, r } = ring(Math.PI + t * o.span * DEG);
+        const out = r + 0.045 + 0.012 * row;
+        const rr = 0.064 + rnd() * 0.014;
+        ball(lp, dx * out, y, dz * out, rr, rr * 0.95, rr, (row + k) % 4 ? c : shade(c, -0.05));
+      }
+    }
+  };
+
+  /** Riccioli su tutta la calotta: sommità, nuca, lati e frangia. */
+  const curls = (lp: LP) => {
+    const pts: Array<[number, number, number]> = [];
+    for (let ix = -2; ix <= 2; ix++) for (let iz = -2; iz <= 2; iz++) pts.push([ix * 0.11, 0.49 - (Math.abs(ix) + Math.abs(iz)) * 0.012, iz * 0.1 - 0.03]);
+    for (let ix = -2; ix <= 2; ix++) for (const y of [0.12, 0.23, 0.34]) pts.push([ix * 0.115, y, -0.265]);
+    for (const sx of [-1, 1]) for (const z of [-0.18, -0.07, 0.04, 0.14]) for (const y of [0.16, 0.27, 0.38]) pts.push([sx * 0.3, y, z]);
+    for (let ix = -2; ix <= 2; ix++) pts.push([ix * 0.105, 0.37, 0.25]);
+    pts.forEach(([x, y, z], i) => lump(lp, x, y, z, 0.07 + (i % 3) * 0.008, 0.07, 0.07, i % 4 ? c : shade(c, -0.05)));
   };
 
   switch (style) {
@@ -529,21 +592,21 @@ function hairStyle(style: HairStyle, c: string, hat: HatStyle, lump: Lump): Buil
     };
     case 'long': return (lp) => {
       cap(lp, 0.02);
-      // ciocche lunghe che ricadono sulla schiena e accanto al viso
-      hanging(lp, { n: 11, span: 108, bottom: -0.2, sideBottom: -0.04, seed: 8 });
-      nape(lp, { n: 11, back: 0.04, side: 0.08, depth: 0.04, span: 110, seed: 8 });
+      // chioma morbida che ricade sulla schiena e accanto al viso
+      curtain(lp, { span: 112, locks: 7, top: 0.24, bottom: -0.2, sideBottom: -0.03 });
+      nape(lp, { n: 11, back: 0.12, side: 0.14, depth: 0.03, span: 112, seed: 8 });
       fringe(lp, { n: 5, base: 0.37, depth: 0.09, sweep: -0.05, wrap: 92, seed: 8 }); // frangia di lato
     };
     case 'curly': return (lp) => {
       cap(lp, 0.12, shade(c, -0.05));
       fringe(lp, { n: 7, base: 0.37, depth: 0.03, wrap: 90, seed: 2, col: shade(c, -0.04) });
-      // riccioli su tutta la calotta: sommità, nuca, lati e frangia
-      const pts: Array<[number, number, number]> = [];
-      for (let ix = -2; ix <= 2; ix++) for (let iz = -2; iz <= 2; iz++) pts.push([ix * 0.11, 0.49 - (Math.abs(ix) + Math.abs(iz)) * 0.012, iz * 0.1 - 0.03]);
-      for (let ix = -2; ix <= 2; ix++) for (const y of [0.12, 0.23, 0.34]) pts.push([ix * 0.115, y, -0.265]);
-      for (const sx of [-1, 1]) for (const z of [-0.18, -0.07, 0.04, 0.14]) for (const y of [0.16, 0.27, 0.38]) pts.push([sx * 0.3, y, z]);
-      for (let ix = -2; ix <= 2; ix++) pts.push([ix * 0.105, 0.37, 0.25]);
-      pts.forEach(([x, y, z], i) => lump(lp, x, y, z, 0.07 + (i % 3) * 0.008, 0.07, 0.07, i % 4 ? c : shade(c, -0.05)));
+      curls(lp);
+    };
+    case 'longcurly': return (lp) => {
+      cap(lp, 0.02, shade(c, -0.05));
+      fringe(lp, { n: 7, base: 0.37, depth: 0.03, wrap: 90, seed: 12, col: shade(c, -0.04) });
+      curls(lp);
+      curlCascade(lp, { span: 108, cols: 9, bottom: -0.2, sideBottom: -0.02 }); // ricci che scendono sulle spalle
     };
     // ciocche corte tirate di lato verso lo chignon
     case 'bun': return (lp) => {

@@ -2,7 +2,7 @@
 // genere: si scelgono pelle (anche "brillantinata"), capelli e colore, occhi,
 // dettagli (occhiali, lentiggini, cerotto), barba e baffi, cappello, vestiti e colori.
 
-export type HairStyle = 'tufts' | 'bob' | 'long' | 'curly' | 'bun' | 'spiky' | 'none';
+export type HairStyle = 'tufts' | 'bob' | 'long' | 'curly' | 'longcurly' | 'bun' | 'spiky' | 'none';
 export type HatStyle = 'wide' | 'top' | 'beanie' | 'none';
 export type Outfit = 'coat' | 'cloak' | 'overalls' | 'sweater';
 export type Glasses = 'none' | 'round' | 'square' | 'monocle';
@@ -42,7 +42,7 @@ export const LOOK_COLORS: Record<'skin' | 'hairColor' | 'beardColor' | 'eyes' | 
 };
 
 export const LOOK_STYLES = {
-  hair: [['tufts', 'Ciuffi'], ['bob', 'Caschetto'], ['long', 'Lunghi'], ['curly', 'Ricci'], ['bun', 'Chignon'], ['spiky', 'Spettinati'], ['none', 'Nessuno']] as Array<[HairStyle, string]>,
+  hair: [['tufts', 'Ciuffi'], ['bob', 'Caschetto'], ['long', 'Lunghi'], ['curly', 'Ricci'], ['longcurly', 'Ricci lunghi'], ['bun', 'Chignon'], ['spiky', 'Spettinati'], ['none', 'Nessuno']] as Array<[HairStyle, string]>,
   hat: [['wide', 'Tesa larga'], ['top', 'Cilindro'], ['beanie', 'Berretto'], ['none', 'Nessuno']] as Array<[HatStyle, string]>,
   outfit: [['coat', 'Cappotto'], ['cloak', 'Mantella'], ['overalls', 'Salopette'], ['sweater', 'Maglione']] as Array<[Outfit, string]>,
   glasses: [['none', 'Nessuno'], ['round', 'Tondi'], ['square', 'Squadrati'], ['monocle', 'Monocolo']] as Array<[Glasses, string]>,

@@ -16,9 +16,10 @@ export interface CustodeLook {
   hairColor: string;
   eyes: string;
   glasses: Glasses;
-  /** Barba e baffi (nel colore dei capelli); la barba può avere una treccia. */
+  /** Barba (anche con treccia) e baffi, con un colore tutto loro. */
   beard: Beard;
   mustache: Mustache;
+  beardColor: string;
   freckles: boolean;
   bandaid: boolean;
   hat: HatStyle;
@@ -30,9 +31,10 @@ export interface CustodeLook {
 
 type Swatch = [color: string, label: string];
 
-export const LOOK_COLORS: Record<'skin' | 'hairColor' | 'eyes' | 'hatColor' | 'outfitColor' | 'accentColor', Swatch[]> = {
+export const LOOK_COLORS: Record<'skin' | 'hairColor' | 'beardColor' | 'eyes' | 'hatColor' | 'outfitColor' | 'accentColor', Swatch[]> = {
   skin: [['#f6dcc7', 'Porcellana'], ['#f2cfb0', 'Pesca'], ['#e0b48f', 'Miele'], ['#c68e62', 'Ambra'], ['#8d5a3b', 'Cacao'], ['#5e3a26', 'Ebano'], ['#b9d7c8', 'Spettrale'], ['#c9c3e6', 'Lilla']],
   hairColor: [['#2a2226', 'Nero'], ['#6b4a33', 'Castano'], ['#b0774a', 'Rame'], ['#e0c27a', 'Biondo'], ['#d9d4cc', 'Bianco'], ['#8a5ab0', 'Viola'], ['#4f7fb0', 'Blu'], ['#d0607a', 'Rosa']],
+  beardColor: [['#2a2226', 'Nero'], ['#6b4a33', 'Castano'], ['#b0774a', 'Rame'], ['#e0c27a', 'Biondo'], ['#8a8580', 'Grigio'], ['#d9d4cc', 'Bianco'], ['#8a5ab0', 'Viola'], ['#4f7fb0', 'Blu'], ['#d0607a', 'Rosa']],
   eyes: [['#1b1a20', 'Nero'], ['#3b2a1e', 'Castano'], ['#1f4a6b', 'Blu'], ['#2f5a32', 'Verde'], ['#5a2f6b', 'Viola'], ['#8a2a2a', 'Rubino']],
   hatColor: [['#4a3326', 'Cuoio'], ['#2a2a30', 'Nero'], ['#5a2f3a', 'Vinaccia'], ['#3a4a3a', 'Muschio'], ['#6b6050', 'Fango'], ['#2f3a5a', 'Notte']],
   outfitColor: [['#6e4c36', 'Cuoio'], ['#3a4150', 'Ardesia'], ['#4f5a3e', 'Muschio'], ['#6b2f35', 'Vinaccia'], ['#4a3a5a', 'Prugna'], ['#2b2b30', 'Nero'], ['#8a7a5a', 'Sabbia']],
@@ -50,7 +52,7 @@ export const LOOK_STYLES = {
 
 export const DEFAULT_LOOK: CustodeLook = {
   skin: '#f2cfb0', sparkle: false, hair: 'tufts', hairColor: '#6b4a33', eyes: '#1b1a20',
-  glasses: 'none', beard: 'none', mustache: 'none', freckles: false, bandaid: false,
+  glasses: 'none', beard: 'none', mustache: 'none', beardColor: '#6b4a33', freckles: false, bandaid: false,
   hat: 'wide', hatColor: '#4a3326', outfit: 'coat', outfitColor: '#6e4c36', accentColor: '#a4473b',
 };
 
@@ -61,6 +63,8 @@ export function normalizeLook(raw: unknown): CustodeLook {
   const pick = <T extends string>(v: unknown, opts: Array<[T, string]>, d: T): T => (opts.some(([o]) => o === v) ? v as T : d);
   return {
     skin: color('skin'), hairColor: color('hairColor'), eyes: color('eyes'), hatColor: color('hatColor'), outfitColor: color('outfitColor'), accentColor: color('accentColor'),
+    // i salvataggi di prima avevano barba e baffi nel colore dei capelli
+    beardColor: LOOK_COLORS.beardColor.some(([c]) => c === r.beardColor) ? r.beardColor as string : color('hairColor'),
     sparkle: r.sparkle === true, freckles: r.freckles === true, bandaid: r.bandaid === true,
     hair: pick(r.hair, LOOK_STYLES.hair, DEFAULT_LOOK.hair),
     hat: pick(r.hat, LOOK_STYLES.hat, DEFAULT_LOOK.hat),
@@ -73,7 +77,7 @@ export function normalizeLook(raw: unknown): CustodeLook {
 
 /** Chiave breve e stabile di un aspetto (cache dei modelli). */
 export function lookKey(l: CustodeLook): string {
-  const s = JSON.stringify([l.skin, l.sparkle, l.hair, l.hairColor, l.eyes, l.glasses, l.beard, l.mustache, l.freckles, l.bandaid, l.hat, l.hatColor, l.outfit, l.outfitColor, l.accentColor]);
+  const s = JSON.stringify([l.skin, l.sparkle, l.hair, l.hairColor, l.eyes, l.glasses, l.beard, l.mustache, l.beardColor, l.freckles, l.bandaid, l.hat, l.hatColor, l.outfit, l.outfitColor, l.accentColor]);
   let h = 2166136261;
   for (let i = 0; i < s.length; i++) h = Math.imul(h ^ s.charCodeAt(i), 16777619);
   return (h >>> 0).toString(36);

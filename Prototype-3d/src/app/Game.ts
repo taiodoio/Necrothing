@@ -223,8 +223,11 @@ export class Game {
   private resized = false;
 
   private readonly onVisibility = () => {
-    if (document.hidden) { saveNow(this.state); this.clock.stop(); return; }
-    this.clock.start();
+    if (document.hidden) { saveNow(this.state); return; }
+    // scarta la pausa senza azzerare l'orologio: Clock.start()/stop()
+    // riportavano il tempo a 0 e le animazioni basate sul tempo trascorso
+    // (es. un fuoco fatuo che stava comparendo) diventavano enormi
+    this.clock.getDelta();
     const report = runCatchUp(this.state, this.now());
     this.afterChange();
     const msg = catchUpMessage(report);

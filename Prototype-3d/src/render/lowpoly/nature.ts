@@ -267,7 +267,7 @@ export function tallGrassLP(v: PVis): LPModel {
 }
 
 /** Fungo con gambo, lamelle scure sotto il cappello e puntini. */
-function mushroom(lp: LP, x: number, z: number, h: number, cap: string, glow = false, w = 0.07) {
+export function mushroom(lp: LP, x: number, z: number, h: number, cap: string, glow = false, w = 0.07) {
   lp.cyl(x, 0, z, w * 0.3, w * 0.22, h, 5, LPC.bone, { jitter: 0 });
   lp.cyl(x, h - 0.012, z, w * 0.9, w * 0.3, 0.012, 7, '#6b5a4a', { jitter: 0, ao: 0 });
   lp.lathe(x, h - 0.01, z, [[0.0, 0], [w, 0], [w * 0.93, w * 0.3], [w * 0.65, w * 0.6], [0, w * 0.72]], 7, cap, { bucket: glow ? 'glow' : 'solid', jitter: 0.004 });

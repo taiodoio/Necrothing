@@ -220,7 +220,19 @@ colonna "Sereno". Veli per qualità: bassa 1, media 2, alta 3. `?mist=0` la speg
   la tesa e ne seguono l'inclinazione (testato per ogni taglio e cappello).
   Salvato nella partita (`player.look`, validato al caricamento), anteprima 3D
   nel pannello "Personaggio", fissa in alto mentre si scorrono le opzioni (dal
-  profilo o dalle Impostazioni). Solo nello stile low-poly.
+  profilo o dalle Impostazioni), su una zolla di prato con fiorellini, sassi e
+  funghetti. Solo nello stile low-poly.
+- **Dettagli che seguono il volto**: la testa ha una distanza con segno
+  (`headSdf` in `kawaii.ts`); la barba è un velo che aderisce a mento,
+  mandibola e basette e si assottiglia sui bordi (colore proprio per barba e
+  baffi), la catenella del monocolo scende lungo guancia e mandibola, cerotto,
+  lentiggini e baffi sono adagiati sulla curva. La pelle brillantinata usa
+  stelline sparse sulla superficie più un velo di scintille animate (shader a
+  punti) che si accendono a turno.
+- **Orologio**: tornando nell'app dopo averla lasciata in background il tempo
+  non riparte più da zero (prima un fuoco fatuo che stava comparendo diventava
+  enorme e copriva la mappa con un bagliore). L'import del backup non filtra più
+  l'estensione, così su iPhone il file `.necro3d` è selezionabile.
 - **Ritocchi kawaii**: guance appoggiate alla faccia (prima fluttuavano sugli
   spigoli arrotondati, anche su fantasmi e animali). Il Custode non porta più la
   pala (è del becchino, che la tiene in spalla): solo la lanterna, che di notte lo

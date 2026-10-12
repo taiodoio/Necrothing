@@ -269,6 +269,10 @@ test('Custode personalizzabile: aspetto validato, chiave stabile, rig con tutte 
     assert.equal(rig.lights.length, 1, 'lanterna accesa');
   }
   assert.equal(normalizeLook({ beard: 'braid', mustache: 'handlebar' }).beard, 'braid');
+  // colore della barba: proprio, oppure (salvataggi vecchi) quello dei capelli
+  assert.equal(normalizeLook({ hairColor: '#e0c27a' }).beardColor, '#e0c27a');
+  assert.equal(normalizeLook({ hairColor: '#e0c27a', beardColor: '#8a8580' }).beardColor, '#8a8580');
+  assert.notEqual(lookKey({ ...DEFAULT_LOOK, beardColor: '#8a8580' }), lookKey(DEFAULT_LOOK));
   // con il cappello nessuna ciocca supera la tesa (o il bordo del berretto)
   // (per i cappelli inclinati si misura rispetto al piano della tesa: i capelli
   // possono seguirla da sotto, mai uscire sopra il suo spessore)

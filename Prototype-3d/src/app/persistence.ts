@@ -71,7 +71,8 @@ export async function exportBackup(state: SaveData): Promise<Blob> {
 }
 
 export async function importBackup(text: string): Promise<SaveData> {
-  const parsed = JSON.parse(text);
+  let parsed: { format?: string; state?: unknown; photos?: PhotoRecord[] } | null = null;
+  try { parsed = JSON.parse(text); } catch { /* sotto: file non riconosciuto */ }
   if (parsed?.format !== 'necrothing-3d') throw new Error('File non riconosciuto come backup Necrothing 3D.');
   const state = normalizeSave(parsed.state);
   if (!state) throw new Error('Backup corrotto.');

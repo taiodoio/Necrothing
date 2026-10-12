@@ -122,6 +122,124 @@ function face(lp: LP, o: FaceOpts) {
 const HIP = 0.2, SHOULDER = 0.5, NECK = 0.56, ARM_X = 0.215, LEG_X = 0.085;
 const HEAD_W = 0.56, HEAD_H = 0.48, HEAD_D = 0.48;
 
+// ── Superficie della testa ──────────────────────────────────────────────
+// La testa (softBoxGeo) è un prisma dal profilo frontale arrotondato
+// (0,3 × 0,22, raggio 0,109) allargato di 0,13 in ogni direzione. Con la sua
+// distanza con segno si appoggiano barba, catenelle, cerotti e brillantini
+// esattamente sul volto invece che su un piano davanti.
+
+const HEAD_CY = -0.02 + HEAD_H / 2;
+const HEAD_BEVEL = 0.13;
+
+function headSdf(x: number, y: number, z: number): number {
+  const rc = 0.109;
+  const qx = Math.abs(x) - (0.15 - rc), qy = Math.abs(y - HEAD_CY) - (0.11 - rc);
+  const d2 = Math.hypot(Math.max(qx, 0), Math.max(qy, 0)) + Math.min(Math.max(qx, qy), 0) - rc;
+  const wz = Math.abs(z) - (HEAD_D / 2 - HEAD_BEVEL);
+  return Math.hypot(Math.max(d2, 0), Math.max(wz, 0)) + Math.min(Math.max(d2, wz), 0) - HEAD_BEVEL;
+}
+
+function headNormal(p: THREE.Vector3): THREE.Vector3 {
+  const e = 1e-3;
+  return new THREE.Vector3(
+    headSdf(p.x + e, p.y, p.z) - headSdf(p.x - e, p.y, p.z),
+    headSdf(p.x, p.y + e, p.z) - headSdf(p.x, p.y - e, p.z),
+    headSdf(p.x, p.y, p.z + e) - headSdf(p.x, p.y, p.z - e),
+  ).normalize();
+}
+
+/** Punto della testa nella direzione (θ attorno a y da +z, φ in alto), con la normale. */
+function headAt(theta: number, phi: number): { p: THREE.Vector3; n: THREE.Vector3 } {
+  const dir = new THREE.Vector3(Math.sin(theta) * Math.cos(phi), Math.sin(phi), Math.cos(theta) * Math.cos(phi));
+  let lo = 0, hi = 0.6;
+  for (let i = 0; i < 24; i++) {
+    const m = (lo + hi) / 2;
+    if (headSdf(dir.x * m, HEAD_CY + dir.y * m, dir.z * m) < 0) lo = m; else hi = m;
+  }
+  const p = new THREE.Vector3(dir.x * lo, HEAD_CY + dir.y * lo, dir.z * lo);
+  return { p, n: headNormal(p) };
+}
+
+/** Punto della faccia davanti a (x, y), con la normale. */
+function headFront(x: number, y: number): { p: THREE.Vector3; n: THREE.Vector3 } {
+  let lo = 0, hi = 0.4;
+  for (let i = 0; i < 22; i++) { const m = (lo + hi) / 2; if (headSdf(x, y, m) < 0) lo = m; else hi = m; }
+  const p = new THREE.Vector3(x, y, lo);
+  return { p, n: headNormal(p) };
+}
+
+/** Disegna un dettaglio piatto (sul piano xy, verso +z) adagiato sulla pelle. */
+function onSkin(lp: LP, at: { p: THREE.Vector3; n: THREE.Vector3 }, lift: number, rz: number, build: Build) {
+  const { p, n } = at;
+  lp.push([p.x + n.x * lift, p.y + n.y * lift, p.z + n.z * lift], Math.atan2(n.x, n.z), -Math.asin(THREE.MathUtils.clamp(n.y, -1, 1)), rz);
+  build(lp);
+  lp.pop();
+}
+
+/**
+ * Velo che aderisce alla testa: griglia (u ∈ −1..1 attorno al viso, v ∈ 0..1
+ * dal basso in alto) proiettata sulla superficie e sollevata di `thick(u, v)`
+ * lungo la normale. Lo spessore va a zero sui bordi, così il velo si fonde
+ * con la pelle (barbe che seguono mento, mandibola e basette).
+ */
+function headSheet(lp: LP, nu: number, nv: number, at: (u: number, v: number) => [number, number], thick: (u: number, v: number) => number, color: string, o: LPOpts = {}) {
+  const pos: number[] = [];
+  for (let j = 0; j <= nv; j++) for (let i = 0; i <= nu; i++) {
+    const u = -1 + (2 * i) / nu, v = j / nv;
+    const { p, n } = headAt(...at(u, v));
+    const t = 0.003 + thick(u, v);
+    pos.push(p.x + n.x * t, p.y + n.y * t, p.z + n.z * t);
+  }
+  const idx: number[] = [];
+  const k = (i: number, j: number) => j * (nu + 1) + i;
+  for (let j = 0; j < nv; j++) for (let i = 0; i < nu; i++) idx.push(k(i, j), k(i + 1, j), k(i + 1, j + 1), k(i, j), k(i + 1, j + 1), k(i, j + 1));
+  const g = new THREE.BufferGeometry();
+  g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+  g.setIndex(idx);
+  lp.add(g, color, { jitter: 0, vary: 0.05, ao: 0, ...o });
+}
+
+const DEG = Math.PI / 180;
+const smooth = (a: number, b: number, x: number) => { const t = THREE.MathUtils.clamp((x - a) / (b - a), 0, 1); return t * t * (3 - 2 * t); };
+
+/** Generatore pseudo-casuale deterministico (stessi brillantini a ogni build). */
+function prng(seed: number) {
+  let s = seed >>> 0;
+  return () => { s = (Math.imul(s ^ (s >>> 15), 2246822519) + 0x9e3779b9) >>> 0; return (s >>> 8) / 16777216; };
+}
+
+/**
+ * Posizioni dei brillantini sulla pelle del viso e dei lati della testa
+ * (lontano da occhi e bocca), già staccate di poco dalla superficie.
+ */
+export function sparklePoints(count = 46): Array<{ p: THREE.Vector3; n: THREE.Vector3; r: number }> {
+  const rnd = prng(7);
+  const out: Array<{ p: THREE.Vector3; n: THREE.Vector3; r: number }> = [];
+  for (let tries = 0; out.length < count && tries < count * 20; tries++) {
+    const at = headAt((rnd() * 2 - 1) * 105 * DEG, (-45 + rnd() * 75) * DEG);
+    const { p } = at;
+    if (p.z > 0.15 && Math.abs(Math.abs(p.x) - 0.11) < 0.085 && Math.abs(p.y - 0.18) < 0.085) continue; // occhi
+    if (p.z > 0.15 && Math.abs(p.x) < 0.06 && Math.abs(p.y - 0.095) < 0.035) continue; // bocca
+    out.push({ ...at, r: rnd() });
+  }
+  return out;
+}
+
+/** Stellina a quattro punte, piatta, adagiata sulla pelle. */
+function starFacet(size: number): THREE.BufferGeometry {
+  const s = new THREE.Shape();
+  const w = size * 0.28;
+  s.moveTo(0, size); s.lineTo(w, w); s.lineTo(size, 0); s.lineTo(w, -w); s.lineTo(0, -size); s.lineTo(-w, -w); s.lineTo(-size, 0); s.lineTo(-w, w); s.closePath();
+  return new THREE.ShapeGeometry(s);
+}
+
+/** Pelle brillantinata: stelline luminose sparse che seguono le curve della testa. */
+function skinGlitter(lp: LP) {
+  sparklePoints().forEach(({ p, n, r }, i) => {
+    onSkin(lp, { p, n }, 0.0025, r * Math.PI, (q) => q.add(starFacet(0.011 + r * 0.015), GLITTER[i % GLITTER.length], { bucket: 'glow', jitter: 0, ao: 0 }));
+  });
+}
+
 interface KH {
   coat: string; coat2: string; skin: string; pants: string; boots: string; arm?: string; cuff?: string;
   robe?: boolean;
@@ -133,8 +251,15 @@ interface KH {
 }
 
 const GLITTER = ['#fff4fb', '#ffd6f0', '#d6f6ff', '#fff2c4'];
-function glitter(lp: LP, pts: Array<[number, number, number]>) {
-  pts.forEach(([x, y, z], i) => lp.blob(x, y, z, 0.011, 0.011, 0.006, GLITTER[i % GLITTER.length], { bucket: 'glow', jitter: 0, ao: 0 }));
+/** Brillantini sulla manina (sfera): stelline adagiate sulla superficie. */
+function handGlitter(lp: LP, c: [number, number, number], r: number) {
+  const rnd = prng(3);
+  for (let i = 0; i < 7; i++) {
+    const th = (rnd() * 2 - 1) * 2, ph = (rnd() * 1.4 - 0.7);
+    const n = new THREE.Vector3(Math.sin(th) * Math.cos(ph), Math.sin(ph), Math.cos(th) * Math.cos(ph));
+    const p = new THREE.Vector3(...c).addScaledVector(n, r * 0.97);
+    onSkin(lp, { p, n }, 0.004, rnd() * Math.PI, (q) => q.add(starFacet(0.008 + rnd() * 0.007), GLITTER[i % GLITTER.length], { bucket: 'glow', jitter: 0, ao: 0 }));
+  }
 }
 
 function kHumanoid(o: KH): KawaiiSpec {
@@ -149,7 +274,7 @@ function kHumanoid(o: KH): KawaiiSpec {
     lp.cyl(0, -0.22, 0, 0.07, 0.068, 0.22, 7, arm, { jitter: 0, vary: 0.04, ao: 0.08 });
     lp.cyl(0, -0.235, 0, 0.074, 0.074, 0.04, 7, o.cuff ?? o.coat2, { jitter: 0, ao: 0 });
     ball(lp, 0, -0.275, 0.005, 0.064, 0.064, 0.064, o.skin); // manina
-    if (o.sparkle) glitter(lp, [[0.03, -0.25, 0.055], [-0.035, -0.29, 0.05], [0.0, -0.32, 0.045], [0.05, -0.29, 0.02]]);
+    if (o.sparkle) handGlitter(lp, [0, -0.275, 0.005], 0.064);
     held?.(lp);
   };
   return {
@@ -177,7 +302,7 @@ function kHumanoid(o: KH): KawaiiSpec {
         sbox(lp, 0, -0.02, 0, HEAD_W, HEAD_H, HEAD_D, 0.13, o.skin, { ao: 0.04 });
         for (const s of [-1, 1]) ball(lp, s * (HEAD_W / 2 + 0.005), 0.18, 0, 0.035, 0.05, 0.035, o.skin); // orecchie
         face(lp, { z: HEAD_D / 2, y: 0.18, ...o.face });
-        if (o.sparkle) glitter(lp, [[-0.2, 0.08, 0.2], [0.21, 0.12, 0.19], [-0.15, 0.3, 0.235], [0.17, 0.27, 0.235], [0.0, 0.32, 0.242], [-0.24, 0.2, 0.15], [0.24, 0.05, 0.15], [0.09, 0.05, 0.242]]);
+        if (o.sparkle) skinGlitter(lp);
         o.hair?.(lp);
         o.hat?.(lp);
         o.extraHead?.(lp);
@@ -342,31 +467,49 @@ function hairStyle(style: HairStyle, c: string, hat: HatStyle, lump: Lump): Buil
   }
 }
 
-/** Barba (corta, folta, con treccia) e baffi, nel colore dei capelli. */
+/**
+ * Barba (corta, folta, con treccia) e baffi. La barba è un velo che aderisce
+ * alla testa: segue mento, mandibola e basette, si assottiglia sui bordi e
+ * lascia libera la bocca; quella folta scende un po' sotto il mento.
+ */
 function facialHair(l: CustodeLook): Build {
-  const c = l.hairColor, z = HEAD_D / 2;
+  const c = l.beardColor;
   return (lp) => {
     if (l.beard === 'short') {
-      // barbetta che segue la mandibola, lascia libero il sorriso
-      for (let i = -3; i <= 3; i++) ball(lp, i * 0.06, 0.02 + Math.abs(i) * 0.025, z - 0.01 - Math.abs(i) * 0.012, 0.045, 0.04, 0.03, i % 2 ? c : shade(c, -0.04));
+      headSheet(lp, 16, 5,
+        (u, v) => [u * 94 * DEG, THREE.MathUtils.lerp(-58, THREE.MathUtils.lerp(-36, -4, smooth(0.5, 0.92, Math.abs(u))), v) * DEG],
+        (u, v) => 0.016 * smooth(0, 0.18, 1 - Math.abs(u)) * smooth(0, 0.3, v) * smooth(0, 0.3, 1 - v), c);
     } else if (l.beard === 'full' || l.beard === 'braid') {
-      ball(lp, 0, -0.01, z - 0.02, 0.24, 0.09, 0.08, c); // lascia libero il sorriso
-      for (const s of [-1, 1]) ball(lp, s * 0.2, 0.1, z - 0.07, 0.07, 0.1, 0.07, c); // basette
-      ball(lp, 0, -0.06, z - 0.01, 0.15, 0.07, 0.07, shade(c, -0.03));
+      headSheet(lp, 18, 7,
+        (u, v) => [u * 96 * DEG, THREE.MathUtils.lerp(-72, THREE.MathUtils.lerp(-34, 10, smooth(0.5, 0.92, Math.abs(u))), v) * DEG],
+        (u, v) => {
+          const edge = smooth(0, 0.2, 1 - Math.abs(u)) * smooth(0, 0.22, v) * smooth(0, 0.25, 1 - v);
+          const chin = (1 - Math.abs(u)) ** 2 * Math.exp(-(((v - 0.38) / 0.22) ** 2)); // ciuffo sotto il mento
+          return edge * (0.04 + 0.045 * chin);
+        }, c);
       if (l.beard === 'braid') {
-        // treccia che scende sul petto, con fermaglio nel colore dei dettagli
-        for (let i = 0; i < 4; i++) ball(lp, (i % 2 ? 0.012 : -0.012), -0.12 - i * 0.065, z - 0.0 - i * 0.004, 0.05 - i * 0.006, 0.04, 0.035, i % 2 ? c : shade(c, -0.06));
-        lp.cyl(0, -0.39, z - 0.01, 0.028, 0.028, 0.035, 6, l.accentColor, { jitter: 0 });
-        ball(lp, 0, -0.42, z - 0.01, 0.03, 0.035, 0.028, c);
+        // treccia che parte dal mento e scende sul petto, con fermaglio
+        const { p, n } = headAt(0, -50 * DEG);
+        const top = p.clone().addScaledVector(n, 0.05);
+        const end = new THREE.Vector3(0, -0.27, 0.2);
+        for (let i = 0; i < 4; i++) {
+          const q = top.clone().lerp(end, i / 3.4);
+          ball(lp, q.x + (i % 2 ? 0.01 : -0.01), q.y, q.z, 0.042 - i * 0.004, 0.036, 0.032, i % 2 ? c : shade(c, -0.06));
+        }
+        lp.cyl(end.x, end.y - 0.035, end.z - 0.004, 0.024, 0.024, 0.032, 6, l.accentColor, { jitter: 0 });
+        ball(lp, end.x, end.y - 0.06, end.z - 0.006, 0.026, 0.032, 0.024, c);
       }
     }
-    const my = 0.115; // sopra la bocca
-    if (l.mustache === 'thin') for (const s of [-1, 1]) lp.push([s * 0.035, my, z + 0.006], 0, 0, s * 0.25).box(0, 0, 0, 0.06, 0.016, 0.012, c, { jitter: 0, ao: 0 }).pop();
-    else if (l.mustache === 'bushy') { for (const s of [-1, 1]) ball(lp, s * 0.045, my, z + 0.005, 0.055, 0.028, 0.025, c); }
-    else if (l.mustache === 'handlebar') {
+    // baffi appena sopra la bocca, adagiati sulla faccia
+    const my = 0.118;
+    if (l.mustache === 'thin') {
+      for (const s of [-1, 1]) onSkin(lp, headFront(s * 0.038, my), 0.004, s * 0.25, (q) => q.box(0, 0, 0, 0.064, 0.016, 0.01, c, { jitter: 0, ao: 0 }));
+    } else if (l.mustache === 'bushy') {
+      for (const s of [-1, 1]) onSkin(lp, headFront(s * 0.046, my), 0.006, s * -0.12, (q) => ball(q, 0, 0, 0, 0.056, 0.028, 0.02, c));
+    } else if (l.mustache === 'handlebar') {
       for (const s of [-1, 1]) {
-        ball(lp, s * 0.04, my, z + 0.006, 0.045, 0.02, 0.02, c);
-        lp.add(new THREE.TorusGeometry(0.03, 0.009, 4, 8, Math.PI * 1.2).rotateZ(s > 0 ? -0.3 : Math.PI * -0.9).translate(s * 0.1, my + 0.02, z + 0.006), c, { jitter: 0, ao: 0 });
+        onSkin(lp, headFront(s * 0.04, my), 0.005, 0, (q) => ball(q, 0, 0, 0, 0.045, 0.02, 0.016, c));
+        onSkin(lp, headFront(s * 0.1, my + 0.02), 0.004, 0, (q) => q.add(new THREE.TorusGeometry(0.03, 0.009, 4, 8, Math.PI * 1.2).rotateZ(s > 0 ? -0.3 : Math.PI * -0.9), c, { jitter: 0, ao: 0 }));
       }
     }
   };
@@ -427,7 +570,20 @@ function faceDetails(l: CustodeLook): Build {
     if (l.glasses === 'round' || l.glasses === 'monocle') {
       for (const s of l.glasses === 'monocle' ? [1] : [-1, 1]) lp.add(new THREE.TorusGeometry(0.07, 0.01, 4, 12).translate(s * 0.11, 0.18, z), frame, { jitter: 0, ao: 0 });
       if (l.glasses === 'round') lp.box(0, 0.19, z, 0.06, 0.012, 0.01, frame, { jitter: 0, ao: 0 });
-      else lp.push([0.17, 0.12, z], 0, 0, 0.4).cyl(0, -0.22, 0, 0.005, 0.005, 0.22, 3, LPC.gold, { jitter: 0 }).pop();
+      else {
+        // catenella: scende lungo la guancia, segue la mandibola e ricade sul petto
+        const lift = (at: { p: THREE.Vector3; n: THREE.Vector3 }, d: number) => at.p.clone().addScaledVector(at.n, d);
+        const curve = new THREE.CatmullRomCurve3([
+          new THREE.Vector3(0.11 + 0.07 * Math.cos(-0.9), 0.18 + 0.07 * Math.sin(-0.9), z - 0.004),
+          lift(headFront(0.19, 0.08), 0.012),
+          lift(headAt(52 * DEG, -40 * DEG), 0.012),
+          lift(headAt(48 * DEG, -68 * DEG), 0.014),
+          new THREE.Vector3(0.15, -0.1, 0.19),
+          new THREE.Vector3(0.09, -0.16, 0.19),
+        ]);
+        lp.add(new THREE.TubeGeometry(curve, 24, 0.0055, 3, false), LPC.gold, { jitter: 0, ao: 0 });
+        ball(lp, 0.09, -0.17, 0.19, 0.016, 0.016, 0.01, LPC.gold);
+      }
     } else if (l.glasses === 'square') {
       for (const s of [-1, 1]) {
         lp.box(s * 0.11, 0.24, z, 0.15, 0.016, 0.012, frame, { jitter: 0, ao: 0 });
@@ -436,12 +592,15 @@ function faceDetails(l: CustodeLook): Build {
       }
       lp.box(0, 0.2, z, 0.06, 0.014, 0.01, frame, { jitter: 0, ao: 0 });
     }
-    if (l.freckles) for (const s of [-1, 1]) for (const [x, y] of [[0.12, 0.13], [0.15, 0.115], [0.135, 0.095], [0.165, 0.135]] as const) lp.blob(s * x, y, HEAD_D / 2 + 0.003, 0.008, 0.008, 0.004, shade(l.skin, -0.2), { jitter: 0, ao: 0 });
+    if (l.freckles) for (const s of [-1, 1]) for (const [x, y] of [[0.12, 0.13], [0.15, 0.115], [0.135, 0.095], [0.165, 0.135]] as const) {
+      onSkin(lp, headFront(s * x, y), 0.001, 0, (q) => q.blob(0, 0, 0, 0.008, 0.008, 0.003, shade(l.skin, -0.2), { jitter: 0, ao: 0 }));
+    }
     if (l.bandaid) {
-      lp.push([-0.17, 0.05, HEAD_D / 2 + 0.006], 0, 0, 0.45); // sulla guancia (la fronte è coperta dai capelli)
-      sbox(lp, 0, -0.018, 0, 0.11, 0.036, 0.008, 0.008, '#e8c9a0');
-      lp.box(0, -0.012, 0.005, 0.035, 0.024, 0.004, '#d9b48a', { jitter: 0, ao: 0 });
-      lp.pop();
+      // sulla guancia (la fronte è coperta dai capelli), adagiato sulla curva
+      onSkin(lp, headFront(-0.16, 0.07), 0.003, 0.45, (q) => {
+        sbox(q, 0, -0.018, 0, 0.11, 0.036, 0.008, 0.008, '#e8c9a0');
+        q.box(0, -0.012, 0.005, 0.035, 0.024, 0.004, '#d9b48a', { jitter: 0, ao: 0 });
+      });
     }
   };
 }

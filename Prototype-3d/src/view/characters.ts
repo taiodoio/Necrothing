@@ -8,7 +8,7 @@ import type { ArtStyle } from '../game/state.ts';
 import { getModel, instantiate, lightWorldPos } from '../render/modelCache.ts';
 import { ModelBuilder, VOX, type LightAnchor, type Model } from '../render/shape.ts';
 import { P } from '../render/palette.ts';
-import { KAWAII, custodeSpec, type KawaiiSpec, type KPart } from '../render/lowpoly/kawaii.ts';
+import { KAWAII, custodeSpec, sparklePoints, type KawaiiSpec, type KPart } from '../render/lowpoly/kawaii.ts';
 import { LP } from '../render/lowpoly/kit.ts';
 import { LOWPOLY_MATERIALS, type CachedModel } from '../render/modelCache.ts';
 import { DEFAULT_LOOK, lookKey, type CustodeLook } from '../game/look.ts';
@@ -270,8 +270,64 @@ function lookPart(spec: KawaiiSpec, key: string, part: KPart): CachedModel | nul
  * Rig di un personaggio. Nel low-poly il Custode può avere un aspetto
  * personalizzato (`look`); negli stili voxel/miniatura resta quello classico.
  */
+// ── Brillantini che scintillano ─────────────────────────────────────────
+// Sopra le stelline fisse della pelle brillantinata, a turno qualche punto si
+// accende in un lampo a croce (shader a punti, tempo letto a ogni render).
+
+const TWINKLE_VERT = /* glsl */ `
+uniform float uTime;
+uniform float uScale;
+attribute float aSeed;
+varying float vA;
+void main() {
+  vec4 mv = modelViewMatrix * vec4(position, 1.0);
+  gl_Position = projectionMatrix * mv;
+  float w = sin(uTime * (1.1 + aSeed * 2.4) + aSeed * 37.0);
+  vA = pow(max(w, 0.0), 6.0);
+  float persp = projectionMatrix[3][3] == 0.0 ? -mv.z : 1.0;
+  gl_PointSize = 0.11 * vA * projectionMatrix[1][1] * uScale / persp;
+}`;
+const TWINKLE_FRAG = /* glsl */ `
+varying float vA;
+void main() {
+  vec2 c = gl_PointCoord * 2.0 - 1.0;
+  float star = max(0.0, 1.0 - abs(c.x) * 7.0) * (1.0 - abs(c.y)) + max(0.0, 1.0 - abs(c.y) * 7.0) * (1.0 - abs(c.x));
+  float a = clamp(star + max(0.0, 1.0 - length(c) * 3.0), 0.0, 1.0) * vA;
+  if (a < 0.01) discard;
+  gl_FragColor = vec4(vec3(1.0, 0.96, 1.0) * a, a);
+}`;
+let twinkleMat: THREE.ShaderMaterial | null = null;
+let twinkleGeo: THREE.BufferGeometry | null = null;
+const drawSize = new THREE.Vector2();
+
+function twinkles(): THREE.Points {
+  twinkleMat ??= new THREE.ShaderMaterial({
+    vertexShader: TWINKLE_VERT, fragmentShader: TWINKLE_FRAG,
+    uniforms: { uTime: { value: 0 }, uScale: { value: 400 } },
+    transparent: true, depthWrite: false, blending: THREE.AdditiveBlending,
+  });
+  if (!twinkleGeo) {
+    const pts = sparklePoints();
+    twinkleGeo = new THREE.BufferGeometry();
+    twinkleGeo.setAttribute('position', new THREE.Float32BufferAttribute(pts.flatMap(({ p, n }) => [p.x + n.x * 0.012, p.y + n.y * 0.012, p.z + n.z * 0.012]), 3));
+    twinkleGeo.setAttribute('aSeed', new THREE.Float32BufferAttribute(pts.map(({ r }) => r), 1));
+  }
+  const points = new THREE.Points(twinkleGeo, twinkleMat);
+  points.name = 'scintille';
+  points.raycast = () => undefined; // non intralcia la selezione
+  points.onBeforeRender = (renderer) => {
+    twinkleMat!.uniforms.uTime.value = performance.now() / 1000;
+    twinkleMat!.uniforms.uScale.value = renderer.getDrawingBufferSize(drawSize).y / 2;
+  };
+  return points;
+}
+
 export function buildRig(kind: CharacterKind, style: ArtStyle, look?: CustodeLook): Rig {
-  if (style === 'lowpoly' && kind === 'custode' && look && lookKey(look) !== lookKey(DEFAULT_LOOK)) return buildKawaiiRig(kind, custodeSpec(look), lookKey(look));
+  if (style === 'lowpoly' && kind === 'custode' && look && lookKey(look) !== lookKey(DEFAULT_LOOK)) {
+    const rig = buildKawaiiRig(kind, custodeSpec(look), lookKey(look));
+    if (look.sparkle && rig.parts.head) rig.parts.head.add(twinkles());
+    return rig;
+  }
   if (style === 'lowpoly' && KAWAII[kind]) return buildKawaiiRig(kind);
   const s = spec(kind);
   const root = new THREE.Group();

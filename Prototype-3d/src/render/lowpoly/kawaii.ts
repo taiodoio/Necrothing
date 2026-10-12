@@ -170,6 +170,44 @@ function headFront(x: number, y: number): { p: THREE.Vector3; n: THREE.Vector3 }
   return { p, n: headNormal(p) };
 }
 
+/**
+ * Tubo che segue i punti con un raggio variabile (affusolato), chiuso alle
+ * estremità: baffi a manubrio e simili.
+ */
+function taperTube(points: THREE.Vector3[], radii: number[], seg = 5): THREE.BufferGeometry {
+  const curve = new THREE.CatmullRomCurve3(points);
+  const n = points.length * 4;
+  const frames = curve.computeFrenetFrames(n, false);
+  const pos: number[] = [], idx: number[] = [];
+  const radius = (u: number) => { const f = u * (radii.length - 1), i = Math.min(radii.length - 2, Math.floor(f)); return THREE.MathUtils.lerp(radii[i], radii[i + 1], f - i); };
+  for (let i = 0; i <= n; i++) {
+    const u = i / n, p = curve.getPointAt(u), r = radius(u);
+    for (let k = 0; k < seg; k++) {
+      const a = (k / seg) * Math.PI * 2;
+      const d = frames.normals[i].clone().multiplyScalar(Math.cos(a)).addScaledVector(frames.binormals[i], Math.sin(a));
+      pos.push(p.x + d.x * r, p.y + d.y * r, p.z + d.z * r);
+    }
+  }
+  for (let i = 0; i < n; i++) for (let k = 0; k < seg; k++) {
+    const a = i * seg + k, b = i * seg + (k + 1) % seg, c2 = a + seg, d = b + seg;
+    idx.push(a, b, c2, b, d, c2);
+  }
+  // tappi: un vertice al centro di ciascuna estremità
+  for (const [i, flip] of [[0, true], [n, false]] as const) {
+    const p = curve.getPointAt(i / n);
+    const cIdx = pos.length / 3;
+    pos.push(p.x, p.y, p.z);
+    for (let k = 0; k < seg; k++) {
+      const a = i * seg + k, b = i * seg + (k + 1) % seg;
+      if (flip) idx.push(cIdx, a, b); else idx.push(cIdx, b, a);
+    }
+  }
+  const g = new THREE.BufferGeometry();
+  g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+  g.setIndex(idx);
+  return g;
+}
+
 /** Disegna un dettaglio piatto (sul piano xy, verso +z) adagiato sulla pelle. */
 function onSkin(lp: LP, at: { p: THREE.Vector3; n: THREE.Vector3 }, lift: number, rz: number, build: Build) {
   const { p, n } = at;
@@ -704,9 +742,15 @@ function facialHair(l: CustodeLook): Build {
     } else if (l.mustache === 'bushy') {
       for (const s of [-1, 1]) onSkin(lp, headFront(s * 0.046, my), 0.006, s * -0.12, (q) => ball(q, 0, 0, 0, 0.056, 0.028, 0.02, c));
     } else if (l.mustache === 'handlebar') {
+      // a manubrio: due bracci che si assottigliano verso l'esterno e finiscono
+      // in un ricciolo all'insù, appoggiati sulla faccia (sotto gli occhi)
+      const path: Array<[number, number, number]> = [
+        [0.004, 0.121, 0.019], [0.05, 0.112, 0.017], [0.1, 0.106, 0.013], [0.148, 0.108, 0.01],
+        [0.178, 0.122, 0.008], [0.183, 0.142, 0.0065], [0.167, 0.151, 0.0058], [0.157, 0.139, 0.005],
+      ];
       for (const s of [-1, 1]) {
-        onSkin(lp, headFront(s * 0.04, my), 0.005, 0, (q) => ball(q, 0, 0, 0, 0.045, 0.02, 0.016, c));
-        onSkin(lp, headFront(s * 0.1, my + 0.02), 0.004, 0, (q) => q.add(new THREE.TorusGeometry(0.03, 0.009, 4, 8, Math.PI * 1.2).rotateZ(s > 0 ? -0.3 : Math.PI * -0.9), c, { jitter: 0, ao: 0 }));
+        const pts = path.map(([x, y, r]) => { const at = headFront(s * x, y); return at.p.addScaledVector(at.n, r * 0.8); });
+        lp.add(taperTube(pts, path.map(([, , r]) => r)), c, { jitter: 0, vary: 0.04, ao: 0 });
       }
     }
   };

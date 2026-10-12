@@ -1,17 +1,18 @@
 // Personalizzazione del Custode: anteprima 3D che gira e opzioni a tasselli
 // divise in schede (Aspetto: pelle, anche hoa-boa-hoa, occhi, occhiali;
 // Capelli: taglio, barba e baffi; Vestiti: vestito, cappello e colori).
-// Ogni scelta si applica subito al personaggio in gioco.
+// Le scelte si vedono subito nell'anteprima; il Custode in gioco cambia con
+// «Salva» (chiudendo con modifiche non salvate si chiede conferma).
 
 import * as THREE from 'three';
-import { DEFAULT_LOOK, LOOK_COLORS, LOOK_STYLES, type CustodeLook } from '../game/look.ts';
+import { DEFAULT_LOOK, LOOK_COLORS, LOOK_STYLES, lookKey, type CustodeLook } from '../game/look.ts';
 import { animateRig, buildRig, type Rig } from '../view/characters.ts';
 import { LP } from '../render/lowpoly/kit.ts';
 import { GRASS, LPC } from '../render/lowpoly/palette.ts';
 import { flower, grassTuft, moss, pebbles } from '../render/lowpoly/details.ts';
 import { mushroom } from '../render/lowpoly/nature.ts';
 import { instantiate, LOWPOLY_MATERIALS, type CachedModel } from '../render/modelCache.ts';
-import { h, openDrawer } from './dom.ts';
+import { closeDrawer, h, openDrawer, toast } from './dom.ts';
 import type { UI } from './UI.ts';
 
 let groundModel: CachedModel | null = null;
@@ -104,12 +105,22 @@ let lastTab: LookTab = 'aspetto';
 
 export function openCustomize(ui: UI) {
   const game = ui.game;
-  let look: CustodeLook = { ...game.state.player.look };
+  // si lavora su una bozza: il Custode in gioco cambia solo con «Salva»
+  let saved: CustodeLook = { ...game.state.player.look };
+  let look: CustodeLook = { ...saved };
   const preview = new CustodePreview(look);
+  const dirty = () => lookKey(look) !== lookKey(saved);
+  const saveBtn = h('button', { class: 'big-btn', onclick: () => {
+    game.setLook(look);
+    saved = { ...look };
+    toast('Aspetto salvato.');
+    closeDrawer(true);
+  } }, 'Salva') as HTMLButtonElement;
+  const refresh = () => { saveBtn.disabled = !dirty(); };
   const apply = (patch: Partial<CustodeLook>) => {
     look = { ...look, ...patch };
-    game.setLook(look);
     preview.setLook(look);
+    refresh();
   };
 
   /** Riga di scelte testuali (vanno a capo su schermi stretti). */
@@ -144,8 +155,9 @@ export function openCustomize(ui: UI) {
   const lowpoly = game.state.settings.style === 'lowpoly';
   const title = (t: string) => h('div', { class: 'section-title' }, t);
   const sub = (t: string) => h('div', { class: 'muted look-sub' }, t);
-  // schede: poche scelte alla volta invece di una pagina lunghissima
-  const panes: Array<[LookTab, string, HTMLElement]> = [
+  // schede: poche scelte alla volta invece di una pagina lunghissima (ricostruite
+  // quando si torna all'aspetto originale, così i tasti attivi seguono la bozza)
+  const buildPanes = (): Array<[LookTab, string, HTMLElement]> => [
     ['aspetto', 'Aspetto', h('div', {},
       title('Pelle'), swatches('skin'),
       toggle('sparkle', 'Pelle hoa-boa-hoa ✨'), toggle('freckles', 'Lentiggini'), toggle('bandaid', 'Cerotto'),
@@ -159,6 +171,7 @@ export function openCustomize(ui: UI) {
       sub('Colore dei dettagli (sciarpa, righe, toppe)'), swatches('accentColor'),
       title('Cappello'), options('hat'), sub('Colore'), swatches('hatColor'))],
   ];
+  let panes = buildPanes();
   const content = h('div', { class: 'look-pane' });
   const tabs = h('div', { class: 'tabs look-tabs', role: 'tablist' });
   const show = (id: LookTab) => {
@@ -174,6 +187,17 @@ export function openCustomize(ui: UI) {
     content,
   );
   show(lastTab);
-  const reset = h('button', { class: 'big-btn ghost', onclick: () => { look = { ...DEFAULT_LOOK }; game.setLook(look); preview.dispose(); openCustomize(ui); } }, 'Aspetto originale');
-  openDrawer('Personaggio', body, { footer: reset, onClose: () => preview.dispose() });
+  refresh();
+  const reset = h('button', { class: 'big-btn ghost', onclick: () => {
+    look = { ...DEFAULT_LOOK };
+    preview.setLook(look);
+    panes = buildPanes();
+    show(lastTab);
+    refresh();
+  } }, 'Originale');
+  openDrawer('Personaggio', body, {
+    footer: h('div', { class: 'row look-foot' }, reset, saveBtn),
+    beforeClose: () => !dirty() || confirm('Hai modificato l’aspetto del Custode senza salvare. Chiudere e perdere le modifiche?'),
+    onClose: () => preview.dispose(),
+  });
 }

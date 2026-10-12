@@ -1,6 +1,7 @@
 // Personalizzazione del Custode: anteprima 3D che gira e opzioni a tasselli
-// (pelle anche brillantinata, capelli e colore, occhi, dettagli, cappello,
-// vestiti e colori). Ogni scelta si applica subito al personaggio in gioco.
+// divise in schede (Aspetto: pelle, anche hoa-boa-hoa, occhi, occhiali;
+// Capelli: taglio, barba e baffi; Vestiti: vestito, cappello e colori).
+// Ogni scelta si applica subito al personaggio in gioco.
 
 import * as THREE from 'three';
 import { DEFAULT_LOOK, LOOK_COLORS, LOOK_STYLES, type CustodeLook } from '../game/look.ts';
@@ -97,6 +98,10 @@ class CustodePreview {
   }
 }
 
+type LookTab = 'aspetto' | 'capelli' | 'vestiti';
+/** Scheda aperta per ultima (riaprendo il pannello si torna lì). */
+let lastTab: LookTab = 'aspetto';
+
 export function openCustomize(ui: UI) {
   const game = ui.game;
   let look: CustodeLook = { ...game.state.player.look };
@@ -137,37 +142,38 @@ export function openCustomize(ui: UI) {
     h('label', { class: 'setting' }, label, h('input', { type: 'checkbox', checked: look[key], onchange: (e: Event) => apply({ [key]: (e.target as HTMLInputElement).checked } as Partial<CustodeLook>) }));
 
   const lowpoly = game.state.settings.style === 'lowpoly';
+  const title = (t: string) => h('div', { class: 'section-title' }, t);
+  const sub = (t: string) => h('div', { class: 'muted look-sub' }, t);
+  // schede: poche scelte alla volta invece di una pagina lunghissima
+  const panes: Array<[LookTab, string, HTMLElement]> = [
+    ['aspetto', 'Aspetto', h('div', {},
+      title('Pelle'), swatches('skin'),
+      toggle('sparkle', 'Pelle hoa-boa-hoa ✨'), toggle('freckles', 'Lentiggini'), toggle('bandaid', 'Cerotto'),
+      title('Occhi'), swatches('eyes'),
+      title('Occhiali'), options('glasses'))],
+    ['capelli', 'Capelli', h('div', {},
+      title('Taglio'), options('hair'), sub('Colore'), swatches('hairColor'),
+      title('Barba e baffi'), sub('Barba'), options('beard'), sub('Baffi'), options('mustache'), sub('Colore di barba e baffi'), swatches('beardColor'))],
+    ['vestiti', 'Vestiti', h('div', {},
+      title('Vestito'), options('outfit'), sub('Colore'), swatches('outfitColor'),
+      sub('Colore dei dettagli (sciarpa, righe, toppe)'), swatches('accentColor'),
+      title('Cappello'), options('hat'), sub('Colore'), swatches('hatColor'))],
+  ];
+  const content = h('div', { class: 'look-pane' });
+  const tabs = h('div', { class: 'tabs look-tabs', role: 'tablist' });
+  const show = (id: LookTab) => {
+    lastTab = id;
+    for (const [tid, , pane] of panes) if (tid === id) content.replaceChildren(pane);
+    for (const b of Array.from(tabs.children)) { const on = (b as HTMLElement).dataset.tab === id; b.classList.toggle('active', on); b.setAttribute('aria-selected', String(on)); }
+    content.parentElement?.parentElement?.scrollTo?.({ top: 0 });
+  };
+  for (const [id, label] of panes) tabs.append(h('button', { class: 'tab', role: 'tab', 'data-tab': id, onclick: () => show(id) }, label));
   const body = h('div', { class: 'look' },
-    h('div', { class: 'look-stage' }, preview.canvas),
+    h('div', { class: 'look-stage' }, preview.canvas, tabs),
     lowpoly ? null : h('p', { class: 'muted' }, 'L’aspetto personalizzato si vede nello stile Low-Poly (Impostazioni → Stile).'),
-    h('div', { class: 'section-title' }, 'Pelle'),
-    swatches('skin'),
-    toggle('sparkle', 'Pelle brillantinata ✨'),
-    h('div', { class: 'section-title' }, 'Capelli'),
-    options('hair'),
-    swatches('hairColor'),
-    h('div', { class: 'section-title' }, 'Occhi'),
-    swatches('eyes'),
-    h('div', { class: 'section-title' }, 'Dettagli'),
-    options('glasses'),
-    toggle('freckles', 'Lentiggini'),
-    toggle('bandaid', 'Cerotto'),
-    h('div', { class: 'section-title' }, 'Barba e baffi'),
-    h('div', { class: 'muted' }, 'Barba'),
-    options('beard'),
-    h('div', { class: 'muted' }, 'Baffi'),
-    options('mustache'),
-    h('div', { class: 'muted' }, 'Colore di barba e baffi'),
-    swatches('beardColor'),
-    h('div', { class: 'section-title' }, 'Cappello'),
-    options('hat'),
-    swatches('hatColor'),
-    h('div', { class: 'section-title' }, 'Vestiti'),
-    options('outfit'),
-    swatches('outfitColor'),
-    h('div', { class: 'muted', style: 'margin-top:6px' }, 'Colore dei dettagli (sciarpa, righe, toppe)'),
-    swatches('accentColor'),
+    content,
   );
+  show(lastTab);
   const reset = h('button', { class: 'big-btn ghost', onclick: () => { look = { ...DEFAULT_LOOK }; game.setLook(look); preview.dispose(); openCustomize(ui); } }, 'Aspetto originale');
   openDrawer('Personaggio', body, { footer: reset, onClose: () => preview.dispose() });
 }

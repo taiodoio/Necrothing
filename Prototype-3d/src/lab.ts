@@ -90,6 +90,7 @@ function rebuild() {
       { skin: '#5e3a26', hair: 'bob', hairColor: '#e0c27a', hat: 'wide', hatColor: '#3a4a3a', outfit: 'sweater', outfitColor: '#8a7a5a', accentColor: '#a4473b', sparkle: true },
       { skin: '#e0b48f', hair: 'curly', hairColor: '#b0774a', hat: 'wide', beard: 'braid', mustache: 'handlebar', beardColor: '#b0774a', outfit: 'coat', accentColor: '#c9a227' },
       { skin: '#f6dcc7', hair: 'none', hairColor: '#d9d4cc', hat: 'none', beard: 'full', mustache: 'bushy', beardColor: '#d9d4cc', outfit: 'overalls', outfitColor: '#3a4150', glasses: 'round' },
+      { skin: '#5e3a26', hair: 'longcurly', hairColor: '#6b4a33', hat: 'none', outfit: 'sweater', outfitColor: '#6b2f35', accentColor: '#d9b48a' },
       { skin: '#8d5a3b', hair: 'spiky', hairColor: '#2a2226', hat: 'beanie', hatColor: '#5a2f3a', beard: 'short', mustache: 'thin', beardColor: '#8a8580', outfit: 'cloak', outfitColor: '#2b2b30' },
     ];
     // ?only=2,5 mostra solo alcuni aspetti (controlli ravvicinati)

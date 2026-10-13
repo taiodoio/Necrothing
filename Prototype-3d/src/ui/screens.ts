@@ -350,6 +350,7 @@ export function openSettings(ui: UI) {
     fileInput,
     h('div', { class: 'section-title' }, 'Info'),
     h('p', { class: 'muted' }, 'Necrothing 3D · prototipo procedurale (Three.js). Tutti i modelli sono generati dal codice. Scorciatoie: WASD muovi · E interagisci · C vista · V stile.'),
+    h('p', { class: 'muted', 'data-build': 'true' }, buildLabel()),
     h('div', { class: 'row' },
       h('a', { class: 'big-btn ghost', href: './gallery.html', style: 'display:grid;place-items:center;text-decoration:none' }, 'Galleria asset'),
       h('button', { class: 'big-btn ghost', style: 'color:var(--danger)', onclick: () => {
@@ -360,6 +361,13 @@ export function openSettings(ui: UI) {
       } }, 'Nuova partita')),
   );
   openDrawer('Impostazioni', body);
+}
+
+/** "Versione abc1234 · 13/10/2026, 14:40": per controllare che il sito pubblicato sia aggiornato. */
+function buildLabel(): string {
+  if (typeof __BUILD__ === 'undefined') return 'Versione di sviluppo';
+  const when = new Date(__BUILD__.built).toLocaleString('it-IT', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+  return `Versione ${__BUILD__.commit} · ${when}`;
 }
 
 // ── Foto & galleria ────────────────────────────────────────────────────

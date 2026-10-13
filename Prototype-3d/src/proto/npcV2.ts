@@ -15,6 +15,7 @@ import {
 const v = (x: number, y: number, z: number) => new THREE.Vector3(x, y, z);
 const D2 = { ...O, detail: 2 } as LPOpts;
 const D1 = { ...O, detail: 1 } as LPOpts;
+const D0 = { ...O, detail: 0 } as LPOpts; // ossicini: pochi triangoli
 const INK = '#2a1a1c';
 const BONE = '#e2d9c3', BONE_D = '#b9ae95';
 const GOLD = '#c9a227';
@@ -305,12 +306,74 @@ function headSpace(lp: LP, pos: [number, number, number], rx: number, s: number)
   return g;
 }
 
-/** Costole scure attorno al corpo (animaletti-scheletro). */
-function ribs(lp: LP, y: number, z0: number, z1: number, rx: number, ry: number, n = 3) {
+
+/** Osso: tubo affusolato con le teste arrotondate alle estremità. */
+function bone(lp: LP, a: THREE.Vector3, b: THREE.Vector3, r0: number, r1 = r0, knobs = true) {
+  lp.add(taperTube([a, b], [r0, r1], 6), BONE, O);
+  if (knobs) for (const [p, r] of [[a, r0], [b, r1]] as const) lp.blob(p.x, p.y, p.z, r * 1.45, r * 1.45, r * 1.45, BONE, D0);
+}
+
+/** Catena di vertebre (palline schiacciate) lungo una curva, con il midollo più scuro che le unisce. */
+function vertebrae(lp: LP, pts: THREE.Vector3[], r0: number, r1: number, n: number) {
+  const c = new THREE.CatmullRomCurve3(pts);
+  lp.add(taperTube(pts, pts.map((_, i) => lerp(r0, r1, i / (pts.length - 1)) * 0.5), 5), BONE_D, O);
   for (let i = 0; i < n; i++) {
-    lp.push([0, y, lerp(z0, z1, i / (n - 1))], 0, 0, 0, [rx * 1.04, ry * 1.04, 0.16]);
-    lp.add(new THREE.TorusGeometry(1, 0.1, 4, 14, Math.PI * 1.25).rotateZ(-Math.PI * 0.125), BONE_D, O);
-    lp.pop();
+    const t = i / (n - 1), p = c.getPointAt(t), r = lerp(r0, r1, t);
+    lp.blob(p.x, p.y, p.z, r, r, r * 0.85, BONE, D0);
+  }
+}
+
+/** Costola ad arco appesa alla spina (aperta in basso), sottile in profondità. */
+function rib(lp: LP, y: number, z: number, r: number, open = 0.35) {
+  lp.push([0, y - r, z], 0, 0, 0, [1.1, 1, 1]);
+  lp.add(new THREE.TorusGeometry(r, 0.011, 4, 16, Math.PI * (2 - open)).rotateZ(-Math.PI / 2 + (open / 2) * Math.PI), BONE, O);
+  lp.pop();
+}
+
+/** Scheletro di quadrupede: spina a vertebre, gabbia toracica, bacino, scapole, zampe d'ossa, coda a vertebre. */
+function skelQuad(lp: LP, tail: Quad['tail']) {
+  vertebrae(lp, [v(0, 0.3, 0.12), v(0, 0.32, 0.02), v(0, 0.31, -0.1), v(0, 0.28, -0.18)], 0.026, 0.021, 8);
+  for (let k = 0; k < 4; k++) rib(lp, 0.31 - k * 0.003, 0.07 - k * 0.045, 0.085 - k * 0.009);
+  lp.add(rbox(0.026, 0.022, 0.15, 0.01, 1).translate(0, 0.155, 0.03).rotateX(0.08), BONE, O); // sterno
+  lp.blob(0, 0.27, -0.18, 0.075, 0.035, 0.05, BONE, D2); // bacino
+  for (const s of [-1, 1]) {
+    lp.push([s * 0.07, 0.28, 0.08], 0, 0.3, s * 0.2).blob(0, 0, 0, 0.018, 0.06, 0.045, BONE_D, D1).pop(); // scapola
+    // zampa davanti: spalla, gomito, polso, zampetta a dita
+    const sh = v(s * 0.075, 0.26, 0.08), el = v(s * 0.078, 0.15, 0.1), wr = v(s * 0.075, 0.045, 0.09);
+    bone(lp, sh, el, 0.02, 0.017); bone(lp, el, wr, 0.017, 0.015);
+    // zampa dietro: anca, ginocchio, garretto
+    const hp = v(s * 0.07, 0.26, -0.18), kn = v(s * 0.078, 0.16, -0.13), hk = v(s * 0.075, 0.075, -0.2), an = v(s * 0.075, 0.035, -0.17);
+    bone(lp, hp, kn, 0.022, 0.018); bone(lp, kn, hk, 0.018, 0.015); bone(lp, hk, an, 0.015, 0.014, false);
+    for (const [x, z] of [[wr.x, wr.z], [an.x, an.z]]) {
+      lp.blob(x, 0.025, z + 0.01, 0.03, 0.017, 0.032, BONE, D1);
+      for (const f of [-1, 0, 1]) lp.add(taperTube([v(x + f * 0.016, 0.018, z + 0.025), v(x + f * 0.024, 0.01, z + 0.06)], [0.008, 0.006], 4), BONE, O);
+    }
+  }
+  const tails: Record<Quad['tail'], () => void> = {
+    up: () => vertebrae(lp, [v(0, 0.28, -0.21), v(0, 0.37, -0.31), v(0, 0.49, -0.3), v(0.02, 0.54, -0.24)], 0.02, 0.011, 10),
+    wag: () => vertebrae(lp, [v(0, 0.29, -0.21), v(0, 0.35, -0.29), v(0.03, 0.43, -0.32)], 0.02, 0.012, 7),
+    pom: () => { vertebrae(lp, [v(0, 0.27, -0.21), v(0, 0.29, -0.25)], 0.018, 0.016, 2); lp.blob(0, 0.3, -0.27, 0.035, 0.035, 0.035, BONE, D2); },
+    long: () => vertebrae(lp, [v(0, 0.26, -0.21), v(0.04, 0.1, -0.33), v(0.14, 0.04, -0.45)], 0.016, 0.006, 12),
+  };
+  tails[tail]();
+}
+
+/** Scheletro di uccello: spina, costole, carena dello sterno, ali ripiegate d'ossa, zampe sottili, codino. */
+function skelBird(lp: LP, duck: boolean) {
+  vertebrae(lp, duck ? [v(0, 0.36, 0.1), v(0, 0.3, 0.07), v(0, 0.27, -0.04), v(0, 0.22, -0.15)] : [v(0, 0.3, 0.08), v(0, 0.27, -0.04), v(0, 0.22, -0.15)], 0.022, 0.017, duck ? 9 : 7);
+  for (let k = 0; k < 3; k++) rib(lp, 0.275 - k * 0.012, 0.04 - k * 0.045, 0.075 - k * 0.008, 0.45);
+  lp.blob(0, 0.15, 0.0, 0.016, 0.055, 0.1, BONE, D2); // carena
+  lp.blob(0, 0.21, -0.17, 0.035, 0.03, 0.035, BONE, D1); // codino (pigostilo)
+  for (const k of [-1, 0, 1]) bone(lp, v(0, 0.21, -0.18), v(k * 0.05, 0.19, -0.3), 0.007, 0.005, false); // timoniere d'osso
+  for (const s of [-1, 1]) {
+    lp.blob(s * 0.04, 0.2, -0.08, 0.035, 0.03, 0.06, BONE_D, D1); // bacino
+    const sh = v(s * 0.08, 0.27, 0.05), el = v(s * 0.13, 0.2, 0.02), wr = v(s * 0.135, 0.25, -0.08), tip = v(s * 0.115, 0.22, -0.2);
+    bone(lp, sh, el, 0.014, 0.012); bone(lp, el, wr, 0.012, 0.011); bone(lp, wr, tip, 0.011, 0.006, false);
+    for (const k of [0, 1, 2]) bone(lp, v(s * 0.133, lerp(0.21, 0.245, k / 2), lerp(0.0, -0.07, k / 2)), v(s * 0.12, lerp(0.17, 0.2, k / 2), lerp(-0.13, -0.2, k / 2)), 0.005, 0.004, false); // remiganti d'osso
+    const hp = v(s * 0.045, 0.19, -0.05), kn = v(s * 0.052, 0.12, 0.01), an = v(s * 0.05, 0.05, -0.02), ft = v(s * 0.05, 0.012, 0.02);
+    bone(lp, hp, kn, 0.014, 0.012); bone(lp, kn, an, 0.011, 0.009); bone(lp, an, ft, 0.008, 0.007);
+    for (const a of [-0.5, 0, 0.5]) bone(lp, ft, v(ft.x + Math.sin(a) * 0.05, 0.006, ft.z + Math.cos(a) * 0.05), 0.006, 0.005, false);
+    bone(lp, ft, v(ft.x, 0.006, ft.z - 0.035), 0.005, 0.004, false);
   }
 }
 
@@ -326,10 +389,11 @@ function quad(o: Quad): CustodeV2 {
   const tone = (k: number) => shade(o.color, k);
   let eyeG: THREE.Group | null = null;
   const char = model((lp) => {
+    if (o.bones) skelQuad(lp, o.tail);
+    else {
     // corpo: fagiolo con petto pieno, zampette a colonna con il polpastrello
     lp.blob(0, 0.2, -0.04, 0.14, 0.13, 0.2, o.color, D2);
     lp.blob(0, 0.23, 0.1, 0.12, 0.12, 0.1, o.belly ?? o.color, D2);
-    if (o.bones) ribs(lp, 0.2, -0.13, 0.06, 0.145, 0.135);
     for (const [x, z] of [[-0.08, 0.12], [0.08, 0.12], [-0.08, -0.15], [0.08, -0.15]]) {
       lp.cyl(x, 0.03, z, 0.045, 0.05, 0.14, 8, o.color, { ...O, ao: 0.1 });
       lp.blob(x, 0.03, z + 0.015, 0.05, 0.035, 0.06, o.bones ? BONE_D : tone(0.04), D1);
@@ -341,6 +405,7 @@ function quad(o: Quad): CustodeV2 {
       pom: () => lp.blob(0, 0.24, -0.25, 0.06, 0.06, 0.06, '#fbf7ef', D2),
     };
     tails[o.tail]();
+    }
     // testa
     eyeG = headSpace(lp, [0, 0.42, 0.16], 0.08, 1);
     lp.add(headGeo(), o.color, { ...O, ao: 0.05 });
@@ -352,13 +417,13 @@ function quad(o: Quad): CustodeV2 {
       g.applyQuaternion(new THREE.Quaternion().setFromUnitVectors(v(0, 1, 0), n.clone().add(v(0, 0, -0.4)).normalize()));
       lp.add(g.translate(p.x, p.y, p.z), tone(0.03), O);
     }
-    if (o.bones) for (const s of [-1, 1]) onSkin(lp, headFront(s * R0[0] * 0.42, -R0[1] * 0.05), 0.001, 0, (q) => q.add(new THREE.CircleGeometry(0.062 * R0[0] / 0.2, 12).scale(1, 1.1, 1), '#2b2730', O)); // orbite
+    if (o.bones) skullDetails(lp, R0, !!o.snout);
     // muso, naso, boccuccia
     const mz = headFront(0, -R0[1] * 0.42);
     if (o.snout) onSkin(lp, mz, 0.015, 0, (q) => q.blob(0, 0.01, 0, R0[0] * 0.32, R0[1] * 0.24, R0[2] * 0.3, o.belly ?? tone(0.05), D2));
     const nz = headFront(0, -R0[1] * 0.26);
     onSkin(lp, nz, o.snout ? 0.06 : 0.008, 0, (q) => q.add(new THREE.CircleGeometry(0.02, 3).rotateZ(-Math.PI / 2).scale(1.3, 1, 1), o.nose, O));
-    onSkin(lp, headFront(0, -R0[1] * 0.45), o.snout ? 0.055 : 0.004, 0, (q) => {
+    if (!o.bones) onSkin(lp, headFront(0, -R0[1] * 0.45), o.snout ? 0.055 : 0.004, 0, (q) => {
       for (const s of [-1, 1]) q.add(new THREE.TorusGeometry(0.012, 0.004, 3, 8, Math.PI).rotateZ(Math.PI).translate(s * 0.012, 0, 0), INK, O);
     });
     if (!o.bones) for (const s of [-1, 1]) onSkin(lp, headFront(s * R0[0] * 0.62, -R0[1] * 0.38), 0.002, 0, (q) => q.add(new THREE.CircleGeometry(0.028, 10).scale(1.3, 0.7, 1), '#e5958f', O));
@@ -377,16 +442,27 @@ function quad(o: Quad): CustodeV2 {
         q.blob(0, 0, 0, 0.075, 0.075, 0.022, o.color, D1);
         q.blob(0, 0, 0.012, 0.05, 0.05, 0.014, o.inner, D1);
       });
-      if (o.ears === 'dog') { const { p } = headAt(s * 80 * DEG, 35 * DEG); lp.push([p.x, p.y, p.z], 0, 0, s * 0.3); lp.blob(s * 0.02, -0.08, 0, 0.055, 0.11, 0.035, o.bones ? BONE_D : tone(-0.06), D2); lp.pop(); }
+      if (o.ears === 'dog' && !o.bones) { const { p } = headAt(s * 80 * DEG, 35 * DEG); lp.push([p.x, p.y, p.z], 0, 0, s * 0.3); lp.blob(s * 0.02, -0.08, 0, 0.055, 0.11, 0.035, o.bones ? BONE_D : tone(-0.06), D2); lp.pop(); }
       if (o.ears === 'rabbit') { const { p } = headAt(s * 38 * DEG, 64 * DEG); lp.push([p.x, p.y, p.z], 0, -0.25, -s * 0.38); lp.blob(0, 0.15, 0, 0.055, 0.17, 0.03, o.color, D2); lp.blob(0, 0.15, 0.016, 0.03, 0.13, 0.02, o.inner, D1); lp.pop(); }
     }
-    eyeG.add(eyes('open', o.eyes, o.color, undefined, o.glow));
+    eyeG.add(o.bones ? eyes('sockets', SKULL_GLOW, o.color) : eyes('open', o.eyes, o.color, undefined, o.glow));
     lp.pop();
   }, `proto:${o.name}`);
   const root = new THREE.Group();
   root.add(instantiate(char, { castShadow: true }));
   root.add(eyeG!);
   return { root, diorama: zolla(), lights: [] };
+}
+
+const SKULL_GLOW = '#8ff0dc';
+
+/** Teschio: denti sul davanti del muso, zigomi, crepa. Le orbite sono quelle degli occhi "sockets". */
+function skullDetails(lp: LP, R0: [number, number, number], snout: boolean) {
+  const lift = snout ? 0.06 : 0.004;
+  for (let i = -2.5; i <= 2.5; i++) onSkin(lp, headFront(i * R0[0] * 0.09, -R0[1] * 0.5), lift, 0, (q) => q.add(rbox(R0[0] * 0.075, R0[1] * 0.15, 0.014, 0.005, 1), '#f3ecda', O)); // denti
+  onSkin(lp, headFront(0, -R0[1] * 0.42), lift, 0, (q) => q.add(rbox(R0[0] * 0.6, 0.006, 0.006, 0.003, 1), '#8e8676', O));
+  for (const s of [-1, 1]) onSkin(lp, headFront(s * R0[0] * 0.62, -R0[1] * 0.3), 0.003, s * 0.5, (q) => q.add(rbox(R0[0] * 0.25, 0.006, 0.006, 0.003, 1), '#a89f8b', O)); // zigomi
+  onSkin(lp, headAt(-0.5, 50 * DEG), 0.002, 1.1, (q) => q.add(rbox(R0[0] * 0.3, 0.006, 0.006, 0.003, 1), '#8e8676', O)); // crepa
 }
 
 interface Bird { name: string; color: string; eyes: string; glow?: boolean; beak: string; bones?: boolean; duck?: boolean }
@@ -397,9 +473,10 @@ function bird(o: Bird): CustodeV2 {
   const tone = (k: number) => shade(o.color, k);
   let eyeG: THREE.Group | null = null;
   const char = model((lp) => {
+    if (o.bones) skelBird(lp, !!o.duck);
+    else {
     lp.blob(0, 0.2, -0.02, 0.15, 0.14, 0.19, o.color, D2);
     lp.blob(0, 0.18, 0.06, 0.12, 0.11, 0.11, tone(0.05), D2); // petto
-    if (o.bones) ribs(lp, 0.2, -0.1, 0.06, 0.15, 0.14);
     for (const s of [-1, 1]) { // ali: tre piume sovrapposte
       for (let k = 0; k < 3; k++) {
         lp.push([s * (0.14 + k * 0.004), 0.23 - k * 0.025, -0.02 - k * 0.04], s * 0.15, 0.25, s * 0.15);
@@ -419,20 +496,21 @@ function bird(o: Bird): CustodeV2 {
       else for (const a of [-0.5, 0, 0.5]) lp.add(taperTube([v(s * 0.05, 0.005, 0.02), v(s * 0.05 + Math.sin(a) * 0.05, 0.005, 0.02 + Math.cos(a) * 0.05)], [0.008, 0.006], 4), legC, O);
     }
     if (o.duck) lp.add(taperTube([v(0, 0.27, 0.08), v(0, 0.35, 0.1)], [0.05, 0.05], 8), o.color, O); // collo
+    }
     eyeG = headSpace(lp, [0, 0.4, 0.1], 0, 1);
     lp.add(headGeo(), o.color, { ...O, ao: 0.05 });
-    if (o.bones) for (const s of [-1, 1]) onSkin(lp, headFront(s * 0.062, 0.012), 0.001, 0, (q) => q.add(new THREE.CircleGeometry(0.045, 12), '#2b2730', O));
+    if (o.bones) onSkin(lp, headAt(-0.5, 50 * DEG), 0.002, 1.1, (q) => q.add(rbox(0.05, 0.006, 0.006, 0.003, 1), '#8e8676', O)); // crepa
     const b = headFront(0, -0.03);
     if (o.duck) onSkin(lp, b, 0.03, 0, (q) => q.add(rbox(0.12, 0.035, 0.1, 0.015, 2).translate(0, 0, 0.02), o.beak, O)); // becco piatto
     else onSkin(lp, b, 0.005, 0, (q) => q.add(new THREE.ConeGeometry(0.035, 0.1, 5).rotateX(Math.PI / 2).translate(0, 0, 0.045), o.beak, O));
-    for (const [th, h, l] of [[-14, 0.07, -0.5], [6, 0.09, -0.3], [24, 0.06, -0.6]]) { // ciuffo
+    if (!o.bones) for (const [th, h, l] of [[-14, 0.07, -0.5], [6, 0.09, -0.3], [24, 0.06, -0.6]]) { // ciuffo
       const { p, n } = headAt(th * DEG, 78 * DEG);
       const g = new THREE.ConeGeometry(0.022, h, 4).translate(0, h / 2, 0);
       g.applyQuaternion(new THREE.Quaternion().setFromUnitVectors(v(0, 1, 0), n.clone().add(v(0, 0, l)).normalize()));
       lp.add(g.translate(p.x, p.y, p.z), tone(0.03), O);
     }
     if (!o.bones) for (const s of [-1, 1]) onSkin(lp, headFront(s * 0.095, -0.035), 0.002, 0, (q) => q.add(new THREE.CircleGeometry(0.02, 10).scale(1.3, 0.7, 1), '#e5958f', O));
-    eyeG.add(eyes('open', o.eyes, o.color, undefined, o.glow));
+    eyeG.add(o.bones ? eyes('sockets', SKULL_GLOW, o.color) : eyes('open', o.eyes, o.color, undefined, o.glow));
     lp.pop();
   }, `proto:${o.name}`);
   const root = new THREE.Group();
@@ -462,6 +540,6 @@ export const ANIMALS: Preset[] = [
   { name: 'Gatto (scheletro)', build: () => quad({ name: 'gattosk', color: BONE, eyes: '#1b1a20', bones: true, head: [0.19, 0.16, 0.16], ears: 'cat', tail: 'up', nose: '#2b2730', inner: BONE_D }) },
   { name: 'Coniglio (scheletro)', build: () => quad({ name: 'coniglio', color: BONE, eyes: '#1b1a20', bones: true, head: [0.18, 0.16, 0.16], ears: 'rabbit', tail: 'pom', nose: '#2b2730', inner: BONE_D }) },
   { name: 'Corvo (scheletro)', build: () => bird({ name: 'corvosk', color: BONE, eyes: '#1b1a20', beak: BONE_D, bones: true }) },
-  { name: 'Papera (scheletro)', build: () => bird({ name: 'papera', color: BONE, eyes: '#1b1a20', beak: '#e0a040', bones: true, duck: true }) },
+  { name: 'Papera (scheletro)', build: () => bird({ name: 'papera', color: BONE, eyes: '#1b1a20', beak: '#d8cdb0', bones: true, duck: true }) },
 ];
 

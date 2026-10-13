@@ -152,9 +152,13 @@ Stesso approccio del Custode, nel prototipo `src/proto/npcV2.ts`. Pagina: `proto
 - **Fantasmi:** la testa stessa fa da corpo: sopra l'equatore è il superellissoide, sotto scende dritta e si chiude con l'orlo a onde. Hanno occhi lucidi con la stella e guance rosa, e restano nel materiale trasparente del gioco.
 - **Animali:** testa enorme a superellissoide come il Custode, occhi lucidi con la stella (luminosi per il gatto nero e il corvo), corpo a fagiolo, zampette.
   - Al gatto nero le guance a ciuffi sono fatte con lo stesso casco a ciocche dei capelli, su un arco.
-  - Gli animaletti-scheletro (cane, gatto, coniglio, corvo, papera) hanno orbite scure e costole.
+  - Gli animaletti-scheletro (cane, gatto, coniglio, corvo, papera) sono scheletri veri, non animali colorati di bianco:
+    - il teschio grande ha le orbite con la lucina (come lo scheletro umano), i denti, gli zigomi e una crepa;
+    - i quadrupedi hanno spina a vertebre, gabbia toracica aperta in basso, sterno, bacino, scapole, zampe d'ossa con le dita e la coda a vertebre;
+    - gli uccelli hanno la carena dello sterno, le ali ripiegate d'ossa con le remiganti, le zampe sottili e il codino;
+    - restano le orecchie (gatto, coniglio) perché si capisca che animale è.
 
-Triangoli (media misurata sulla pagina): circa 6.700 per umani, scheletro e fantasmi; circa 2.800 per gli animali. Il Custode con le sue varianti resta il più pesante, circa 12.600.
+Triangoli (media misurata sulla pagina): circa 6.700 per umani, scheletro e fantasmi; circa 5.400 per gli animali (gli scheletri pesano di più: ogni vertebra e ogni giuntura è un pezzo). Il Custode con le sue varianti resta il più pesante, circa 12.600.
 
 ## Prestazioni su telefono (app Capacitor)
 

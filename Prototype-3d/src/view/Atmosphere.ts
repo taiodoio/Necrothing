@@ -10,6 +10,7 @@ import type { DayPhase } from '../game/time.ts';
 import { MATERIALS } from '../render/modelCache.ts';
 import type { LightAnchor } from '../render/shape.ts';
 import { FireFlicker, seedFromPosition } from './FireFlicker.ts';
+import { radialGlowTexture } from '../render/glowTexture.ts';
 
 interface Preset {
   top: string; bottom: string; fog: string;
@@ -64,19 +65,7 @@ const LIGHT_IN = 0.6, LIGHT_OUT = 0.45;
 
 let haloTexture: THREE.Texture | null = null;
 function getHaloTexture(): THREE.Texture {
-  if (haloTexture) return haloTexture;
-  const c = document.createElement('canvas');
-  c.width = c.height = 64;
-  const g = c.getContext('2d')!;
-  const grad = g.createRadialGradient(32, 32, 0, 32, 32, 32);
-  grad.addColorStop(0, 'rgba(255,255,255,0.95)');
-  grad.addColorStop(0.18, 'rgba(255,255,255,0.45)');
-  grad.addColorStop(0.5, 'rgba(255,255,255,0.12)');
-  grad.addColorStop(1, 'rgba(255,255,255,0)');
-  g.fillStyle = grad;
-  g.fillRect(0, 0, 64, 64);
-  haloTexture = new THREE.CanvasTexture(c);
-  haloTexture.colorSpace = THREE.SRGBColorSpace;
+  haloTexture ??= radialGlowTexture([[0, 0.95], [0.18, 0.45], [0.5, 0.12], [1, 0]]);
   return haloTexture;
 }
 

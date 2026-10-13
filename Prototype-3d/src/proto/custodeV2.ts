@@ -211,9 +211,9 @@ const rbox = (w: number, h: number, d: number, r: number, seg = 2) => new Rounde
 const EYE_Y = 0.707, EYE_X = 0.1;
 const absDeg = (th: number) => Math.abs(Math.atan2(Math.sin(th), Math.cos(th))) / DEG; // 0 davanti, 180 dietro
 /** Dove arrivano le punte dei capelli (φ in gradi): poco sopra gli occhi davanti, sopra le orecchie ai lati, alla nuca dietro. */
-const hairTip = (th: number) => { const a = absDeg(th); return a < 90 ? lerp(20, -12, smooth(30, 90, a)) : lerp(-12, -34, smooth(90, 160, a)); }; // ai lati scende fin sopra l'orecchio, dietro alla nuca
+const hairTip = (th: number) => { const a = absDeg(th); return a < 90 ? lerp(20, 0, smooth(30, 90, a)) : lerp(0, -32, smooth(90, 160, a)); }; // ai lati scende fin sopra l'orecchio, dietro alla nuca
 /** Bordo superiore della barba (φ in gradi): sotto la bocca davanti, sale lungo la mandibola fino all'orecchio. */
-const beardTop = (thDeg: number) => lerp(-54, -6, smooth(18, 82, Math.abs(thDeg))); // davanti appena sotto la bocca // sale lungo la guancia e raggiunge i capelli davanti all'orecchio
+const beardTop = (thDeg: number) => lerp(-54, 6, smooth(16, 86, Math.abs(thDeg))); // davanti appena sotto la bocca, ai lati sale fino ai capelli alla tempia // sale lungo la guancia e raggiunge i capelli davanti all'orecchio
 
 function head(lp: LP) {
   lp.add(headGeo(), SKIN, { ...O, ao: 0.05 });
@@ -249,14 +249,14 @@ function beard(lp: LP) {
   const outer: THREE.Vector3[][] = [], inner: THREE.Vector3[][] = [], norms: THREE.Vector3[][] = [];
   for (let i = 0; i <= NU; i++) {
     outer.push([]); inner.push([]); norms.push([]);
-    const u = -1 + (2 * i) / NU, th = u * 86;
+    const u = -1 + (2 * i) / NU, th = u * 92;
     for (let j = 0; j <= NV; j++) {
       const v = j / NV; // 0 sotto il mento, 1 bordo superiore
       const { p, n } = headAt(th * DEG, lerp(-84, beardTop(th), v) * DEG);
       const side = smooth(0, 0.12, 1 - Math.abs(u));
       const center = 0.35 + 0.65 * Math.pow(1 - Math.abs(u), 1.4);
       const low = Math.pow(1 - v, 2);
-      const t = side * smooth(0, 0.06, 1 - v) * (0.012 + 0.016 * center + 0.075 * low * center); // sottile ai lati, piena al mento
+      const t = side * smooth(0, 0.06, 1 - v) * (0.018 + 0.012 * center + 0.075 * low * center); // fascia media ai lati, cuneo pieno al mento
       // sotto il mento la massa va anche in avanti, non solo lungo la normale
       const dir = n.clone().add(new THREE.Vector3(0, -0.15, 0.55).multiplyScalar(low * center)).normalize();
       inner[i].push(p.clone());
@@ -272,26 +272,27 @@ function beard(lp: LP) {
 }
 
 /** Punto (coordinate della testa, prima della scala) da cui pende la treccia. */
-function braidAnchor(): THREE.Vector3 {
-  // punto più basso e avanzato della massa del mento (stesso calcolo della barba, u = 0, v = 0)
+/**
+ * Treccia che esce dalla punta della barba (stesso spazio della testa): il
+ * primo grano è dentro la massa del mento, gli altri scendono toccandosi.
+ * Restano davanti alla giacca (convertendo le quote nello spazio del corpo).
+ */
+function braid(lp: LP) {
   const { p, n } = headAt(0, -84 * DEG);
   const dir = n.clone().add(new THREE.Vector3(0, -0.15, 0.55)).normalize();
-  return p.addScaledVector(dir, 0.012 + 0.016 + 0.075);
-}
-
-/** Treccia: tre grani uguali impilati, fermaglio color panna e punta. */
-function braid(lp: LP, top: THREE.Vector3) {
-  // il primo grano parte dentro la massa del mento; scendendo la treccia resta
-  // davanti alla giacca (si sposta in avanti quanto serve)
-  const R0 = 0.046, STEPY = 0.068;
-  const zAt = (y: number, r: number) => Math.max(top.z - 0.02, jacketR(y) * 0.82 + r * 0.85);
+  const tip = p.addScaledVector(dir, 0.012 + 0.016 + 0.075 - 0.02); // appena dentro la punta della barba
+  const R0 = 0.036, STEPY = 0.052;
+  const zMin = (y: number, r: number) => (jacketR(HEAD_T.y + HEAD_S * y) * 0.82 + r * HEAD_S * 0.9) / HEAD_S;
+  let y = tip.y, z = tip.z;
   for (let i = 0; i < 3; i++) {
-    const r = R0 - i * 0.002, y = top.y - 0.02 - i * STEPY;
-    lp.blob(top.x, y, zAt(y, r), r * 1.05, r * 0.95, r, i % 2 ? '#c94f75' : BEARD, { ...O, detail: 2 } as LPOpts);
+    const r = R0 - i * 0.0015;
+    z = Math.max(z - 0.004, zMin(y, r));
+    lp.blob(0, y, z, r * 1.05, r * 0.95, r, i % 2 ? '#c94f75' : BEARD, { ...O, detail: 2 } as LPOpts);
+    y -= STEPY;
   }
-  const ty = top.y - 0.02 - 3 * STEPY + 0.022, tz = zAt(ty, 0.024);
-  lp.cyl(top.x, ty - 0.03, tz, 0.024, 0.024, 0.032, 10, SCARF, O);
-  lp.cyl(top.x, ty - 0.058, tz, 0.006, 0.02, 0.028, 8, BEARD, O);
+  y += STEPY - 0.04;
+  lp.cyl(0, y - 0.024, z, 0.019, 0.019, 0.026, 10, SCARF, O);
+  lp.cyl(0, y - 0.046, z, 0.005, 0.016, 0.022, 8, BEARD, O);
 }
 
 
@@ -314,50 +315,71 @@ function moustache(lp: LP) {
  * sovrapposte a scaglie (ogni fila copre la radice di quella sotto), più
  * qualche ciuffetto dritto in cima.
  */
-function hair(lp: LP) {
-  const rnd = prng(31);
-  const tone = (k: number) => `#${new THREE.Color(HAIR).offsetHSL(0, 0, k).getHexString()}`;
-  // la calotta è il volume vero dei capelli (sottile al bordo, piena in cima):
-  // le ciocche ci si appoggiano sopra, così non sembrano staccate dalla testa
-  // calotta: sottile sui lati (solo per non lasciare pelle tra le ciocche), più piena
-  // in cima, dove riempie le fessure tra le radici delle ciocche
-  const capT = (_th: number, phD: number) => 0.01 + 0.04 * smooth(55, 88, phD);
-  sheet(lp, 36, 10, (u, v) => { const th = Math.PI + u * Math.PI; return [th, lerp(hairTip(th) + 3, 89.5, v) * DEG]; }, (u, v) => {
-    const th = Math.PI + u * Math.PI;
-    return capT(th, lerp(hairTip(th) + 3, 89.5, v));
-  }, tone(-0.07)); // appena più scura: tra una ciocca e l'altra si legge il solco
-  // poche ciocche grandi e scompigliate (come nel concept): una frangia, due
-  // giri attorno (lati e nuca) con ciocche corte che arrivano dove serve, e
-  // qualche ciuffo in cima che punta in direzioni diverse
-  const LEN = 38;
-  const ring = (n: number, tipOf: (th: number) => number, w: number, phase: number, seed: number) => {
-    for (let k = 0; k < n; k++) {
-      const th0 = (k + phase) * (360 / n) + (rnd() - 0.5) * 14;
-      const front = absDeg(th0 * DEG) < 50;
-      if (front && seed === 0) continue; // davanti c'è la frangia
-      const tip = tipOf(th0) - rnd() * 7;
-      const swing = (rnd() - 0.5) * 22; // scompigliate: ognuna piega per conto suo
-      lock(lp, {
-        th0, th1: th0 + swing, ph0: Math.min(86, tip + LEN + (rnd() - 0.5) * 8), ph1: tip,
-        w: w * (0.85 + rnd() * 0.3), t: 0.07 + rnd() * 0.015, base: 0.008 + seed * 0.01, lift: 0.004, // punte appoggiate: niente fessure in ombra
-        col: tone([0.03, -0.025, 0.05, 0.005, -0.04][(k + seed) % 5]),
-      });
+/**
+ * Strato del "casco" di capelli: un guscio pieno (faccia esterna, faccia
+ * interna sulla testa, parete lungo il bordo) che va dal bordo fino in cima.
+ * Il bordo è seghettato (una punta per ciocca) e la superficie ha un rilievo
+ * per ciocca che scende dal vortice girando un poco: le ciocche fanno parte
+ * del volume, non possono staccarsi.
+ */
+function hairLayer(lp: LP, o: { locks: number; hem: (thDeg: number) => number; depth: number; lift: number; thick: number; phase: number; swirl: number; seed: number; tone: (k: number) => string }) {
+  const rnd = prng(o.seed);
+  const jitter = Array.from({ length: o.locks }, () => [0.75 + rnd() * 0.5, (rnd() - 0.5) * 0.3, rnd()]); // lunghezza, asimmetria, tono
+  const NU = o.locks * 6, NV = 9;
+  const P: THREE.Vector3[][] = [], Q: THREE.Vector3[][] = [], Nn: THREE.Vector3[][] = [], lockOf: number[] = [];
+  for (let i = 0; i <= NU; i++) {
+    const u = i / NU, f = (u * o.locks + o.phase) % o.locks, k = Math.floor(f), w = f - k;
+    const [len, skew] = jitter[k];
+    // dente di sega: punta al centro della ciocca (spostata un po' di lato)
+    const c = 0.5 + skew, tooth = w < c ? w / c : (1 - w) / (1 - c);
+    const ridge = Math.sin(Math.PI * Math.min(1, Math.max(0, w))); // rilievo al centro della ciocca
+    lockOf.push(k);
+    P.push([]); Q.push([]); Nn.push([]);
+    for (let j = 0; j <= NV; j++) {
+      const v = j / NV; // 0 bordo, 1 cima
+      const thD = u * 360 + o.swirl * v;
+      const hem = o.hem(thD) - o.depth * len * tooth;
+      const phD = lerp(hem, 89, Math.pow(v, 0.85));
+      const { p, n } = headAt(thD * DEG, phD * DEG);
+      const t = o.thick * (0.55 + 0.45 * ridge) * smooth(0, 0.25, v + 0.05 * tooth) + o.lift * (1 - v) * (1 - v);
+      P[i].push(p.clone().addScaledVector(n, 0.006 + t));
+      Q[i].push(p.clone().addScaledVector(n, 0.004));
+      Nn[i].push(n);
     }
-  };
-  ring(10, (th) => hairTip(th * DEG) - 2, 0.21, 0, 0);            // giro basso: lati e nuca
-  ring(8, (th) => hairTip(th * DEG) + 30, 0.22, 0.5, 1);         // giro alto
-  // frangia: cinque ciocche grandi che cadono sulla fronte, un po' di traverso
-  for (let k = 0; k < 5; k++) {
-    const th0 = -50 + k * 25 + (rnd() - 0.5) * 8;
-    lock(lp, { th0, th1: th0 + 10 + (rnd() - 0.5) * 16, ph0: 82, ph1: hairTip(th0 * DEG) - rnd() * 6, w: 0.22 * (0.9 + rnd() * 0.2), t: 0.07, base: 0.03, lift: 0.012 + rnd() * 0.016, col: tone([0.04, -0.01, 0.025, -0.03, 0.015][k]) });
   }
-  // vortice in cima: un piccolo ciuffo pieno da cui partono le ciocche (niente fessure al centro)
-  lp.blob(0, C.y + R.y * 0.98, -0.02, 0.09, 0.045, 0.09, tone(0.01), { ...O, detail: 1 } as LPOpts);
-  // cima: ciocche che si aprono dal vortice in direzioni diverse
-  for (let k = 0; k < 7; k++) {
-    const th0 = k * 51 + (rnd() - 0.5) * 24;
-    lock(lp, { th0, th1: th0 + (rnd() - 0.5) * 40, ph0: 87, ph1: 58 - rnd() * 8, w: 0.2, t: 0.07, base: 0.05, lift: 0.006, col: tone([0.045, 0.01, 0.03, -0.015, 0.02][k % 5]) });
+  const tr: Tris[] = [new Tris(), new Tris(), new Tris()];
+  for (let i = 0; i < NU; i++) {
+    const t = tr[Math.floor(jitter[lockOf[i]][2] * 3)];
+    for (let j = 0; j < NV; j++) t.quad(P[i][j], P[i + 1][j], P[i + 1][j + 1], P[i][j + 1], Nn[i][j]);
+    // parete del bordo: chiude il guscio verso la testa
+    t.quad(P[i][0], P[i + 1][0], Q[i + 1][0], Q[i][0], Nn[i][0].clone().negate().add(new THREE.Vector3(0, -1, 0)));
   }
+  tr.forEach((t, k) => lp.add(t.geo(), o.tone([0.035, 0, -0.03][k]), { ...O, vary: 0.04 }));
+}
+
+/**
+ * Capelli come nel concept: un casco pieno, più largo del cranio, fatto di
+ * strati di ciocche appuntite che scendono dal vortice; bordo seghettato
+ * (frangia sulla fronte, sopra le orecchie ai lati, nuca dietro) e qualche
+ * ciuffo a punta che sale dalla cima.
+ */
+function hair(lp: LP) {
+  const tone = (k: number) => `#${new THREE.Color(HAIR).offsetHSL(0, 0, k).getHexString()}`;
+  const tip = (thD: number) => hairTip(thD * DEG);
+  // dal basso in alto: ogni strato ha il bordo più in alto e sta sopra a quello sotto
+  hairLayer(lp, { locks: 15, hem: (t) => tip(t) + 4, depth: 13, lift: 0.03, thick: 0.05, phase: 0, swirl: 14, seed: 3, tone });
+  hairLayer(lp, { locks: 12, hem: (t) => tip(t) + 26, depth: 15, lift: 0.04, thick: 0.065, phase: 0.5, swirl: 18, seed: 7, tone });
+  hairLayer(lp, { locks: 9, hem: (t) => tip(t) + 48, depth: 16, lift: 0.05, thick: 0.08, phase: 0.2, swirl: 22, seed: 11, tone });
+  // ciuffi a punta che salgono dalla cima (radicati dentro il casco)
+  const rnd = prng(5);
+  [[-25, 0.13, -0.5], [5, 0.15, 0.1], [30, 0.12, 0.55], [175, 0.11, 0.3], [-160, 0.1, -0.4]].forEach(([th, h, lean], k) => {
+    const { p, n } = headAt(th * DEG, 78 * DEG);
+    const base = p.addScaledVector(n, 0.05);
+    const axis = n.clone().add(new THREE.Vector3(Math.sin(th * DEG), 0, Math.cos(th * DEG)).multiplyScalar(0.6 + lean)).normalize();
+    const g = new THREE.ConeGeometry(0.045 + rnd() * 0.012, h, 5).translate(0, h / 2, 0);
+    g.applyQuaternion(new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0, 1, 0), axis));
+    lp.add(g.translate(base.x, base.y, base.z), tone([0.04, 0.015, 0.03, 0, 0.02][k]), { ...O, vary: 0.04 });
+  });
 }
 
 const JACKET_D = '#4c652a';
@@ -524,11 +546,11 @@ function eyes(): THREE.Group {
     const e = new THREE.Group();
     e.position.copy(p.addScaledVector(n, 0.004));
     e.rotation.set(-Math.asin(n.y), Math.atan2(n.x, n.z), 0, 'YXZ');
-    const ball = new THREE.Mesh(new THREE.IcosahedronGeometry(1, 2).scale(0.0486, 0.0612, 0.02), mat);
+    const ball = new THREE.Mesh(new THREE.IcosahedronGeometry(1, 2).scale(0.042, 0.051, 0.018), mat);
     ball.castShadow = true;
     e.add(ball);
-    const st = new THREE.Mesh(star(0.018, 0.42), shine); st.position.set(-0.004, 0.014, 0.019); e.add(st);
-    const dot = new THREE.Mesh(new THREE.CircleGeometry(0.0054, 8), shine); dot.position.set(0.016, -0.022, 0.018); e.add(dot);
+    const st = new THREE.Mesh(star(0.015, 0.42), shine); st.position.set(-0.003, 0.012, 0.017); e.add(st);
+    const dot = new THREE.Mesh(new THREE.CircleGeometry(0.0046, 8), shine); dot.position.set(0.014, -0.019, 0.016); e.add(dot);
     g.add(e);
   }
   return g;
@@ -541,10 +563,9 @@ export function buildCustodeV2(): CustodeV2 {
     // testa (con faccia, barba, baffi e capelli) più grande del 30%, scalata
     // attorno al mento: resta appoggiata sul colletto
     lp.push([0, HEAD_T.y, 0], 0, 0, 0, HEAD_S);
-    head(lp); glitter(lp); beard(lp); moustache(lp); hair(lp);
+    head(lp); glitter(lp); beard(lp); braid(lp); moustache(lp); hair(lp);
     lp.pop();
     // la treccia pende davanti alla giacca (prima finiva dietro il nodo della sciarpa)
-    braid(lp, braidAnchor().multiplyScalar(HEAD_S).add(HEAD_T)); // il primo grano entra nella barba
     body(lp); arm(lp, -1); arm(lp, 1);
     lantern(lp, -0.296);
   }, 'proto:custode-v2');

@@ -70,6 +70,12 @@ Ottava passata:
 - **Treccia:** il primo grano parte dentro la massa del mento, quindi è attaccata in alto.
 - **Occhi:** più piccoli del 10%.
 
+Nona passata (capelli e barba ripensati guardando bene il concept):
+- **Capelli:** un "casco" pieno, più largo del cranio, fatto di tre strati sovrapposti. Ogni strato è un guscio chiuso con il bordo seghettato (una punta per ciocca) e un rilievo per ciocca che scende dal vortice girando un poco. Le ciocche fanno parte del volume, quindi non possono staccarsi. Il bordo forma la frangia sulla fronte, scende sopra le orecchie ai lati e alla nuca dietro; in cima ci sono alcuni ciuffi a punta. È anche più leggero (meno triangoli).
+- **Barba:** la fascia sale lungo la guancia fino ai capelli alla tempia, ha spessore medio ai lati e si chiude in un cuneo pieno sotto il mento.
+- **Treccia:** costruita nello stesso spazio della barba; il primo grano parte dalla punta del cuneo e gli altri scendono toccandosi.
+- **Occhi:** ancora più piccoli.
+
 ## Prestazioni su telefono (app Capacitor)
 
 Con Capacitor il gioco gira nel WebView del sistema (WKWebView su iOS, WebView di Chrome su Android): le prestazioni sono quelle del browser del telefono. Che il gioco funzioni offline non cambia nulla, perché il lavoro lo fanno GPU e CPU del dispositivo.
@@ -115,7 +121,7 @@ Il lavoro vero è **rifare le opzioni di personalizzazione** nel nuovo stile, ci
 |---|---|---|---|
 | Custode attuale, look base | 7.450 | 7 | — |
 | Custode attuale, look ricco (ricci lunghi, treccia, manubrio, monocolo, brillantini) | 17.370 | 9 | ~126 ms |
-| Prototipo v2 (completo, con lanterna) | 18.000 | 8 | ~40 ms |
+| Prototipo v2 (completo, con lanterna) | 15.000 | 8 | ~35 ms |
 
 Il v2 costa più o meno quanto un look ricco di oggi, ed è più veloce da generare perché la testa è un ellissoide. Diviso nelle parti del rig resterebbe a circa 8–10 draw call. Per il solo Custode non ci sono problemi di prestazioni.
 

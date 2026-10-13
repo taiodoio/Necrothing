@@ -289,8 +289,14 @@ function beardSlices(): BeardSlice[] {
     const yTop = au < 0.78 ? lerp(0.588, 0.63, au / 0.78) : lerp(0.63, 0.8, smooth(0.78, 1, au)); // lungo la mandibola, poi su come basetta
     // orlo: diagonale da sotto l'orecchio al mento, con la punta di ogni ciocca
     // lineare nella profondità (cos θ): di profilo l'orlo è una diagonale dritta dall'orecchio al mento
-    const yHem = lerp(0.543 - BEARD_DROP, 0.665, (1 - Math.cos(th)) / (1 - Math.cos(BEARD_TH * DEG))) - 0.022 * len * tooth * (1 - 0.6 * au);
-    const rFloor = skinR(th, 0.6) * (0.985 - 0.04 * au) + 0.028 * (1 - au * au); // un po' bombata davanti
+    // orlo: la barba continua anche sui lati, sotto la linea della mandibola,
+    // sempre più corta andando verso l'orecchio (davanti è la più lunga)
+    const r6 = skinR(th, 0.6);
+    let jaw = 0.6;
+    while (jaw > 0.45 && skinR(th, jaw) > r6 * 0.82) jaw -= 0.004; // dove la pelle rientra sotto la mascella
+    const length = lerp(BEARD_DROP + 0.035, 0.035, Math.pow(au, 1.1));
+    const yHem = Math.min(jaw - length, yTop - 0.045) - 0.022 * len * tooth * (1 - 0.4 * au);
+    const rFloor = r6 * (0.985 - 0.04 * au) + 0.028 * (1 - au * au) + 0.012; // un po' bombata davanti, piena anche sui lati
     out.push({ th, rad: new THREE.Vector3(Math.sin(th), 0, Math.cos(th)), yTop, yHem, rFloor, rIn: rFloor * 0.45, tone, ridge: Math.sin(Math.PI * w) });
   }
   return out;
@@ -299,7 +305,7 @@ function beardSlices(): BeardSlice[] {
 /** Punto esterno della fetta all'altezza v (0 orlo, 1 bordo superiore). */
 function beardOuter(sl: BeardSlice, v: number): THREE.Vector3 {
   const y = lerp(sl.yHem, sl.yTop, Math.pow(v, 1.15));
-  const thin = 0.014 * (0.35 + 0.65 * smooth(0, 0.25, 1 - v)) + 0.008 * sl.ridge * (1 - v);
+  const thin = 0.02 * (0.35 + 0.65 * smooth(0, 0.25, 1 - v)) + 0.008 * sl.ridge * (1 - v);
   let r = Math.max(skinR(sl.th, y) + thin, sl.rFloor + 0.006 * sl.ridge);
   // l'orlo si arrotonda verso l'interno
   const ROUND = 0.055;

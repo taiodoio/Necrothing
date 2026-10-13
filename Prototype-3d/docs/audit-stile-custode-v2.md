@@ -86,6 +86,10 @@ Undicesima passata:
 - **Prima la punta finiva dietro il colletto.** Il cuneo scendeva sotto la testa e la sua punta restava dietro il bordo della giacca, per questo la treccia sembrava staccata. Ora il bordo inferiore è più alto e il cuneo va in avanti.
 - **Treccia:** esce dalla punta del cuneo, calcolata con la stessa funzione della barba (`beardOffset`), così resta attaccata anche se la barba cambia.
 
+Dodicesima passata:
+- **Barba:** sotto il mento si allunga in modo uniforme da una mandibola all'altra, con forma a U e non a punta, verso il basso e un po' in avanti; le guance restano sottili.
+- **Barba lunga:** lo stesso schema vale per una barba lunga senza treccia; basta aumentare `BEARD_DROP`.
+
 ## Prestazioni su telefono (app Capacitor)
 
 Con Capacitor il gioco gira nel WebView del sistema (WKWebView su iOS, WebView di Chrome su Android): le prestazioni sono quelle del browser del telefono. Che il gioco funzioni offline non cambia nulla, perché il lavoro lo fanno GPU e CPU del dispositivo.

@@ -240,18 +240,20 @@ function glitter(lp: LP) {
 
 /**
  * Spessore e direzione della barba nel punto (u attorno al viso, v dal basso
- * in alto). Ai lati è una striscia sottile; il cuneo pieno esiste solo al
- * centro, sotto il mento, e spinge in avanti e in basso.
+ * in alto). Ai lati, sulle guance, è una striscia sottile; sotto il mento si
+ * allunga in modo uniforme da una mandibola all'altra (forma a U, non a
+ * punta), verso il basso e un po' in avanti. `BEARD_DROP` regola quanto
+ * scende: lo stesso schema serve per una barba lunga senza treccia.
  */
 /** Bordo inferiore della barba (φ, gradi): sotto il mento, ma non così in basso da finire dietro il colletto. */
 const BEARD_LOW = -72;
-
+const BEARD_DROP = 0.1;
 function beardOffset(u: number, v: number, n: THREE.Vector3): { t: number; dir: THREE.Vector3 } {
-  const side = smooth(0, 0.12, 1 - Math.abs(u));
-  const chinW = smooth(0.6, 0, Math.abs(u)); // 1 al centro, 0 da metà guancia in poi
-  const low = Math.pow(1 - v, 1.6);
-  const t = side * smooth(0, 0.06, 1 - v) * (0.008 + 0.006 * (1 - Math.abs(u)) + 0.115 * low * chinW);
-  const dir = n.clone().add(new THREE.Vector3(0, -0.05, 1.1).multiplyScalar(low * chinW)).normalize(); // in avanti, non giù dietro il colletto
+  const side = smooth(0, 0.1, 1 - Math.abs(u));
+  const jaw = smooth(0.8, 0.35, Math.abs(u)); // largo sotto la mandibola, sfuma prima delle guance
+  const low = Math.pow(1 - v, 2.2); // solo la parte bassa si allunga: le guance restano sottili
+  const t = side * smooth(0, 0.06, 1 - v) * (0.008 + 0.006 * (1 - Math.abs(u)) + BEARD_DROP * low * jaw);
+  const dir = n.clone().add(new THREE.Vector3(0, -0.7, 0.45).multiplyScalar(low * jaw)).normalize();
   return { t, dir };
 }
 

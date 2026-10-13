@@ -51,7 +51,28 @@ Quinta passata:
 - **Sciarpa:** un nastro morbido che segue la curva della giacca, con righe, ondeggiamento e frangia in fondo (prima era un rettangolo appoggiato).
 - **Suole:** seguono la pianta dello stivale, con punta tonda e tacco.
 
-I triangoli sono saliti a ~31.800, soprattutto per le ciocche più numerose. In gioco si può ridurre (meno file in qualità «Bassa», ciocche con meno segmenti).
+Sesta passata:
+- **Capelli:** tornati alle quattro file di prima, con le proporzioni giuste. Le ciocche hanno una lunghezza massima, così dietro non pendono più, e ai lati scendono un po' di più.
+- **Barba:** non più un velo spalmato. È un volume a mezzaluna con il bordo superiore netto, che sale dalla bocca fino davanti all'orecchio, più una massa sotto il mento che sporge in avanti.
+- **Treccia:** tre grani uguali impilati dritti davanti alla giacca, fermaglio color panna e punta, come nel concept.
+- **Stivali:** tomaia e suola hanno la stessa pianta e la tomaia nasce dentro la suola, così il bordo è continuo e la suola non sembra staccata.
+- **Sciarpa:** spostata di lato, per lasciare libera la treccia.
+
+## Prestazioni su telefono (app Capacitor)
+
+Con Capacitor il gioco gira nel WebView del sistema (WKWebView su iOS, WebView di Chrome su Android): le prestazioni sono quelle del browser del telefono. Che il gioco funzioni offline non cambia nulla, perché il lavoro lo fanno GPU e CPU del dispositivo.
+
+- **Triangoli:** ~23k per il Custode v2 non sono un problema nemmeno per telefoni di 5–6 anni fa, che reggono qualche centinaio di migliaia di triangoli a 30 fps. Conta il totale della scena: con 6–8 personaggi v2 si aggiungono ~150–200k triangoli. Sui telefoni vecchi conviene una versione alleggerita in qualità «Bassa»: meno file di ciocche, sfere con meno suddivisioni, niente stelline.
+- **Cose che pesano di più dei triangoli:**
+  - le ombre (raddoppiano il lavoro sulla geometria);
+  - la risoluzione (pixel ratio 2–3 sugli schermi moderni);
+  - la post-elaborazione (sfocatura ai bordi);
+  - le luci puntiformi;
+  - le parti trasparenti.
+
+  Il gioco le regola già in base alla qualità.
+- **CPU e memoria:** i modelli si generano dal codice (~45 ms il v2) e restano in cache. Su un telefono lento può diventare ~150–200 ms, per una volta, al primo caricamento o quando si cambia aspetto. Con molti personaggi diversi va fatto con calma (uno per frame) o in anticipo.
+- **Raccomandazione:** prima di andare avanti, misurare su un Android economico reale (es. 3–4 GB di RAM, GPU Mali/Adreno di fascia bassa) con le statistiche tecniche del gioco.
 
 Restano differenze con il concept:
 - l'ombreggiatura morbida da render (il gioco usa facce piatte);
@@ -82,7 +103,7 @@ Il lavoro vero è **rifare le opzioni di personalizzazione** nel nuovo stile, ci
 |---|---|---|---|
 | Custode attuale, look base | 7.450 | 7 | — |
 | Custode attuale, look ricco (ricci lunghi, treccia, manubrio, monocolo, brillantini) | 17.370 | 9 | ~126 ms |
-| Prototipo v2 (completo, con lanterna) | 31.800 | 8 | ~55 ms |
+| Prototipo v2 (completo, con lanterna) | 23.300 | 8 | ~45 ms |
 
 Il v2 costa più o meno quanto un look ricco di oggi, ed è più veloce da generare perché la testa è un ellissoide. Diviso nelle parti del rig resterebbe a circa 8–10 draw call. Per il solo Custode non ci sono problemi di prestazioni.
 

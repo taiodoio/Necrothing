@@ -209,7 +209,7 @@ const absDeg = (th: number) => Math.abs(Math.atan2(Math.sin(th), Math.cos(th))) 
 /** Dove arrivano le punte dei capelli (φ in gradi): poco sopra gli occhi davanti, sopra le orecchie ai lati, alla nuca dietro. */
 const hairTip = (th: number) => { const a = absDeg(th); return a < 90 ? lerp(20, -12, smooth(30, 90, a)) : lerp(-12, -34, smooth(90, 160, a)); }; // ai lati scende fin sopra l'orecchio, dietro alla nuca
 /** Bordo superiore della barba (φ in gradi): sotto la bocca davanti, sale lungo la mandibola fino all'orecchio. */
-const beardTop = (thDeg: number) => lerp(-60, -8, smooth(24, 84, Math.abs(thDeg))); // sale lungo la guancia e raggiunge i capelli davanti all'orecchio
+const beardTop = (thDeg: number) => lerp(-54, -6, smooth(18, 82, Math.abs(thDeg))); // davanti appena sotto la bocca // sale lungo la guancia e raggiunge i capelli davanti all'orecchio
 
 function head(lp: LP) {
   lp.add(headGeo(), SKIN, { ...O, ao: 0.05 });
@@ -235,42 +235,33 @@ function glitter(lp: LP) {
 }
 
 function beard(lp: LP) {
-  // fascia lungo la mandibola, da un orecchio all'altro: bordo inferiore pieno
-  // (fa un'ombra netta sul colletto, non si fonde con la giacca), bordo
-  // superiore che sfuma sulla guancia; più piena sotto il mento
-  sheet(lp, 26, 8,
-    (u, v) => [u * 86 * DEG, lerp(-74, beardTop(u * 86), v) * DEG],
+  // come nel concept: un volume pieno a mezzaluna attorno alla parte bassa
+  // della faccia. Bordo superiore netto (sale dalla bocca fino davanti
+  // all'orecchio), spessore quasi costante, e sotto il mento una massa che
+  // sporge in avanti e in basso, oltre il profilo della testa.
+  sheet(lp, 30, 10,
+    (u, v) => [u * 84 * DEG, lerp(-88, beardTop(u * 84), v) * DEG],
     (u, v) => {
-      const edge = smooth(0, 0.12, 1 - Math.abs(u)) * (0.55 + 0.45 * smooth(0, 0.25, v)) * smooth(0, 0.3, 1 - v);
-      const chin = (1 - Math.abs(u)) ** 2 * Math.exp(-(((v - 0.3) / 0.3) ** 2));
-      return edge * (0.03 + 0.018 * chin);
+      const side = smooth(0, 0.1, 1 - Math.abs(u));
+      const top = smooth(0, 0.07, 1 - v); // bordo superiore netto
+      return side * top * (0.036 + 0.014 * (1 - v));
     }, BEARD, { vary: 0.05 });
-  // chiusura sotto il mento: un "ricciolo" più scuro che fa da bordo
-  sheet(lp, 26, 2,
-    (u, v) => [u * 84 * DEG, lerp(-79, -73, v) * DEG],
-    (u) => 0.02 * smooth(0, 0.15, 1 - Math.abs(u)), '#b84368', { vary: 0.04 });
-  // treccia: parte da sotto il mento e scende sul petto; tre trecce intrecciate
-  // (lobi inclinati a destra e a sinistra, con un solco più scuro tra uno e
-  // l'altro), un fermaglio color panna e un ciuffetto che si apre in fondo
-  // attacco sul mento, davanti (fuori dalla giacca: prima finiva dentro il colletto)
-  const { p: chin, n: cn } = headAt(0, -66 * DEG);
-  const start = chin.addScaledVector(cn, 0.03);
-  const dir = new THREE.Vector3(0, -1, 0.32).normalize();
-  const lobes = 4;
-  for (let i = 0; i < lobes; i++) {
-    const q = start.clone().addScaledVector(dir, 0.03 + i * 0.048);
-    const side = i % 2 ? 1 : -1, r = 0.034 - i * 0.003;
-    lp.push([q.x + side * 0.008, q.y, q.z + 0.012 * i], 0, 0.1, side * 0.55);
-    lp.blob(0, 0, 0, r * 1.15, r * 0.82, r * 0.85, i % 2 ? BEARD : '#c64a70', { ...O, detail: 2 } as LPOpts);
-    lp.pop();
+  // massa del mento: ellissoide schiacciato che riempie sotto la mandibola
+  const { p: chin } = headAt(0, -62 * DEG);
+  lp.blob(0, chin.y - 0.035, chin.z - 0.05, 0.19, 0.075, 0.13, BEARD, { ...O, detail: 2 } as LPOpts);
+  lp.blob(0, chin.y - 0.06, chin.z - 0.02, 0.12, 0.05, 0.1, '#c94f75', { ...O, detail: 2 } as LPOpts);
+  // treccia: tre grani uguali, impilati dritti sotto il mento, un fermaglio
+  // color panna e una punta: semplice e leggibile come nel concept
+  // davanti alla giacca (prima restava dietro il nodo della sciarpa)
+  const top = new THREE.Vector3(0.012, chin.y - 0.085, 0.235);
+  const R0 = 0.046, STEPY = 0.07;
+  for (let i = 0; i < 3; i++) {
+    const r = R0 - i * 0.002;
+    lp.blob(top.x, top.y - i * STEPY, top.z - i * 0.004, r * 1.05, r * 0.95, r, i % 2 ? '#c94f75' : BEARD, { ...O, detail: 2 } as LPOpts);
   }
-  const tie = start.clone().addScaledVector(dir, 0.03 + lobes * 0.048 - 0.012);
-  lp.cyl(tie.x, tie.y - 0.016, tie.z + 0.04, 0.02, 0.02, 0.026, 8, SCARF, O);
-  for (const a of [-0.45, 0, 0.45]) {
-    lp.push([tie.x, tie.y - 0.018, tie.z + 0.04], 0, 0.15, a);
-    lp.cyl(0, -0.045, 0, 0.004, 0.014, 0.045, 5, BEARD, O);
-    lp.pop();
-  }
+  const ty = top.y - 3 * STEPY + 0.022, tz = top.z - 3 * 0.004;
+  lp.cyl(top.x, ty - 0.03, tz, 0.024, 0.024, 0.032, 10, SCARF, O);
+  lp.cyl(top.x, ty - 0.058, tz, 0.006, 0.02, 0.028, 8, BEARD, O);
 }
 
 function moustache(lp: LP) {
@@ -302,28 +293,27 @@ function hair(lp: LP) {
     const th = Math.PI + u * Math.PI;
     return capT(th, lerp(hairTip(th) + 3, 89.5, v));
   }, tone(-0.11)); // più scura: tra una ciocca e l'altra si legge il solco
-  // ciocche tutte corte come quelle della frangia (~32°), a file sfalsate che
-  // salgono dal bordo fino in cima: dietro e ai lati servono più file, non
-  // ciocche più lunghe
-  const LEN = 32, STEP = 19;
-  for (let r = 0; r < 7; r++) {
-    const n = 16;
-    for (let k = 0; k < n; k++) {
-      const th0 = (k + (r % 2) * 0.5) * (360 / n) + (rnd() - 0.5) * 9;
-      const tip = hairTip(th0 * DEG) - 2 + r * STEP;
-      if (tip > 72) continue;
+  // quattro file a scaglie come prima; le ciocche hanno però una lunghezza
+  // massima, così dietro e ai lati non pendono più (prima arrivavano a 80°)
+  const back = (th: number) => smooth(50, 160, absDeg(th * DEG));
+  const MAXLEN = 40;
+  const rows = [
+    { n: 16, root: 46, tip: (th: number) => hairTip(th * DEG) - 2, w: 0.15 },
+    { n: 13, root: 62, tip: (th: number) => lerp(36, 4, back(th)), w: 0.16 },
+    { n: 10, root: 76, tip: (th: number) => lerp(54, 34, back(th)), w: 0.16 },
+    { n: 6, root: 88, tip: () => 68, w: 0.15 },
+  ];
+  rows.forEach((row, r) => {
+    for (let k = 0; k < row.n; k++) {
+      const th0 = (k + (r % 2) * 0.5) * (360 / row.n) + (rnd() - 0.5) * 8;
+      const tip = row.tip(th0) - rnd() * 6;
       lock(lp, {
-        th0, th1: th0 + (r % 2 ? 7 : -5) + (rnd() - 0.5) * 12, ph0: Math.min(91, tip + LEN + (rnd() - 0.5) * 6), ph1: tip - rnd() * 6,
-        w: 0.15 * (0.8 + rnd() * 0.45), t: 0.058 + rnd() * 0.012, surface: (th: number, ph: number) => capT(th * DEG, ph) * 0.78, bulge: 0.018, lift: 0.01 + rnd() * 0.022,
+        th0, th1: th0 + (r % 2 ? 9 : -4) + (rnd() - 0.5) * 14, ph0: Math.min(row.root + (rnd() - 0.5) * 6, tip + MAXLEN), ph1: tip,
+        w: row.w * (0.8 + rnd() * 0.45), t: 0.058 + rnd() * 0.012, surface: (th: number, ph: number) => capT(th * DEG, ph) * 0.78, bulge: 0.018, lift: 0.01 + rnd() * 0.022,
         col: tone([0.03, -0.02, 0.05, 0.01, -0.035][(k + r) % 5]),
       });
     }
-  }
-  // cima: poche ciocche che si aprono dal vortice
-  for (let k = 0; k < 6; k++) {
-    const th0 = k * 60 + (rnd() - 0.5) * 20;
-    lock(lp, { th0, th1: th0 + 8, ph0: 90, ph1: 66 - rnd() * 6, w: 0.15, t: 0.055, surface: (th: number, ph: number) => capT(th * DEG, ph) * 0.78, bulge: 0.018, lift: 0.015, col: tone([0.04, 0, 0.02][k % 3]) });
-  }
+  });
   // ciuffetti dritti in cima, radicati nella calotta
   [[-20, 104], [10, 110], [35, 100], [190, 102]].forEach(([th, ph1], k) => {
     lock(lp, { th0: th, th1: th + 4, ph0: 84, ph1, w: 0.085, t: 0.03, base: 0.05, lift: 0.05 + k * 0.01, bulge: 0.008, col: tone(k % 2 ? 0.045 : 0.02) });
@@ -342,14 +332,13 @@ function jacketR(y: number): number {
   return JACKET_PROFILE[JACKET_PROFILE.length - 1][0];
 }
 
-/** Suola che segue la pianta dello stivale (punta e tacco tondi), con un bordino smussato. */
-function soleGeo(w: number, d: number, h: number): THREE.BufferGeometry {
+/** Pianta dello stivale (punta tonda, tacco più squadrato) estrusa per altezza h, con smusso b. */
+function footGeo(w: number, d: number, h: number, b: number): THREE.BufferGeometry {
   const s = new THREE.Shape();
-  const hw = w / 2, hd = d / 2, rt = hw * 0.98, rh = hw * 0.8; // punta quasi semicircolare, tacco più squadrato
+  const hw = w / 2 - b, hd = d / 2 - b, rh = hw * 0.8;
   s.moveTo(-hw, -hd + rh); s.quadraticCurveTo(-hw, -hd, -hw + rh, -hd); s.lineTo(hw - rh, -hd); s.quadraticCurveTo(hw, -hd, hw, -hd + rh);
-  s.lineTo(hw, hd - rt); s.absarc(0, hd - rt, hw, 0, Math.PI, false); s.lineTo(-hw, -hd + rh);
-  const b = 0.007;
-  const g = new THREE.ExtrudeGeometry(s, { depth: h - 2 * b, bevelEnabled: true, bevelThickness: b, bevelSize: b, bevelSegments: 2, curveSegments: 8 });
+  s.lineTo(hw, hd - hw); s.absarc(0, hd - hw, hw, 0, Math.PI, false); s.lineTo(-hw, -hd + rh);
+  const g = new THREE.ExtrudeGeometry(s, { depth: Math.max(0.001, h - 2 * b), bevelEnabled: true, bevelThickness: b, bevelSize: b, bevelSegments: 3, curveSegments: 8 });
   return g.rotateX(Math.PI / 2).translate(0, h - b, 0);
 }
 
@@ -361,7 +350,7 @@ function scarfTail(lp: LP) {
   const N = 14, W = 0.044, T = 0.014;
   const center = (s: number) => {
     const y = lerp(0.47, 0.305, s);
-    const x = -0.07 - 0.04 * s + 0.008 * Math.sin(s * 5);
+    const x = -0.105 - 0.03 * s + 0.008 * Math.sin(s * 5);
     const z = Math.sqrt(Math.max(0, (jacketR(y) * 0.82) ** 2 - (x * 0.82) ** 2)) + 0.012 + 0.006 * Math.sin(s * Math.PI);
     return new THREE.Vector3(x, y, z);
   };
@@ -420,13 +409,15 @@ function body(lp: LP) {
   lp.add(new THREE.TorusGeometry(0.13, 0.032, 6, 18).rotateX(Math.PI / 2), SCARF, O);
   lp.pop();
   // nodo sotto la barba, poi il capo che scende sul petto
-  lp.blob(-0.07, 0.48, 0.17, 0.05, 0.04, 0.035, SCARF, { ...O, detail: 1 } as LPOpts);
+  lp.blob(-0.105, 0.48, 0.165, 0.045, 0.038, 0.035, SCARF, { ...O, detail: 1 } as LPOpts);
   scarfTail(lp);
   // gambe corte e un po' larghe, stivaloni tondi con suola spessa
   for (const s of [-1, 1]) {
     lp.cyl(s * 0.095, 0.07, 0, 0.082, 0.076, 0.13, 12, PANTS, { ...O, ao: 0.12 });
-    lp.add(rbox(0.162, 0.1, 0.232, 0.05, 3).translate(s * 0.095, 0.078, 0.03), BOOT, O);
-    lp.add(soleGeo(0.172, 0.25, 0.03).translate(s * 0.095, 0, 0.034), SOLE, O);
+    // stivale e suola con la stessa pianta: la tomaia nasce dentro la suola,
+    // così il bordo è continuo (niente tavoletta staccata sotto)
+    lp.add(footGeo(0.172, 0.25, 0.036, 0.01).translate(s * 0.095, 0, 0.034), SOLE, O);
+    lp.add(footGeo(0.16, 0.236, 0.112, 0.04).translate(s * 0.095, 0.014, 0.034), BOOT, O);
   }
 }
 

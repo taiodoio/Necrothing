@@ -442,7 +442,7 @@ function quad(o: Quad): CustodeV2 {
         q.blob(0, 0, 0, 0.075, 0.075, 0.022, o.color, D1);
         q.blob(0, 0, 0.012, 0.05, 0.05, 0.014, o.inner, D1);
       });
-      if (o.ears === 'dog' && !o.bones) { const { p } = headAt(s * 80 * DEG, 35 * DEG); lp.push([p.x, p.y, p.z], 0, 0, s * 0.3); lp.blob(s * 0.02, -0.08, 0, 0.055, 0.11, 0.035, o.bones ? BONE_D : tone(-0.06), D2); lp.pop(); }
+      if (o.ears === 'dog') { const { p } = headAt(s * 80 * DEG, 35 * DEG); lp.push([p.x, p.y, p.z], 0, 0, s * 0.3); lp.blob(s * 0.02, -0.08, 0, 0.055, 0.11, 0.035, o.bones ? BONE_D : tone(-0.06), D2); lp.pop(); }
       if (o.ears === 'rabbit') { const { p } = headAt(s * 38 * DEG, 64 * DEG); lp.push([p.x, p.y, p.z], 0, -0.25, -s * 0.38); lp.blob(0, 0.15, 0, 0.055, 0.17, 0.03, o.color, D2); lp.blob(0, 0.15, 0.016, 0.03, 0.13, 0.02, o.inner, D1); lp.pop(); }
     }
     eyeG.add(o.bones ? eyes('sockets', SKULL_GLOW, o.color) : eyes('open', o.eyes, o.color, undefined, o.glow));

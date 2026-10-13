@@ -156,7 +156,7 @@ Stesso approccio del Custode, nel prototipo `src/proto/npcV2.ts`. Pagina: `proto
     - il teschio grande ha le orbite con la lucina (come lo scheletro umano), i denti, gli zigomi e una crepa;
     - i quadrupedi hanno spina a vertebre, gabbia toracica aperta in basso, sterno, bacino, scapole, zampe d'ossa con le dita e la coda a vertebre;
     - gli uccelli hanno la carena dello sterno, le ali ripiegate d'ossa con le remiganti, le zampe sottili e il codino;
-    - restano le orecchie (gatto, coniglio) perché si capisca che animale è.
+    - restano le orecchie (gatto, coniglio e cane, anche se uno scheletro non le avrebbe) perché si capisca che animale è.
 
 Triangoli (media misurata sulla pagina): circa 6.700 per umani, scheletro e fantasmi; circa 5.400 per gli animali (gli scheletri pesano di più: ogni vertebra e ogni giuntura è un pezzo). Il Custode con le sue varianti resta il più pesante, circa 12.600.
 

@@ -88,7 +88,7 @@ export interface Pet extends Walker {
   den: Den;
 }
 
-const PET_SPEED = { roam: 1.3, run: 3.5 };
+const PET_SPEED = { roam: 1.3, run: 3.5, dash: 5 };
 
 interface Funeral {
   members: Walker[];
@@ -591,7 +591,8 @@ export class Actors {
     if (this.clearLine(pet.pos, target)) pet.path = [target];
     else if (pet.repath <= 0 || !pet.path.length) { pet.repath = 0.6; pet.path = this.pathTo(pet.pos, worldToCell(a), target); }
     this.pullPath(pet);
-    pet.speed = THREE.MathUtils.clamp((d - stop) * 3, 0.8, PET_SPEED.run);
+    // se è lontano (appena uscito dalla cuccia, o rimasto indietro) corre di più, ma ci arriva sempre a piedi
+    pet.speed = THREE.MathUtils.clamp((d - stop) * 3, 0.8, d > 6 ? PET_SPEED.dash : PET_SPEED.run);
     return this.followPath(pet, dt);
   }
 
@@ -664,7 +665,6 @@ export class Actors {
         { const t = this.randomRoamTarget(pet); pet.path = t ? this.pathTo(pet.pos, t) : []; pet.act = 'roam'; }
         return;
       case 'follow': {
-        if (toAvatar > 16) { pet.pos.copy(a).add(new THREE.Vector3(1, 0, 1)); pet.path = []; } // rimasto indietro: raggiunge il padrone
         if (this.chase(pet, dt, 1.2)) pet.pose = 'walk';
         else { pet.pose = 'idle'; face(a); }
         return;

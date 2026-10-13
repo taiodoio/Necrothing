@@ -13,11 +13,11 @@ import { flower, grassTuft } from '../render/lowpoly/details.ts';
 import { mushroom } from '../render/lowpoly/nature.ts';
 
 // ── Palette del concept ─────────────────────────────────────────────────
-const SKIN = '#f3dcc4';
+const SKIN = '#f6cba6';
 const HAIR = '#d98238';
 const BEARD = '#d4567c';
 const EYE = '#1f4d2e';
-const JACKET = '#5d7836';
+const JACKET = '#58722f';
 const DARK = '#2c2a25';
 const PANTS = '#5a3c2a';
 const BOOT = '#6c4830';
@@ -36,8 +36,9 @@ function prng(seed: number) {
 const O: LPOpts = { jitter: 0, vary: 0.04, ao: 0 };
 
 // ── Testa: ellissoide (tonda, appena più larga che alta) ────────────────
-const C = new THREE.Vector3(0, 0.745, 0);
-const R = new THREE.Vector3(0.28, 0.258, 0.258);
+// testa enorme (≈60% dell'altezza con i capelli), appena più alta che larga
+const C = new THREE.Vector3(0, 0.79, 0);
+const R = new THREE.Vector3(0.275, 0.29, 0.265);
 
 /** Punto e normale della testa nella direzione (θ da +z verso +x, φ elevazione). */
 function headAt(th: number, ph: number) {
@@ -97,11 +98,11 @@ function sheet(lp: LP, nu: number, nv: number, at: (u: number, v: number) => [nu
  * segue la testa dalla radice alla punta, si allarga e poi si stringe a punta,
  * e si stacca dalla testa verso la punta (volume che esce dalla sagoma).
  */
-function lock(lp: LP, o: { th0: number; th1: number; ph0: number; ph1: number; w: number; t?: number; lift?: number; bulge?: number; col: string }) {
+function lock(lp: LP, o: { th0: number; th1: number; ph0: number; ph1: number; w: number; t?: number; lift?: number; bulge?: number; base?: number; col: string }) {
   const NS = 10, NW = 6;
   const center = (s: number) => {
     const { p, n } = headAt(lerp(o.th0, o.th1, s) * DEG, lerp(o.ph0, o.ph1, s) * DEG);
-    const off = 0.022 + (o.bulge ?? 0.04) * Math.sin(Math.PI * s) + (o.lift ?? 0.06) * s * s;
+    const off = (o.base ?? 0.022) + (o.bulge ?? 0.04) * Math.sin(Math.PI * s) + (o.lift ?? 0.06) * s * s;
     return { c: p.addScaledVector(n, off), n };
   };
   const outer: THREE.Vector3[][] = [], inner: THREE.Vector3[][] = [];
@@ -170,60 +171,65 @@ function star(size: number, inner = 0.45): THREE.BufferGeometry {
 const rbox = (w: number, h: number, d: number, r: number, seg = 2) => new RoundedBoxGeometry(w, h, d, seg, r);
 
 // ── Parti ───────────────────────────────────────────────────────────────
+// Misure ricavate dalla vista frontale del concept: occhi, baffi e bocca nella
+// metà bassa della testa (fronte grande), barba come fascia lungo la mandibola.
 
-/** Linea dell'attaccatura dei capelli (φ in gradi) attorno alla testa. */
-const hairline = (th: number) => lerp(30, -26, smooth(0.25 * Math.PI, 0.8 * Math.PI, Math.abs(Math.atan2(Math.sin(th), Math.cos(th)))));
-/** Bordo superiore della barba (φ in gradi) in funzione di θ. */
-const beardTop = (thDeg: number) => lerp(-31, -1, smooth(18, 86, Math.abs(thDeg)));
+const EYE_Y = 0.682, EYE_X = 0.1;
+const absDeg = (th: number) => Math.abs(Math.atan2(Math.sin(th), Math.cos(th))) / DEG; // 0 davanti, 180 dietro
+/** Dove arrivano le punte dei capelli (φ in gradi): poco sopra gli occhi davanti, sopra le orecchie ai lati, alla nuca dietro. */
+const hairTip = (th: number) => { const a = absDeg(th); return a < 90 ? lerp(24, 2, smooth(30, 90, a)) : lerp(2, -34, smooth(90, 160, a)); };
+/** Bordo superiore della barba (φ in gradi): sotto la bocca davanti, sale lungo la mandibola fino all'orecchio. */
+const beardTop = (thDeg: number) => lerp(-53, -16, smooth(0, 96, Math.abs(thDeg)));
 
 function head(lp: LP) {
-  lp.add(new THREE.IcosahedronGeometry(1, 3).scale(R.x, R.y, R.z).translate(C.x, C.y, C.z), SKIN, { ...O, ao: 0.06 });
-  for (const s of [-1, 1]) lp.blob(s * (R.x - 0.005), C.y - 0.035, 0, 0.05, 0.058, 0.035, SKIN, { ...O, detail: 1 } as LPOpts); // orecchie
+  lp.add(new THREE.IcosahedronGeometry(1, 3).scale(R.x, R.y, R.z).translate(C.x, C.y, C.z), SKIN, { ...O, ao: 0.05 });
+  for (const s of [-1, 1]) lp.blob(s * (R.x - 0.004), 0.708, -0.012, 0.05, 0.064, 0.04, SKIN, { ...O, detail: 2 } as LPOpts); // orecchie grandi e tonde
   // bocca: sorrisetto un po' di lato, sotto i baffi
-  onSkin(lp, headFront(0.035, 0.636), 0.002, 0.15, (q) => q.add(new THREE.TorusGeometry(0.022, 0.0065, 3, 8, Math.PI).rotateZ(Math.PI), '#2a1a1c', O));
+  onSkin(lp, headFront(0.03, 0.575), 0.002, 0.15, (q) => q.add(new THREE.TorusGeometry(0.024, 0.007, 3, 8, Math.PI).rotateZ(Math.PI), '#2a1a1c', O));
 }
 
-/** Brillantini a stella sparsi sulla pelle (non su occhi, barba, baffi, capelli). */
+/** Brillantini a stella, grandi e radi, su tutto il viso (non su occhi, baffi, barba, capelli). */
 function glitter(lp: LP) {
-  const rnd = prng(5);
+  const rnd = prng(9);
   let placed = 0;
-  for (let tries = 0; placed < 40 && tries < 2000; tries++) {
-    const thD = (rnd() * 2 - 1) * 100, phD = -24 + rnd() * 62;
-    if (phD < beardTop(thD) + 5 || phD > hairline(thD * DEG) - 2) continue;
+  for (let tries = 0; placed < 26 && tries < 4000; tries++) {
+    const thD = (rnd() * 2 - 1) * 88, phD = -45 + rnd() * 55;
+    if (phD < beardTop(thD) + 6 || phD > hairTip(thD * DEG) - 4) continue;
     const at = headAt(thD * DEG, phD * DEG);
     const { p } = at;
-    if (p.z > 0.1 && Math.abs(Math.abs(p.x) - 0.092) < 0.078 && Math.abs(p.y - 0.727) < 0.09) continue; // occhi
-    if (p.z > 0.1 && Math.abs(p.x) < 0.2 && p.y < 0.69) continue; // baffi
-    onSkin(lp, at, 0.002, rnd() * Math.PI, (q) => q.add(star(0.011 + rnd() * 0.011), GLITTER[placed % GLITTER.length], { ...O, bucket: 'glow' }));
+    if (p.z > 0.08 && Math.abs(Math.abs(p.x) - EYE_X) < 0.078 && Math.abs(p.y - EYE_Y) < 0.09) continue; // occhi
+    if (p.z > 0.08 && Math.abs(p.x) < 0.23 && p.y > 0.56 && p.y < 0.67) continue; // baffi e bocca
+    onSkin(lp, at, 0.002, rnd() * Math.PI, (q) => q.add(star(0.013 + rnd() * 0.011), GLITTER[placed % 3 === 0 ? 1 + (placed % 4) : 0], { ...O, bucket: 'glow' }));
     placed++;
   }
 }
 
 function beard(lp: LP) {
-  sheet(lp, 22, 8,
-    (u, v) => [u * 104 * DEG, lerp(-76, beardTop(u * 104), v) * DEG],
+  // fascia lungo la mandibola, da un orecchio all'altro, più piena sotto il mento
+  sheet(lp, 24, 7,
+    (u, v) => [u * 100 * DEG, lerp(-82, beardTop(u * 100), v) * DEG],
     (u, v) => {
-      const edge = smooth(0, 0.14, 1 - Math.abs(u)) * smooth(0, 0.18, v) * smooth(0, 0.2, 1 - v);
-      const chin = (1 - Math.abs(u)) ** 2 * Math.exp(-(((v - 0.35) / 0.25) ** 2));
-      return edge * (0.034 + 0.026 * chin);
+      const edge = smooth(0, 0.12, 1 - Math.abs(u)) * smooth(0, 0.16, v) * smooth(0, 0.22, 1 - v);
+      const chin = (1 - Math.abs(u)) ** 2 * Math.exp(-(((v - 0.35) / 0.3) ** 2));
+      return edge * (0.06 + 0.035 * chin);
     }, BEARD, { vary: 0.05 });
   // treccia: tre perle che scendono sul petto, fermaglio color panna e punta
-  const { p, n } = headAt(0, -58 * DEG);
-  const top = p.addScaledVector(n, 0.055);
-  const end = new THREE.Vector3(0, 0.335, 0.205);
-  [0.052, 0.047, 0.042].forEach((r, i) => {
+  const { p, n } = headAt(0, -64 * DEG);
+  const top = p.addScaledVector(n, 0.045);
+  const end = new THREE.Vector3(0, 0.33, 0.235);
+  [0.052, 0.048, 0.044].forEach((r, i) => {
     const q = top.clone().lerp(end, i / 2);
     lp.blob(q.x, q.y, q.z, r, r * 0.92, r * 0.9, i % 2 ? BEARD : '#c94b71', { ...O, detail: 2 } as LPOpts);
   });
-  lp.cyl(end.x, end.y - 0.065, end.z, 0.024, 0.024, 0.032, 8, SCARF, O);
-  lp.blob(end.x, end.y - 0.082, end.z, 0.018, 0.022, 0.018, BEARD, { ...O, detail: 1 } as LPOpts);
+  lp.cyl(end.x, end.y - 0.07, end.z, 0.026, 0.026, 0.034, 8, SCARF, O);
+  lp.blob(end.x, end.y - 0.088, end.z, 0.019, 0.024, 0.019, BEARD, { ...O, detail: 1 } as LPOpts);
 }
 
 function moustache(lp: LP) {
-  // dal centro sotto il naso verso l'esterno, poi un ricciolo all'insù accanto all'occhio
+  // grosso manubrio: dal centro sotto il naso fin oltre gli occhi, poi un ricciolo all'insù
   const path: Array<[number, number, number]> = [
-    [0.004, 0.668, 0.026], [0.045, 0.66, 0.024], [0.09, 0.652, 0.02], [0.135, 0.655, 0.015], [0.168, 0.674, 0.012],
-    [0.18, 0.702, 0.0105], [0.166, 0.722, 0.0095], [0.146, 0.714, 0.0088], [0.149, 0.696, 0.008],
+    [0.004, 0.626, 0.022], [0.06, 0.617, 0.02], [0.12, 0.612, 0.016], [0.168, 0.622, 0.013], [0.196, 0.646, 0.011],
+    [0.2, 0.674, 0.0095], [0.182, 0.689, 0.0088], [0.165, 0.677, 0.008], [0.172, 0.660, 0.0075],
   ];
   for (const s of [-1, 1]) {
     const pts = path.map(([x, y, r]) => { const at = headFront(s * x, y); return at.p.addScaledVector(at.n, r * 0.85); });
@@ -231,76 +237,76 @@ function moustache(lp: LP) {
   }
 }
 
+/**
+ * Capelli: massa tonda e compatta fatta di tante ciocche corte a punta,
+ * sovrapposte a scaglie (ogni fila copre la radice di quella sotto), più
+ * qualche ciuffetto dritto in cima.
+ */
 function hair(lp: LP) {
   const rnd = prng(31);
   const tone = (k: number) => `#${new THREE.Color(HAIR).offsetHSL(0, 0, k).getHexString()}`;
-  // calotta sotto le ciocche (più scura): niente pelle tra una ciocca e l'altra
-  sheet(lp, 30, 8, (u, v) => { const th = Math.PI + u * Math.PI; return [th, lerp(hairline(th), 89, v) * DEG]; }, () => 0.018, tone(-0.06));
-  // strato interno sulla nuca (riempie tra le ciocche esterne)
-  for (let k = 0; k < 9; k++) {
-    const th0 = 116 + k * 16;
-    lock(lp, { th0, th1: th0 + (rnd() - 0.5) * 8, ph0: 64, ph1: -16 - rnd() * 6, w: 0.17, t: 0.04, lift: 0.04, col: tone(-0.06) });
-  }
-  // ciocche esterne della nuca: grosse, a punta, che si aprono verso il basso
-  for (let k = 0; k < 10; k++) {
-    const th0 = 106 + k * (148 / 9);
-    lock(lp, { th0, th1: th0 + (k % 2 ? 9 : -9), ph0: 76, ph1: -22 - rnd() * 12, w: 0.2, lift: 0.1 + rnd() * 0.04, bulge: 0.05, col: tone([0, 0.045, -0.035][k % 3]) });
-  }
-  // lati, sopra le orecchie
-  for (const s of [-1, 1]) [[58, 22], [78, 14], [96, 2]].forEach(([th, ph1], k) => {
-    lock(lp, { th0: s * th, th1: s * (th + 10), ph0: 74, ph1: ph1 - rnd() * 5, w: 0.17, lift: 0.06, col: tone([0.02, -0.02, 0.01][k]) });
+  sheet(lp, 30, 8, (u, v) => { const th = Math.PI + u * Math.PI; return [th, lerp(hairTip(th) + 6, 89, v) * DEG]; }, () => 0.02, tone(-0.07));
+  const back = (th: number) => smooth(80, 160, absDeg(th * DEG));
+  const rows = [
+    { n: 15, root: 50, tip: (th: number) => hairTip(th * DEG), base: 0.022, w: 0.15, t: 0.036 },
+    { n: 12, root: 66, tip: (th: number) => lerp(40, 8, back(th)), base: 0.032, w: 0.16, t: 0.036 },
+    { n: 9, root: 80, tip: (th: number) => lerp(56, 36, back(th)), base: 0.042, w: 0.17, t: 0.036 },
+    { n: 6, root: 89, tip: () => 70, base: 0.05, w: 0.16, t: 0.034 },
+  ];
+  rows.forEach((row, r) => {
+    for (let k = 0; k < row.n; k++) {
+      const th0 = (k + (r % 2) * 0.5) * (360 / row.n) + (rnd() - 0.5) * 8;
+      lock(lp, {
+        th0, th1: th0 + 6 + (rnd() - 0.5) * 10, ph0: row.root, ph1: row.tip(th0) - rnd() * 5,
+        w: row.w * (0.9 + rnd() * 0.2), t: row.t, base: row.base, lift: 0.02 + rnd() * 0.02, bulge: 0.012,
+        col: tone([0.02, -0.02, 0.035, 0, -0.035][(k + r) % 5]),
+      });
+    }
   });
-  // frangia spettinata a ciocche grosse, appena portata di lato
-  for (let k = 0; k < 5; k++) {
-    const th0 = -46 + k * 23;
-    lock(lp, { th0, th1: th0 + 14, ph0: 84, ph1: 20 + rnd() * 10, w: 0.21, t: 0.045, lift: 0.06, bulge: 0.045, col: tone([0.04, -0.01, 0.025, -0.03, 0.02][k]) });
-  }
-  // ciuffi ribelli in cima
-  [[-14, 106, 0.12], [14, 114, 0.14], [168, 98, 0.1]].forEach(([th, ph1, lift], k) => {
-    lock(lp, { th0: th, th1: th + 6, ph0: 74, ph1, w: 0.13, t: 0.04, lift, bulge: 0.03, col: tone(k % 2 ? 0.04 : 0.01) });
+  // ciuffetti dritti in cima
+  [[-20, 104], [10, 110], [35, 100], [190, 102]].forEach(([th, ph1], k) => {
+    lock(lp, { th0: th, th1: th + 4, ph0: 82, ph1, w: 0.085, t: 0.032, base: 0.055, lift: 0.06 + k * 0.01, bulge: 0.01, col: tone(k % 2 ? 0.04 : 0.015) });
   });
 }
 
 function body(lp: LP) {
-  // giacca morbida con cappuccio, cintura scura, tasche
-  lp.add(rbox(0.41, 0.28, 0.31, 0.085).translate(0, 0.335, 0), JACKET, { ...O, ao: 0.12 });
-  lp.add(rbox(0.42, 0.048, 0.32, 0.022, 1).translate(0, 0.215, 0), DARK, O);
-  for (const s of [-1, 1]) lp.add(rbox(0.085, 0.014, 0.01, 0.004, 1).translate(s * 0.115, 0.27, 0.157), DARK, O);
-  lp.blob(0, 0.475, -0.12, 0.17, 0.07, 0.085, '#536c30', { ...O, detail: 2 } as LPOpts); // cappuccio
-  lp.add(new THREE.TorusGeometry(0.145, 0.04, 6, 14).rotateX(Math.PI / 2).translate(0, 0.468, 0), '#566f32', O); // colletto
+  // giacca morbida e paffuta con cappuccio, cintura scura, tasche
+  lp.add(rbox(0.47, 0.31, 0.35, 0.12, 3).translate(0, 0.33, 0), JACKET, { ...O, ao: 0.14 });
+  lp.add(rbox(0.48, 0.046, 0.36, 0.022, 1).translate(0, 0.2, 0), DARK, O);
+  for (const s of [-1, 1]) lp.add(rbox(0.09, 0.014, 0.01, 0.004, 1).translate(s * 0.12, 0.262, 0.176), DARK, O);
+  lp.blob(0, 0.47, -0.13, 0.19, 0.08, 0.1, '#536c30', { ...O, detail: 2 } as LPOpts); // cappuccio
+  lp.add(new THREE.TorusGeometry(0.16, 0.046, 6, 16).rotateX(Math.PI / 2).translate(0, 0.47, 0), '#566f32', O); // colletto
   // sciarpa color panna a righe
-  lp.add(new THREE.TorusGeometry(0.128, 0.042, 6, 14).rotateX(Math.PI / 2).translate(0, 0.49, 0.005), SCARF, O);
-  lp.push([-0.075, 0.46, 0.17], 0, 0.08, 0.06);
-  lp.add(rbox(0.078, 0.16, 0.026, 0.01, 1).translate(0, -0.08, 0), SCARF, O);
-  for (const y of [-0.04, -0.085, -0.13]) lp.add(new THREE.BoxGeometry(0.08, 0.016, 0.006).translate(0, y, 0.014), SCARF_STRIPE, O);
+  lp.add(new THREE.TorusGeometry(0.14, 0.045, 6, 16).rotateX(Math.PI / 2).translate(0, 0.485, 0.005), SCARF, O);
+  lp.push([-0.085, 0.455, 0.19], 0, 0.1, 0.06);
+  lp.add(rbox(0.085, 0.17, 0.028, 0.012, 1).translate(0, -0.085, 0), SCARF, O);
+  for (const y of [-0.045, -0.09, -0.135]) lp.add(new THREE.BoxGeometry(0.087, 0.017, 0.006).translate(0, y, 0.015), SCARF_STRIPE, O);
   lp.pop();
-  // gambe corte e stivali con suola scura
+  // gambe cortissime e stivaloni con suola spessa
   for (const s of [-1, 1]) {
-    lp.cyl(s * 0.082, 0.07, 0, 0.064, 0.066, 0.15, 10, PANTS, { ...O, ao: 0.1 });
-    lp.add(rbox(0.135, 0.09, 0.2, 0.038).translate(s * 0.082, 0.065, 0.028), BOOT, O);
-    lp.add(rbox(0.142, 0.032, 0.21, 0.014, 1).translate(s * 0.082, 0.016, 0.03), SOLE, O);
+    lp.cyl(s * 0.09, 0.075, 0, 0.072, 0.074, 0.12, 10, PANTS, { ...O, ao: 0.1 });
+    lp.add(rbox(0.16, 0.095, 0.23, 0.045).translate(s * 0.09, 0.075, 0.03), BOOT, O);
+    lp.add(rbox(0.17, 0.036, 0.24, 0.016, 1).translate(s * 0.09, 0.018, 0.035), SOLE, O);
   }
 }
 
 function arm(lp: LP, s: number) {
-  lp.push([s * 0.205, 0.43, 0], 0, 0, s * 0.24);
-  lp.blob(0, 0, 0, 0.068, 0.068, 0.068, JACKET, { ...O, detail: 2 } as LPOpts);
-  lp.add(new THREE.CapsuleGeometry(0.06, 0.11, 4, 10).translate(0, -0.085, 0), JACKET, { ...O, ao: 0.08 });
-  lp.cyl(0, -0.19, 0, 0.066, 0.066, 0.04, 10, DARK, O); // polsino
-  lp.blob(0, -0.235, 0.005, 0.062, 0.062, 0.062, SKIN, { ...O, detail: 2 } as LPOpts); // manina
+  lp.push([s * 0.235, 0.43, 0], 0, 0, s * 0.2);
+  lp.blob(0, 0, 0, 0.078, 0.078, 0.078, JACKET, { ...O, detail: 2 } as LPOpts);
+  lp.add(new THREE.CapsuleGeometry(0.068, 0.1, 4, 10).translate(0, -0.08, 0), JACKET, { ...O, ao: 0.08 });
+  lp.cyl(0, -0.185, 0, 0.074, 0.074, 0.042, 10, DARK, O); // polsino
+  lp.blob(0, -0.235, 0.008, 0.072, 0.07, 0.07, SKIN, { ...O, detail: 2 } as LPOpts); // manona
   lp.pop();
 }
 
-/** Lanterna appesa alla manina (al posto della borsa del concept). */
+/** Lanterna appesa alla manona (al posto della borsa del concept). */
 function lantern(lp: LP, x: number) {
-  const y = 0.215, z = 0.01;
+  const y = 0.2, z = 0.01;
   lp.add(new THREE.TorusGeometry(0.036, 0.008, 4, 12, Math.PI).translate(x, y - 0.035, z), DARK, O); // manico ad arco
   const by = y - 0.125; // centro del vetro
   lp.add(new THREE.ConeGeometry(0.075, 0.05, 4).rotateY(Math.PI / 4).translate(x, by + 0.09, z), DARK, O); // tettuccio
   lp.add(rbox(0.11, 0.022, 0.11, 0.006, 1).translate(x, by + 0.062, z), DARK, O);
   lp.add(rbox(0.118, 0.026, 0.118, 0.007, 1).translate(x, by - 0.062, z), DARK, O);
-  lp.add(new THREE.CylinderGeometry(0.03, 0.04, 0.02, 4).rotateY(Math.PI / 4).translate(x, by - 0.083, z), DARK, O); // piedino
-  // telaio: montanti agli spigoli e una croce su ogni faccia
   for (const [dx, dz] of [[-1, -1], [1, -1], [-1, 1], [1, 1]]) lp.add(new THREE.BoxGeometry(0.016, 0.11, 0.016).translate(x + dx * 0.046, by, z + dz * 0.046), DARK, O);
   for (const a of [0, Math.PI / 2, Math.PI, -Math.PI / 2]) {
     lp.push([x, by, z], a);
@@ -309,23 +315,23 @@ function lantern(lp: LP, x: number) {
     lp.pop();
   }
   lp.add(new THREE.BoxGeometry(0.084, 0.1, 0.084).translate(x, by, z), '#ffb24a', { ...O, bucket: 'glow' }); // vetro acceso
-  lp.blob(x, by - 0.01, z, 0.016, 0.024, 0.016, '#fff1c4', { ...O, bucket: 'glow' }); // fiammella
+  lp.blob(x, by - 0.01, z, 0.016, 0.024, 0.016, '#fff1c4', { ...O, bucket: 'glow' });
   lp.light(x, by, z, '#ffb24a', 0.8, 1.6, 0.1, 0.6);
 }
 
-/** Zolla del concept: terra spessa, prato, funghi a pois, fiorellini, sasso. */
+/** Zolla del concept: piccola, terra spessa, prato scuro, funghi a pois, fiorellini, sasso. */
 function diorama(lp: LP) {
   const r = lp.rng;
-  lp.cyl(0, -0.15, 0, 0.66, 0.62, 0.13, 14, '#6a4528', { jitter: 0.012, vary: 0.08, ao: 0.25 });
-  lp.cyl(0, -0.03, 0, 0.675, 0.67, 0.035, 14, '#5f8a3a', { jitter: 0.008, vary: 0.08, ao: 0 });
+  lp.cyl(0, -0.18, 0, 0.5, 0.46, 0.15, 14, '#5e3d24', { jitter: 0.012, vary: 0.08, ao: 0.25 });
+  lp.cyl(0, -0.035, 0, 0.51, 0.505, 0.04, 14, '#4e7b34', { jitter: 0.008, vary: 0.08, ao: 0 });
   const ring = (a: number, d0: number, d1: number): [number, number] => { const d = r.range(d0, d1); return [Math.cos(a) * d, Math.sin(a) * d]; };
-  for (let i = 0; i < 14; i++) { const [x, z] = ring((i / 14) * Math.PI * 2 + r.range(-0.2, 0.2), 0.3, 0.6); grassTuft(lp, x, z, 0.65 + r.next() * 0.35, ['#5f8a3a', '#6f9a44', '#4f7a33', '#7aa64a']); }
-  mushroom(lp, -0.42, 0.18, 0.13, '#c9332e', false, 0.075);
-  mushroom(lp, 0.43, 0.12, 0.11, '#c9332e', false, 0.065);
-  mushroom(lp, -0.22, 0.42, 0.06, '#a77bc4', false, 0.035);
-  for (const [x, z] of [[0.3, 0.38], [0.36, 0.28], [-0.5, -0.05]]) flower(lp, x, z, '#ec9fbf', 0.06 + r.next() * 0.04);
-  lp.blob(0.2, 0.02, -0.4, 0.09, 0.05, 0.07, '#8d8f8c', { jitter: 0.01, vary: 0.1, ao: 0 });
-  lp.blob(-0.05, 0.005, 0.5, 0.07, 0.03, 0.05, '#9a9c98', { jitter: 0.01, vary: 0.1, ao: 0 });
+  for (let i = 0; i < 12; i++) { const [x, z] = ring((i / 12) * Math.PI * 2 + r.range(-0.2, 0.2), 0.3, 0.46); grassTuft(lp, x, z, 0.55 + r.next() * 0.3, ['#4e7b34', '#5d8c3c', '#436b2d', '#6a9a45']); }
+  mushroom(lp, -0.36, 0.2, 0.11, '#c9332e', false, 0.062);
+  mushroom(lp, 0.33, 0.2, 0.09, '#c9332e', false, 0.055);
+  mushroom(lp, -0.2, 0.36, 0.05, '#a77bc4', false, 0.03);
+  for (const [x, z] of [[0.22, 0.35], [0.3, 0.27]]) flower(lp, x, z, '#ec9fbf', 0.05 + r.next() * 0.03);
+  lp.blob(0.16, 0.02, -0.33, 0.075, 0.045, 0.06, '#8d8f8c', { jitter: 0.01, vary: 0.1, ao: 0 });
+  lp.blob(0.02, 0.005, 0.42, 0.06, 0.028, 0.045, '#9a9c98', { jitter: 0.01, vary: 0.1, ao: 0 });
 }
 
 function model(build: (lp: LP) => void, name: string): CachedModel {
@@ -341,15 +347,15 @@ function eyes(): THREE.Group {
   const mat = new THREE.MeshStandardMaterial({ color: EYE, roughness: 0.18, metalness: 0.05, flatShading: true });
   const shine = new THREE.MeshBasicMaterial({ color: '#ffffff' });
   for (const s of [-1, 1]) {
-    const { p, n } = headFront(s * 0.092, 0.727);
+    const { p, n } = headFront(s * EYE_X, EYE_Y);
     const e = new THREE.Group();
     e.position.copy(p.addScaledVector(n, 0.004));
     e.rotation.set(-Math.asin(n.y), Math.atan2(n.x, n.z), 0, 'YXZ');
-    const ball = new THREE.Mesh(new THREE.IcosahedronGeometry(1, 2).scale(0.052, 0.064, 0.022), mat);
+    const ball = new THREE.Mesh(new THREE.IcosahedronGeometry(1, 2).scale(0.054, 0.068, 0.022), mat);
     ball.castShadow = true;
     e.add(ball);
-    const st = new THREE.Mesh(star(0.017, 0.42), shine); st.position.set(-0.013, 0.018, 0.021); e.add(st);
-    const dot = new THREE.Mesh(new THREE.CircleGeometry(0.0065, 8), shine); dot.position.set(0.016, -0.022, 0.02); e.add(dot);
+    const st = new THREE.Mesh(star(0.02, 0.42), shine); st.position.set(-0.004, 0.016, 0.021); e.add(st);
+    const dot = new THREE.Mesh(new THREE.CircleGeometry(0.006, 8), shine); dot.position.set(0.018, -0.024, 0.02); e.add(dot);
     g.add(e);
   }
   return g;
@@ -360,7 +366,7 @@ export interface CustodeV2 { root: THREE.Group; diorama: THREE.Group; lights: Ar
 export function buildCustodeV2(): CustodeV2 {
   const char = model((lp) => {
     head(lp); glitter(lp); beard(lp); moustache(lp); hair(lp); body(lp); arm(lp, -1); arm(lp, 1);
-    lantern(lp, -0.265);
+    lantern(lp, -0.28);
   }, 'proto:custode-v2');
   const root = new THREE.Group();
   root.add(instantiate(char, { castShadow: true }));

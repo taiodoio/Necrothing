@@ -63,7 +63,7 @@ scene.add(diorama);
 const lanternLights = (attuale ? [] : lights).map((l) => { const pl = new THREE.PointLight(l.color, 0.5, 1.2, 2); pl.position.set(...l.pos); root.add(pl); return pl; });
 
 // ombra a terra per le viste senza zolla
-const floor = new THREE.Mesh(new THREE.CircleGeometry(0.7, 32).rotateX(-Math.PI / 2), new THREE.ShadowMaterial({ opacity: 0.32 }));
+const floor = new THREE.Mesh(new THREE.CircleGeometry(0.6, 32).rotateX(-Math.PI / 2), new THREE.ShadowMaterial({ opacity: 0.32 }));
 floor.receiveShadow = true;
 scene.add(floor);
 
@@ -73,7 +73,7 @@ const panels: Panel[] = [
   { x: 40, y: 545, w: 370, h: 460, yaw: Math.PI },           // retro
   { x: 1038, y: 20, w: 370, h: 470, yaw: -Math.PI / 2 },     // destra (lato destro del personaggio)
   { x: 1038, y: 545, w: 370, h: 460, yaw: Math.PI / 2 },     // sinistra
-  { x: 420, y: 10, w: 608, h: 1010, yaw: 0.52, hero: true }, // 3/4 sulla zolla
+  { x: 420, y: 10, w: 608, h: 1010, yaw: 0.42, hero: true }, // 3/4 sulla zolla
 ];
 
 const camera = new THREE.PerspectiveCamera(22, 1, 0.1, 50);
@@ -85,8 +85,8 @@ for (const p of panels) {
   camera.aspect = p.w / p.h;
   if (p.hero) {
     camera.fov = 26;
-    camera.position.set(0.18, 1.3, 3.65);
-    camera.lookAt(0, 0.42, 0);
+    camera.position.set(0.1, 1.15, 3.4);
+    camera.lookAt(0, 0.46, 0);
   } else {
     camera.fov = 22;
     camera.position.set(0, 0.8, 3.55);

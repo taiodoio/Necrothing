@@ -16,6 +16,21 @@ Ho costruito un **prototipo separato**, fuori dal gioco, per valutarne la fattib
 ![Prototipo v2](../screenshots/proto/custode-v2.png)
 ![Custode attuale, stessa tavola](../screenshots/proto/custode-attuale.png)
 
+## Seconda versione del prototipo
+
+La prima versione era troppo lontana dal concept. Ho rifatto il modello misurando la vista frontale del concept:
+- **Proporzioni:** testa e capelli occupano ~60% dell'altezza, il corpo è basso e paffuto con gambe cortissime, e la testa poggia sopra il colletto.
+- **Volto:** occhi, baffi e bocca stanno nella metà bassa della testa, con una fronte grande.
+- **Capelli:** massa tonda a scaglie di ciocche corte a punta, al posto delle ciocche lunghe e pendenti.
+- **Barba:** fascia lungo la mandibola, non più una maschera sul viso.
+- **Dettagli:** baffi più larghi, brillantini più grandi e radi, orecchie grandi e tonde, manone, stivaloni con suola spessa.
+- **Zolla:** più piccola e più scura.
+
+Restano differenze con il concept:
+- l'ombreggiatura morbida da render (il gioco usa facce piatte);
+- la pelle, un po' più spenta per via della luce del gioco;
+- la varietà delle ciocche, più regolare che nel disegno.
+
 ## Verdetto
 
 **Fattibile con la pipeline attuale.** Il prototipo usa lo stesso kit low-poly del gioco: `LP`, materiali a colori per vertice, bucket `glow`, `instantiate`. Usa le stesse primitive, più `RoundedBoxGeometry` di three (già nelle dipendenze). Non servono asset esterni, modellazione in un software 3D né nuove librerie.
@@ -27,10 +42,10 @@ Il lavoro vero è **rifare le opzioni di personalizzazione** nel nuovo stile, ci
 | Elemento | Oggi | Stile v2 (prototipo) | Impatto |
 |---|---|---|---|
 | Testa | box arrotondato | ellissoide più tondo e grande | Facile: anzi semplifica, perché la superficie è analitica e non serve la ricerca per bisezione. |
-| Capelli | veli aderenti e ciocche sottili | ciocche "a lente" chiuse e gonfie che escono dalla sagoma, a strati (nuca interna/esterna, lati, frangia, ciuffi) | Medio: 8 tagli da rifare. Con il cappello servono varianti "schiacciate". |
+| Capelli | veli aderenti e ciocche sottili | massa tonda e compatta di tante ciocche corte a punta sovrapposte a scaglie (4 file più ciuffetti in cima) | Medio: 8 tagli da rifare. Con il cappello servono varianti "schiacciate". |
 | Occhi | iride con riflessi bianchi | grande ovale lucido con riflesso a stella | Facile: un materiale lucido a parte (+1 draw call). |
 | Brillantini | stelline a 4 punte e scintille | stelle a 5 punte pastello più grandi | Facile: quasi già pronto. |
-| Barba e baffi | velo aderente, manubrio sottile | maschera fino alle orecchie, manubrio grosso con ricciolo | Facile: stessa tecnica, sulla nuova testa. |
+| Barba e baffi | velo aderente, manubrio sottile | fascia lungo la mandibola da orecchio a orecchio (la bocca resta libera), manubrio largo con il ricciolo accanto agli occhi | Facile: stessa tecnica, sulla nuova testa. |
 | Corpo e vestiti | busto squadrato, braccia sottili | giacca morbida con cappuccio e cintura, braccia a capsula, stivali tondi | Medio: 4 vestiti da rifare. |
 | Rig e animazioni | parti separate con perni | uguale, con perni da ricalibrare (testa più pesante, braccia corte) | Basso: verificare camminata, lavoro, preghiera, seduto. |
 
@@ -40,7 +55,7 @@ Il lavoro vero è **rifare le opzioni di personalizzazione** nel nuovo stile, ci
 |---|---|---|---|
 | Custode attuale, look base | 7.450 | 7 | — |
 | Custode attuale, look ricco (ricci lunghi, treccia, manubrio, monocolo, brillantini) | 17.370 | 9 | ~126 ms |
-| Prototipo v2 (completo, con lanterna) | 15.600 | 8 | ~38 ms |
+| Prototipo v2 (completo, con lanterna) | 19.100 | 8 | ~40 ms |
 
 Il v2 costa più o meno quanto un look ricco di oggi, ed è più veloce da generare perché la testa è un ellissoide. Diviso nelle parti del rig resterebbe a circa 8–10 draw call. Per il solo Custode non ci sono problemi di prestazioni.
 

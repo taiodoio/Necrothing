@@ -31,8 +31,8 @@ key.position.set(-1.6, 2.6, 2.4);
 key.castShadow = true;
 key.shadow.mapSize.set(2048, 2048);
 Object.assign(key.shadow.camera, { left: -1, right: 1, top: 1.4, bottom: -0.4, near: 0.1, far: 8 });
-key.shadow.bias = -0.0008;
-key.shadow.normalBias = 0.01;
+key.shadow.bias = -0.0015;
+key.shadow.normalBias = 0.03; // niente righe d'ombra sulle superfici vicine (capelli)
 scene.add(key);
 const rim = new THREE.DirectionalLight('#bcd2ff', 1.35);
 rim.position.set(1.9, 1.7, -2.3);

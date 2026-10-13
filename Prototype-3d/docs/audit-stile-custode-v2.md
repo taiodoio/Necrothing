@@ -91,7 +91,7 @@ Dodicesima passata:
 - **Barba lunga:** lo stesso schema vale per una barba lunga senza treccia; basta aumentare `BEARD_DROP`.
 
 Tredicesima passata:
-- **Barba:** sotto la mandibola cresce anche in avanti, quindi la parte bassa vista di lato è più spessa.
+- **Barba:** stessa forma a U della passata precedente, con più spessore solo davanti, sotto il mento, che cresce in avanti.
 - **Treccia:** di conseguenza si attacca un po' più avanti.
 - **Bocca:** centrata.
 

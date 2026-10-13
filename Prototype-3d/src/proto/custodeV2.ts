@@ -247,13 +247,15 @@ function glitter(lp: LP) {
  */
 /** Bordo inferiore della barba (φ, gradi): sotto il mento, ma non così in basso da finire dietro il colletto. */
 const BEARD_LOW = -72;
-const BEARD_DROP = 0.13;
+const BEARD_DROP = 0.1;
 function beardOffset(u: number, v: number, n: THREE.Vector3): { t: number; dir: THREE.Vector3 } {
   const side = smooth(0, 0.1, 1 - Math.abs(u));
   const jaw = smooth(0.8, 0.35, Math.abs(u)); // largo sotto la mandibola, sfuma prima delle guance
   const low = Math.pow(1 - v, 2.2); // solo la parte bassa si allunga: le guance restano sottili
-  const t = side * smooth(0, 0.06, 1 - v) * (0.008 + 0.006 * (1 - Math.abs(u)) + BEARD_DROP * low * jaw);
-  const dir = n.clone().add(new THREE.Vector3(0, -0.55, 0.8).multiplyScalar(low * jaw)).normalize(); // sotto la mandibola cresce anche in avanti
+  // sotto il mento, davanti, un po' di spessore in più che cresce in avanti
+  const front = smooth(0.55, 0, Math.abs(u)) * low;
+  const t = side * smooth(0, 0.06, 1 - v) * (0.008 + 0.006 * (1 - Math.abs(u)) + BEARD_DROP * low * jaw + 0.035 * front);
+  const dir = n.clone().add(new THREE.Vector3(0, -0.7, 0.45).multiplyScalar(low * jaw)).add(new THREE.Vector3(0, 0, 0.6).multiplyScalar(front)).normalize();
   return { t, dir };
 }
 

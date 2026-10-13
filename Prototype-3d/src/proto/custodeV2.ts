@@ -221,7 +221,7 @@ function head(lp: LP) {
   lp.add(headGeo(), SKIN, { ...O, ao: 0.05 });
   for (const s of [-1, 1]) lp.blob(s * (R.x - 0.004), 0.72, -0.012, 0.05, 0.064, 0.04, SKIN, { ...O, detail: 2 } as LPOpts); // orecchie grandi e tonde
   // bocca: sorrisetto un po' di lato, sotto i baffi
-  onSkin(lp, headFront(0, 0.603), 0.002, 0, (q) => q.add(new THREE.TorusGeometry(0.028, 0.008, 3, 8, Math.PI).rotateZ(Math.PI), '#2a1a1c', O));
+  onSkin(lp, headFront(0, 0.613), 0.002, 0, (q) => q.add(new THREE.TorusGeometry(0.022, 0.007, 3, 8, Math.PI).rotateZ(Math.PI), '#2a1a1c', O));
 }
 
 /** Brillantini a stella, grandi e radi, su tutto il viso (non su occhi, baffi, barba, capelli). */
@@ -286,7 +286,7 @@ function beardSlices(): BeardSlice[] {
     const [len, skew, tone] = lens[k];
     const c = 0.5 + skew, tooth = w < c ? w / c : (1 - w) / (1 - c);
     // bordo superiore: sotto la bocca al centro, risale lungo la guancia fino alla basetta
-    const yTop = au < 0.78 ? lerp(0.588, 0.63, au / 0.78) : lerp(0.63, 0.8, smooth(0.78, 1, au)); // lungo la mandibola, poi su come basetta
+    const yTop = au < 0.78 ? lerp(0.574, 0.63, au / 0.78) : lerp(0.63, 0.8, smooth(0.78, 1, au)); // lungo la mandibola, poi su come basetta
     // orlo: diagonale da sotto l'orecchio al mento, con la punta di ogni ciocca
     // lineare nella profondità (cos θ): di profilo l'orlo è una diagonale dritta dall'orecchio al mento
     // orlo: la barba continua anche sui lati, sotto la linea della mandibola,

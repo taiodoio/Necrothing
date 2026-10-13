@@ -256,7 +256,7 @@ function beard(lp: LP) {
       const side = smooth(0, 0.12, 1 - Math.abs(u));
       const center = 0.35 + 0.65 * Math.pow(1 - Math.abs(u), 1.4);
       const low = Math.pow(1 - v, 2);
-      const t = side * smooth(0, 0.06, 1 - v) * (0.018 + 0.012 * center + 0.075 * low * center); // fascia media ai lati, cuneo pieno al mento
+      const t = side * smooth(0, 0.06, 1 - v) * (0.008 + 0.014 * center + 0.075 * low * center); // sottile ai lati, cuneo pieno al mento
       // sotto il mento la massa va anche in avanti, non solo lungo la normale
       const dir = n.clone().add(new THREE.Vector3(0, -0.15, 0.55).multiplyScalar(low * center)).normalize();
       inner[i].push(p.clone());
@@ -280,13 +280,13 @@ function beard(lp: LP) {
 function braid(lp: LP) {
   const { p, n } = headAt(0, -84 * DEG);
   const dir = n.clone().add(new THREE.Vector3(0, -0.15, 0.55)).normalize();
-  const tip = p.addScaledVector(dir, 0.012 + 0.016 + 0.075 - 0.02); // appena dentro la punta della barba
-  const R0 = 0.036, STEPY = 0.052;
+  const tip = p.addScaledVector(dir, 0.008 + 0.014 + 0.075 - 0.03).add(new THREE.Vector3(0, 0.014, 0)); // metà dentro la punta della barba, metà fuori
+  const R0 = 0.036, STEPY = 0.05;
   const zMin = (y: number, r: number) => (jacketR(HEAD_T.y + HEAD_S * y) * 0.82 + r * HEAD_S * 0.9) / HEAD_S;
   let y = tip.y, z = tip.z;
   for (let i = 0; i < 3; i++) {
     const r = R0 - i * 0.0015;
-    z = Math.max(z - 0.004, zMin(y, r));
+    z = Math.max(z - 0.006, zMin(y, r * 0.6)); // scende dritta, appena appoggiata alla giacca
     lp.blob(0, y, z, r * 1.05, r * 0.95, r, i % 2 ? '#c94f75' : BEARD, { ...O, detail: 2 } as LPOpts);
     y -= STEPY;
   }
@@ -325,7 +325,7 @@ function moustache(lp: LP) {
 function hairLayer(lp: LP, o: { locks: number; hem: (thDeg: number) => number; depth: number; lift: number; thick: number; phase: number; swirl: number; seed: number; tone: (k: number) => string }) {
   const rnd = prng(o.seed);
   const jitter = Array.from({ length: o.locks }, () => [0.75 + rnd() * 0.5, (rnd() - 0.5) * 0.3, rnd()]); // lunghezza, asimmetria, tono
-  const NU = o.locks * 6, NV = 9;
+  const NU = o.locks * 4, NV = 6; // pochi segmenti: bastano per punta e rilievo di ogni ciocca
   const P: THREE.Vector3[][] = [], Q: THREE.Vector3[][] = [], Nn: THREE.Vector3[][] = [], lockOf: number[] = [];
   for (let i = 0; i <= NU; i++) {
     const u = i / NU, f = (u * o.locks + o.phase) % o.locks, k = Math.floor(f), w = f - k;

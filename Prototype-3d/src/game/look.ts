@@ -2,7 +2,10 @@
 // genere: si scelgono pelle (anche "brillantinata"), capelli e colore, occhi,
 // dettagli (occhiali, lentiggini, cerotto), barba e baffi, cappello, vestiti e colori.
 
-export type HairStyle = 'tufts' | 'bob' | 'long' | 'curly' | 'longcurly' | 'bun' | 'spiky' | 'none';
+export type HairStyle = 'tufts' | 'bob' | 'long' | 'curly' | 'longcurly' | 'bun' | 'spiky' | 'none'
+  | 'fringe' | 'fringeLong' | 'side' | 'sideLong' | 'wavy' | 'wavyLong' | 'buzz';
+/** Testa: umana, zucca intagliata, teschio, zombie. */
+export type HeadStyle = 'human' | 'pumpkin' | 'skull' | 'zombie';
 export type HatStyle = 'wide' | 'top' | 'beanie' | 'none';
 export type Outfit = 'coat' | 'cloak' | 'overalls' | 'sweater';
 export type Glasses = 'none' | 'round' | 'square' | 'monocle';
@@ -10,6 +13,8 @@ export type Beard = 'none' | 'short' | 'full' | 'braid';
 export type Mustache = 'none' | 'thin' | 'handlebar' | 'bushy';
 
 export interface CustodeLook {
+  /** Tipo di testa (in anteprima: non ancora nel selettore del gioco). */
+  head?: HeadStyle;
   skin: string;
   sparkle: boolean;
   hair: HairStyle;

@@ -1,0 +1,24 @@
+<!doctype html>
+<html lang="it">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Custode · capelli e teste (anteprima)</title>
+  <!-- Anteprima per la valutazione: NON fa parte del gioco né della build. -->
+  <style>
+    html, body { margin: 0; background: #1f2925; }
+    .tavola { position: relative; display: inline-block; background: radial-gradient(ellipse 70% 65% at 50% 45%, #2b3833, #1b2420 75%); }
+    canvas { display: block; position: relative; z-index: 1; }
+    .label { position: absolute; z-index: 2; font: 600 13px/1.1 system-ui, sans-serif; letter-spacing: 0.06em; color: #c9d1cc; transform: translate(-50%, 0); white-space: nowrap; text-align: center; }
+    .label small { display: block; font-weight: 400; color: #8fa199; letter-spacing: 0.04em; }
+    .label.small { font-size: 11px; transform: translate(-50%, 4px); white-space: normal; width: 112px; }
+    .gruppo { position: absolute; z-index: 2; font: 600 17px/1 Georgia, serif; color: #e8cf8c; letter-spacing: 0.04em; }
+    .tile { position: absolute; z-index: 0; border: 2px solid #4c4a3f; background: #141a18; box-sizing: border-box; }
+    .tile.sel { border-color: #c9a227; }
+  </style>
+</head>
+<body>
+  <div class="tavola"><div id="etichette"></div></div>
+  <script type="module" src="./src/proto/hair.ts"></script>
+</body>
+</html>

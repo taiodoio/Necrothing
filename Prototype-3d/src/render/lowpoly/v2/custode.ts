@@ -13,7 +13,7 @@ import { instantiate, LOWPOLY_MATERIALS, type CachedModel } from '../../modelCac
 import { VOX } from '../../shape.ts';
 import { flower, grassTuft } from '../details.ts';
 import { mushroom } from '../nature.ts';
-import type { CustodeLook, HairStyle, HatStyle } from '../../../game/look.ts';
+import type { CustodeLook, HairStyle, HatStyle, HeadStyle } from '../../../game/look.ts';
 
 // ── Parti del rig ───────────────────────────────────────────────────────
 
@@ -46,15 +46,25 @@ const DARK = '#2c2a25';
 const BOOT = '#6c4830';
 const SOLE = '#2a221d';
 const shade = (c: string, k: number) => `#${new THREE.Color(c).offsetHSL(0, 0, k).getHexString()}`;
+/** Teste che non portano capelli, barba e baffi (la zucca ha il picciolo, il teschio è osso). */
+export const BALD_HEADS: HeadStyle[] = ['pumpkin', 'skull'];
+let HEAD: HeadStyle = 'human';
+const BONE = '#e2d9c3';
+const mix = (a: string, b: string, k: number) => `#${new THREE.Color(a).lerp(new THREE.Color(b), k).getHexString()}`;
 function applyLook(l: CustodeLook) {
   L = l;
-  SKIN = l.skin; HAIR = l.hairColor; BEARD = l.beardColor; EYE = l.eyes;
+  HEAD = l.head ?? 'human';
+  // lo zombie resta del colore scelto, ma verdognolo; il teschio è osso
+  SKIN = HEAD === 'zombie' ? mix(l.skin, '#9cc27a', 0.68) : HEAD === 'skull' ? BONE : l.skin;
+  if (BALD_HEADS.includes(HEAD)) L = { ...l, hair: 'none', beard: 'none', mustache: 'none', freckles: false, bandaid: false, sparkle: false };
+  HAIR = l.hairColor; BEARD = l.beardColor; EYE = l.eyes;
   JACKET = l.outfitColor; JACKET_D = shade(l.outfitColor, -0.05);
   PANTS = l.outfit === 'overalls' ? l.outfitColor : '#5a3c2a';
   SCARF = l.accentColor; SCARF_STRIPE = shade(l.accentColor, -0.18);
   BEARD_DROP = l.beard === 'short' ? 0.035 : 0.11;
-  HAIR_TIP = X.hair?.tip ?? HAIR_TIPS[l.hair === 'none' ? 'spiky' : l.hair];
-  HAIR_HANG = l.hair === 'bob' || l.hair === 'long' || l.hair === 'longcurly';
+  const tip = HAIR_TIPS[L.hair === 'none' ? 'spiky' : L.hair];
+  HAIR_TIP = X.hair ? (a) => X.hair!.tip(a) : tip;
+  HAIR_HANG = HANGING.includes(L.hair);
 }
 /**
  * Aggiunte per gli altri personaggi umani (stesso corpo e stessa testa del
@@ -65,6 +75,8 @@ export type EyeStyle = 'open' | 'sleepy' | 'closed' | 'zombie' | 'sockets';
 export interface V2Extra {
   /** Nome del modello (cache e semi). */
   name?: string;
+  /** Solo la forma (anteprime del selettore): niente occhi, bocca, guance, brillantini. */
+  bare?: boolean;
   eyes?: EyeStyle;
   mouth?: 'smile' | 'flat' | 'o' | 'stitched' | 'none';
   blush?: string;
@@ -284,18 +296,42 @@ const rbox = (w: number, h: number, d: number, r: number, seg = 2) => new Rounde
 
 let EYE_Y = 0.707, EYE_X = 0.1, EYE_S = 1;
 const absDeg = (th: number) => Math.abs(Math.atan2(Math.sin(th), Math.cos(th))) / DEG; // 0 davanti, 180 dietro
-/** Dove arrivano le punte dei capelli (φ in gradi): poco sopra gli occhi davanti, sopra le orecchie ai lati, alla nuca dietro. */
-const HAIR_TIPS: Record<Exclude<HairStyle, 'none'>, (a: number) => number> = {
+/**
+ * Dove arrivano le punte dei capelli (φ in gradi) per angolo dal davanti `a`
+ * (0 davanti, 180 dietro); `sd` è l'angolo con il segno (per i tagli
+ * asimmetrici, come il ciuffo di lato).
+ */
+const bump = (a: number, a0: number, a1: number, w = 5) => smooth(a0 - w, a0 + w, a) * smooth(a1 + w, a1 - w, a);
+/** Lunghi: davanti fino agli occhi, ai lati scendono subito oltre il mento, dietro fin sulle spalle. */
+const longTip = (front: number, side = -88, back = -95) => (a: number) => (a < 45 ? lerp(front + 6, front, smooth(0, 45, a)) : a < 72 ? lerp(front, side, smooth(45, 72, a)) : lerp(side, back, smooth(72, 140, a)));
+/** Ciuffo di lato: da una parte la frangia scende sulla fronte, dall'altra la riga lascia la fronte scoperta. */
+const sideFront = (sd: number) => (sd < 0 ? lerp(4, 10, smooth(-70, -20, sd)) : lerp(10, 34, smooth(0, 30, sd)));
+const HAIR_TIPS: Record<Exclude<HairStyle, 'none'>, (a: number, sd: number) => number> = {
   spiky: (a) => (a < 90 ? lerp(20, 0, smooth(30, 90, a)) : lerp(0, -32, smooth(90, 160, a))), // ai lati fin sopra l'orecchio, dietro alla nuca
-  tufts: (a) => (a < 90 ? lerp(24, 6, smooth(30, 90, a)) : lerp(6, -26, smooth(90, 160, a))),
+  // ciuffi: fronte scoperta (attaccatura alta), corti ai lati; i ciuffi salgono dalla cima
+  tufts: (a) => (a < 40 ? 42 : a < 90 ? lerp(42, 8, smooth(40, 90, a)) : lerp(8, -38, smooth(90, 160, a))),
   bob: (a) => (a < 50 ? lerp(14, 8, smooth(0, 50, a)) : lerp(8, -42, smooth(50, 105, a))), // caschetto: frangia dritta, copre le orecchie
-  // lunghi: ai lati scendono subito lungo la guancia (accanto all'occhio), dietro fin sulle spalle
-  long: (a) => (a < 45 ? lerp(18, 10, smooth(0, 45, a)) : a < 72 ? lerp(10, -50, smooth(45, 72, a)) : lerp(-50, -78, smooth(72, 130, a))),
-  curly: (a) => (a < 90 ? lerp(22, 4, smooth(30, 90, a)) : lerp(4, -30, smooth(90, 160, a))),
-  longcurly: (a) => (a < 45 ? lerp(22, 10, smooth(0, 45, a)) : a < 72 ? lerp(10, -48, smooth(45, 72, a)) : lerp(-48, -70, smooth(72, 130, a))),
-  bun: (a) => (a < 90 ? lerp(30, 8, smooth(30, 90, a)) : lerp(8, -22, smooth(90, 160, a))), // raccolti: fronte scoperta
+  long: longTip(10),
+  // ricci: scendono sotto le orecchie, dietro fino alla nuca
+  curly: (a) => (a < 40 ? lerp(22, 14, smooth(0, 40, a)) : a < 110 ? lerp(14, -40, smooth(40, 110, a)) : lerp(-40, -46, smooth(110, 170, a))),
+  longcurly: longTip(12, -84, -90),
+  // chignon: raccolti (fronte scoperta), sopra l'orecchio, basette davanti all'orecchio, nuca coperta
+  bun: (a) => (a < 60 ? lerp(32, 14, smooth(20, 60, a)) : a < 98 ? lerp(14, 4, smooth(60, 80, a)) : lerp(4, -44, smooth(98, 150, a))) - 34 * bump(a, 66, 82),
+  // frangia: dritta fino alle sopracciglia
+  fringe: (a) => (a < 50 ? -2 : a < 95 ? lerp(-2, -4, smooth(50, 95, a)) : lerp(-4, -40, smooth(95, 165, a))),
+  fringeLong: longTip(-2),
+  side: (a, sd) => (a < 95 ? lerp(sideFront(sd), 2, smooth(55, 95, a)) : lerp(2, -38, smooth(95, 165, a))),
+  sideLong: (a, sd) => (a < 72 ? lerp(sideFront(sd), -88, smooth(50, 72, a)) : lerp(-88, -95, smooth(72, 140, a))),
+  // mossi: come un caschetto lungo, a onde
+  wavy: (a) => (a < 45 ? lerp(16, 10, smooth(0, 45, a)) : lerp(10, -46, smooth(45, 105, a))),
+  wavyLong: longTip(12),
+  // rasati: un velo cortissimo che segue l'attaccatura
+  buzz: (a) => (a < 40 ? 30 : a < 95 ? lerp(30, 6, smooth(40, 95, a)) : lerp(6, -44, smooth(95, 165, a))),
 };
-let HAIR_TIP = HAIR_TIPS.spiky;
+/** Tagli che sotto l'equatore pendono (invece di rientrare sulla nuca); quelli lunghi ai lati seguono la guancia. */
+const HANGING: HairStyle[] = ['bob', 'long', 'longcurly', 'fringeLong', 'sideLong', 'wavy', 'wavyLong'];
+const LONG_SIDES: HairStyle[] = ['long', 'longcurly', 'fringeLong', 'sideLong', 'wavyLong'];
+let HAIR_TIP: (a: number, sd: number) => number = HAIR_TIPS.spiky;
 let HAIR_HANG = false;
 /**
  * Punto dei capelli: sopra l'equatore seguono la testa; per i tagli lunghi,
@@ -309,7 +345,7 @@ function hairPoint(th: number, phD: number) {
   const hang = { p: p.addScaledVector(h, 0.12 * dy).add(new THREE.Vector3(0, -dy, 0)), n: h };
   // capelli lunghi: ai lati restano aderenti alla guancia fino alla mandibola,
   // poi scendono dritti; dietro pendono come una tenda
-  const b = L.hair === 'long' || L.hair === 'longcurly' ? smooth(95, 145, absDeg(th)) : 1;
+  const b = LONG_SIDES.includes(L.hair) ? smooth(95, 145, absDeg(th)) : 1;
   if (b >= 1) return hang;
   const JAW = -55;
   const s = headAt(th, Math.max(phD, JAW) * DEG);
@@ -317,17 +353,61 @@ function hairPoint(th: number, phD: number) {
   const hug = { p: s.p.add(new THREE.Vector3(0, -drop, 0)), n: drop > 0 ? h : s.n };
   return { p: hug.p.lerp(hang.p, b), n: hug.n.clone().lerp(hang.n, b).normalize() };
 }
-const hairTip = (th: number) => HAIR_TIP(absDeg(th));
+const signedDeg = (th: number) => Math.atan2(Math.sin(th), Math.cos(th)) / DEG;
+const hairTip = (th: number) => HAIR_TIP(absDeg(th), signedDeg(th));
 /** Bordo superiore della barba (φ in gradi): sotto la bocca davanti, sale lungo la mandibola fino all'orecchio. */
 // bordo superiore: davanti subito sotto la bocca, sulle guance resta basso
 // (lungo la mandibola) e solo vicino all'orecchio sale come basetta fino ai capelli
 const beardTop = (thDeg: number) => { const a = Math.abs(thDeg); return a < 70 ? lerp(-53, -48, smooth(0, 70, a)) : lerp(-50, 6, smooth(70, 88, a)); };
 
+/** Zucca: più larga e schiacciata, a spicchi, con il picciolo; faccia intagliata che brilla. */
+function pumpkin(lp: LP) {
+  const g = new THREE.IcosahedronGeometry(1, 4);
+  const pos = g.attributes.position as THREE.BufferAttribute;
+  const v = new THREE.Vector3();
+  for (let i = 0; i < pos.count; i++) {
+    v.fromBufferAttribute(pos, i).normalize();
+    const p = surfaceAlong(v).sub(C);
+    const lon = Math.atan2(v.x, v.z), lat = Math.asin(THREE.MathUtils.clamp(v.y, -1, 1));
+    const rib = 1 - 0.055 * (0.5 - 0.5 * Math.cos(lon * 10)) * Math.pow(Math.cos(lat), 0.6); // solchi tra gli spicchi
+    p.multiply(new THREE.Vector3(1.07 * rib, 0.9 - 0.06 * Math.pow(Math.abs(v.y), 6), 1.05 * rib)); // un po' schiacciata, sommità e base rientranti
+    pos.setXYZ(i, C.x + p.x, C.y + p.y, C.z + p.z);
+  }
+  lp.add(g, '#e0832f', { ...O, ao: 0.08, vary: 0.05 });
+  if (hatPh() >= 89) { // picciolo (sotto un cappello non c'è posto)
+    const b = new THREE.Vector3(C.x, C.y + R.y * 0.84, C.z);
+    lp.add(taperTube([b, b.clone().add(new THREE.Vector3(0.015, 0.08, 0)), b.clone().add(new THREE.Vector3(0.06, 0.13, -0.02))], [0.045, 0.034, 0.024], 6), '#5a6a2c', O);
+    lp.blob(b.x - 0.05, b.y + 0.02, b.z + 0.02, 0.05, 0.012, 0.03, '#6f8a33', { ...O, detail: 1 } as LPOpts); // fogliolina
+  }
+  if (X.bare) return;
+  const carve = (x: number, y: number, geo: THREE.BufferGeometry) => onSkin(lp, headFront(x, y), 0.012, 0, (q) => {
+    q.add(geo.clone(), '#2a1206', O);
+    q.add(geo.clone().scale(0.62, 0.62, 1).translate(0, -0.003, 0.002), '#ffb54a', { ...O, bucket: 'glow' });
+  });
+  for (const s of [-1, 1]) carve(s * EYE_X * 1.05, EYE_Y + 0.01, new THREE.CircleGeometry(0.075, 3).rotateZ(Math.PI / 2));
+  carve(0, 0.665, new THREE.CircleGeometry(0.03, 3).rotateZ(Math.PI / 2));
+  const m = new THREE.Shape();
+  const pts: Array<[number, number]> = [[-0.13, 0.03], [-0.085, 0], [-0.05, 0.03], [-0.012, -0.004], [0.028, 0.03], [0.068, 0], [0.13, 0.03], [0.09, -0.045], [0, -0.068], [-0.09, -0.045]];
+  m.moveTo(...pts[0]); for (const p of pts.slice(1)) m.lineTo(...p); m.closePath();
+  carve(0, 0.6, new THREE.ShapeGeometry(m));
+}
+
 function head(lp: LP) {
+  if (HEAD === 'pumpkin') { pumpkin(lp); return; }
   lp.add(headGeo(), SKIN, { ...O, ao: 0.05 });
-  if (X.ears !== false) for (const s of [-1, 1]) lp.blob(s * (R.x - 0.004), 0.72, -0.012, 0.05, 0.064, 0.04, SKIN, { ...O, detail: 2 } as LPOpts); // orecchie grandi e tonde
-  // bocca: sorrisetto sotto i baffi
-  const mouth = X.mouth ?? 'smile', m = headFront(0, 0.613);
+  if (X.ears !== false && HEAD !== 'skull') for (const s of [-1, 1]) lp.blob(s * (R.x - 0.004), 0.72, -0.012, 0.05, 0.064, 0.04, SKIN, { ...O, detail: 2 } as LPOpts); // orecchie grandi e tonde
+  if (X.bare) { X.head?.(lp); return; }
+  if (HEAD === 'skull') { // naso a cuore rovesciato e denti
+    onSkin(lp, headFront(0, 0.645), 0.002, 0, (q) => q.add(new THREE.CircleGeometry(0.03, 3).rotateZ(-Math.PI / 2).scale(1, 1.2, 1), '#1e1b22', O));
+    onSkin(lp, headFront(0, 0.612), 0.002, 0, (q) => q.add(rbox(0.17, 0.008, 0.006, 0.003, 1).translate(0, 0.022, 0), '#8e8676', O));
+    for (let i = -2.5; i <= 2.5; i++) onSkin(lp, headFront(i * 0.03, 0.59), 0.008, 0, (q) => q.add(rbox(0.025, 0.04, 0.02, 0.007, 1), '#f3ecda', O));
+  }
+  if (HEAD === 'zombie') onSkin(lp, headAt(-0.35, 40 * DEG), 0.003, 0.3, (q) => { // cicatrice cucita
+    q.add(rbox(0.13, 0.01, 0.006, 0.004, 1), '#4a5a3a', O);
+    for (let i = -2; i <= 2; i++) q.add(rbox(0.008, 0.04, 0.006, 0.003, 1).translate(i * 0.025, 0, 0.002), '#4a5a3a', O);
+  });
+  // bocca: sorrisetto sotto i baffi (cucita per lo zombie, niente per il teschio)
+  const mouth = X.mouth ?? (HEAD === 'zombie' ? 'stitched' : HEAD === 'skull' ? 'none' : 'smile'), m = headFront(0, 0.613);
   if (mouth === 'smile') onSkin(lp, m, 0.002, 0, (q) => q.add(new THREE.TorusGeometry(0.022, 0.007, 3, 8, Math.PI).rotateZ(Math.PI), '#2a1a1c', O));
   if (mouth === 'flat') onSkin(lp, m, 0.002, 0, (q) => q.add(rbox(0.04, 0.009, 0.008, 0.004, 1), '#2a1a1c', O));
   if (mouth === 'o') onSkin(lp, m, 0.002, 0, (q) => q.add(new THREE.CircleGeometry(0.016, 10).scale(1, 1.2, 1), '#2a1a1c', O));
@@ -341,7 +421,7 @@ function head(lp: LP) {
 
 /** Brillantini a stella, grandi e radi, su tutto il viso (non su occhi, baffi, barba, capelli). */
 function glitter(lp: LP | null, out?: Array<{ p: THREE.Vector3; n: THREE.Vector3; r: number }>) {
-  if (!L.sparkle) return;
+  if (!L.sparkle || X.bare) return;
   const rnd = prng(9);
   let placed = 0;
   for (let tries = 0; placed < 26 && tries < 4000; tries++) {
@@ -519,10 +599,10 @@ function moustache(lp: LP) {
  * per ciocca che scende dal vortice girando un poco: le ciocche fanno parte
  * del volume, non possono staccarsi.
  */
-export function hairLayer(lp: LP, o: { locks: number; hem: (thDeg: number) => number; depth: number; lift: number; thick: number; phase: number; swirl: number; seed: number; tone: (k: number) => string; top?: number; span?: [number, number] }) {
+export function hairLayer(lp: LP, o: { locks: number; hem: (thDeg: number) => number; depth: number; lift: number; thick: number; phase: number; swirl: number; seed: number; tone: (k: number) => string; top?: number; span?: [number, number]; wave?: number }) {
   const rnd = prng(o.seed);
   const jitter = Array.from({ length: o.locks }, () => [0.75 + rnd() * 0.5, (rnd() - 0.5) * 0.3, rnd()]); // lunghezza, asimmetria, tono
-  const NU = o.locks * 4, NV = 6; // pochi segmenti: bastano per punta e rilievo di ogni ciocca
+  const NU = o.locks * 4, NV = o.wave ? 18 : 6; // pochi segmenti: bastano per punta e rilievo di ogni ciocca (le onde ne vogliono di più)
   const P: THREE.Vector3[][] = [], Q: THREE.Vector3[][] = [], Nn: THREE.Vector3[][] = [], lockOf: number[] = [];
   for (let i = 0; i <= NU; i++) {
     const u = i / NU, f = (u * o.locks + o.phase) % o.locks, k = Math.floor(f), w = f - k;
@@ -540,7 +620,8 @@ export function hairLayer(lp: LP, o: { locks: number; hem: (thDeg: number) => nu
       const top = o.top ?? 89;
       const phD = lerp(Math.min(hem, top - 3), top, Math.pow(v, 0.85));
       const { p, n } = hairPoint(thD * DEG, phD);
-      const t = (o.thick * (0.55 + 0.45 * ridge) * smooth(0, 0.25, v + 0.05 * tooth) + o.lift * (1 - v) * (1 - v)) * ends;
+      const wave = o.wave ? o.wave * Math.sin(v * Math.PI * 7 + u * Math.PI * 2 * o.locks * 0.02) * (1 - v) : 0; // onde orizzontali, più marcate in basso
+      const t = (o.thick * (0.55 + 0.45 * ridge) * smooth(0, 0.25, v + 0.05 * tooth) + o.lift * (1 - v) * (1 - v) + Math.max(-o.thick * 0.5, wave)) * ends;
       P[i].push(p.clone().addScaledVector(n, 0.006 + t));
       Q[i].push(p.clone().addScaledVector(n, 0.004));
       Nn[i].push(n);
@@ -567,17 +648,18 @@ const hatPh = () => X.hatPh ?? HAT_PH[L.hat];
 /** Riccioli: palline schiacciate distribuite a file regolari sulla superficie dei capelli. */
 function curls(lp: LP, tone: (k: number) => string, top: number) {
   const rnd = prng(17);
-  const ROWS = HAIR_HANG ? 10 : 6;
+  // file fitte di riccioli grandi che si toccano: coprono tutto il casco (niente parti lisce in vista)
+  const ROWS = HAIR_HANG ? 12 : 8;
   for (let r = 0; r < ROWS; r++) {
     const v = r / (ROWS - 1); // 0 orlo, 1 cima
-    const count = Math.round(lerp(22, 7, v));
+    const count = Math.round(lerp(24, 8, v));
     for (let i = 0; i < count; i++) {
       const th = ((i + 0.5 * (r % 2) + (rnd() - 0.5) * 0.4) / count) * 360;
       const ph = lerp(hairTip(th * DEG) + 4, top - 8, v);
       const { p, n } = hairPoint(th * DEG, ph);
       if (absDeg(th * DEG) < 40 && ph < 10) continue; // non sul viso
-      const rr = 0.04 + rnd() * 0.014;
-      const c = p.addScaledVector(n, 0.05);
+      const rr = 0.05 + rnd() * 0.016;
+      const c = p.addScaledVector(n, 0.045);
       lp.blob(c.x, c.y, c.z, rr, rr * 0.9, rr, tone([0.03, -0.02, 0.05, 0][(r + i) % 4]), { ...O, detail: 1 } as LPOpts);
     }
   }
@@ -594,37 +676,76 @@ function hair(lp: LP) {
   const tip = (thD: number) => hairTip(thD * DEG);
   const top = Math.min(hatPh(), X.hair?.top ?? 89), hat = hatPh() < 89;
   const style = L.hair;
-  const neat = style === 'bob' || style === 'long' || style === 'bun' || style === 'longcurly';
-  const depth = X.hair?.depth ?? ({ bob: 3, long: 5, bun: 4, longcurly: 6, curly: 7 } as Record<string, number>)[style] ?? 13;
+  const depth = X.hair?.depth ?? ({ bob: 3, long: 5, bun: 4, longcurly: 6, curly: 7, fringe: 2, fringeLong: 3, side: 6, sideLong: 5, wavy: 3, wavyLong: 4, tufts: 9 } as Record<string, number>)[style] ?? 13;
   if (X.hair) { // orlo su misura (corona di capelli ai lati, ciuffi grigi…): un solo strato
     hairLayer(lp, { locks: 14, hem: (t) => tip(t) + 4, depth, lift: X.hair.lift ?? 0.03, thick: X.hair.thick ?? 0.05, phase: 0, swirl: 6, seed: 3, tone, top: Math.min(top, X.hair.top ?? 89), span: X.hair.span });
     return;
   }
-  hairLayer(lp, { locks: neat ? 20 : 15, hem: (t) => tip(t) + 4, depth, lift: 0.03, thick: hat ? 0.03 : 0.05, phase: 0, swirl: neat ? 6 : 14, seed: 3, tone, top });
-  if (!hat) {
-    hairLayer(lp, { locks: neat ? 16 : 12, hem: (t) => tip(t) + 26, depth: depth + 2, lift: 0.04, thick: 0.065, phase: 0.5, swirl: neat ? 8 : 18, seed: 7, tone });
-    hairLayer(lp, { locks: neat ? 12 : 9, hem: (t) => tip(t) + 48, depth: depth + 3, lift: 0.05, thick: 0.08, phase: 0.2, swirl: neat ? 10 : 22, seed: 11, tone });
+  if (style === 'buzz') { // rasati: un velo cortissimo, senza ciocche
+    sheet(lp, 48, 8, (u, v) => [u * Math.PI, lerp(tip(u * 180), top, Math.pow(v, 0.8)) * DEG], (_u, v) => 0.005 + 0.009 * smooth(0, 0.2, v), tone(-0.03), { vary: 0.05 } as LPOpts);
+    return;
   }
-  if (style === 'curly' || style === 'longcurly') curls(lp, tone, hat ? top : 86);
+  const messy = style === 'spiky' || style === 'tufts';
+  const curly = style === 'curly' || style === 'longcurly';
+  const wave = style === 'wavy' || style === 'wavyLong' ? 0.018 : 0;
+  // i ricci hanno sotto un casco sottile e più scuro: si vedono solo i riccioli
+  const base = curly ? (k: number) => tone(k - 0.07) : tone;
+  const thick = curly ? 0.025 : hat ? 0.03 : 0.05;
+  hairLayer(lp, { locks: messy ? 15 : 20, hem: (t) => tip(t) + 4, depth, lift: 0.03, thick, phase: 0, swirl: messy ? 14 : 6, seed: 3, tone: base, top, wave });
+  if (!hat && !curly) {
+    hairLayer(lp, { locks: messy ? 12 : 16, hem: (t) => tip(t) + 26, depth: depth + 2, lift: 0.04, thick: 0.065, phase: 0.5, swirl: messy ? 18 : 8, seed: 7, tone, wave: wave * 0.6 });
+    hairLayer(lp, { locks: messy ? 9 : 12, hem: (t) => tip(t) + 48, depth: depth + 3, lift: 0.05, thick: 0.08, phase: 0.2, swirl: messy ? 22 : 10, seed: 11, tone });
+  }
+  if (curly) curls(lp, tone, hat ? top : 86);
   if (style === 'bun' && !hat) {
-    const { p, n } = headAt(Math.PI, 52 * DEG);
+    const { p, n } = headAt(Math.PI, 40 * DEG); // crocchia più bassa, sulla nuca
     const c = p.addScaledVector(n, 0.1);
     lp.blob(c.x, c.y, c.z, 0.11, 0.1, 0.1, tone(0.02), { ...O, detail: 2 } as LPOpts);
-    lp.add(new THREE.TorusGeometry(0.075, 0.016, 6, 14).rotateX(-0.6).translate(c.x, c.y - 0.04, c.z + 0.05), L.accentColor, O); // elastico
+    lp.add(new THREE.TorusGeometry(0.075, 0.016, 6, 14).rotateX(-0.3).translate(c.x, c.y + 0.03, c.z + 0.06), L.accentColor, O); // elastico
   }
+  if (style === 'side' || style === 'sideLong') sweptLock(lp, tone, hat);
   if (hat) return;
-  // ciuffi a punta che salgono dalla cima (spettinati e ciuffi)
-  if (style !== 'spiky' && style !== 'tufts') return;
-  const rnd = prng(5);
-  const tufts = style === 'spiky' ? [[-25, 0.13, -0.5], [5, 0.15, 0.1], [30, 0.12, 0.55], [175, 0.11, 0.3], [-160, 0.1, -0.4]] : [[-10, 0.1, 0.2], [20, 0.09, 0.5]];
-  tufts.forEach(([th, h, lean], k) => {
-    const { p, n } = headAt(th * DEG, 78 * DEG);
-    const base = p.addScaledVector(n, 0.05);
-    const axis = n.clone().add(new THREE.Vector3(Math.sin(th * DEG), 0, Math.cos(th * DEG)).multiplyScalar(0.6 + lean)).normalize();
-    const g = new THREE.ConeGeometry(0.045 + rnd() * 0.012, h, 5).translate(0, h / 2, 0);
-    g.applyQuaternion(new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0, 1, 0), axis));
-    lp.add(g.translate(base.x, base.y, base.z), tone([0.04, 0.015, 0.03, 0, 0.02][k]), { ...O, vary: 0.04 });
+  if (style === 'spiky') {
+    // ciuffi a punta che salgono dalla cima
+    const rnd = prng(5);
+    [[-25, 0.13, -0.5], [5, 0.15, 0.1], [30, 0.12, 0.55], [175, 0.11, 0.3], [-160, 0.1, -0.4]].forEach(([th, h, lean], k) => {
+      const { p, n } = headAt(th * DEG, 78 * DEG);
+      const base0 = p.addScaledVector(n, 0.05);
+      const axis = n.clone().add(new THREE.Vector3(Math.sin(th * DEG), 0, Math.cos(th * DEG)).multiplyScalar(0.6 + lean)).normalize();
+      const g = new THREE.ConeGeometry(0.045 + rnd() * 0.012, h, 5).translate(0, h / 2, 0);
+      g.applyQuaternion(new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0, 1, 0), axis));
+      lp.add(g.translate(base0.x, base0.y, base0.z), tone([0.04, 0.015, 0.03, 0, 0.02][k]), { ...O, vary: 0.04 });
+    });
+  }
+  if (style === 'tufts') tufts(lp, tone);
+}
+
+/**
+ * Ciuffi: ciocche grosse e morbide che salgono dritte dalla cima e si piegano
+ * un po' all'indietro, come fiammelle (non sulla fronte).
+ */
+function tufts(lp: LP, tone: (k: number) => string) {
+  const list: Array<[number, number, number, number]> = [ // θ, φ della radice, altezza, piega all'indietro
+    [-28, 66, 0.2, 0.35], [0, 70, 0.25, 0.25], [28, 66, 0.2, 0.4], [-55, 58, 0.15, 0.5], [55, 58, 0.15, 0.55], [-14, 80, 0.21, 0.6], [16, 80, 0.2, 0.7],
+  ];
+  list.forEach(([th, ph, h, back], k) => {
+    const { p, n } = headAt(th * DEG, ph * DEG);
+    const rootP = p.clone().addScaledVector(n, 0.02);
+    const up = n.clone().multiplyScalar(0.55).add(new THREE.Vector3(0, 1, 0)).normalize();
+    const bend = new THREE.Vector3(Math.sin(th * DEG) * 0.3, 0, -1).normalize(); // si piega indietro e un po' in fuori
+    const mid = rootP.clone().addScaledVector(up, h * 0.55).addScaledVector(bend, h * back * 0.25);
+    const tipP = rootP.clone().addScaledVector(up, h).addScaledVector(bend, h * back * 0.7);
+    lp.add(taperTube([rootP, mid, tipP], [0.055, 0.04, 0.006], 6), tone([0.04, 0.0, 0.03, -0.02, 0.02, 0.05, 0.01][k]), { ...O, vary: 0.04 });
   });
+}
+
+/** Ciuffo di lato: una ciocca larga che parte dalla riga e scende di traverso sulla fronte. */
+function sweptLock(lp: LP, tone: (k: number) => string, hat: boolean) {
+  const path: Array<[number, number]> = hat ? [[18, 38], [-10, 26], [-40, 16], [-62, 8]] : [[22, 62], [8, 40], [-18, 24], [-45, 14], [-66, 6]];
+  for (const [off, r, k] of [[0, 1, 0.03], [7, 0.8, -0.01]] as const) {
+    const pts = path.map(([th, ph]) => { const { p, n } = headAt((th + off) * DEG, (ph - off * 0.4) * DEG); return p.addScaledVector(n, 0.045 * r + 0.02); });
+    lp.add(taperTube(pts, pts.map((_, i) => lerp(0.055, 0.012, i / (pts.length - 1)) * r), 7), tone(k), { ...O, vary: 0.04 });
+  }
 }
 
 /** Cappelli: tesa larga, cilindro, berretto con risvolto e pompon. */
@@ -669,6 +790,7 @@ function faceExtras(lp: LP) {
     });
     onSkin(lp, headFront(0, EYE_Y + 0.02), lift - 0.004, 0, (q) => q.add(new THREE.BoxGeometry(0.08, 0.012, 0.01), frame, O));
   }
+  if (X.bare) return;
   if (L.freckles) for (const s of [-1, 1]) for (const [x, y] of [[0.17, 0.655], [0.2, 0.67], [0.185, 0.64], [0.215, 0.648]]) {
     onSkin(lp, headFront(s * x, y), 0.002, 0, (q) => q.add(new THREE.CircleGeometry(0.008, 6), shade(SKIN, -0.25), O));
   }
@@ -983,7 +1105,10 @@ function headPart(lp: LP) {
   // testa (con faccia, barba, baffi e capelli) più grande del 30%, scalata attorno al mento
   lp.push([0, HEAD_T.y, 0], 0, 0, 0, HEAD_S);
   head(lp); glitter(lp); faceExtras(lp); beard(lp); braid(lp); moustache(lp); hair(lp); hatGeo(lp);
-  eyesLP(lp, X.eyes ?? 'open', EYE, SKIN);
+  if (!X.bare && HEAD !== 'pumpkin') {
+    const style = X.eyes ?? (HEAD === 'zombie' ? 'zombie' : HEAD === 'skull' ? 'sockets' : 'open');
+    eyesLP(lp, style, style === 'sockets' ? '#8ff0dc' : EYE, SKIN);
+  }
   lp.pop();
 }
 

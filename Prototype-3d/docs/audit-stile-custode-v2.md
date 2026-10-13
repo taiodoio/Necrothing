@@ -42,6 +42,17 @@ Quarta passata:
 - **Sciarpa:** ha un nodo che esce da sotto la barba, prima del capo che scende sul petto.
 - **Bocca:** un po' più grande, tra baffi e barba.
 
+Quinta passata:
+- **Testa:** un po' più in alto, così barba e colletto non si sovrappongono; tra i due resta il giro della sciarpa.
+- **Barba:** meno gonfia, sale lungo la guancia prima dell'orecchio.
+- **Treccia:** attaccata davanti al mento (prima finiva dentro il colletto), con lobi intrecciati alternati, fermaglio e ciuffetto finale.
+- **Baffi:** ridotti del 20%.
+- **Capelli:** tutte le ciocche hanno la stessa lunghezza della frangia, e dietro e ai lati ci sono più file invece di ciocche lunghe; ai lati coprono fin sopra l'orecchio.
+- **Sciarpa:** un nastro morbido che segue la curva della giacca, con righe, ondeggiamento e frangia in fondo (prima era un rettangolo appoggiato).
+- **Suole:** seguono la pianta dello stivale, con punta tonda e tacco.
+
+I triangoli sono saliti a ~31.800, soprattutto per le ciocche più numerose. In gioco si può ridurre (meno file in qualità «Bassa», ciocche con meno segmenti).
+
 Restano differenze con il concept:
 - l'ombreggiatura morbida da render (il gioco usa facce piatte);
 - la pelle, un po' più spenta per via della luce del gioco;
@@ -71,7 +82,7 @@ Il lavoro vero è **rifare le opzioni di personalizzazione** nel nuovo stile, ci
 |---|---|---|---|
 | Custode attuale, look base | 7.450 | 7 | — |
 | Custode attuale, look ricco (ricci lunghi, treccia, manubrio, monocolo, brillantini) | 17.370 | 9 | ~126 ms |
-| Prototipo v2 (completo, con lanterna) | 22.400 | 8 | ~45 ms |
+| Prototipo v2 (completo, con lanterna) | 31.800 | 8 | ~55 ms |
 
 Il v2 costa più o meno quanto un look ricco di oggi, ed è più veloce da generare perché la testa è un ellissoide. Diviso nelle parti del rig resterebbe a circa 8–10 draw call. Per il solo Custode non ci sono problemi di prestazioni.
 

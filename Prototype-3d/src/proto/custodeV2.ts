@@ -248,9 +248,13 @@ function glitter(lp: LP) {
 /** Bordo inferiore della barba (φ, gradi): sotto il mento, ma non così in basso da finire dietro il colletto. */
 const BEARD_LOW = -72;
 const BEARD_DROP = 0.1;
+/** Bordo inferiore lungo la mandibola: sotto il mento davanti, sale verso l'orecchio (profilo a diagonale). */
+const beardLow = (u: number) => lerp(BEARD_LOW, -28, smooth(0.25, 1, Math.abs(u)));
 function beardOffset(u: number, v: number, n: THREE.Vector3): { t: number; dir: THREE.Vector3 } {
   const side = smooth(0, 0.1, 1 - Math.abs(u));
-  const jaw = smooth(0.8, 0.35, Math.abs(u)); // largo sotto la mandibola, sfuma prima delle guance
+  // di profilo il bordo posteriore scende in diagonale dall'orecchio al mento:
+  // la massa cala gradualmente andando verso l'orecchio
+  const jaw = Math.pow(THREE.MathUtils.clamp(1 - Math.abs(u) / 0.95, 0, 1), 1.3); // sulle guance resta sottile
   const low = Math.pow(1 - v, 2.2); // solo la parte bassa si allunga: le guance restano sottili
   // sotto il mento, davanti, un po' di spessore in più che cresce in avanti
   const front = smooth(0.55, 0, Math.abs(u)) * low;
@@ -273,7 +277,7 @@ function beard(lp: LP) {
     const u = -1 + (2 * i) / NU, th = u * 92;
     for (let j = 0; j <= NV; j++) {
       const v = j / NV; // 0 sotto il mento, 1 bordo superiore
-      const { p, n } = headAt(th * DEG, lerp(BEARD_LOW, beardTop(th), v) * DEG);
+      const { p, n } = headAt(th * DEG, lerp(beardLow(u), beardTop(th), v) * DEG);
       const { t, dir } = beardOffset(u, v, n);
       inner[i].push(p.clone());
       outer[i].push(p.clone().addScaledVector(dir, t));

@@ -95,6 +95,9 @@ Tredicesima passata:
 - **Treccia:** di conseguenza si attacca un po' più avanti.
 - **Bocca:** centrata.
 
+Quattordicesima passata:
+- **Barba di profilo:** stretta in alto, davanti all'orecchio; davanti scende dritta lungo la guancia fino a sotto il mento; dietro il bordo cala in diagonale dall'orecchio al mento. Il bordo inferiore sale verso l'orecchio (`beardLow`) e la massa diminuisce gradualmente verso i lati, quindi le guance restano sottili.
+
 ## Prestazioni su telefono (app Capacitor)
 
 Con Capacitor il gioco gira nel WebView del sistema (WKWebView su iOS, WebView di Chrome su Android): le prestazioni sono quelle del browser del telefono. Che il gioco funzioni offline non cambia nulla, perché il lavoro lo fanno GPU e CPU del dispositivo.

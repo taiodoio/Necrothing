@@ -58,6 +58,12 @@ Sesta passata:
 - **Stivali:** tomaia e suola hanno la stessa pianta e la tomaia nasce dentro la suola, così il bordo è continuo e la suola non sembra staccata.
 - **Sciarpa:** spostata di lato, per lasciare libera la treccia.
 
+Settima passata (cambio di metodo: meno forme sovrapposte):
+- **Testa:** più grande del 30% (con faccia, barba, baffi e capelli), scalata attorno al mento, così resta appoggiata sul colletto.
+- **Barba:** un unico guscio continuo che nasce dalla pelle, con il bordo superiore netto. Avvolge guance e mandibola e sotto il mento si ispessisce in avanti e in basso, chiuso da una parete verso il collo. Niente più ellissoidi appiccicati.
+- **Capelli:** poche ciocche grandi e scompigliate, come nel concept: una frangia di cinque, due giri attorno (lati e nuca) con ciocche corte che piegano ognuna per conto suo, e sette ciocche in cima che si aprono dal vortice. La copertura arriva allo stesso punto di prima.
+- **Treccia:** pende davanti alla giacca, subito sotto la barba.
+
 ## Prestazioni su telefono (app Capacitor)
 
 Con Capacitor il gioco gira nel WebView del sistema (WKWebView su iOS, WebView di Chrome su Android): le prestazioni sono quelle del browser del telefono. Che il gioco funzioni offline non cambia nulla, perché il lavoro lo fanno GPU e CPU del dispositivo.
@@ -103,7 +109,7 @@ Il lavoro vero è **rifare le opzioni di personalizzazione** nel nuovo stile, ci
 |---|---|---|---|
 | Custode attuale, look base | 7.450 | 7 | — |
 | Custode attuale, look ricco (ricci lunghi, treccia, manubrio, monocolo, brillantini) | 17.370 | 9 | ~126 ms |
-| Prototipo v2 (completo, con lanterna) | 23.300 | 8 | ~45 ms |
+| Prototipo v2 (completo, con lanterna) | 18.800 | 8 | ~40 ms |
 
 Il v2 costa più o meno quanto un look ricco di oggi, ed è più veloce da generare perché la testa è un ellissoide. Diviso nelle parti del rig resterebbe a circa 8–10 draw call. Per il solo Custode non ci sono problemi di prestazioni.
 

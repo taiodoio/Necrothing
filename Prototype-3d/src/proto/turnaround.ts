@@ -85,12 +85,12 @@ for (const p of panels) {
   camera.aspect = p.w / p.h;
   if (p.hero) {
     camera.fov = 26;
-    camera.position.set(0.1, 1.15, 3.4);
-    camera.lookAt(0, 0.46, 0);
+    camera.position.set(0.1, 1.3, 3.9);
+    camera.lookAt(0, 0.56, 0);
   } else {
     camera.fov = 22;
-    camera.position.set(0, 0.8, 3.55);
-    camera.lookAt(0, 0.55, 0);
+    camera.position.set(0, 0.95, 4.1);
+    camera.lookAt(0, 0.66, 0);
   }
   camera.updateProjectionMatrix();
   const vy = H - (p.y + p.h);

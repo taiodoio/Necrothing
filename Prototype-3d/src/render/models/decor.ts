@@ -156,11 +156,6 @@ export function npcHome(v: PVis): Model {
       skull(b, r.range(-1, 1), 1, 0, P.bone);
       break;
     }
-    case 'skeleton_pet': {
-      b.cyl(0, 0, 0, 1.6, 2.4, 2.8, P.iron, { seg: 8 });
-      b.box(-1.8, 1.2, -0.4, 1.8, 2, 0.4, P.bone);
-      break;
-    }
     default:
       tuft(b, 0, 0, 3);
   }

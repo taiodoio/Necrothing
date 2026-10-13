@@ -85,7 +85,7 @@ const defs: PlaceableDef[] = [
   { id: 'well', label: 'Pozzo', category: 'structure', footprint: [2, 2], cost: 25, minRank: 2, unique: true, decays: true, description: 'Se butti una moneta, qualcuno da sotto la restituisce.' },
   { id: 'fountain', label: 'Fontana', category: 'structure', footprint: [3, 3], cost: 40, minRank: 3, unique: true, decays: true, description: 'L’acqua è torbida e canticchia.' },
   { id: 'hell_hole', label: 'Buco infernale', category: 'structure', footprint: [2, 2], cost: 45, minRank: 4, unique: true, decays: true, light: true, description: 'Un bagliore rosso dal profondo. Aumenta le apparizioni.' },
-  { id: 'pet_house', label: 'Casetta per animale', category: 'structure', footprint: [2, 2], cost: 20, minRank: 2, decays: true, variants: 5, variantLabels: ['Cane', 'Gatto', 'Coniglio', 'Papera', 'Corvo'], description: 'Ci vive un animaletto scheletro. A volte resta in tana.' },
+  { id: 'pet_house', label: 'Casetta per animale', category: 'structure', footprint: [2, 2], cost: 20, minRank: 2, decays: true, variants: 5, variantLabels: ['Cane', 'Gatto', 'Coniglio', 'Papera', 'Corvo'], description: 'Ci vive un animaletto scheletro: gira libero per il cimitero e torna a dormire in tana. Toccalo per farti raggiungere, liberarlo, mandarlo a cuccia, accarezzarlo o lanciargli l’osso.' },
 
   // ── Ambiente ──────────────────────────────────────────────────────────
   { id: 'pond', label: 'Lago con pesci morti', category: 'ambient', footprint: [4, 3], cost: 30, minRank: 2, description: 'Ninfee, canne e qualche pesce a pancia in su.' },
@@ -108,7 +108,6 @@ const defs: PlaceableDef[] = [
   { id: 'zombie_walker', label: 'Zombie errante', category: 'npc', footprint: [1, 1], cost: 26, minRank: 3, walkable: true, description: 'Passeggia senza meta, come la domenica.' },
   { id: 'ghosts_roam', label: 'Fantasmi erranti', category: 'npc', footprint: [1, 1], cost: 28, minRank: 3, walkable: true, description: 'Girano in tondo attraverso tutto, lapidi comprese.' },
   { id: 'ghosts_ball', label: 'Fantasmi a palla', category: 'npc', footprint: [2, 2], cost: 34, minRank: 4, walkable: true, description: 'Giocano a palla con un teschio. Il teschio si diverte meno.' },
-  { id: 'skeleton_pet', label: 'Animale scheletro', category: 'npc', footprint: [1, 1], cost: 18, minRank: 2, walkable: true, variants: 5, variantLabels: ['Cane', 'Gatto', 'Coniglio', 'Papera', 'Corvo'], description: 'Fedele oltre la morte. Riporta ancora i bastoni.' },
 ];
 
 export const CATALOG: Record<string, PlaceableDef> = Object.fromEntries(defs.map((d) => [d.id, d]));

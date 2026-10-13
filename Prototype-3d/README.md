@@ -93,8 +93,14 @@ interagisci, `C` cambia vista, `V` cambia stile (low-poly → voxel → miniatur
   Toccarle dà XP/✦; il becchino pulisce gratis le tombe vicine. Mausoleo, santuario,
   casa del becchino, bare aperte e buco infernale modificano le probabilità.
 - **Presenze piazzabili**: zombie che giocano a carte o ballano, zombie errante,
-  fantasmi in girotondo o a palla con un teschio, animali scheletro (cane, gatto,
-  coniglio, papera, corvo); la casetta per animali a volte, all'apertura, ha l'animale in tana.
+  fantasmi in girotondo o a palla con un teschio, e l'**animale
+  domestico**: la casetta per animali (cane, gatto, coniglio, papera, corvo scheletro) porta con sé
+  il suo animaletto. Libero gira per il cimitero e ogni tanto torna a dormire in tana (si vedono
+  gli occhietti nel buio dell'arco e salgono le "z"); ogni animale ha il suo menù (toccandolo,
+  o toccando la sua casetta quando dorme): raggiungi il padrone (ti segue), libera, a cuccia,
+  accarezza, lancia l'osso (che riporta). Le voci che in quel momento non servono restano visibili
+  ma disattivate; con più casette si gestisce ogni animale per conto suo. Quello che fa (libero, al seguito, a
+  cuccia) è salvato nella sua casetta e alla riapertura riprende da lì.
 - **Simulazione a tempo reale** all'apertura e al ritorno in primo piano (erbacce,
   sporco, rotture, anniversari, meteo giornaliero) + tick "vivo" ogni 40 s mentre si gioca.
 - **Progressione**: 5 ranghi, 27 achievement, prestigio, distretti tematici
@@ -125,7 +131,7 @@ interagisci, `C` cambia vista, `V` cambia stile (low-poly → voxel → miniatur
   (`?set=umani` | `?set=animali`).
   Edifici in chiave "cozy spooky" (case storte con travi a vista, tetti muschiati,
   lanterne, edera, zucche intagliate), edicola votiva e angelo piangente, e **tutto il
-  catalogo** (51 oggetti) più gli animali con un generatore dedicato.
+  catalogo** (50 oggetti) più gli animali con un generatore dedicato.
   Materiali `MeshStandardMaterial` opachi a flat shading; il fallback *miniatura* resta
   come rete di sicurezza per asset futuri. Ogni luce tremola con un
   `FireFlicker` indipendente e deterministico.

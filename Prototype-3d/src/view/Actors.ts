@@ -1,11 +1,11 @@
 // Attori animati: il Custode (giocatore), le presenze erranti generate dalla
-// matrice di spawn, le presenze piazzabili (zombie, fantasmi, animali) e il
-// corteo funebre. Movimento delle presenze "a torre" sugli assi X/Z: se
+// matrice di spawn, le presenze piazzabili (zombie, fantasmi), l'animale
+// domestico della casetta e il corteo funebre. Movimento delle presenze "a torre" sugli assi X/Z: se
 // incontrano un ostacolo cambiano direzione; i fantasmi attraversano tutto.
 
 import * as THREE from 'three';
 import { MAP_SIZE } from '../game/balance.ts';
-import { rotatedFootprint } from '../game/catalog.ts';
+import { CATALOG, rotatedFootprint } from '../game/catalog.ts';
 import { createRng, hashString } from '../game/rng.ts';
 import type { RoamerKind, SpawnRequest } from '../game/spawn.ts';
 import type { ArtStyle, Placed, SaveData } from '../game/state.ts';
@@ -17,6 +17,7 @@ import type { CustodeLook } from '../game/look.ts';
 import { skull } from '../render/lowpoly/extras.ts';
 import { instantiate, LOWPOLY_MATERIALS } from '../render/modelCache.ts';
 import { findPath, type Cell } from './pathfinding.ts';
+import { boneMesh, Den, Glyphs } from './petFx.ts';
 import { cellCenter, HALF, worldToCell } from './WorldView.ts';
 
 const LIFESPAN: Record<RoamerKind, number> = { ghost: 26, cat: 32, crow: 22, gravedigger: 34, priest: 36, rat: 15, zombie: 30 };
@@ -59,6 +60,34 @@ interface Presence extends Walker {
   extra?: THREE.Object3D;
 }
 
+/**
+ * Animale domestico della casetta. Può essere libero (gira per il cimitero e
+ * ogni tanto torna a dormire in tana), seguire il Custode o stare a cuccia.
+ */
+export type PetMode = 'free' | 'follow' | 'home';
+type PetAct = 'roam' | 'rest' | 'enter' | 'sleep' | 'follow' | 'wait' | 'fetch' | 'bring' | 'happy';
+
+export interface Pet extends Walker {
+  placeId: string;
+  label: string;
+  variant: number;
+  home: THREE.Vector3;
+  /** Punto dentro l'arco della casetta (da qui entra ed esce). */
+  door: THREE.Vector3;
+  /** Cella libera davanti alla casetta. */
+  porch: Cell;
+  mode: PetMode;
+  act: PetAct;
+  timer: number;
+  repath: number;
+  roams: number;
+  broken: boolean;
+  hitbox: THREE.Mesh;
+  den: Den;
+}
+
+const PET_SPEED = { roam: 1.3, run: 3.5 };
+
 interface Funeral {
   members: Walker[];
   stage: 'arrive' | 'rite' | 'leave';
@@ -85,6 +114,11 @@ export class Actors {
   private readonly atmosphere: Atmosphere;
   readonly hitboxes: THREE.Object3D[] = [];
   avatarMoving = false;
+  private readonly pets = new Map<string, Pet>();
+  private readonly glyphs = new Glyphs();
+  /** L'osso: in volo (lanciato dal Custode), a terra o in bocca all'animale. */
+  private readonly bone = { obj: boneMesh(), from: new THREE.Vector3(), to: new THREE.Vector3(), t: 0, dur: 0, flying: false, landed: false, carrier: null as Pet | null };
+  private ground: (p: THREE.Vector3) => number = () => 0;
 
   /** Aspetto del Custode (personalizzazione, solo low-poly). */
   private look: CustodeLook | undefined;
@@ -96,6 +130,7 @@ export class Actors {
     this.group.name = 'attori';
     scene.add(this.group);
     this.avatar = this.makeWalker('custode', start, 3.1);
+    this.group.add(this.glyphs.group, this.bone.obj);
   }
 
   private makeWalker(kind: CharacterKind, pos: THREE.Vector3, speed: number): Walker {
@@ -135,6 +170,7 @@ export class Actors {
     };
     rebuild(this.avatar);
     for (const r of this.roamers.values()) { rebuild(r); r.rig.root.add(r.hitbox); }
+    for (const p of this.pets.values()) { rebuild(p); p.rig.root.add(p.hitbox); p.rig.root.visible = p.act !== 'sleep'; }
     for (const p of this.presences) rebuild(p);
     if (this.funeral) for (const m of this.funeral.members) rebuild(m);
   }
@@ -358,7 +394,8 @@ export class Actors {
   // ── Presenze piazzabili ──────────────────────────────────────────────
 
   syncPresences(state: SaveData, now: Date) {
-    const homes = state.placeables.filter((p) => ['zombies_play', 'zombies_dance', 'zombie_walker', 'ghosts_roam', 'ghosts_ball', 'skeleton_pet', 'pet_house'].includes(p.type));
+    this.syncPets(state);
+    const homes = state.placeables.filter((p) => ['zombies_play', 'zombies_dance', 'zombie_walker', 'ghosts_roam', 'ghosts_ball'].includes(p.type));
     const sig = homes.map((p) => `${p.id}:${p.x}:${p.y}:${p.variant}:${p.broken}`).join('|');
     if (sig === this.presenceSig) return;
     this.presenceSig = sig;
@@ -367,7 +404,7 @@ export class Actors {
     for (const p of homes) this.addPresences(p, now);
   }
 
-  private addPresences(p: Placed, now: Date) {
+  private addPresences(p: Placed, _now: Date) {
     const center = cellCenter(p.x, p.y, rotatedFootprint(p.type, p.rot));
     const add = (kind: CharacterKind, role: Presence['role'], offset: THREE.Vector3, radius = 0, angle = 0, speed = 0.6) => {
       const w = this.makeWalker(kind, center.clone().add(offset), speed);
@@ -401,17 +438,6 @@ export class Actors {
         ball.add(instantiate({ geometries: sk.geometries, lights: [], height: 0.25, mats: LOWPOLY_MATERIALS, dedicated: true }));
         this.group.add(ball);
         g1.extra = ball;
-        break;
-      }
-      case 'skeleton_pet':
-      case 'pet_house': {
-        const pet = add(PET_KINDS[p.variant % PET_KINDS.length], 'wander', new THREE.Vector3(0, 0, 1.2), 2.2, 0, 0.9);
-        // a volte, all'apertura, l'animale resta nella tana (Excel)
-        if (p.type === 'pet_house') {
-          const day = now.toISOString().slice(0, 10);
-          pet.hidden = createRng(`${p.id}:${day}`).chance(0.35) || p.broken;
-          pet.rig.root.visible = !pet.hidden;
-        }
         break;
       }
     }
@@ -457,6 +483,311 @@ export class Actors {
         }
         break;
     }
+  }
+
+  // ── Animale domestico ────────────────────────────────────────────────
+
+  /** Una casetta = un animale: si creano, spostano e tolgono con le casette. */
+  private syncPets(state: SaveData) {
+    const houses = state.placeables.filter((p) => p.type === 'pet_house');
+    for (const [id, pet] of this.pets) if (!houses.some((h) => h.id === id)) this.removePet(pet);
+    for (const h of houses) {
+      let pet = this.pets.get(h.id);
+      if (pet && pet.variant !== h.variant) { this.removePet(pet); pet = undefined; }
+      if (!pet) { pet = this.makePet(h); this.pets.set(h.id, pet); }
+      const fp = rotatedFootprint(h.type, h.rot);
+      const home = cellCenter(h.x, h.y, fp);
+      if (!home.equals(pet.home)) { // casetta spostata: l'animale la segue
+        pet.home.copy(home);
+        pet.door.copy(home).add(new THREE.Vector3(0, 0, 0.42));
+        pet.porch = this.porchOf(h);
+        pet.den.place(home);
+        if (pet.act === 'sleep' || pet.act === 'enter') { pet.pos.copy(pet.door); pet.path = []; pet.act = 'sleep'; }
+      }
+      pet.porch = this.porchOf(h); // gli oggetti attorno possono cambiare
+      pet.broken = h.broken;
+      if (pet.broken && pet.act !== 'sleep') this.goHome(pet); // casetta rotta: resta in tana finché non la ripari
+    }
+  }
+
+  private porchOf(h: Placed): Cell {
+    const fp = rotatedFootprint(h.type, h.rot);
+    const front = [{ x: h.x + Math.floor(fp[0] / 2), y: h.y + fp[1] }, { x: h.x + Math.floor(fp[0] / 2) - 1, y: h.y + fp[1] }];
+    return front.find((c) => this.walkable(c.x, c.y)) ?? this.nearestWalkable(front[0], front[0]) ?? front[0];
+  }
+
+  private makePet(h: Placed): Pet {
+    const fp = rotatedFootprint(h.type, h.rot);
+    const home = cellCenter(h.x, h.y, fp);
+    const door = home.clone().add(new THREE.Vector3(0, 0, 0.42));
+    const w = this.makeWalker(PET_KINDS[h.variant % PET_KINDS.length], door, PET_SPEED.roam);
+    const hitbox = new THREE.Mesh(new THREE.BoxGeometry(0.9, 0.8, 0.9), hitMat);
+    hitbox.position.y = 0.4;
+    hitbox.userData.petId = h.id;
+    w.rig.root.add(hitbox);
+    w.rig.root.visible = false;
+    const den = new Den('#8ff0dc');
+    den.place(home);
+    this.group.add(den.group);
+    const labels = CATALOG.pet_house.variantLabels ?? [];
+    // riprende quello che faceva (salvato nella casetta); libero, si sveglia dopo poco
+    return {
+      ...w, placeId: h.id, label: labels[h.variant % labels.length] ?? 'Animale', variant: h.variant, home, door, porch: this.porchOf(h),
+      mode: h.petMode ?? 'free', act: 'sleep', timer: h.petMode === 'follow' ? 0.3 : 2 + createRng(h.id).next() * 10, repath: 0, roams: 0, broken: h.broken, hitbox, den,
+    };
+  }
+
+  private removePet(pet: Pet) {
+    if (this.bone.carrier === pet) { this.bone.carrier = null; this.bone.obj.visible = false; }
+    this.disposeWalker(pet);
+    this.group.remove(pet.den.group);
+    pet.hitbox.geometry.dispose();
+    this.pets.delete(pet.placeId);
+  }
+
+  /** Percorso fino a una cella (il punto di partenza può essere occupato); se non c'è, dritto. */
+  private pathTo(from: THREE.Vector3, goal: Cell, final?: THREE.Vector3): THREE.Vector3[] {
+    const start = worldToCell(from);
+    const path = findPath(start, goal, (x, y) => !this.walkable(x, y) && !(x === start.x && y === start.y) && !(x === goal.x && y === goal.y), MAP_SIZE);
+    const pts = (path ?? []).slice(1).map((c) => cellCenter(c.x, c.y, [1, 1]));
+    if (final) { if (pts.length) pts[pts.length - 1] = final.clone(); else pts.push(final.clone()); }
+    return pts.length ? pts : [cellCenter(goal.x, goal.y, [1, 1])];
+  }
+
+  /** Esce dalla tana dall'arco e si ferma sul davanzale. */
+  private wake(pet: Pet) {
+    pet.pos.copy(pet.door);
+    pet.rig.root.visible = true;
+    pet.path = [cellCenter(pet.porch.x, pet.porch.y, [1, 1])];
+    pet.act = pet.mode === 'follow' ? 'follow' : 'roam';
+    pet.roams = 0;
+  }
+
+  /** Torna alla casetta ed entra dall'arco. */
+  private goHome(pet: Pet) {
+    if (pet.act === 'sleep') return;
+    pet.speed = pet.mode === 'home' ? PET_SPEED.run : PET_SPEED.roam;
+    pet.path = [...this.pathTo(pet.pos, pet.porch), pet.door.clone()];
+    pet.act = 'enter';
+  }
+
+  /** Riprende quello che stava facendo (dopo coccole e giochi). */
+  private resume(pet: Pet) {
+    if (pet.broken || pet.mode === 'home') this.goHome(pet);
+    else { pet.act = pet.mode === 'follow' ? 'follow' : 'roam'; pet.path = []; pet.timer = 0.5; }
+  }
+
+  private randomRoamTarget(pet: Pet): Cell | null {
+    const c = worldToCell(pet.pos);
+    for (let i = 0; i < 12; i++) {
+      const a = Math.random() * Math.PI * 2, d = 3 + Math.random() * 7;
+      const t = { x: Math.round(c.x + Math.cos(a) * d), y: Math.round(c.y + Math.sin(a) * d) };
+      if (this.walkable(t.x, t.y)) return t;
+    }
+    return null;
+  }
+
+  private stepPet(pet: Pet, dt: number) {
+    const a = this.avatar.pos;
+    const toAvatar = Math.hypot(a.x - pet.pos.x, a.z - pet.pos.z);
+    const face = (p: THREE.Vector3) => { const dx = p.x - pet.pos.x, dz = p.z - pet.pos.z; if (Math.hypot(dx, dz) > 0.05) pet.facing = Math.atan2(dx, dz); };
+    pet.den.sleeping = pet.act === 'sleep';
+    switch (pet.act) {
+      case 'sleep':
+        pet.rig.root.visible = false;
+        pet.pose = 'idle';
+        // libero: dopo un sonnellino esce di nuovo; al seguito (salvato così): esce subito dal padrone
+        if (pet.mode !== 'home' && !pet.broken) { pet.timer -= dt; if (pet.timer <= 0) this.wake(pet); }
+        return;
+      case 'enter':
+        if (this.followPath(pet, dt)) { pet.pose = 'walk'; return; }
+        pet.act = 'sleep';
+        pet.timer = 18 + Math.random() * 25;
+        pet.rig.root.visible = false;
+        return;
+      case 'roam':
+        pet.speed = PET_SPEED.roam;
+        if (this.followPath(pet, dt)) { pet.pose = 'walk'; return; }
+        pet.act = 'rest';
+        pet.timer = 1.5 + Math.random() * 3.5;
+        pet.pose = 'idle';
+        return;
+      case 'rest':
+        pet.pose = 'idle';
+        pet.timer -= dt;
+        if (pet.timer > 0) return;
+        // dopo qualche giro torna a farsi un pisolino in tana
+        if (++pet.roams > 4 + Math.floor(Math.random() * 4)) { this.goHome(pet); return; }
+        { const t = this.randomRoamTarget(pet); pet.path = t ? this.pathTo(pet.pos, t) : []; pet.act = 'roam'; }
+        return;
+      case 'follow': {
+        pet.speed = PET_SPEED.run;
+        if (toAvatar > 16) { pet.pos.copy(a).add(new THREE.Vector3(1, 0, 1)); pet.path = []; } // rimasto indietro: raggiunge il padrone
+        pet.repath -= dt;
+        if (toAvatar > 1.7 && (pet.repath <= 0 || !pet.path.length)) {
+          pet.repath = 0.5;
+          const stop = a.clone().add(pet.pos.clone().sub(a).setY(0).normalize().multiplyScalar(1.1));
+          pet.path = this.pathTo(pet.pos, worldToCell(a), stop);
+        }
+        if (toAvatar < 1.2) pet.path = [];
+        if (this.followPath(pet, dt)) pet.pose = 'walk';
+        else { pet.pose = 'idle'; face(a); }
+        return;
+      }
+      case 'wait': // fermo ad aspettare le coccole
+        pet.pose = 'idle';
+        face(a);
+        pet.timer -= dt;
+        if (pet.timer <= 0) this.resume(pet);
+        return;
+      case 'fetch':
+        pet.speed = PET_SPEED.run;
+        if (this.followPath(pet, dt)) { pet.pose = 'walk'; return; }
+        if (!this.bone.landed) { pet.pose = 'idle'; face(this.bone.obj.position); return; }
+        // l'osso è a terra: lo prende e lo riporta
+        this.bone.carrier = pet;
+        pet.act = 'bring';
+        pet.repath = 0;
+        return;
+      case 'bring': {
+        pet.speed = PET_SPEED.run;
+        pet.repath -= dt;
+        if (toAvatar > 1.2 && (pet.repath <= 0 || !pet.path.length)) {
+          pet.repath = 0.5;
+          const stop = a.clone().add(pet.pos.clone().sub(a).setY(0).normalize().multiplyScalar(0.95));
+          pet.path = this.pathTo(pet.pos, worldToCell(a), stop);
+        }
+        if (toAvatar > 1.15 && this.followPath(pet, dt)) { pet.pose = 'walk'; return; }
+        // consegnato: lascia l'osso ai piedi del Custode, tutto contento
+        this.bone.carrier = null;
+        this.bone.obj.visible = false;
+        this.happy(pet, 1.8);
+        return;
+      }
+      case 'happy':
+        pet.pose = 'cheer';
+        face(a);
+        pet.timer -= dt;
+        if (pet.timer <= 0) this.resume(pet);
+        return;
+    }
+  }
+
+  private happy(pet: Pet, seconds: number) {
+    pet.act = 'happy';
+    pet.timer = seconds;
+    pet.path = [];
+    for (let i = 0; i < 3; i++) {
+      const p = pet.pos;
+      this.glyphs.spawn('heart', new THREE.Vector3(p.x + (i - 1) * 0.18, this.ground(p) + 0.75 + i * 0.12, p.z), { size: 0.24, life: 1.4 + i * 0.2, vel: new THREE.Vector3((i - 1) * 0.08, 0.5, 0) });
+    }
+  }
+
+  private updateBone(dt: number) {
+    const b = this.bone;
+    if (b.flying) {
+      b.t += dt;
+      const k = Math.min(1, b.t / b.dur);
+      b.obj.position.lerpVectors(b.from, b.to, k);
+      b.obj.position.y += Math.sin(k * Math.PI) * 1.4;
+      b.obj.rotation.set(0, k * 9, k * 14);
+      if (k >= 1) { b.flying = false; b.landed = true; b.obj.rotation.set(0, b.obj.rotation.y, 0); }
+    } else if (b.carrier) {
+      // in bocca: davanti al muso, di traverso
+      const head = b.carrier.rig.parts.head;
+      if (head) { head.updateWorldMatrix(true, false); b.obj.position.copy(head.localToWorld(new THREE.Vector3(0, 0.02, 0.27))); }
+      b.obj.rotation.set(0, b.carrier.rig.root.rotation.y, 0);
+    }
+  }
+
+  /** Animali delle casette (per i menù). */
+  petList(): Array<{ id: string; label: string; mode: PetMode; sleeping: boolean; broken: boolean }> {
+    return [...this.pets.values()].map((p) => ({ id: p.placeId, label: p.label, mode: p.mode, sleeping: p.act === 'sleep', broken: p.broken }));
+  }
+
+  petAt(id: string) { const p = this.pets.get(id); return p ? { label: p.label, mode: p.mode, sleeping: p.act === 'sleep', broken: p.broken } : null; }
+
+  /** Punto sopra la testa dell'animale (per il menù), o sopra la casetta se dorme. */
+  petTop(id: string): THREE.Vector3 | null {
+    const p = this.pets.get(id);
+    if (!p) return null;
+    return p.act === 'sleep' ? p.home.clone().setY(1.4) : p.pos.clone().setY(this.ground(p.pos) + 0.9);
+  }
+
+  /** Raggiunge il padrone: esce dalla tana (se dorme) e lo segue per il cimitero. */
+  callPet(id: string): string {
+    const p = this.pets.get(id);
+    if (!p) return '';
+    if (p.broken) return `La casetta è rotta: riparala e ${p.label.toLowerCase()} tornerà fuori.`;
+    p.mode = 'follow';
+    if (p.act === 'sleep') this.wake(p);
+    else if (!['fetch', 'bring', 'happy', 'wait'].includes(p.act)) { p.act = 'follow'; p.path = []; }
+    return `${p.label} ti raggiunge e ti segue.`;
+  }
+
+  /** A cuccia: torna alla casetta e resta a dormire finché non lo richiami. */
+  sendPetHome(id: string): string {
+    const p = this.pets.get(id);
+    if (!p) return '';
+    p.mode = 'home';
+    if (this.bone.carrier === p) { this.bone.carrier = null; this.bone.obj.visible = false; }
+    if (p.act !== 'sleep') this.goHome(p);
+    return `${p.label} va a cuccia.`;
+  }
+
+  /** Libero: gira per il cimitero e ogni tanto torna in tana. */
+  freePet(id: string): string {
+    const p = this.pets.get(id);
+    if (!p) return '';
+    p.mode = 'free';
+    if (p.act === 'sleep') { p.timer = 1.5; return `${p.label} esce a fare un giro.`; }
+    if (p.act === 'follow') { p.act = 'rest'; p.timer = 0.5; p.path = []; }
+    return `${p.label} è libero di girare.`;
+  }
+
+  /** Coccole: il Custode si avvicina, l'animale aspetta e poi scodinzola. */
+  petPet(id: string, done?: () => void) {
+    const p = this.pets.get(id);
+    if (!p || p.act === 'sleep') return;
+    p.act = 'wait';
+    p.timer = 8;
+    p.path = [];
+    const a = this.avatar.pos;
+    const spot = p.pos.clone().add(a.clone().sub(p.pos).setY(0).normalize().multiplyScalar(0.9));
+    const pet = () => {
+      this.faceTowards(p.pos);
+      this.work(1.3);
+      this.happy(p, 1.9);
+      done?.();
+    };
+    if (Math.hypot(a.x - p.pos.x, a.z - p.pos.z) < 1.3 || !this.walkTo(worldToCell(spot), pet)) pet();
+  }
+
+  /** Lancia l'osso: vola in un punto libero lì vicino, l'animale corre a prenderlo e lo riporta. */
+  throwBone(id: string): boolean {
+    const p = this.pets.get(id);
+    if (!p || p.act === 'sleep' || this.bone.flying || this.bone.carrier) return false;
+    const a = this.avatar.pos;
+    const c = worldToCell(a);
+    let target: Cell | null = null;
+    for (let i = 0; i < 16 && !target; i++) {
+      const ang = Math.random() * Math.PI * 2, d = 3 + Math.random() * 2.5;
+      const t = { x: Math.round(c.x + Math.cos(ang) * d), y: Math.round(c.y + Math.sin(ang) * d) };
+      if (this.walkable(t.x, t.y)) target = t;
+    }
+    if (!target) return false;
+    const to = cellCenter(target.x, target.y, [1, 1]);
+    this.avatar.path = [];
+    this.faceTowards(to);
+    this.cheer(0.6);
+    const b = this.bone;
+    b.from.copy(a).setY(this.ground(a) + 0.75);
+    b.to.copy(to).setY(this.ground(to) + 0.04);
+    b.t = 0; b.dur = 0.9; b.flying = true; b.landed = false; b.carrier = null;
+    b.obj.visible = true;
+    p.act = 'fetch';
+    p.path = this.pathTo(p.pos, target, to);
+    return true;
   }
 
   // ── Funerale ─────────────────────────────────────────────────────────
@@ -554,6 +885,8 @@ export class Actors {
     }
     for (const r of [...this.roamers.values()]) this.stepRoamer(r, dt, t, graves);
     for (const p of this.presences) this.stepPresence(p, dt, t);
+    this.ground = ground;
+    for (const p of this.pets.values()) this.stepPet(p, dt);
     if (this.funeral) this.stepFuneral(dt);
 
     const apply = (w: Walker) => {
@@ -572,14 +905,22 @@ export class Actors {
     apply(a);
     for (const r of this.roamers.values()) apply(r);
     for (const p of this.presences) if (!p.hidden) apply(p);
+    for (const p of this.pets.values()) { if (p.rig.root.visible) apply(p); p.den.group.position.y = ground(p.home); p.den.update(dt, t, this.glyphs); }
     if (this.funeral) for (const m of this.funeral.members) apply(m);
+    this.updateBone(dt);
+    this.glyphs.update(dt);
+  }
+
+  /** Oggetti toccabili: presenze erranti e animali fuori dalla tana. */
+  pickables(): THREE.Object3D[] {
+    return [...this.hitboxes, ...[...this.pets.values()].filter((p) => p.rig.root.visible).map((p) => p.hitbox)];
   }
 
   avatarCell(): Cell { return worldToCell(this.avatar.pos); }
 
   roamerAt(id: string) { return this.roamers.get(id); }
 
-  stats() { return { roamers: this.roamers.size, presences: this.presences.length }; }
+  stats() { return { roamers: this.roamers.size, presences: this.presences.length, pets: this.pets.size }; }
 }
 
 export function graveSpots(state: SaveData): THREE.Vector3[] {

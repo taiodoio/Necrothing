@@ -77,7 +77,6 @@ export const LP_PLACEABLES: Record<string, (v: PVis) => LPModel> = {
   zombie_walker: npcHomeLP,
   ghosts_roam: npcHomeLP,
   ghosts_ball: npcHomeLP,
-  skeleton_pet: npcHomeLP,
 };
 /** Generatori di scenografia (prefisso della chiave → generatore con parametro). */
 export const LP_SCENERY: Record<string, (arg: string) => LPModel> = {

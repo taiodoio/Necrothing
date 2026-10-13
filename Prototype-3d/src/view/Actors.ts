@@ -464,12 +464,13 @@ export class Actors {
   startFuneral(graveCenter: THREE.Vector3, gateCell: Cell, onDone: () => void) {
     this.endFuneral();
     const gate = cellCenter(gateCell.x, gateCell.y, [1, 1]);
+    // a semicerchio davanti alla tomba, ben distanziati: teste e cappelli grandi non si toccano
     const spots = [
-      new THREE.Vector3(0, 0, 1.6), new THREE.Vector3(-1.1, 0, 1.4), new THREE.Vector3(1.1, 0, 1.4), new THREE.Vector3(-0.5, 0, 2.2), new THREE.Vector3(0.6, 0, 2.3),
+      new THREE.Vector3(0, 0, 1.65), new THREE.Vector3(-1.25, 0, 1.75), new THREE.Vector3(1.25, 0, 1.75), new THREE.Vector3(-0.65, 0, 2.75), new THREE.Vector3(0.75, 0, 2.8),
     ];
     const kinds: CharacterKind[] = ['priest', 'mourner', 'mournerB', 'mourner', 'gravedigger'];
     const members = kinds.map((k, i) => {
-      const w = this.makeWalker(k, gate.clone().add(new THREE.Vector3((i - 2) * 0.4, 0, 0.5 + i * 0.3)), 1.4);
+      const w = this.makeWalker(k, gate.clone().add(new THREE.Vector3((i - 2) * 0.7, 0, 0.5 + i * 0.45)), 1.4);
       const dest = graveCenter.clone().add(spots[i]);
       const path = findPath(worldToCell(w.pos), worldToCell(dest), (x, y) => !this.walkable(x, y), MAP_SIZE);
       w.path = (path ?? []).slice(1).map((c) => cellCenter(c.x, c.y, [1, 1]));
@@ -494,9 +495,24 @@ export class Actors {
     this.funeral = null;
   }
 
+  /** Il corteo cammina sullo stesso sentiero: chi è troppo vicino viene scostato, così non si compenetrano. */
+  private keepApart(ms: Walker[], dt: number, min = 1) {
+    const k = Math.min(1, dt * 6);
+    for (let i = 0; i < ms.length; i++) for (let j = i + 1; j < ms.length; j++) {
+      const a = ms[i].pos, b = ms[j].pos;
+      const dx = b.x - a.x, dz = b.z - a.z, d = Math.hypot(dx, dz);
+      if (d >= min) continue;
+      const [ux, uz] = d > 1e-4 ? [dx / d, dz / d] : [Math.cos(i + j), Math.sin(i + j)];
+      const push = ((min - d) / 2) * k;
+      a.x -= ux * push; a.z -= uz * push;
+      b.x += ux * push; b.z += uz * push;
+    }
+  }
+
   private stepFuneral(dt: number) {
     const f = this.funeral!;
     f.timer += dt;
+    if (f.stage !== 'rite') this.keepApart(f.members.filter((m) => m.rig.root.visible), dt);
     if (f.stage === 'arrive') {
       let moving = false;
       for (const m of f.members) {

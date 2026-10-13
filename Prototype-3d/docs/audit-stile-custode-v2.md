@@ -1,0 +1,251 @@
+# Audit di fattibilità: personaggi nello stile "v2" (concept del Custode)
+
+Il concept del Custode ha:
+- una testa tonda e grande;
+- capelli voluminosi a ciocche che escono dalla sagoma;
+- una barba a maschera con la treccia e baffi a manubrio grandi;
+- brillantini a stella e occhi grandi e lucidi con il riflesso a stella;
+- una giacca con cappuccio e cintura, e stivali tondi.
+
+Ho costruito un **prototipo separato**, fuori dal gioco, per valutarne la fattibilità; al posto della borsa del concept tiene la lanterna.
+
+- Pagina: `proto-custode.html`, solo con `npm run dev`. Non è nella build né collegata al gioco.
+- Codice: `src/proto/custodeV2.ts` (modello) e `src/proto/turnaround.ts` (tavola).
+- Confronto: `proto-custode.html?v=attuale` mostra il Custode di oggi, con un aspetto simile al concept, nella stessa tavola e con la stessa luce.
+
+![Prototipo v2](../screenshots/proto/custode-v2.png)
+![Custode attuale, stessa tavola](../screenshots/proto/custode-attuale.png)
+
+## Seconda versione del prototipo
+
+La prima versione era troppo lontana dal concept. Ho rifatto il modello misurando la vista frontale del concept:
+- **Proporzioni:** testa e capelli occupano ~60% dell'altezza, il corpo è basso e paffuto con gambe cortissime, e la testa poggia sopra il colletto.
+- **Volto:** occhi, baffi e bocca stanno nella metà bassa della testa, con una fronte grande.
+- **Capelli:** massa tonda a scaglie di ciocche corte a punta, al posto delle ciocche lunghe e pendenti.
+- **Barba:** fascia lungo la mandibola, non più una maschera sul viso.
+- **Dettagli:** baffi più larghi, brillantini più grandi e radi, orecchie grandi e tonde, manone, stivaloni con suola spessa.
+- **Zolla:** più piccola e più scura.
+
+Terza passata:
+- **Testa:** non più sferica ma "superellissoide", più piena di una sfera, con la faccia più piatta davanti e appena più larga sulle guance.
+- **Capelli:** la calotta è il volume vero e le ciocche ci si appoggiano sopra, quindi non sembrano più staccate dalla testa; tra una ciocca e l'altra si legge il solco.
+- **Barba:** ha un bordo inferiore pieno e più scuro, con il collo in ombra, così si stacca dalla giacca.
+- **Corpo:**
+  - giacca morbida "a pera" con sezione ovale, cappuccio ripiegato e bordo morbido attorno al collo;
+  - cintura con fibbia, borsello sul fianco e tasche oblique;
+  - maniche morbide che scendono in fuori e si allargano al polso, polsini scuri e manone;
+  - gambe larghe e stivaloni.
+
+Quarta passata:
+- **Testa:** più bassa, quindi meno fronte; il mento resta dov'era, scende la sommità. Anche la frangia è più bassa.
+- **Ciocche:** più spesse, più varie in larghezza, lunghezza e direzione, con le punte un po' sollevate.
+- **Sciarpa:** ha un nodo che esce da sotto la barba, prima del capo che scende sul petto.
+- **Bocca:** un po' più grande, tra baffi e barba.
+
+Quinta passata:
+- **Testa:** un po' più in alto, così barba e colletto non si sovrappongono; tra i due resta il giro della sciarpa.
+- **Barba:** meno gonfia, sale lungo la guancia prima dell'orecchio.
+- **Treccia:** attaccata davanti al mento (prima finiva dentro il colletto), con lobi intrecciati alternati, fermaglio e ciuffetto finale.
+- **Baffi:** ridotti del 20%.
+- **Capelli:** tutte le ciocche hanno la stessa lunghezza della frangia, e dietro e ai lati ci sono più file invece di ciocche lunghe; ai lati coprono fin sopra l'orecchio.
+- **Sciarpa:** un nastro morbido che segue la curva della giacca, con righe, ondeggiamento e frangia in fondo (prima era un rettangolo appoggiato).
+- **Suole:** seguono la pianta dello stivale, con punta tonda e tacco.
+
+Sesta passata:
+- **Capelli:** tornati alle quattro file di prima, con le proporzioni giuste. Le ciocche hanno una lunghezza massima, così dietro non pendono più, e ai lati scendono un po' di più.
+- **Barba:** non più un velo spalmato. È un volume a mezzaluna con il bordo superiore netto, che sale dalla bocca fino davanti all'orecchio, più una massa sotto il mento che sporge in avanti.
+- **Treccia:** tre grani uguali impilati dritti davanti alla giacca, fermaglio color panna e punta, come nel concept.
+- **Stivali:** tomaia e suola hanno la stessa pianta e la tomaia nasce dentro la suola, così il bordo è continuo e la suola non sembra staccata.
+- **Sciarpa:** spostata di lato, per lasciare libera la treccia.
+
+Settima passata (cambio di metodo: meno forme sovrapposte):
+- **Testa:** più grande del 30% (con faccia, barba, baffi e capelli), scalata attorno al mento, così resta appoggiata sul colletto.
+- **Barba:** un unico guscio continuo che nasce dalla pelle, con il bordo superiore netto. Avvolge guance e mandibola e sotto il mento si ispessisce in avanti e in basso, chiuso da una parete verso il collo. Niente più ellissoidi appiccicati.
+- **Capelli:** poche ciocche grandi e scompigliate, come nel concept: una frangia di cinque, due giri attorno (lati e nuca) con ciocche corte che piegano ognuna per conto suo, e sette ciocche in cima che si aprono dal vortice. La copertura arriva allo stesso punto di prima.
+- **Treccia:** pende davanti alla giacca, subito sotto la barba.
+
+Ottava passata:
+- **Capelli:** ogni ciocca è incollata alla testa. La faccia interna sta sulla pelle, quella esterna si gonfia e poi si assottiglia, e alla radice lo spessore è zero, così la ciocca esce dalla testa senza scalini. Le punte sono appoggiate, non sollevate.
+- **Barba:** più sottile ai lati e piena solo al mento.
+- **Treccia:** il primo grano parte dentro la massa del mento, quindi è attaccata in alto.
+- **Occhi:** più piccoli del 10%.
+
+Nona passata (capelli e barba ripensati guardando bene il concept):
+- **Capelli:** un "casco" pieno, più largo del cranio, fatto di tre strati sovrapposti. Ogni strato è un guscio chiuso con il bordo seghettato (una punta per ciocca) e un rilievo per ciocca che scende dal vortice girando un poco. Le ciocche fanno parte del volume, quindi non possono staccarsi. Il bordo forma la frangia sulla fronte, scende sopra le orecchie ai lati e alla nuca dietro; in cima ci sono alcuni ciuffi a punta. È anche più leggero (meno triangoli).
+- **Barba:** la fascia sale lungo la guancia fino ai capelli alla tempia, ha spessore medio ai lati e si chiude in un cuneo pieno sotto il mento.
+- **Treccia:** costruita nello stesso spazio della barba; il primo grano parte dalla punta del cuneo e gli altri scendono toccandosi.
+- **Occhi:** ancora più piccoli.
+
+Decima passata:
+- **Barba:** più sottile ai lati.
+- **Treccia:** il primo grano parte metà dentro la punta della barba, gli altri scendono dritti.
+- **Capelli:** meno segmenti per ciocca (4 di larghezza e 6 di altezza al posto di 6 e 9), con lo stesso aspetto. Il modello intero scende a ~12.700 triangoli, meno del Custode attuale con un look ricco.
+
+Undicesima passata:
+- **Barba:** ai lati è una striscia sottile; il volume pieno c'è solo al centro, sotto il mento, in un cuneo più grande che spinge in avanti.
+- **Prima la punta finiva dietro il colletto.** Il cuneo scendeva sotto la testa e la sua punta restava dietro il bordo della giacca, per questo la treccia sembrava staccata. Ora il bordo inferiore è più alto e il cuneo va in avanti.
+- **Treccia:** esce dalla punta del cuneo, calcolata con la stessa funzione della barba (`beardOffset`), così resta attaccata anche se la barba cambia.
+
+Dodicesima passata:
+- **Barba:** sotto il mento si allunga in modo uniforme da una mandibola all'altra, con forma a U e non a punta, verso il basso e un po' in avanti; le guance restano sottili.
+- **Barba lunga:** lo stesso schema vale per una barba lunga senza treccia; basta aumentare `BEARD_DROP`.
+
+Tredicesima passata:
+- **Barba:** stessa forma a U della passata precedente, con più spessore solo davanti, sotto il mento, che cresce in avanti.
+- **Treccia:** di conseguenza si attacca un po' più avanti.
+- **Bocca:** centrata.
+
+Quattordicesima passata:
+- **Barba di profilo:** stretta in alto, davanti all'orecchio; davanti scende dritta lungo la guancia fino a sotto il mento; dietro il bordo cala in diagonale dall'orecchio al mento. Il bordo inferiore sale verso l'orecchio (`beardLow`) e la massa diminuisce gradualmente verso i lati, quindi le guance restano sottili.
+
+Quindicesima passata (barba ricostruita):
+- **Metodo:** la barba non è più uno strato spostato lungo la normale della pelle, che si piegava e si stirava. Ora c'è un involucro, un superellissoide un po' più basso e avanzato della testa con il davanti quasi piatto, e la barba è la parte dell'involucro che sta fuori dalla testa. I punti si trovano lungo raggi dal centro della testa, quindi la superficie è continua e senza pieghe.
+- **Forma che ne risulta:** sottile sulle guance, piena sotto il mento, davanti che scende dritto, bordo dietro in diagonale dall'orecchio al mento, come nel concept e nel disegno di profilo.
+- **Barba lunga:** si ottiene aumentando `BEARD_DROP`.
+- **Primi piani:** `proto-custode.html?yaw=…` mostra la testa da vicino con la rotazione indicata (per i controlli).
+
+Sedicesima passata (barba dallo schizzo):
+- **Guance:** restano libere.
+- **Strato sottile:** fa da basetta davanti alle orecchie e copre la zona sotto la bocca.
+- **Cuscinetto:** lungo la mandibola c'è un cuscinetto pieno (`beardPad`, un tubo per metà dentro la testa) che nasce sottile sotto l'orecchio e si ingrossa verso il mento. Di fronte forma la U sotto la bocca e la treccia esce dal suo punto più basso. `BEARD_DROP` ne regola il volume (barba lunga).
+
+Diciassettesima passata:
+- **Cuscinetto pieno:** ha una sezione ellittica, rotonda davanti e allungata dietro verso il collo. Riempie il vuoto sotto la mandibola, quindi di profilo la barba è un volume unico e non un ricciolo cavo.
+- **Basette:** più spesse in basso vicino all'orecchio; l'estremità del cuscinetto si sovrappone alla loro base, quindi basetta e barba sono continue.
+
+Diciottesima passata:
+- **Barba di profilo:** la massa lungo la mandibola non è più un tubo, ma una "tenda" piena che pende dalla linea della mascella. Per ogni punto attorno al viso c'è una striscia verticale che scende poco sotto l'orecchio e molto al mento, con il davanti arrotondato e lo spessore che rientra verso il collo. Di profilo riempie tutta la zona tra mandibola e linea orecchio-mento, unita alla basetta.
+
+## Varianti con le opzioni della personalizzazione
+
+Il prototipo ora accetta un `CustodeLook` (`buildCustodeV2(look)`): stesso corpo, stesse proporzioni, stessi metodi per barba e capelli, con tutte le opzioni che la personalizzazione del gioco offre già. La pagina `proto-looks.html` mostra otto varianti che coprono tutte le opzioni; `?yaw=0` la mostra di fronte, `?yaw=3.14` di spalle, `?i=N` mostra una sola variante grande. Le immagini sono in `screenshots/proto/varianti-34.png`, `varianti-fronte.png` e `varianti-retro.png`.
+
+| Opzione | Come è fatta in v2 |
+| --- | --- |
+| Capelli | Tutti i tagli sono lo stesso casco a ciocche; cambia la forma dell'orlo per taglio. Spettinati e ciuffi hanno anche le punte in cima. Caschetto, lunghi e ricci lunghi, sotto l'equatore della testa, dietro scendono dritti come una tenda invece di rientrare sulla nuca. Nei lunghi e nei ricci lunghi, ai lati scendono subito accanto all'occhio e restano aderenti alla guancia fino alla mandibola, incorniciando il viso. Ricci e ricci lunghi sono il casco più riccioli a file regolari. Chignon è il casco più la crocchia con l'elastico del colore d'accento. Calvo non ha capelli. |
+| Cappelli | Tesa larga, cilindro e berretto con risvolto e pompon. Sotto un cappello resta solo lo strato basso dei capelli, che finisce alla tesa; la cupola si allarga sul cranio, quindi niente capelli che bucano. |
+| Barba | Corta: stessa barba "a ciocche" ma aderente al viso e appena sotto la mandibola. Piena: quella del concept senza treccia. Treccia: quella del concept. |
+| Baffi | Sottili, folti e a manubrio (quelli del concept). |
+| Occhiali | Tondi, squadrati e monocolo con la catenella; il monocolo segue il volto. |
+| Viso | Lentiggini, cerotto e brillantini, quest'ultimi solo se attivi. |
+| Vestiti | Giacca: quella del concept, con sciarpa del colore d'accento. Maglione: orlo a coste, due righe d'accento e collo alto. Mantello: tunica chiara, mantello dietro, cappuccio e fermagli. Salopette: camicia del colore d'accento, pettorina, bretelle con bottoni e pantaloni. |
+
+Triangoli: da circa 9k (calvo, caschetto) a circa 17k (ricci lunghi), in media circa 12,6k. I riccioli sono l'opzione più pesante.
+
+Punti ancora deboli:
+- **Calvo:** il cranio grande del nuovo stile resta tutto scoperto e la fronte sembra alta.
+- **Capelli lunghi:** da dietro sono una tenda un po' rigida.
+- **Mantello:** di fronte si vede solo la tunica.
+
+## Gli altri personaggi e gli animali
+
+Stesso approccio del Custode, nel prototipo `src/proto/npcV2.ts`. Pagina: `proto-looks.html?set=umani` e `proto-looks.html?set=animali` (con `&yaw=0` di fronte). Immagini: `screenshots/proto/npc-34.png`, `npc-fronte.png`, `animali-34.png`, `animali-lato.png`.
+
+- **Umani:** becchino, prete, le due figure del corteo e lo zombie usano lo stesso costruttore del Custode, con le stesse opzioni della personalizzazione (capelli, barba, baffi, occhiali, cappelli, vestiti) e poche aggiunte:
+  - occhi assonnati (palpebra), chiusi (archetto), da zombie (uno tondo, uno cucito), orbite dello scheletro con la lucina;
+  - bocca piatta, a "o" o cucita, e guance rosa;
+  - capelli con un orlo proprio, anche solo su un arco (la corona grigia del prete);
+  - cappelli su misura: coppola, saturno, cappellino con veletta;
+  - tonaca fino a terra, braccia tese in avanti;
+  - oggetti in mano: pala, libro, giglio, ombrello, bende.
+- **Scheletro:** la stessa testa del Custode diventa un teschio (orbite, naso, denti, crepa) su un corpo di ossa.
+- **Fantasmi:** la testa stessa fa da corpo: sopra l'equatore è il superellissoide, sotto scende dritta e si chiude con l'orlo a onde. Hanno occhi lucidi con la stella e guance rosa, e restano nel materiale trasparente del gioco.
+- **Animali:** testa enorme a superellissoide come il Custode, occhi lucidi con la stella (luminosi per il gatto nero e il corvo), corpo a fagiolo, zampette.
+  - Il ratto è più piccolo (0,62) e ha le orecchie tonde e grandi in cima, dritte e rivolte in avanti, come Topolino; i baffi di gatto e ratto sono sottili e curvi.
+  - Al gatto nero le guance a ciuffi sono fatte con lo stesso casco a ciocche dei capelli, su un arco.
+  - Gli animaletti-scheletro (cane, gatto, coniglio, corvo, papera) sono scheletri veri, non animali colorati di bianco:
+    - il teschio grande ha le orbite con la lucina (come lo scheletro umano); il coniglio ha i due dentoni adagiati sul muso;
+    - i quadrupedi hanno spina a vertebre, gabbia toracica aperta in basso, bacino, scapole, zampe d'ossa con le dita e la coda a vertebre;
+    - gli uccelli hanno la carena dello sterno, le ali ripiegate d'ossa, le zampe sottili e il codino;
+    - niente elementi dritti "a bacchetta" (denti in fila, crepe, zigomi, sterno, penne d'osso): non seguivano le forme.
+    - restano le orecchie (gatto, coniglio e cane, anche se uno scheletro non le avrebbe) perché si capisca che animale è.
+
+Triangoli (media misurata sulla pagina): circa 6.700 per umani, scheletro e fantasmi; circa 5.400 per gli animali (gli scheletri pesano di più: ogni vertebra e ogni giuntura è un pezzo). Il Custode con le sue varianti resta il più pesante, circa 12.600.
+
+## Nel gioco
+
+Lo stile v2 ha sostituito i personaggi "kawaii" per tutti: Custode (con ogni opzione della personalizzazione), becchino, prete, corteo, zombie, scheletro, fantasmi, gatto nero, ratto, corvo e animaletti-scheletro.
+
+- **Parti animate:** ogni personaggio è diviso nelle parti del rig (testa, busto, braccia, gambe; per gli animali le quattro zampe; per il corvo le ali), con il perno all'articolazione: collo, anca, spalle, anche. Le animazioni del gioco restano le stesse.
+- **Costruzione delle parti:** ogni parte si disegna nello spazio del personaggio, come nelle tavole, e poi viene portata nello spazio del suo perno. Le tavole di prototipo montano le stesse parti, quindi quello che si vede nelle tavole è quello che si vede nel gioco.
+- **Occhi:** fanno parte del modello della testa, in un materiale lucido dedicato (bucket `gloss`), quindi non costano mesh in più.
+- **Scintille della pelle brillantinata:** seguono i brillantini del nuovo viso.
+- **Esultanza e ballo:** con la testa grande e le braccia corte, le braccia alzate finirebbero dentro la testa, quindi in queste due pose si aprono di lato.
+- **Zombie:** le braccia tese gliele dà l'animazione della camminata, non il modello.
+- **Lanterna del Custode:** ha la stessa luce di prima, quindi di notte illumina il Custode.
+- **Tempi e pesi:** generare le parti di un personaggio richiede 10–100 ms, una volta sola, perché poi restano in cache. I triangoli vanno da circa 1.300 (fantasmi) a circa 11.000 (becchino); il Custode con ricci lunghi e treccia arriva a circa 25.000.
+
+## Prestazioni su telefono (app Capacitor)
+
+Con Capacitor il gioco gira nel WebView del sistema (WKWebView su iOS, WebView di Chrome su Android): le prestazioni sono quelle del browser del telefono. Che il gioco funzioni offline non cambia nulla, perché il lavoro lo fanno GPU e CPU del dispositivo.
+
+- **Triangoli:** ~23k per il Custode v2 non sono un problema nemmeno per telefoni di 5–6 anni fa, che reggono qualche centinaio di migliaia di triangoli a 30 fps. Conta il totale della scena: con 6–8 personaggi v2 si aggiungono ~150–200k triangoli. Sui telefoni vecchi conviene una versione alleggerita in qualità «Bassa»: meno file di ciocche, sfere con meno suddivisioni, niente stelline.
+- **Cose che pesano di più dei triangoli:**
+  - le ombre (raddoppiano il lavoro sulla geometria);
+  - la risoluzione (pixel ratio 2–3 sugli schermi moderni);
+  - la post-elaborazione (sfocatura ai bordi);
+  - le luci puntiformi;
+  - le parti trasparenti.
+
+  Il gioco le regola già in base alla qualità.
+- **CPU e memoria:** i modelli si generano dal codice (~45 ms il v2) e restano in cache. Su un telefono lento può diventare ~150–200 ms, per una volta, al primo caricamento o quando si cambia aspetto. Con molti personaggi diversi va fatto con calma (uno per frame) o in anticipo.
+- **Raccomandazione:** prima di andare avanti, misurare su un Android economico reale (es. 3–4 GB di RAM, GPU Mali/Adreno di fascia bassa) con le statistiche tecniche del gioco.
+
+Restano differenze con il concept:
+- l'ombreggiatura morbida da render (il gioco usa facce piatte);
+- la pelle, un po' più spenta per via della luce del gioco;
+- la varietà delle ciocche, più regolare che nel disegno.
+
+## Verdetto
+
+**Fattibile con la pipeline attuale.** Il prototipo usa lo stesso kit low-poly del gioco: `LP`, materiali a colori per vertice, bucket `glow`, `instantiate`. Usa le stesse primitive, più `RoundedBoxGeometry` di three (già nelle dipendenze). Non servono asset esterni, modellazione in un software 3D né nuove librerie.
+
+Il lavoro vero è **rifare le opzioni di personalizzazione** nel nuovo stile, cioè 8 tagli, 4 cappelli, barbe e vestiti, e **rendere coerenti i PNG** (becchino, prete, dolenti, ecc.). Il motore non è il problema.
+
+## Cosa cambia rispetto a oggi
+
+| Elemento | Oggi | Stile v2 (prototipo) | Impatto |
+|---|---|---|---|
+| Testa | box arrotondato | ellissoide più tondo e grande | Facile: anzi semplifica, perché la superficie è analitica e non serve la ricerca per bisezione. |
+| Capelli | veli aderenti e ciocche sottili | massa tonda e compatta di tante ciocche corte a punta sovrapposte a scaglie (4 file più ciuffetti in cima) | Medio: 8 tagli da rifare. Con il cappello servono varianti "schiacciate". |
+| Occhi | iride con riflessi bianchi | grande ovale lucido con riflesso a stella | Facile: un materiale lucido a parte (+1 draw call). |
+| Brillantini | stelline a 4 punte e scintille | stelle a 5 punte pastello più grandi | Facile: quasi già pronto. |
+| Barba e baffi | velo aderente, manubrio sottile | fascia lungo la mandibola da orecchio a orecchio (la bocca resta libera), manubrio largo con il ricciolo accanto agli occhi | Facile: stessa tecnica, sulla nuova testa. |
+| Corpo e vestiti | busto squadrato, braccia sottili | giacca morbida con cappuccio e cintura, braccia a capsula, stivali tondi | Medio: 4 vestiti da rifare. |
+| Rig e animazioni | parti separate con perni | uguale, con perni da ricalibrare (testa più pesante, braccia corte) | Basso: verificare camminata, lavoro, preghiera, seduto. |
+
+## Numeri (misurati)
+
+| | Triangoli | Draw call | Tempo di costruzione |
+|---|---|---|---|
+| Custode attuale, look base | 7.450 | 7 | — |
+| Custode attuale, look ricco (ricci lunghi, treccia, manubrio, monocolo, brillantini) | 17.370 | 9 | ~126 ms |
+| Prototipo v2 (completo, con lanterna) | 12.700 | 8 | ~30 ms |
+
+Il v2 costa più o meno quanto un look ricco di oggi, ed è più veloce da generare perché la testa è un ellissoide. Diviso nelle parti del rig resterebbe a circa 8–10 draw call. Per il solo Custode non ci sono problemi di prestazioni.
+
+Se anche i PNG passassero al v2 (6–8 in scena, ~10–15k triangoli ciascuno) si arriverebbe a ~100k triangoli di personaggi. Va bene su telefoni medi, ma per quelli economici converrebbe una versione semplificata dei capelli in qualità «Bassa».
+
+## Rischi
+
+1. **Leggibilità alla distanza di gioco.** In gioco la camera è isometrica e lontana: su telefono il Custode è alto pochi decine di pixel. Stelline, riflesso negli occhi e ricciolo dei baffi rischiano di sparire o sfarfallare. Il concept funziona molto in primo piano. *Da verificare con un'opzione sperimentale nel gioco vero, prima di investire su tutte le opzioni.*
+2. **Luce.** Gran parte del fascino del concept viene dalla luce da studio: chiave calda, controluce freddo, ombre morbide. In gioco c'è l'atmosfera (giorno, notte, nebbia) e di notte molti dettagli si appiattiscono.
+3. **Cappelli e capelli voluminosi.** Più volume vuol dire più conflitti con tesa, cilindro e berretto. Ogni taglio ha bisogno di una variante sotto il cappello, e anche i cappelli vanno ridisegnati per la testa tonda.
+4. **Coerenza con il mondo.** Il v2 è più morbido e "giocattolo" del resto (tombe ed edifici gotici low-poly). Insieme probabilmente funziona, ma va guardato in scena.
+5. **PNG.** Se cambia solo il Custode, gli altri personaggi sembrano di un altro gioco: il passaggio va pianificato anche per loro.
+
+## Piano proposto (a passi, ognuno valutabile)
+
+1. **Prova in gioco** (1 giro): solo il Custode v2 con il look di base, attivabile con un'opzione sperimentale (es. `?stile=v2`), per vederlo alla distanza vera, di giorno e di notte.
+2. **Testa e volto** (1 giro): occhi, bocca, orecchie, barbe, baffi, occhiali, cerotto, lentiggini e brillantini sulla testa tonda.
+3. **Capelli** (2–3 giri): gli 8 tagli a ciocche-volume, le varianti sotto il cappello e i 3 cappelli rifatti, con il test "niente capelli sopra la tesa".
+4. **Vestiti e corpo** (1–2 giri): cappotto (o giacca con cappuccio), mantella, salopette, maglione, stivali e mani; ricalibrare perni e animazioni.
+5. **PNG** (1–2 giri): becchino, prete, dolenti e zombie nello stesso stile; fantasmi e animali solo se serve.
+
+In totale sono 6–9 giri, più o meno quanto la personalizzazione fatta finora. Il passo 1 basta già per decidere se proseguire.
+
+## Cosa del concept non è (ancora) nel prototipo
+
+- L'ombreggiatura morbida "da render", con occlusione ambientale e leggero sottosuolo: nel gioco usiamo facce piatte.
+- La borsa: sostituita dalla lanterna, come richiesto.
+- Proporzioni e lunghezze delle ciocche sono a occhio e si possono ritoccare.

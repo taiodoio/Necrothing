@@ -15,7 +15,7 @@ export type BucketGeometries = Partial<Record<Bucket, THREE.BufferGeometry>>;
 interface Mat { color: THREE.Color; bucket: Bucket }
 
 const AO_LEVELS = [0.45, 0.64, 0.82, 1];
-const TRANSPARENT: Record<Bucket, boolean> = { solid: false, glow: false, water: true, ghost: true };
+const TRANSPARENT: Record<Bucket, boolean> = { solid: false, glow: false, water: true, ghost: true, gloss: false };
 
 /** Voxel per unità di design (10 unità = 1 cella). Impostabile per qualità. */
 let RES = 1.6;

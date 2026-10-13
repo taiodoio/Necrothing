@@ -1,14 +1,15 @@
 // Personaggi procedurali composti da parti (busto, testa, braccia, gambe)
 // con pivot alle articolazioni: animazione leggera di idle/camminata/lavoro
 // senza scheletri. Ogni parte è un modello voxel/miniatura in cache; nello
-// stile low-poly le parti e i perni sono quelli "kawaii" di render/lowpoly/kawaii.ts.
+// stile low-poly le parti e i perni sono quelli dello stile v2 (render/lowpoly/v2).
 
 import * as THREE from 'three';
 import type { ArtStyle } from '../game/state.ts';
 import { getModel, instantiate, lightWorldPos } from '../render/modelCache.ts';
 import { ModelBuilder, VOX, type LightAnchor, type Model } from '../render/shape.ts';
 import { P } from '../render/palette.ts';
-import { KAWAII, custodeSpec, sparklePoints, type KawaiiSpec, type KPart } from '../render/lowpoly/kawaii.ts';
+import { humanSpec, sparklePointsV2, type KawaiiSpec, type KPart } from '../render/lowpoly/v2/custode.ts';
+import { V2_SPECS as KAWAII } from '../render/lowpoly/v2/npc.ts';
 import { LP } from '../render/lowpoly/kit.ts';
 import { LOWPOLY_MATERIALS, type CachedModel } from '../render/modelCache.ts';
 import { DEFAULT_LOOK, lookKey, type CustodeLook } from '../game/look.ts';
@@ -30,10 +31,12 @@ interface Spec {
   hover?: number;
   quadruped?: boolean;
   flier?: boolean;
-  /** Ampiezza dei sobbalzi (personaggi kawaii: gambe più corte). */
+  /** Ampiezza dei sobbalzi (personaggi low-poly: gambe più corte). */
   bob?: number;
   /** Spostamento verticale del busto da seduti (unità di design; default -2.6). */
   sitDy?: number;
+  /** Testa grande e braccia corte (stile v2): le braccia alzate finirebbero dentro la testa, si aprono di lato. */
+  bigHead?: boolean;
 }
 
 /** Umanoide generico: misure in voxel, pivot (anca/spalla) nello spazio personaggio. */
@@ -297,21 +300,19 @@ void main() {
   gl_FragColor = vec4(vec3(1.0, 0.96, 1.0) * a, a);
 }`;
 let twinkleMat: THREE.ShaderMaterial | null = null;
-let twinkleGeo: THREE.BufferGeometry | null = null;
 const drawSize = new THREE.Vector2();
 
-function twinkles(): THREE.Points {
+function twinkles(look: CustodeLook): THREE.Points {
   twinkleMat ??= new THREE.ShaderMaterial({
     vertexShader: TWINKLE_VERT, fragmentShader: TWINKLE_FRAG,
     uniforms: { uTime: { value: 0 }, uScale: { value: 400 } },
     transparent: true, depthWrite: false, blending: THREE.AdditiveBlending,
   });
-  if (!twinkleGeo) {
-    const pts = sparklePoints();
-    twinkleGeo = new THREE.BufferGeometry();
-    twinkleGeo.setAttribute('position', new THREE.Float32BufferAttribute(pts.flatMap(({ p, n }) => [p.x + n.x * 0.012, p.y + n.y * 0.012, p.z + n.z * 0.012]), 3));
-    twinkleGeo.setAttribute('aSeed', new THREE.Float32BufferAttribute(pts.map(({ r }) => r), 1));
-  }
+  // sui brillantini della pelle (che cambiano con capelli, barba e cappello)
+  const pts = sparklePointsV2(look);
+  const twinkleGeo = new THREE.BufferGeometry();
+  twinkleGeo.setAttribute('position', new THREE.Float32BufferAttribute(pts.flatMap(({ p, n }) => [p.x + n.x * 0.012, p.y + n.y * 0.012, p.z + n.z * 0.012]), 3));
+  twinkleGeo.setAttribute('aSeed', new THREE.Float32BufferAttribute(pts.map(({ r }) => r), 1));
   const points = new THREE.Points(twinkleGeo, twinkleMat);
   points.name = 'scintille';
   points.raycast = () => undefined; // non intralcia la selezione
@@ -324,8 +325,8 @@ function twinkles(): THREE.Points {
 
 export function buildRig(kind: CharacterKind, style: ArtStyle, look?: CustodeLook): Rig {
   if (style === 'lowpoly' && kind === 'custode' && look && lookKey(look) !== lookKey(DEFAULT_LOOK)) {
-    const rig = buildKawaiiRig(kind, custodeSpec(look), lookKey(look));
-    if (look.sparkle && rig.parts.head) rig.parts.head.add(twinkles());
+    const rig = buildKawaiiRig(kind, humanSpec(look), lookKey(look));
+    if (look.sparkle && rig.parts.head) rig.parts.head.add(twinkles(look));
     return rig;
   }
   if (style === 'lowpoly' && KAWAII[kind]) return buildKawaiiRig(kind);
@@ -357,15 +358,15 @@ export function buildRig(kind: CharacterKind, style: ArtStyle, look?: CustodeLoo
 }
 
 /**
- * Rig low-poly "kawaii": stesse parti (e animazioni) del rig voxel, perni in
- * unità mondo dal catalogo kawaii; le luci portate (lanterna del Custode,
+ * Rig low-poly (stile v2): stesse parti (e animazioni) del rig voxel, perni in
+ * unità mondo dal catalogo di render/lowpoly/v2; le luci portate (lanterna del Custode,
  * bagliore dei fantasmi) arrivano dai modelli delle parti.
  */
 function buildKawaiiRig(kind: CharacterKind, custom?: KawaiiSpec, customKey?: string): Rig {
   const k = custom ?? KAWAII[kind];
   const voxel = spec(kind);
   // da seduti il busto resta all'altezza di uno sgabello (≈0,26) invece di affondare
-  const s: Spec = { parts: voxel.parts, scale: k.scale, bucket: k.ghost ? 'ghost' : undefined, quadruped: k.quadruped, flier: k.flier, bob: 0.6, sitDy: 0.67 };
+  const s: Spec = { parts: voxel.parts, scale: k.scale, bucket: k.ghost ? 'ghost' : undefined, quadruped: k.quadruped, flier: k.flier, bob: 0.6, sitDy: 0.67, bigHead: !k.quadruped && !k.flier && !k.ghost };
   const root = new THREE.Group();
   root.name = kind;
   const inner = new THREE.Group();
@@ -441,7 +442,8 @@ export function animateRig(rig: Rig, pose: Pose, t: number, phase: number) {
     }
     case 'dance': {
       const d = Math.sin(t * 6);
-      set(p.armL, -2.4 + d * 0.5, -0.3); set(p.armR, -2.4 - d * 0.5, 0.3);
+      if (rig.spec.bigHead) { set(p.armL, d * 0.3, -1.25 - d * 0.35); set(p.armR, -d * 0.3, 1.25 - d * 0.35); }
+      else { set(p.armL, -2.4 + d * 0.5, -0.3); set(p.armR, -2.4 - d * 0.5, 0.3); }
       set(p.legL, d * 0.4); set(p.legR, -d * 0.4);
       torso(Math.abs(d) * 1); set(p.head, 0, d * 0.2);
       break;
@@ -455,7 +457,9 @@ export function animateRig(rig: Rig, pose: Pose, t: number, phase: number) {
       set(p.armL, -0.9, 0.35); set(p.armR, -0.9, -0.35); set(p.head, 0.35); set(p.legL, 0); set(p.legR, 0); torso(0);
       break;
     case 'cheer':
-      set(p.armL, -2.6, -0.2); set(p.armR, -2.6, 0.2); torso(Math.abs(Math.sin(t * 8)) * 1);
+      if (rig.spec.bigHead) { const c = Math.sin(t * 8) * 0.25; set(p.armL, -0.2, -1.5 - c); set(p.armR, -0.2, 1.5 + c); }
+      else { set(p.armL, -2.6, -0.2); set(p.armR, -2.6, 0.2); }
+      torso(Math.abs(Math.sin(t * 8)) * 1);
       break;
     default: {
       const br = Math.sin(t * 1.6) * 0.04;

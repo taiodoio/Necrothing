@@ -10,7 +10,7 @@ import type { PVis } from '../models/types.ts';
 import { lowpolyGrave } from './graves.ts';
 import type { LPModel } from './kit.ts';
 import { angelStatueLP, fencePillarLP, fenceSegmentLP, gateLP, gravediggerHouseLP, mausoleumLP, shopLP, votiveStatueLP, wellLP } from './architecture.ts';
-import { kawaiiGenerators } from './kawaii.ts';
+import { v2Generators } from './v2/npc.ts';
 import {
   archLP, bonfireLP, candleTreeLP, fenceIronLP, fenceWoodLP, fountainLP, ghostLanternLP, glowPumpkinLP, hellHoleLP, hillockLP,
   monsterRocksLP, mudLP, npcHomeLP, openCoffinLP, openGraveLP, petHouseLP, shrineLP, skullCandleLP, spectralTreeLP, toxicPuddleLP,
@@ -96,8 +96,8 @@ export const LP_SCENERY: Record<string, (arg: string) => LPModel> = {
   fern: (a) => sceneryFernLP(Number(a)),
   bush: (a) => sceneryBushLP(Number(a)),
 };
-/** Parti dei personaggi (tipo:parte → generatore). */
-export const LP_CHARACTERS: Record<string, () => LPModel> = kawaiiGenerators();
+/** Parti dei personaggi nello stile v2 (tipo:parte → generatore). */
+export const LP_CHARACTERS: Record<string, () => LPModel> = v2Generators();
 
 export function resolveLowpoly(key: string): Builder | null {
   let m = key.match(/^(?:g|grave):([a-z_]+):([a-z]+):(\d+)$/);

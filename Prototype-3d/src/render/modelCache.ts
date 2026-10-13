@@ -56,6 +56,7 @@ export const MATERIALS: MaterialSet = {
   glow,
   water: new THREE.MeshLambertMaterial({ vertexColors: true, transparent: true, opacity: 0.82 }),
   ghost,
+  gloss: voxelNoise(new THREE.MeshLambertMaterial({ vertexColors: true })),
   selected: voxelNoise(new THREE.MeshLambertMaterial({ vertexColors: true, emissive: new THREE.Color('#4a3618'), emissiveIntensity: 0.55 })),
   invalid: voxelNoise(new THREE.MeshLambertMaterial({ vertexColors: true, emissive: new THREE.Color('#7a1f1f'), emissiveIntensity: 1 })),
 };
@@ -70,6 +71,8 @@ export const LOWPOLY_MATERIALS: MaterialSet = {
   glow,
   water: new THREE.MeshStandardMaterial({ vertexColors: true, flatShading: true, roughness: 0.25, metalness: 0.1, transparent: true, opacity: 0.86 }),
   ghost,
+  /** Occhi dei personaggi: lucidi, con il riflesso della luce. */
+  gloss: new THREE.MeshStandardMaterial({ vertexColors: true, flatShading: true, roughness: 0.18, metalness: 0.05 }),
   selected: new THREE.MeshStandardMaterial({ vertexColors: true, flatShading: true, roughness: 0.85, metalness: 0, emissive: new THREE.Color('#5a4120'), emissiveIntensity: 0.45 }),
   invalid: new THREE.MeshStandardMaterial({ vertexColors: true, flatShading: true, roughness: 0.85, metalness: 0, emissive: new THREE.Color('#7a1f1f'), emissiveIntensity: 0.9 }),
 };

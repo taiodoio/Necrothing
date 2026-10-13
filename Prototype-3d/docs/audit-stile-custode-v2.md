@@ -113,6 +113,9 @@ Diciassettesima passata:
 - **Cuscinetto pieno:** ha una sezione ellittica, rotonda davanti e allungata dietro verso il collo. Riempie il vuoto sotto la mandibola, quindi di profilo la barba è un volume unico e non un ricciolo cavo.
 - **Basette:** più spesse in basso vicino all'orecchio; l'estremità del cuscinetto si sovrappone alla loro base, quindi basetta e barba sono continue.
 
+Diciottesima passata:
+- **Barba di profilo:** la massa lungo la mandibola non è più un tubo, ma una "tenda" piena che pende dalla linea della mascella. Per ogni punto attorno al viso c'è una striscia verticale che scende poco sotto l'orecchio e molto al mento, con il davanti arrotondato e lo spessore che rientra verso il collo. Di profilo riempie tutta la zona tra mandibola e linea orecchio-mento, unita alla basetta.
+
 ## Prestazioni su telefono (app Capacitor)
 
 Con Capacitor il gioco gira nel WebView del sistema (WKWebView su iOS, WebView di Chrome su Android): le prestazioni sono quelle del browser del telefono. Che il gioco funzioni offline non cambia nulla, perché il lavoro lo fanno GPU e CPU del dispositivo.

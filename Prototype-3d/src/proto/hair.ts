@@ -122,7 +122,7 @@ if (view === 'tagli' || view === 'spalle') {
 } else if (view === 'teste') {
   const heads: Array<[CustodeLook['head'], string, Partial<CustodeLook>]> = [
     ['human', 'Umana', { hair: 'tufts' }], ['pumpkin', 'Zucca', { hat: 'none' }], ['skull', 'Teschio', {}], ['zombie', 'Zombie', { hair: 'spiky' }],
-    ['pumpkin', 'Zucca con cappello', { hat: 'wide' }], ['skull', 'Teschio con cilindro', { hat: 'top', hatColor: '#2a2a30', glasses: 'monocle' }], ['zombie', 'Zombie, capelli lunghi', { hair: 'long', hairColor: '#2a2226' }], ['human', 'Umana, pelle lilla', { skin: '#c9c3e6', hair: 'bun', hairColor: '#d0607a' }],
+    ['pumpkin', 'Zucca con cilindro e monocolo', { hat: 'top', hatColor: '#3a4a3a', glasses: 'monocle' }], ['skull', 'Teschio con cilindro', { hat: 'top', hatColor: '#2a2a30', glasses: 'monocle' }], ['zombie', 'Zombie, capelli lunghi', { hair: 'long', hairColor: '#2a2226' }], ['human', 'Umana, pelle lilla', { skin: '#c9c3e6', hair: 'bun', hairColor: '#d0607a' }],
   ];
   const COLS = 4, CW = 320, CH = 420;
   heads.forEach(([head, name, look], i) => cells.push({ x: (i % COLS) * CW, y: Math.floor(i / COLS) * CH, w: CW, h: CH, obj: build({ ...look, head }, {}), label: name, fit: 'full', floor: true }));

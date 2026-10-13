@@ -364,36 +364,68 @@ const hairTip = (th: number) => HAIR_TIP(absDeg(th), signedDeg(th));
 // (lungo la mandibola) e solo vicino all'orecchio sale come basetta fino ai capelli
 const beardTop = (thDeg: number) => { const a = Math.abs(thDeg); return a < 70 ? lerp(-53, -48, smooth(0, 70, a)) : lerp(-50, 6, smooth(70, 88, a)); };
 
-/** Zucca: più larga e schiacciata, a spicchi, con il picciolo; faccia intagliata che brilla. */
+/** Superficie della zucca lungo una direzione dal centro: più larga e schiacciata, a spicchi. */
+function pumpkinAt(dir: THREE.Vector3): THREE.Vector3 {
+  const v = dir.clone().normalize();
+  const p = surfaceAlong(v).sub(C);
+  const lon = Math.atan2(v.x, v.z), lat = Math.asin(THREE.MathUtils.clamp(v.y, -1, 1));
+  const rib = 1 - 0.055 * (0.5 - 0.5 * Math.cos(lon * 10)) * Math.pow(Math.cos(lat), 0.6); // solchi tra gli spicchi
+  p.multiply(new THREE.Vector3(1.07 * rib, 0.9 - 0.06 * Math.pow(Math.abs(v.y), 6), 1.05 * rib)); // un po' schiacciata, sommità e base rientranti
+  p.y -= 0.1 * R.y; // schiacciata verso il basso: poggia sul collo come la testa (niente buco sotto)
+  return p.add(C);
+}
+
+/**
+ * Intaglio sulla zucca: la regione tra `bot(u)` e `top(u)` (u da -1 a 1, x = cx + u·w)
+ * diventa una griglia proiettata sulla buccia, così segue la curva anche se è larga.
+ * Bordo scuro, e dentro la luce della candela un po' più rientrata.
+ */
+function carve(lp: LP, cx: number, w: number, top: (u: number) => number, bot: (u: number) => number, nu = 8) {
+  const at = (x: number, y: number, out: number) => {
+    const d = new THREE.Vector3(x / R.x, (y - C.y) / R.y, 0);
+    d.z = Math.sqrt(Math.max(0.05, 1 - d.x * d.x - d.y * d.y));
+    const p = pumpkinAt(d);
+    return p.addScaledVector(p.clone().sub(C).normalize(), out);
+  };
+  const grid = (u0: number, u1: number, v0: number, v1: number, out: number, color: string, o: LPOpts) => {
+    const t = new Tris();
+    const P: THREE.Vector3[][] = [];
+    for (let i = 0; i <= nu; i++) {
+      const u = lerp(u0, u1, i / nu);
+      P.push([0, 1, 2].map((j) => at(cx + u * w, lerp(bot(u), top(u), lerp(v0, v1, j / 2)), out)));
+    }
+    for (let i = 0; i < nu; i++) for (let j = 0; j < 2; j++) t.quad(P[i][j], P[i + 1][j], P[i + 1][j + 1], P[i][j + 1], P[i][j].clone().sub(C).normalize());
+    lp.add(t.geo(), color, o);
+  };
+  grid(-1, 1, 0, 1, 0.004, '#2a1206', O);
+  grid(-0.86, 0.86, 0.2, 0.8, 0.006, '#ffb54a', { ...O, bucket: 'glow' });
+}
+
+/** Zucca: a spicchi, con il picciolo; faccia intagliata che brilla. */
 function pumpkin(lp: LP) {
   const g = new THREE.IcosahedronGeometry(1, 4);
   const pos = g.attributes.position as THREE.BufferAttribute;
   const v = new THREE.Vector3();
   for (let i = 0; i < pos.count; i++) {
-    v.fromBufferAttribute(pos, i).normalize();
-    const p = surfaceAlong(v).sub(C);
-    const lon = Math.atan2(v.x, v.z), lat = Math.asin(THREE.MathUtils.clamp(v.y, -1, 1));
-    const rib = 1 - 0.055 * (0.5 - 0.5 * Math.cos(lon * 10)) * Math.pow(Math.cos(lat), 0.6); // solchi tra gli spicchi
-    p.multiply(new THREE.Vector3(1.07 * rib, 0.9 - 0.06 * Math.pow(Math.abs(v.y), 6), 1.05 * rib)); // un po' schiacciata, sommità e base rientranti
-    pos.setXYZ(i, C.x + p.x, C.y + p.y, C.z + p.z);
+    const p = pumpkinAt(v.fromBufferAttribute(pos, i));
+    pos.setXYZ(i, p.x, p.y, p.z);
   }
   lp.add(g, '#e0832f', { ...O, ao: 0.08, vary: 0.05 });
   if (hatPh() >= 89) { // picciolo (sotto un cappello non c'è posto)
-    const b = new THREE.Vector3(C.x, C.y + R.y * 0.84, C.z);
+    const b = new THREE.Vector3(C.x, C.y + R.y * 0.72, C.z); // sulla sommità (rientrante)
     lp.add(taperTube([b, b.clone().add(new THREE.Vector3(0.015, 0.08, 0)), b.clone().add(new THREE.Vector3(0.06, 0.13, -0.02))], [0.045, 0.034, 0.024], 6), '#5a6a2c', O);
     lp.blob(b.x - 0.05, b.y + 0.02, b.z + 0.02, 0.05, 0.012, 0.03, '#6f8a33', { ...O, detail: 1 } as LPOpts); // fogliolina
   }
   if (X.bare) return;
-  const carve = (x: number, y: number, geo: THREE.BufferGeometry) => onSkin(lp, headFront(x, y), 0.012, 0, (q) => {
-    q.add(geo.clone(), '#2a1206', O);
-    q.add(geo.clone().scale(0.62, 0.62, 1).translate(0, -0.003, 0.002), '#ffb54a', { ...O, bucket: 'glow' });
-  });
-  for (const s of [-1, 1]) carve(s * EYE_X * 1.05, EYE_Y + 0.01, new THREE.CircleGeometry(0.075, 3).rotateZ(Math.PI / 2));
-  carve(0, 0.665, new THREE.CircleGeometry(0.03, 3).rotateZ(Math.PI / 2));
-  const m = new THREE.Shape();
-  const pts: Array<[number, number]> = [[-0.13, 0.03], [-0.085, 0], [-0.05, 0.03], [-0.012, -0.004], [0.028, 0.03], [0.068, 0], [0.13, 0.03], [0.09, -0.045], [0, -0.068], [-0.09, -0.045]];
-  m.moveTo(...pts[0]); for (const p of pts.slice(1)) m.lineTo(...p); m.closePath();
-  carve(0, 0.6, new THREE.ShapeGeometry(m));
+  // la faccia sta al centro della zucca (più in alto degli occhi umani)
+  // occhi: triangoli con la punta in su, un po' inclinati verso il naso
+  const tri = (a: number) => (u: number) => (u < a ? (u + 1) / (a + 1) : (1 - u) / (1 - a)); // 0 ai lati, 1 sulla punta (in u = a)
+  for (const s of [-1, 1]) { const t = tri(-s * 0.3); carve(lp, s * 0.115, 0.068, (u) => 0.795 + 0.085 * t(u), () => 0.795, 6); }
+  carve(lp, 0, 0.028, (u) => 0.752 + 0.036 * tri(0)(u), () => 0.752, 4); // naso
+  // bocca: un sorriso largo a mezzaluna, con un dente che scende dall'alto e uno che sale dal basso
+  const y0 = 0.712;
+  const tooth = (u: number, at: number) => smooth(0.2, 0.12, Math.abs(u - at)) * 0.034;
+  carve(lp, 0, 0.19, (u) => y0 + 0.05 * u * u - tooth(u, -0.32), (u) => y0 + 0.05 * u * u - 0.07 * Math.pow(1 - u * u, 0.7) + tooth(u, 0.36), 40);
 }
 
 function head(lp: LP) {

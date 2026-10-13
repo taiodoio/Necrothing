@@ -99,7 +99,8 @@ interagisci, `C` cambia vista, `V` cambia stile (low-poly → voxel → miniatur
   gli occhietti nel buio dell'arco e salgono le "z"); ogni animale ha il suo menù (toccandolo,
   o toccando la sua casetta quando dorme): raggiungi il padrone (ti segue), libera, a cuccia,
   accarezza, lancia l'osso (che riporta). Le voci che in quel momento non servono restano visibili
-  ma disattivate; con più casette si gestisce ogni animale per conto suo.
+  ma disattivate; con più casette si gestisce ogni animale per conto suo. Quello che fa (libero, al seguito, a
+  cuccia) è salvato nella sua casetta e alla riapertura riprende da lì.
 - **Simulazione a tempo reale** all'apertura e al ritorno in primo piano (erbacce,
   sporco, rotture, anniversari, meteo giornaliero) + tick "vivo" ogni 40 s mentre si gioca.
 - **Progressione**: 5 ranghi, 27 achievement, prestigio, distretti tematici

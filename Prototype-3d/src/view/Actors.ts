@@ -530,10 +530,10 @@ export class Actors {
     den.place(home);
     this.group.add(den.group);
     const labels = CATALOG.pet_house.variantLabels ?? [];
-    // si sveglia dopo poco: all'apertura del gioco non è sempre già fuori
+    // riprende quello che faceva (salvato nella casetta); libero, si sveglia dopo poco
     return {
       ...w, placeId: h.id, label: labels[h.variant % labels.length] ?? 'Animale', variant: h.variant, home, door, porch: this.porchOf(h),
-      mode: 'free', act: 'sleep', timer: 2 + createRng(h.id).next() * 10, repath: 0, roams: 0, broken: h.broken, hitbox, den,
+      mode: h.petMode ?? 'free', act: 'sleep', timer: h.petMode === 'follow' ? 0.3 : 2 + createRng(h.id).next() * 10, repath: 0, roams: 0, broken: h.broken, hitbox, den,
     };
   }
 
@@ -596,8 +596,8 @@ export class Actors {
       case 'sleep':
         pet.rig.root.visible = false;
         pet.pose = 'idle';
-        // libero: dopo un sonnellino esce di nuovo
-        if (pet.mode === 'free' && !pet.broken) { pet.timer -= dt; if (pet.timer <= 0) this.wake(pet); }
+        // libero: dopo un sonnellino esce di nuovo; al seguito (salvato così): esce subito dal padrone
+        if (pet.mode !== 'home' && !pet.broken) { pet.timer -= dt; if (pet.timer <= 0) this.wake(pet); }
         return;
       case 'enter':
         if (this.followPath(pet, dt)) { pet.pose = 'walk'; return; }

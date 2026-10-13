@@ -57,6 +57,8 @@ export interface Placed {
   dirty: boolean;
   broken: boolean;
   createdAt: string;
+  /** Casetta per animale: cosa fa il suo animale (libero, segue il Custode, a cuccia). */
+  petMode?: 'free' | 'follow' | 'home';
 }
 
 export interface LooseWisp {

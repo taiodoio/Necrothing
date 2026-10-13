@@ -534,12 +534,20 @@ export class Game {
     if (!p) return [];
     const off = p.broken;
     return [
-      { label: 'Raggiungi il padrone', icon: 'paw', disabled: off || p.mode === 'follow', run: () => toast(this.actors.callPet(id)) },
-      { label: 'Libera', icon: 'sun', disabled: off || p.mode === 'free', run: () => toast(this.actors.freePet(id)) },
-      { label: 'A cuccia', icon: 'kennel', disabled: off || p.mode === 'home', run: () => toast(this.actors.sendPetHome(id)) },
+      { label: 'Raggiungi il padrone', icon: 'paw', disabled: off || p.mode === 'follow', run: () => this.petCommand(id, this.actors.callPet(id)) },
+      { label: 'Libera', icon: 'sun', disabled: off || p.mode === 'free', run: () => this.petCommand(id, this.actors.freePet(id)) },
+      { label: 'A cuccia', icon: 'kennel', disabled: off || p.mode === 'home', run: () => this.petCommand(id, this.actors.sendPetHome(id)) },
       { label: 'Accarezza', icon: 'heart', cls: 'primary', disabled: off || p.sleeping, run: () => this.actors.petPet(id) },
       { label: 'Lancia l’osso', icon: 'bone', disabled: off || p.sleeping, run: () => { if (!this.actors.throwBone(id)) toast('Qui non c’è spazio per lanciare l’osso.'); } },
     ];
+  }
+
+  /** Dopo un comando l'animale ricorda cosa fa (salvato nella sua casetta). */
+  private petCommand(id: string, message: string) {
+    toast(message);
+    const house = this.state.placeables.find((p) => p.id === id);
+    const mode = this.actors.petAt(id)?.mode;
+    if (house && mode && house.petMode !== mode) { house.petMode = mode; scheduleSave(this.state); }
   }
 
   /** Stato dell'animale in breve (sotto il nome nel menù). */

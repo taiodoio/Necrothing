@@ -346,3 +346,24 @@ test('animale domestico: esce dalla tana, segue il Custode, riporta l’osso, va
   a.syncPresences(s, new Date());
   assert.equal(a.petList().length, 0, 'senza casetta niente animale');
 });
+
+test('animale domestico: alla riapertura riprende quello che faceva (salvato nella casetta)', async () => {
+  const { Actors } = await import('../src/view/Actors.ts');
+  const { cellCenter } = await import('../src/view/WorldView.ts');
+  const { normalizeSave } = await import('../src/game/state.ts');
+  const atmosphere = { addAnchor: () => ({}), removeAnchor() {}, moveAnchor() {} };
+  const s = createNewGame(new Date('2026-10-09T12:00:00Z'), 717);
+  const base = { ...s.placeables[0], type: 'pet_house', rot: 0, variant: 0, broken: false, dirty: false };
+  s.placeables.push({ ...base, id: 'segue', x: 22, y: 36, petMode: 'follow' }, { ...base, id: 'cuccia', x: 26, y: 36, petMode: 'home' });
+  const loaded = normalizeSave(JSON.parse(JSON.stringify(s)));
+  assert.equal(loaded.placeables.find((p) => p.id === 'segue').petMode, 'follow', 'lo stato resta nel salvataggio');
+  const occ = buildOccupancy(loaded);
+  const a = new Actors(new THREE.Scene(), atmosphere, 'lowpoly', cellCenter(24, 42, [1, 1]));
+  a.setWorld(areaForLevel(0), (x, y) => occ.blocked.has(`${x},${y}`));
+  a.syncPresences(loaded, new Date());
+  for (let t = 0; t < 40; t += 0.05) a.update(0.05, t, [], () => 0);
+  const follow = a.pets.get('segue'), home = a.pets.get('cuccia');
+  assert.equal(follow.mode, 'follow');
+  assert.ok(follow.rig.root.visible && follow.pos.distanceTo(a.avatar.pos) < 2, 'chi seguiva il Custode lo raggiunge subito');
+  assert.equal(home.act, 'sleep', 'chi era a cuccia resta in tana');
+});

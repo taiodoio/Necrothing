@@ -51,7 +51,7 @@ export interface V2Extra {
   blush?: string;
   ears?: boolean;
   /** Capelli con orlo proprio (φ in gradi per angolo dal davanti), su un arco [da, a] in gradi. */
-  hair?: { tip: (a: number) => number; span?: [number, number]; depth?: number; top?: number };
+  hair?: { tip: (a: number) => number; span?: [number, number]; depth?: number; top?: number; thick?: number; lift?: number };
   /** Cappello su misura (spazio della testa) e fin dove arrivano i capelli sotto (φ). */
   hat?: (lp: LP) => void;
   hatPh?: number;
@@ -576,7 +576,7 @@ function hair(lp: LP) {
   const neat = style === 'bob' || style === 'long' || style === 'bun' || style === 'longcurly';
   const depth = X.hair?.depth ?? ({ bob: 3, long: 5, bun: 4, longcurly: 6, curly: 7 } as Record<string, number>)[style] ?? 13;
   if (X.hair) { // orlo su misura (corona di capelli ai lati, ciuffi grigi…): un solo strato
-    hairLayer(lp, { locks: 14, hem: (t) => tip(t) + 4, depth, lift: 0.03, thick: 0.05, phase: 0, swirl: 6, seed: 3, tone, top: Math.min(top, X.hair.top ?? 89), span: X.hair.span });
+    hairLayer(lp, { locks: 14, hem: (t) => tip(t) + 4, depth, lift: X.hair.lift ?? 0.03, thick: X.hair.thick ?? 0.05, phase: 0, swirl: 6, seed: 3, tone, top: Math.min(top, X.hair.top ?? 89), span: X.hair.span });
     return;
   }
   hairLayer(lp, { locks: neat ? 20 : 15, hem: (t) => tip(t) + 4, depth, lift: 0.03, thick: hat ? 0.03 : 0.05, phase: 0, swirl: neat ? 6 : 14, seed: 3, tone, top });

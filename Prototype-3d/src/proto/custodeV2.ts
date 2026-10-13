@@ -239,6 +239,23 @@ function glitter(lp: LP) {
 }
 
 /**
+ * Spessore e direzione della barba nel punto (u attorno al viso, v dal basso
+ * in alto). Ai lati è una striscia sottile; il cuneo pieno esiste solo al
+ * centro, sotto il mento, e spinge in avanti e in basso.
+ */
+/** Bordo inferiore della barba (φ, gradi): sotto il mento, ma non così in basso da finire dietro il colletto. */
+const BEARD_LOW = -72;
+
+function beardOffset(u: number, v: number, n: THREE.Vector3): { t: number; dir: THREE.Vector3 } {
+  const side = smooth(0, 0.12, 1 - Math.abs(u));
+  const chinW = smooth(0.6, 0, Math.abs(u)); // 1 al centro, 0 da metà guancia in poi
+  const low = Math.pow(1 - v, 1.6);
+  const t = side * smooth(0, 0.06, 1 - v) * (0.008 + 0.006 * (1 - Math.abs(u)) + 0.115 * low * chinW);
+  const dir = n.clone().add(new THREE.Vector3(0, -0.05, 1.1).multiplyScalar(low * chinW)).normalize(); // in avanti, non giù dietro il colletto
+  return { t, dir };
+}
+
+/**
  * Barba come un unico guscio continuo (niente forme appiccicate): parte dalla
  * pelle con un bordo superiore netto (dalla bocca a davanti all'orecchio),
  * avvolge guance e mandibola e sotto il mento si ispessisce spingendo in
@@ -252,13 +269,8 @@ function beard(lp: LP) {
     const u = -1 + (2 * i) / NU, th = u * 92;
     for (let j = 0; j <= NV; j++) {
       const v = j / NV; // 0 sotto il mento, 1 bordo superiore
-      const { p, n } = headAt(th * DEG, lerp(-84, beardTop(th), v) * DEG);
-      const side = smooth(0, 0.12, 1 - Math.abs(u));
-      const center = 0.35 + 0.65 * Math.pow(1 - Math.abs(u), 1.4);
-      const low = Math.pow(1 - v, 2);
-      const t = side * smooth(0, 0.06, 1 - v) * (0.008 + 0.014 * center + 0.075 * low * center); // sottile ai lati, cuneo pieno al mento
-      // sotto il mento la massa va anche in avanti, non solo lungo la normale
-      const dir = n.clone().add(new THREE.Vector3(0, -0.15, 0.55).multiplyScalar(low * center)).normalize();
+      const { p, n } = headAt(th * DEG, lerp(BEARD_LOW, beardTop(th), v) * DEG);
+      const { t, dir } = beardOffset(u, v, n);
       inner[i].push(p.clone());
       outer[i].push(p.clone().addScaledVector(dir, t));
       norms[i].push(n);
@@ -278,10 +290,11 @@ function beard(lp: LP) {
  * Restano davanti alla giacca (convertendo le quote nello spazio del corpo).
  */
 function braid(lp: LP) {
-  const { p, n } = headAt(0, -84 * DEG);
-  const dir = n.clone().add(new THREE.Vector3(0, -0.15, 0.55)).normalize();
-  const tip = p.addScaledVector(dir, 0.008 + 0.014 + 0.075 - 0.03).add(new THREE.Vector3(0, 0.014, 0)); // metà dentro la punta della barba, metà fuori
-  const R0 = 0.036, STEPY = 0.05;
+  // punta del cuneo (u = 0, v = 0): il primo grano è per metà dentro la barba
+  const { p, n } = headAt(0, BEARD_LOW * DEG);
+  const { t, dir } = beardOffset(0, 0, n);
+  const tip = p.addScaledVector(dir, t - 0.035);
+  const R0 = 0.039, STEPY = 0.052;
   const zMin = (y: number, r: number) => (jacketR(HEAD_T.y + HEAD_S * y) * 0.82 + r * HEAD_S * 0.9) / HEAD_S;
   let y = tip.y, z = tip.z;
   for (let i = 0; i < 3; i++) {

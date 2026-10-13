@@ -81,6 +81,11 @@ Decima passata:
 - **Treccia:** il primo grano parte metà dentro la punta della barba, gli altri scendono dritti.
 - **Capelli:** meno segmenti per ciocca (4 di larghezza e 6 di altezza al posto di 6 e 9), con lo stesso aspetto. Il modello intero scende a ~12.700 triangoli, meno del Custode attuale con un look ricco.
 
+Undicesima passata:
+- **Barba:** ai lati è una striscia sottile; il volume pieno c'è solo al centro, sotto il mento, in un cuneo più grande che spinge in avanti.
+- **Prima la punta finiva dietro il colletto.** Il cuneo scendeva sotto la testa e la sua punta restava dietro il bordo della giacca, per questo la treccia sembrava staccata. Ora il bordo inferiore è più alto e il cuneo va in avanti.
+- **Treccia:** esce dalla punta del cuneo, calcolata con la stessa funzione della barba (`beardOffset`), così resta attaccata anche se la barba cambia.
+
 ## Prestazioni su telefono (app Capacitor)
 
 Con Capacitor il gioco gira nel WebView del sistema (WKWebView su iOS, WebView di Chrome su Android): le prestazioni sono quelle del browser del telefono. Che il gioco funzioni offline non cambia nulla, perché il lavoro lo fanno GPU e CPU del dispositivo.

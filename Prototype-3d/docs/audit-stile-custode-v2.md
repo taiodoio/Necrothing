@@ -154,7 +154,7 @@ Stesso approccio del Custode, nel prototipo `src/proto/npcV2.ts`. Pagina: `proto
   - Al gatto nero le guance a ciuffi sono fatte con lo stesso casco a ciocche dei capelli, su un arco.
   - Gli animaletti-scheletro (cane, gatto, coniglio, corvo, papera) hanno orbite scure e costole.
 
-Triangoli: umani circa 9–13k, fantasmi circa 5k, animali circa 2–4k.
+Triangoli (media misurata sulla pagina): circa 6.700 per umani, scheletro e fantasmi; circa 2.800 per gli animali. Il Custode con le sue varianti resta il più pesante, circa 12.600.
 
 ## Prestazioni su telefono (app Capacitor)
 

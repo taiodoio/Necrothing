@@ -367,3 +367,35 @@ test('animale domestico: alla riapertura riprende quello che faceva (salvato nel
   assert.ok(follow.rig.root.visible && follow.pos.distanceTo(a.avatar.pos) < 2, 'chi seguiva il Custode lo raggiunge subito');
   assert.equal(home.act, 'sleep', 'chi era a cuccia resta in tana');
 });
+
+test('animale domestico: segue il padrone in modo fluido (niente inversioni di direzione)', async () => {
+  const { Actors } = await import('../src/view/Actors.ts');
+  const { cellCenter } = await import('../src/view/WorldView.ts');
+  const atmosphere = { addAnchor: () => ({}), removeAnchor() {}, moveAnchor() {} };
+  const s = createNewGame(new Date('2026-10-09T12:00:00Z'), 717);
+  s.placeables.push({ ...s.placeables[0], id: 'casetta', type: 'pet_house', x: 22, y: 36, rot: 0, variant: 0, broken: false, dirty: false, petMode: 'follow' });
+  const occ = buildOccupancy(s);
+  const a = new Actors(new THREE.Scene(), atmosphere, 'lowpoly', cellCenter(24, 42, [1, 1]));
+  a.setWorld(areaForLevel(0), (x, y) => occ.blocked.has(`${x},${y}`));
+  a.syncPresences(s, new Date());
+  let t = 0;
+  const step = () => { a.update(1 / 30, t, [], () => 0); t += 1 / 30; };
+  for (let i = 0; i < 300; i++) step();
+  const pet = a.pets.get('casetta');
+  // il Custode cammina avanti e indietro per il cimitero; si registra la direzione di marcia dell'animale
+  let reversals = 0, prev = null, last = pet.pos.clone();
+  for (const goal of [{ x: 34, y: 42 }, { x: 34, y: 30 }, { x: 20, y: 30 }, { x: 24, y: 44 }]) {
+    a.walkTo(goal);
+    for (let i = 0; i < 240; i++) {
+      step();
+      const d = pet.pos.clone().sub(last).setY(0);
+      last = pet.pos.clone();
+      if (d.length() < 1e-3) continue;
+      d.normalize();
+      if (prev && d.dot(prev) < -0.2) reversals++;
+      prev = d;
+    }
+  }
+  assert.ok(reversals <= 2, `inversioni di marcia: ${reversals}`);
+  assert.ok(pet.pos.distanceTo(a.avatar.pos) < 3, 'resta vicino al padrone');
+});

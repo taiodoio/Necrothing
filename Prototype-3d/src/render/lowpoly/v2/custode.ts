@@ -602,7 +602,7 @@ function moustache(lp: LP) {
  * per ciocca che scende dal vortice girando un poco: le ciocche fanno parte
  * del volume, non possono staccarsi.
  */
-export function hairLayer(lp: LP, o: { locks: number; hem: (thDeg: number) => number; depth: number; lift: number; thick: number; phase: number; swirl: number; seed: number; tone: (k: number) => string; top?: number; span?: [number, number]; waveTh?: number; flare?: number; round?: boolean }) {
+export function hairLayer(lp: LP, o: { locks: number; hem: (thDeg: number) => number; depth: number; lift: number; thick: number; phase: number; swirl: number; seed: number; tone: (k: number) => string; top?: number; span?: [number, number]; waveTh?: number; flare?: number; round?: boolean; sweep?: number }) {
   const rnd = prng(o.seed);
   const jitter = Array.from({ length: o.locks }, () => [0.75 + rnd() * 0.5, (rnd() - 0.5) * 0.3, rnd()]); // lunghezza, asimmetria, tono
   const NU = o.locks * 4, NV = o.waveTh ? 16 : 6; // pochi segmenti: bastano per punta e rilievo di ogni ciocca (le onde ne vogliono di più)
@@ -620,9 +620,11 @@ export function hairLayer(lp: LP, o: { locks: number; hem: (thDeg: number) => nu
       // mossi: ogni ciocca ondeggia di lato (a S) scendendo, di più verso le punte
       // (sulla fronte la frangia resta liscia: onde e volume solo ai lati e dietro)
       const th0 = (o.span ? lerp(o.span[0], o.span[1], u) : u * 360) + o.swirl * v;
-      const sides = smooth(30, 75, absDeg(th0 * DEG));
+      // ciuffo di lato (sweep): le ciocche davanti partono dalla riga e scendono di traverso sulla fronte, ondeggiando anche lì
+      const front = 1 - smooth(10, 150, absDeg(th0 * DEG)); // calo dolce: le ciocche spostate non si accavallano
+      const sides = o.sweep ? 1 : smooth(30, 75, absDeg(th0 * DEG));
       const wv = o.waveTh ? o.waveTh * Math.sin((1 - v) * Math.PI * 2.6 + k * 0.9) * smooth(0, 0.6, 1 - v) * sides : 0;
-      const thD = th0 + wv;
+      const thD = th0 + wv + (o.sweep ?? 0) * front * Math.pow(1 - v, 1.3);
       const ends = o.span ? smooth(0, 0.1, u) * smooth(1, 0.9, u) : 1; // un arco si assottiglia agli estremi
       const hem = o.hem(thD) - o.depth * len * tooth * (o.round ? 0.25 + 0.75 * sides : 1);
       const top = o.top ?? 89;
@@ -699,13 +701,18 @@ function hair(lp: LP) {
   const wavy = style === 'wavy' || style === 'wavyLong';
   const wave = wavy ? { waveTh: style === 'wavy' ? 9 : 15, flare: style === 'wavy' ? 0.05 : 0.07, round: true } : {};
   const wave2 = wavy ? { waveTh: style === 'wavy' ? 7 : 11, flare: 0.03, round: true } : {};
+  // ciuffo di lato: come i mossi ma più accentuato, con le ciocche davanti spazzate di traverso
+  const swept = style === 'side' || style === 'sideLong';
+  const sw1 = swept ? { waveTh: 12, flare: 0.04, round: true, sweep: -40 } : wave;
+  const sw2 = swept ? { waveTh: 7, flare: 0.03, round: true, sweep: -45 } : wave2;
+  const sw3 = swept ? { round: true, sweep: -35 } : {};
   // i ricci hanno sotto un casco sottile e più scuro: si vedono solo i riccioli
   const base = curly ? (k: number) => tone(k - 0.07) : tone;
   const thick = curly ? 0.025 : hat ? 0.03 : 0.05;
-  hairLayer(lp, { locks: messy ? 15 : wavy ? 14 : 20, hem: (t) => tip(t) + 4, depth, lift: 0.03, thick, phase: 0, swirl: messy ? 14 : 6, seed: 3, tone: base, top, ...wave });
+  hairLayer(lp, { locks: messy ? 15 : wavy || swept ? 14 : 20, hem: (t) => tip(t) + 4, depth, lift: 0.03, thick, phase: 0, swirl: messy ? 14 : 6, seed: 3, tone: base, top, ...sw1 });
   if (!hat && !curly) {
-    hairLayer(lp, { locks: messy ? 12 : wavy ? 11 : 16, hem: (t) => tip(t) + 26, depth: depth + 2, lift: 0.04, thick: 0.065, phase: 0.5, swirl: messy ? 18 : 8, seed: 7, tone, ...wave2 });
-    hairLayer(lp, { locks: messy ? 9 : 12, hem: (t) => tip(t) + 48, depth: depth + 3, lift: 0.05, thick: 0.08, phase: 0.2, swirl: messy ? 22 : 10, seed: 11, tone });
+    hairLayer(lp, { locks: messy ? 12 : wavy || swept ? 11 : 16, hem: (t) => tip(t) + 26, depth: depth + 2, lift: 0.04, thick: 0.065, phase: 0.5, swirl: messy ? 18 : 8, seed: 7, tone, ...sw2 });
+    hairLayer(lp, { locks: messy ? 9 : 12, hem: (t) => tip(t) + 48, depth: depth + 3, lift: 0.05, thick: 0.08, phase: 0.2, swirl: messy ? 22 : 10, seed: 11, tone, ...sw3 });
   }
   if (curly) curls(lp, tone, hat ? top : 86);
   if (style === 'bun' && !hat) {
@@ -714,7 +721,6 @@ function hair(lp: LP) {
     lp.blob(c.x, c.y, c.z, 0.11, 0.1, 0.1, tone(0.02), { ...O, detail: 2 } as LPOpts);
     lp.add(new THREE.TorusGeometry(0.075, 0.016, 6, 14).rotateX(-0.3).translate(c.x, c.y + 0.03, c.z + 0.06), L.accentColor, O); // elastico
   }
-  if (style === 'side' || style === 'sideLong') sweptLock(lp, tone, hat);
   if (hat) return;
   if (style === 'spiky') {
     // ciuffi a punta che salgono dalla cima
@@ -750,15 +756,6 @@ function tufts(lp: LP, tone: (k: number) => string) {
     const tipP = rootP.clone().addScaledVector(up, h).addScaledVector(bend, h * back * 0.7);
     lp.add(taperTube([rootP, mid, tipP], [0.03 + h * 0.14, 0.022 + h * 0.1, 0.005], 6), tone([0.04, 0.0, 0.03, -0.02, 0.02, 0.05, 0.01][k % 7]), { ...O, vary: 0.04 });
   });
-}
-
-/** Ciuffo di lato: una ciocca larga che parte dalla riga e scende di traverso sulla fronte. */
-function sweptLock(lp: LP, tone: (k: number) => string, hat: boolean) {
-  const path: Array<[number, number]> = hat ? [[18, 38], [-10, 26], [-40, 16], [-62, 8]] : [[22, 62], [8, 40], [-18, 24], [-45, 14], [-66, 6]];
-  for (const [off, r, k] of [[0, 1, 0.03], [7, 0.8, -0.01]] as const) {
-    const pts = path.map(([th, ph]) => { const { p, n } = headAt((th + off) * DEG, (ph - off * 0.4) * DEG); return p.addScaledVector(n, 0.045 * r + 0.02); });
-    lp.add(taperTube(pts, pts.map((_, i) => lerp(0.055, 0.012, i / (pts.length - 1)) * r), 7), tone(k), { ...O, vary: 0.04 });
-  }
 }
 
 /** Cappelli: tesa larga, cilindro, berretto con risvolto e pompon. */

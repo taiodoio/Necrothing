@@ -195,6 +195,12 @@ class Tris {
 }
 
 /** Velo sulla testa: griglia (u, v) → (θ, φ), sollevata di thick(u, v) lungo la normale. */
+/** Superficie su cui poggiano cappelli e berretto: la testa, o la buccia della zucca. */
+function shellAt(th: number, ph: number) {
+  if (HEAD !== 'pumpkin') return headAt(th, ph);
+  const p = pumpkinAt(new THREE.Vector3(Math.sin(th) * Math.cos(ph), Math.sin(ph), Math.cos(th) * Math.cos(ph)));
+  return { p, n: p.clone().sub(C).normalize() };
+}
 function sheet(lp: LP, nu: number, nv: number, at: (u: number, v: number) => [number, number], thick: (u: number, v: number) => number, color: string, o: LPOpts = {}) {
   const P: THREE.Vector3[][] = [];
   const N: THREE.Vector3[][] = [];
@@ -202,7 +208,7 @@ function sheet(lp: LP, nu: number, nv: number, at: (u: number, v: number) => [nu
     P.push([]); N.push([]);
     for (let j = 0; j <= nv; j++) {
       const u = -1 + (2 * i) / nu, v = j / nv;
-      const { p, n } = headAt(...at(u, v));
+      const { p, n } = shellAt(...at(u, v));
       P[i].push(p.addScaledVector(n, 0.003 + thick(u, v))); N[i].push(n);
     }
   }
@@ -365,21 +371,23 @@ const beardTop = (thDeg: number) => { const a = Math.abs(thDeg); return a < 70 ?
 /** Superficie della zucca lungo una direzione dal centro: più larga e schiacciata, a spicchi. */
 function pumpkinAt(dir: THREE.Vector3): THREE.Vector3 {
   const v = dir.clone().normalize();
-  const p = surfaceAlong(v).sub(C);
-  const lon = Math.atan2(v.x, v.z), lat = Math.asin(THREE.MathUtils.clamp(v.y, -1, 1));
+  const lon = Math.atan2(v.x, v.z), h = Math.hypot(v.x, v.z);
   // spicchi gonfi con solchi netti, come la zucca-lampada: un solco al centro (sotto il naso),
   // così gli occhi cadono al centro di due spicchi; sulla faccia i solchi sono un po' più leggeri
-  const lobe = Math.pow(Math.abs(Math.sin(lon * PUMPKIN_LOBES / 2)), 0.4);
+  const step = (Math.PI * 2) / PUMPKIN_LOBES;
+  const w = (((lon / step) % 1) + 1) % 1;
+  const lobe = Math.pow(Math.sin(Math.PI * w), 0.6);
   const soft = lerp(0.6, 1, smooth(25, 75, Math.abs(lon) / DEG));
-  const rib = 1 - (1 - lobe) * 0.22 * soft * Math.pow(Math.cos(lat), 0.6);
-  p.x *= 1.1 * rib; p.z *= 1.07 * rib;
-  // bassa e larga: sommità e base rientrano verso il picciolo (fossetta in cima)
-  const h = Math.hypot(v.x, v.z);
-  p.y *= 0.8 - 0.08 * Math.pow(Math.abs(v.y), 5);
-  if (v.y > 0) p.y -= 0.07 * R.y * Math.exp(-((h / 0.3) ** 2));
-  p.y -= 0.16 * R.y; // poggia sul collo come la testa (niente buco sotto)
+  const rib = 1 - (1 - lobe) * 0.2 * soft * Math.pow(h, 0.6);
+  // un po' più larga che alta; sommità e base rientrano (fossetta del picciolo)
+  const p = new THREE.Vector3(v.x * PUMPKIN_R.x * rib, v.y * PUMPKIN_R.y, v.z * PUMPKIN_R.z * rib);
+  if (v.y > 0) p.y -= 0.05 * Math.exp(-((h / 0.35) ** 2));
+  else p.y += 0.03 * Math.exp(-((h / 0.3) ** 2));
+  p.y += PUMPKIN_R.y - R.y + 0.006; // la base poggia sul collo come il mento
   return p.add(C);
 }
+/** Semiassi della zucca (più larga della testa, quasi alta uguale). */
+const PUMPKIN_R = new THREE.Vector3(0.305, 0.258, 0.285);
 const PUMPKIN_LOBES = 8;
 /** Punto e normale sulla faccia della zucca, davanti, in (x, y) come `headFront`. */
 function pumpkinFront(x: number, y: number) {
@@ -394,7 +402,12 @@ function pumpkinFront(x: number, y: number) {
 }
 /** Dove stanno gli occhi (e quindi gli occhiali): sugli occhi intagliati per la zucca. */
 const PUMPKIN_EYE: [number, number] = [0.106, 0.823]; // baricentro del triangolo intagliato
-const faceAt = (x: number, y: number) => (HEAD === 'pumpkin' ? pumpkinFront(x, y) : headFront(x, y));
+/** Punto della faccia per occhiali e simili; sulla zucca (molto curva) guardano più in avanti, come lenti su una montatura dritta. */
+const faceAt = (x: number, y: number) => {
+  if (HEAD !== 'pumpkin') return headFront(x, y);
+  const f = pumpkinFront(x, y);
+  return { p: f.p, n: f.n.add(new THREE.Vector3(0, 0, 1)).normalize() };
+};
 const eyeAt = (): [number, number] => (HEAD === 'pumpkin' ? PUMPKIN_EYE : [EYE_X, EYE_Y]);
 
 /**
@@ -420,26 +433,27 @@ function carve(lp: LP, cx: number, w: number, top: (u: number) => number, bot: (
 
 /** Zucca: a spicchi, con il picciolo; faccia intagliata che brilla. */
 function pumpkin(lp: LP) {
-  // ogni spicchio ha la sua tinta (come la zucca-lampada): i triangoli si dividono per spicchio
-  const src = new THREE.IcosahedronGeometry(1, 4).toNonIndexed().attributes.position as THREE.BufferAttribute;
-  const TINTS = ['#d97a2a', '#bf6420', '#e8913f'];
+  // griglia allineata agli spicchi: i solchi cadono sulle linee della griglia (pieghe pulite)
+  // e ogni spicchio è un pezzo a sé con la sua tinta, come la zucca-lampada
+  const TINTS = ['#d97a2a', '#c4681f', '#e48c3c'];
   const ORDER = [0, 1, 0, 2, 0, 1, 0, 2]; // spicchi vicini sempre di tinta diversa
-  const buckets: number[][] = TINTS.map(() => []);
-  const v = new THREE.Vector3(), face: THREE.Vector3[] = [];
-  for (let i = 0; i < src.count; i += 3) {
-    face.length = 0;
-    for (let k = 0; k < 3; k++) face.push(pumpkinAt(v.fromBufferAttribute(src, i + k)));
-    const c = face[0].clone().add(face[1]).add(face[2]).divideScalar(3).sub(C);
-    const step = (Math.PI * 2) / PUMPKIN_LOBES;
-    const lobe = ((Math.floor(Math.atan2(c.x, c.z) / step) % PUMPKIN_LOBES) + PUMPKIN_LOBES) % PUMPKIN_LOBES; // i solchi stanno sui multipli del passo
-    for (const q of face) buckets[ORDER[lobe]].push(q.x, q.y, q.z);
-  }
-  buckets.forEach((arr, k) => {
+  const SEG = 5, NV = 14, step = (Math.PI * 2) / PUMPKIN_LOBES;
+  const at = (lon: number, lat: number) => pumpkinAt(new THREE.Vector3(Math.sin(lon) * Math.cos(lat), Math.sin(lat), Math.cos(lon) * Math.cos(lat)));
+  for (let k = 0; k < PUMPKIN_LOBES; k++) {
+    const pos: number[] = [];
+    const put = (...q: THREE.Vector3[]) => { for (const x of q) pos.push(x.x, x.y, x.z); };
+    for (let i = 0; i < SEG; i++) for (let j = 0; j < NV; j++) {
+      const l0 = (k + i / SEG) * step, l1 = (k + (i + 1) / SEG) * step;
+      const t0 = -Math.PI / 2 + (j / NV) * Math.PI, t1 = -Math.PI / 2 + ((j + 1) / NV) * Math.PI;
+      const a = at(l0, t0), b = at(l1, t0), c = at(l1, t1), d = at(l0, t1);
+      if (j > 0) put(a, b, c); // ai poli i quadrati diventano triangoli
+      if (j < NV - 1) put(a, c, d);
+    }
     const g = new THREE.BufferGeometry();
-    g.setAttribute('position', new THREE.Float32BufferAttribute(arr, 3));
+    g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
     g.computeVertexNormals();
-    lp.add(g, TINTS[k], { ...O, ao: 0.1, vary: 0.04 });
-  });
+    lp.add(g, TINTS[ORDER[k]], { ...O, ao: 0.1, vary: 0.03 });
+  }
   if (hatPh() >= 89) { // picciolo nella fossetta in cima (sotto un cappello non c'è posto)
     const b = pumpkinAt(new THREE.Vector3(0, 1, 0)).add(new THREE.Vector3(0, -0.01, 0));
     lp.add(taperTube([b, b.clone().add(new THREE.Vector3(0.015, 0.08, 0)), b.clone().add(new THREE.Vector3(0.06, 0.13, -0.02))], [0.045, 0.034, 0.024], 6), '#5a6a2c', O);
@@ -832,11 +846,11 @@ function hatGeo(lp: LP) {
   if (L.hat === 'beanie') {
     sheet(lp, 30, 6, (u, v) => [Math.PI + u * Math.PI, lerp(26, 89, v) * DEG], (_u, v) => 0.06 + 0.03 * smooth(0.3, 1, v), c);
     sheet(lp, 60, 2, (u, v) => [Math.PI + u * Math.PI, lerp(18, 32, v) * DEG], (u) => 0.085 + 0.006 * Math.cos(u * Math.PI * 30), shade(c, 0.04));
-    lp.blob(C.x, C.y + R.y + 0.09, C.z, 0.075, 0.07, 0.075, shade(c, 0.12), { ...O, detail: 1 } as LPOpts);
+    lp.blob(C.x, shellAt(0, Math.PI / 2).p.y + 0.09, C.z, 0.075, 0.07, 0.075, shade(c, 0.12), { ...O, detail: 1 } as LPOpts);
     return;
   }
   // la tesa poggia dove finiscono i capelli; la cupola li copre tutti
-  const at = (th: number) => headAt(th, (hatPh() - 4) * DEG).p;
+  const at = (th: number) => shellAt(th, (hatPh() - 4) * DEG).p;
   const brimY = at(0).y - 0.005;
   const headR = Math.max(...[0, 90, 180, -90].map((t) => Math.hypot(at(t * DEG).x - C.x, at(t * DEG).z - C.z)));
   const wide = L.hat === 'wide';
@@ -852,7 +866,7 @@ function hatGeo(lp: LP) {
 /** Occhiali, lentiggini, cerotto. */
 function faceExtras(lp: LP) {
   const frame = L.glasses === 'square' ? '#6b4a33' : '#c9a227';
-  const lift = HEAD === 'pumpkin' ? 0.014 : 0.03; // sulla zucca gli occhiali poggiano sulla buccia
+  const lift = HEAD === 'pumpkin' ? 0.008 : 0.03; // sulla zucca gli occhiali poggiano sulla buccia
   // (sulla zucca vanno sugli occhi intagliati, appoggiati alla buccia)
   const [ex, ey] = eyeAt(), lens = HEAD === 'pumpkin' ? 0.07 : 0.062;
   if (L.glasses === 'round' || L.glasses === 'monocle') {

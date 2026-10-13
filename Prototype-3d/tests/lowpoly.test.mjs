@@ -162,9 +162,11 @@ test('FireFlicker: deterministico per seme e indipendente tra sorgenti', () => {
   assert.equal(new FireFlicker(5, 0).value(3), 1);
 });
 
-test('prototipi kawaii: ogni parte ha geometria e gli arti partono dentro il busto', async () => {
-  const { KAWAII, buildKawaiiPart } = await import('../src/render/lowpoly/kawaii.ts');
-  for (const [kind, spec] of Object.entries(KAWAII)) {
+test('personaggi v2: ogni parte ha geometria e gli arti partono dentro il busto', async () => {
+  const { V2_SPECS, v2Generators } = await import('../src/render/lowpoly/v2/npc.ts');
+  const gens = v2Generators();
+  const buildKawaiiPart = (kind, part) => gens[`${kind}:${part}`]();
+  for (const [kind, spec] of Object.entries(V2_SPECS)) {
     for (const part of Object.keys(spec.parts)) {
       const m = buildKawaiiPart(kind, part);
       assert.ok(m && Object.values(m.geometries).some((g) => g && g.getAttribute('position').count > 20), `${kind}:${part}`);
@@ -179,12 +181,15 @@ test('prototipi kawaii: ogni parte ha geometria e gli arti partono dentro il bus
   }
 });
 
-test('rig low-poly: personaggi kawaii in gioco, con luci portate dai modelli', async () => {
+test('rig low-poly: personaggi v2 in gioco, con luci portate dai modelli e occhi lucidi', async () => {
   const { buildRig } = await import('../src/view/characters.ts');
-  const { KAWAII } = await import('../src/render/lowpoly/kawaii.ts');
+  const { V2_SPECS } = await import('../src/render/lowpoly/v2/npc.ts');
   const c = buildRig('custode', 'lowpoly');
   assert.equal(c.lights.length, 1, 'lanterna del Custode');
-  assert.deepEqual(c.parts.armR.position.toArray(), KAWAII.custode.pivots.armR, 'perni kawaii');
+  assert.deepEqual(c.parts.armR.position.toArray(), V2_SPECS.custode.pivots.armR, 'perni v2');
+  assert.ok(c.parts.head.getObjectByName('gloss'), 'occhi lucidi nella testa');
+  const custom = buildRig('custode', 'lowpoly', { ...(await import('../src/game/look.ts')).DEFAULT_LOOK, hair: 'long', sparkle: true });
+  assert.ok(custom.parts.head.getObjectByName('scintille'), 'scintille sui brillantini');
   assert.equal(buildRig('ghost', 'lowpoly').lights.length, 1, 'bagliore del fantasma');
   assert.equal(buildRig('ghost', 'lowpoly').spec.bucket, 'ghost');
   for (const kind of ['mourner', 'mournerB', 'priest', 'gravedigger', 'zombie', 'skeleton', 'cat', 'crow', 'petDuck']) {
@@ -276,23 +281,17 @@ test('Custode personalizzabile: aspetto validato, chiave stabile, rig con tutte 
   // con il cappello nessuna ciocca supera la tesa (o il bordo del berretto)
   // (per i cappelli inclinati si misura rispetto al piano della tesa: i capelli
   // possono seguirla da sotto, mai uscire sopra il suo spessore)
-  const { hairBuild, HAIR_CEILING, HAT_TILT } = await import('../src/render/lowpoly/kawaii.ts');
-  const { LP } = await import('../src/render/lowpoly/kit.ts');
+  const { hairOnly } = await import('../src/render/lowpoly/v2/custode.ts');
   for (const [hair] of LOOK_STYLES.hair) for (const hat of ['wide', 'top', 'beanie']) {
-    const build = hairBuild(hair, '#6b4a33', hat);
-    if (!build) continue;
-    const lp = new LP('t');
-    build(lp);
-    const g = lp.build().geometries.solid;
-    const tilt = HAT_TILT[hat];
-    const inv = tilt && new THREE.Matrix4().compose(new THREE.Vector3(0, tilt[0], 0), new THREE.Quaternion().setFromEuler(new THREE.Euler(tilt[1], 0, tilt[2], 'YXZ')), new THREE.Vector3(1, 1, 1)).invert();
-    const p = g.attributes.position, v = new THREE.Vector3();
+    const { geo, center, hatPh } = hairOnly({ ...DEFAULT_LOOK, hair, hat });
+    if (!geo) continue;
+    const p = geo.attributes.position, v = new THREE.Vector3();
     let max = -Infinity;
     for (let i = 0; i < p.count; i++) {
-      v.fromBufferAttribute(p, i);
-      max = Math.max(max, inv ? v.applyMatrix4(inv).y : v.y - HAIR_CEILING[hat]);
+      v.fromBufferAttribute(p, i).sub(center);
+      max = Math.max(max, Math.asin(v.y / v.length()) * 180 / Math.PI);
     }
-    assert.ok(max <= (inv ? 0.03 : 0.012), `${hair} sotto ${hat}: ${max.toFixed(3)}`);
+    assert.ok(max <= hatPh + 8, `${hair} sotto ${hat}: ${max.toFixed(1)}° (cappello da ${hatPh}°)`);
   }
   const sparkly = buildRig('custode', 'lowpoly', custom);
   assert.ok(sparkly.parts.head.children[0].children.some((m) => m.name === 'glow'), 'brillantini luminosi sul viso');

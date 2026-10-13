@@ -14,7 +14,7 @@ import { createRng, type Rng } from '../game/rng.ts';
 export const V = 10;
 export const VOX = 1 / V;
 
-export type Bucket = 'solid' | 'glow' | 'water' | 'ghost';
+export type Bucket = 'solid' | 'glow' | 'water' | 'ghost' | 'gloss';
 
 export interface PrimOpts {
   bucket?: Bucket;

@@ -1,4 +1,4 @@
-// Laboratorio personaggi (sviluppo): i personaggi kawaii dello stile low-poly
+// Laboratorio personaggi (sviluppo): i personaggi v2 dello stile low-poly
 // con le animazioni del gioco, a confronto con lo stile voxel.
 // Apri /lab.html con `npm run dev`. Parametri: ?set=town|spooky|animals|funeral
 // &pose=idle|walk|work &time=day|night &compare=0|1 &t=<secondi, ferma il tempo> &zoom=
@@ -159,7 +159,7 @@ function drawLabels() {
     labels.append(s);
   }
   if (compare && set !== 'funeral') {
-    for (const [txt, z] of [['low-poly (kawaii)', 1.0], ['voxel', -1.4]] as const) {
+    for (const [txt, z] of [['low-poly (v2)', 1.0], ['voxel', -1.4]] as const) {
       const xs = actors.filter((a) => Math.abs(a.at.z - z) < 0.01).map((a) => a.at.x);
       v.set(Math.min(...xs) - 0.2, 2.1, z).project(camera);
       const s = document.createElement('span');

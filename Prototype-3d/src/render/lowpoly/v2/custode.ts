@@ -1,17 +1,36 @@
-// PROTOTIPO (non incluso nel gioco): il Custode nello stile "v2" del concept —
-// testa tonda e grande, capelli voluminosi a ciocche che escono dalla sagoma,
-// barba a maschera con treccia, baffi a manubrio grandi, brillantini a
-// stella, giacca con cappuccio e cintura, stivali, lanterna in mano.
-// Costruito con lo stesso kit low-poly del gioco (LP), per valutarne la
-// fattibilità. Pagina: proto-custode.html (solo in sviluppo, fuori dalla build).
+// Personaggi low-poly "v2" (stile del concept): testa grande a
+// superellissoide, capelli a casco di ciocche, barba disegnata per contorni,
+// corpo a pera, stivali, occhi lucidi con la stella. Ogni personaggio è
+// diviso nelle parti del rig (testa, busto, braccia, gambe) con il perno
+// all'articolazione, così le animazioni di view/characters.ts restano quelle.
+// Qui il Custode (con tutte le opzioni di CustodeLook) e il kit comune;
+// gli altri personaggi e gli animali sono in npc.ts.
 
 import * as THREE from 'three';
 import { RoundedBoxGeometry } from 'three/examples/jsm/geometries/RoundedBoxGeometry.js';
-import { LP, type LPOpts } from '../render/lowpoly/kit.ts';
-import { instantiate, LOWPOLY_MATERIALS, type CachedModel } from '../render/modelCache.ts';
-import { flower, grassTuft } from '../render/lowpoly/details.ts';
-import { mushroom } from '../render/lowpoly/nature.ts';
-import type { CustodeLook, HairStyle, HatStyle } from '../game/look.ts';
+import { LP, type LPOpts } from '../kit.ts';
+import { instantiate, LOWPOLY_MATERIALS, type CachedModel } from '../../modelCache.ts';
+import { VOX } from '../../shape.ts';
+import { flower, grassTuft } from '../details.ts';
+import { mushroom } from '../nature.ts';
+import type { CustodeLook, HairStyle, HatStyle } from '../../../game/look.ts';
+
+// ── Parti del rig ───────────────────────────────────────────────────────
+
+export type KPart = 'body' | 'head' | 'armL' | 'armR' | 'legL' | 'legR';
+
+/** Un personaggio: perni delle parti e loro geometria (nello spazio del perno). */
+export interface KawaiiSpec {
+  /** Perni delle parti (unità mondo, personaggio in scala 1). */
+  pivots: Partial<Record<KPart, [number, number, number]>>;
+  parts: Partial<Record<KPart, (lp: LP) => void>>;
+  /** Scala nel mondo. */
+  scale: number;
+  hover?: number;
+  ghost?: boolean;
+  quadruped?: boolean;
+  flier?: boolean;
+}
 
 // ── Aspetto ─────────────────────────────────────────────────────────────
 // Stesse opzioni della personalizzazione del gioco (CustodeLook); la palette
@@ -64,8 +83,8 @@ export interface V2Extra {
   chest?: (lp: LP) => void;
   /** Oggetti in mano: costruiti con l'origine al centro della mano. */
   held?: Array<{ side: number; build: (lp: LP) => void }>;
-  /** Corpo completamente diverso (scheletro): sostituisce busto, braccia e gambe. */
-  body?: (lp: LP) => void;
+  /** Corpo completamente diverso (scheletro): sostituisce busto, braccia e gambe (spazio del personaggio). */
+  body?: { torso: (lp: LP) => void; arm: (lp: LP, s: number) => void; leg: (lp: LP, s: number) => void };
 }
 let X: V2Extra = {};
 const GLITTER = ['#fff7d8', '#ffd2ec', '#d3f2ff', '#e8d6ff', '#fff0a0'];
@@ -321,7 +340,7 @@ function head(lp: LP) {
 }
 
 /** Brillantini a stella, grandi e radi, su tutto il viso (non su occhi, baffi, barba, capelli). */
-function glitter(lp: LP) {
+function glitter(lp: LP | null, out?: Array<{ p: THREE.Vector3; n: THREE.Vector3; r: number }>) {
   if (!L.sparkle) return;
   const rnd = prng(9);
   let placed = 0;
@@ -332,7 +351,9 @@ function glitter(lp: LP) {
     const { p } = at;
     if (p.z > 0.08 && Math.abs(Math.abs(p.x) - EYE_X) < 0.078 && Math.abs(p.y - EYE_Y) < 0.09) continue; // occhi
     if (p.z > 0.08 && Math.abs(p.x) < 0.23 && p.y > 0.585 && p.y < 0.68) continue; // baffi e bocca
-    onSkin(lp, at, 0.002, rnd() * Math.PI, (q) => q.add(star(0.013 + rnd() * 0.011), GLITTER[placed % 3 === 0 ? 1 + (placed % 4) : 0], { ...O, bucket: 'glow' }));
+    const rot = rnd() * Math.PI, size = 0.013 + rnd() * 0.011;
+    out?.push({ p: p.clone(), n: at.n.clone(), r: (rot / Math.PI + size * 37) % 1 });
+    if (lp) onSkin(lp, at, 0.002, rot, (q) => q.add(star(size), GLITTER[placed % 3 === 0 ? 1 + (placed % 4) : 0], { ...O, bucket: 'glow' }));
     placed++;
   }
 }
@@ -744,7 +765,6 @@ function body(lp: LP) {
   if (L.outfit === 'overalls') overalls(lp);
   if (L.outfit === 'cloak') cloak(lp);
   X.chest?.(lp);
-  legs(lp);
 }
 
 /** Tonaca lunga fino a terra (prete, corteo): dal collo si allarga a campana; spuntano le punte degli stivali. */
@@ -758,7 +778,6 @@ function robe(lp: LP) {
   lp.add(new THREE.TorusGeometry(0.135, 0.04, 8, 18).rotateX(Math.PI / 2), JACKET_D, O); // colletto
   lp.pop();
   X.chest?.(lp);
-  for (const s of [-1, 1]) lp.add(footGeo(0.15, 0.2, 0.08, 0.03).translate(s * 0.09, 0, 0.08), X.boot ?? SOLE, O);
 }
 
 /** Giacca: fibbia, borsello, tasche, cappuccio, sciarpa. */
@@ -822,15 +841,15 @@ function cloak(lp: LP) {
   lp.add(new THREE.CylinderGeometry(0.006, 0.006, 0.2, 4).rotateZ(Math.PI / 2).translate(0, 0.47, 0.135), L.accentColor, O);
 }
 
-function legs(lp: LP) {
-  // gambe corte e un po' larghe, stivaloni tondi con suola spessa
-  for (const s of [-1, 1]) {
-    lp.cyl(s * 0.095, 0.07, 0, 0.082, 0.076, 0.13, 12, X.pants ?? PANTS, { ...O, ao: 0.12 });
-    // stivale e suola con la stessa pianta: la tomaia nasce dentro la suola,
-    // così il bordo è continuo (niente tavoletta staccata sotto)
-    lp.add(footGeo(0.172, 0.25, 0.036, 0.01).translate(s * 0.095, 0, 0.034), SOLE, O);
-    lp.add(footGeo(0.16, 0.236, 0.112, 0.04).translate(s * 0.095, 0.014, 0.034), X.boot ?? BOOT, O);
-  }
+function leg(lp: LP, s: number) {
+  // sotto la tonaca spuntano solo le punte degli stivali
+  if (X.robe) { lp.add(footGeo(0.15, 0.2, 0.08, 0.03).translate(s * 0.09, 0, 0.08), X.boot ?? SOLE, O); return; }
+  // gamba corta e un po' larga (nasce dentro la giacca), stivalone tondo con suola spessa
+  lp.cyl(s * 0.095, 0.07, 0, 0.082, 0.076, 0.15, 12, X.pants ?? PANTS, { ...O, ao: 0.12 });
+  // stivale e suola con la stessa pianta: la tomaia nasce dentro la suola,
+  // così il bordo è continuo (niente tavoletta staccata sotto)
+  lp.add(footGeo(0.172, 0.25, 0.036, 0.01).translate(s * 0.095, 0, 0.034), SOLE, O);
+  lp.add(footGeo(0.16, 0.236, 0.112, 0.04).translate(s * 0.095, 0.014, 0.034), X.boot ?? BOOT, O);
 }
 
 /** Centro della mano (braccia giù o tese in avanti, come lo zombie). */
@@ -873,7 +892,7 @@ function lantern(lp: LP, x: number) {
   }
   lp.add(new THREE.BoxGeometry(0.084, 0.1, 0.084).translate(x, by, z), '#ffb24a', { ...O, bucket: 'glow' }); // vetro acceso
   lp.blob(x, by - 0.01, z, 0.016, 0.024, 0.016, '#fff1c4', { ...O, bucket: 'glow' });
-  lp.light(x, by, z, '#ffb24a', 0.8, 1.6, 0.1, 0.6);
+  lp.light(x, by, z, '#f2ac58', 1.1, 5.5, 0.2, 1); // come la lanterna del gioco: di notte illumina il Custode
 }
 
 /** Zolla del concept: piccola, terra spessa, prato scuro, funghi a pois, fiorellini, sasso. */
@@ -899,89 +918,148 @@ function model(build: (lp: LP) => void, name: string): CachedModel {
 }
 
 /**
- * Occhi grandi e lucidi (materiale a parte) con il riflesso a stella; varianti:
- * assonnati (palpebra), chiusi (archetto), zombie (uno tondo, uno cucito),
- * orbite (scheletro: buio con una lucina). `at` dà il punto sulla superficie.
+ * Occhi grandi e lucidi (materiale lucido "gloss") con il riflesso a stella;
+ * varianti: assonnati (palpebra), chiusi (archetto), zombie (uno tondo, uno
+ * cucito), orbite (scheletro: buio con una lucina). `at` dà il punto sulla
+ * superficie; `glow` li fa luminosi (gatto nero, corvo).
  */
-export function eyes(style: EyeStyle = 'open', color = EYE, lid = SKIN, at = (s: number) => headFront(s * EYE_X, EYE_Y), glow = false): THREE.Group {
-  const g = new THREE.Group();
-  const mat = glow
-    ? new THREE.MeshStandardMaterial({ color, emissive: color, emissiveIntensity: 0.9, roughness: 0.3, flatShading: true })
-    : new THREE.MeshStandardMaterial({ color, roughness: 0.18, metalness: 0.05, flatShading: true });
-  const shine = new THREE.MeshBasicMaterial({ color: '#ffffff' });
-  const ink = new THREE.MeshStandardMaterial({ color: '#2a1a1c', roughness: 0.6, flatShading: true });
-  const lidMat = new THREE.MeshStandardMaterial({ color: shade(lid, -0.04), roughness: 0.8, flatShading: true });
-  const white = new THREE.MeshStandardMaterial({ color: '#f4efe4', roughness: 0.3, flatShading: true });
-  const hole = new THREE.MeshStandardMaterial({ color: '#1e1b22', roughness: 0.9, flatShading: true });
-  const spark = new THREE.MeshBasicMaterial({ color: color });
-  const k = EYE_S;
+export function eyesLP(lp: LP, style: EyeStyle = 'open', color = EYE, lid = SKIN, at = (s: number) => headFront(s * EYE_X, EYE_Y), glow = false) {
+  const ball = { ...O, vary: 0, bucket: glow ? 'glow' : 'gloss' } as LPOpts;
+  const shine = { ...O, vary: 0, bucket: 'gloss' } as LPOpts;
+  const flat = { ...O, vary: 0 } as LPOpts;
+  const ink = '#2a1a1c';
   for (const s of [-1, 1]) {
     const { p, n } = at(s);
-    const e = new THREE.Group();
-    e.position.copy(p.addScaledVector(n, 0.004));
-    e.rotation.set(-Math.asin(n.y), Math.atan2(n.x, n.z), 0, 'YXZ');
-    e.scale.setScalar(k);
-    const add = (geo: THREE.BufferGeometry, m: THREE.Material, x = 0, y = 0, z = 0) => { const mesh = new THREE.Mesh(geo, m); mesh.position.set(x, y, z); mesh.castShadow = true; e.add(mesh); return mesh; };
+    p.addScaledVector(n, 0.004);
+    lp.push([p.x, p.y, p.z], Math.atan2(n.x, n.z), -Math.asin(THREE.MathUtils.clamp(n.y, -1, 1)), 0, EYE_S);
+    const add = (geo: THREE.BufferGeometry, c: string, o: LPOpts, x = 0, y = 0, z = 0) => lp.add(geo.translate(x, y, z), c, o);
     const glossy = () => {
-      add(new THREE.IcosahedronGeometry(1, 2).scale(0.042, 0.051, 0.018), mat);
-      add(star(0.015, 0.42), shine, -0.003, 0.012, 0.017);
-      add(new THREE.CircleGeometry(0.0046, 8), shine, 0.014, -0.019, 0.016);
+      add(new THREE.IcosahedronGeometry(1, 2).scale(0.042, 0.051, 0.018), color, ball);
+      add(star(0.015, 0.42), '#ffffff', shine, -0.003, 0.012, 0.017);
+      add(new THREE.CircleGeometry(0.0046, 8), '#ffffff', shine, 0.014, -0.019, 0.016);
     };
     if (style === 'open') glossy();
     else if (style === 'sleepy') {
       glossy();
       // palpebra a metà: mezza calotta color pelle sopra l'occhio, con il bordo scuro
-      add(new THREE.SphereGeometry(1, 14, 6, 0, Math.PI * 2, 0, Math.PI / 2).scale(0.047, 0.056, 0.024), lidMat, 0, -0.004, 0.0);
-      add(new THREE.TorusGeometry(0.044, 0.005, 4, 14, Math.PI).scale(1, 0.32, 1).rotateX(-Math.PI / 2).rotateX(Math.PI / 2), ink, 0, -0.004, 0.012);
+      add(new THREE.SphereGeometry(1, 14, 6, 0, Math.PI * 2, 0, Math.PI / 2).scale(0.047, 0.056, 0.024), shade(lid, -0.04), flat, 0, -0.004, 0);
+      add(new THREE.TorusGeometry(0.044, 0.005, 4, 14, Math.PI).scale(1, 0.32, 1), ink, flat, 0, -0.004, 0.012);
     } else if (style === 'closed') {
-      add(new THREE.TorusGeometry(0.036, 0.007, 4, 12, Math.PI).rotateZ(Math.PI), ink, 0, 0.004, 0.004);
+      add(new THREE.TorusGeometry(0.036, 0.007, 4, 12, Math.PI).rotateZ(Math.PI), ink, flat, 0, 0.004, 0.004);
     } else if (style === 'zombie') {
       if (s < 0) {
-        add(new THREE.IcosahedronGeometry(1, 2).scale(0.058, 0.062, 0.02), white);
-        add(new THREE.IcosahedronGeometry(1, 1).scale(0.022, 0.022, 0.01), ink, 0.008, -0.006, 0.016);
-        add(new THREE.CircleGeometry(0.006, 8), shine, 0.004, 0.002, 0.027);
-      } else for (const r of [0.785, -0.785]) add(new THREE.BoxGeometry(0.012, 0.085, 0.01).rotateZ(r), ink, 0, 0, 0.004);
+        add(new THREE.IcosahedronGeometry(1, 2).scale(0.058, 0.062, 0.02), '#f4efe4', shine);
+        add(new THREE.IcosahedronGeometry(1, 1).scale(0.022, 0.022, 0.01), ink, flat, 0.008, -0.006, 0.016);
+        add(new THREE.CircleGeometry(0.006, 8), '#ffffff', shine, 0.004, 0.002, 0.027);
+      } else for (const r of [0.785, -0.785]) add(new THREE.BoxGeometry(0.012, 0.085, 0.01).rotateZ(r), ink, flat, 0, 0, 0.004);
     } else if (style === 'sockets') {
-      add(new THREE.IcosahedronGeometry(1, 2).scale(0.058, 0.064, 0.02), hole, 0, 0, -0.004);
-      add(new THREE.IcosahedronGeometry(1, 1).scale(0.016, 0.016, 0.008), spark, 0, -0.004, 0.013);
+      add(new THREE.IcosahedronGeometry(1, 2).scale(0.058, 0.064, 0.02), '#1e1b22', flat, 0, 0, -0.004);
+      add(new THREE.IcosahedronGeometry(1, 1).scale(0.016, 0.016, 0.008), color, { ...flat, bucket: 'glow' }, 0, -0.004, 0.013);
     }
-    g.add(e);
+    lp.pop();
   }
-  return g;
 }
+
+// ── Parti animate (rig del gioco) ───────────────────────────────────────
+
+type Build = (lp: LP) => void;
+/** Scala nel mondo (altezza ≈ 1,25 come i personaggi di prima). */
+export const V2_SCALE = 1;
+/** Perni delle parti degli umani (spazio del personaggio): collo, anca, spalle, anche. */
+export const HUMAN_PIVOTS: Record<KPart, [number, number, number]> = {
+  head: [0, 0.5, 0], body: [0, 0.2, 0], armL: [-0.18, 0.46, -0.005], armR: [0.18, 0.46, -0.005], legL: [-0.095, 0.2, 0], legR: [0.095, 0.2, 0],
+};
+
+/**
+ * Una parte si disegna nello spazio del personaggio (come nella tavola) e
+ * viene portata nello spazio del suo perno. `state` reimposta aspetto e
+ * forma della testa: le parti si generano quando servono, una alla volta.
+ */
+export function atPivot(state: () => void, pv: [number, number, number], draw: Build): Build {
+  return (lp) => { state(); lp.push([-pv[0], -pv[1], -pv[2]]); draw(lp); lp.pop(); };
+}
+
+function headPart(lp: LP) {
+  // testa (con faccia, barba, baffi e capelli) più grande del 30%, scalata attorno al mento
+  lp.push([0, HEAD_T.y, 0], 0, 0, 0, HEAD_S);
+  head(lp); glitter(lp); faceExtras(lp); beard(lp); braid(lp); moustache(lp); hair(lp); hatGeo(lp);
+  eyesLP(lp, X.eyes ?? 'open', EYE, SKIN);
+  lp.pop();
+}
+
+function armPart(lp: LP, s: number) {
+  if (X.body) X.body.arm(lp, s); else arm(lp, s);
+  if (X.held) {
+    for (const h of X.held) if (h.side === s) { const p = handPos(s); lp.push([p.x, p.y, p.z]); h.build(lp); lp.pop(); }
+  } else if (s < 0) lantern(lp, -0.296);
+}
+
+/** Umano nello stile v2: aspetto (stesse opzioni della personalizzazione) e aggiunte. */
+export function humanSpec(look: Partial<CustodeLook> = {}, extra: V2Extra = {}): KawaiiSpec {
+  const full: CustodeLook = { ...CONCEPT_LOOK, ...look };
+  const state = () => { X = extra; setHeadShape(); applyLook(full); };
+  const P = HUMAN_PIVOTS;
+  return {
+    scale: V2_SCALE,
+    pivots: { ...P },
+    parts: {
+      head: atPivot(state, P.head, headPart),
+      body: atPivot(state, P.body, (lp) => (X.body ? X.body.torso(lp) : body(lp))),
+      armL: atPivot(state, P.armL, (lp) => armPart(lp, -1)),
+      armR: atPivot(state, P.armR, (lp) => armPart(lp, 1)),
+      legL: atPivot(state, P.legL, (lp) => (X.body ? X.body.leg(lp, -1) : leg(lp, -1))),
+      legR: atPivot(state, P.legR, (lp) => (X.body ? X.body.leg(lp, 1) : leg(lp, 1))),
+    },
+  };
+}
+
+/** Punti dei brillantini nello spazio della parte "testa" (per le scintille animate). */
+export function sparklePointsV2(look: CustodeLook): Array<{ p: THREE.Vector3; n: THREE.Vector3; r: number }> {
+  X = {}; setHeadShape(); applyLook(look);
+  const out: Array<{ p: THREE.Vector3; n: THREE.Vector3; r: number }> = [];
+  glitter(null, out);
+  const pv = HUMAN_PIVOTS.head;
+  return out.map(({ p, n, r }) => ({ p: new THREE.Vector3(p.x * HEAD_S - pv[0], HEAD_T.y + p.y * HEAD_S - pv[1], p.z * HEAD_S - pv[2]), n, r }));
+}
+
+// ── Montaggio statico (tavole di prototipo) ─────────────────────────────
 
 export interface CustodeV2 { root: THREE.Group; diorama: THREE.Group; lights: Array<{ pos: [number, number, number]; color: string }> }
 
-export function buildCustodeV2(look: Partial<CustodeLook> = {}, extra: V2Extra = {}): CustodeV2 {
-  X = extra;
-  setHeadShape();
-  applyLook({ ...CONCEPT_LOOK, ...look });
-  const char = model((lp) => {
-    // testa (con faccia, barba, baffi e capelli) più grande del 30%, scalata
-    // attorno al mento: resta appoggiata sul colletto
-    lp.push([0, HEAD_T.y, 0], 0, 0, 0, HEAD_S);
-    head(lp); glitter(lp); faceExtras(lp); beard(lp); braid(lp); moustache(lp); hair(lp); hatGeo(lp);
-    lp.pop();
-    // la treccia pende davanti alla giacca (prima finiva dietro il nodo della sciarpa)
-    if (X.body) X.body(lp);
-    else { body(lp); arm(lp, -1); arm(lp, 1); }
-    if (X.held) for (const h of X.held) { const p = handPos(h.side); lp.push([p.x, p.y, p.z]); h.build(lp); lp.pop(); }
-    else lantern(lp, -0.296);
-  }, `proto:custode-v2:${X.name ?? ''}:${JSON.stringify(L)}`);
+/** Monta le parti ai loro perni, ferme (per le tavole e le gallerie). */
+export function assemble(spec: KawaiiSpec, name: string): CustodeV2 {
   const root = new THREE.Group();
-  root.add(instantiate(char, { castShadow: true }));
-  const eyeGroup = eyes(X.eyes ?? 'open', EYE, SKIN);
-  eyeGroup.scale.setScalar(HEAD_S);
-  eyeGroup.position.copy(HEAD_T);
-  root.add(eyeGroup);
-  root.traverse((o) => { if (o instanceof THREE.Mesh) { o.castShadow = true; o.receiveShadow = true; } });
-  const d = model(diorama, 'proto:zolla');
-  const dio = instantiate(d, { castShadow: true });
-  dio.traverse((o) => { if (o instanceof THREE.Mesh) o.receiveShadow = true; });
-  return { root, diorama: dio, lights: char.lights.map((l) => ({ pos: l.pos, color: l.color })) };
+  const inner = new THREE.Group();
+  inner.scale.setScalar(spec.scale);
+  root.add(inner);
+  const lights: CustodeV2['lights'] = [];
+  for (const [part, pv] of Object.entries(spec.pivots) as Array<[KPart, [number, number, number]]>) {
+    const build = spec.parts[part];
+    if (!build) continue;
+    const lp = new LP(`v2:${name}:${part}`);
+    build(lp);
+    const m = lp.build();
+    const g = instantiate({ geometries: m.geometries, lights: m.lights, height: 1, mats: LOWPOLY_MATERIALS, dedicated: true }, { castShadow: !spec.ghost });
+    g.position.set(pv[0], pv[1] + (spec.hover ?? 0), pv[2]);
+    inner.add(g);
+    for (const l of m.lights) lights.push({ pos: [(l.pos[0] * VOX + pv[0]) * spec.scale, (l.pos[1] * VOX + pv[1] + (spec.hover ?? 0)) * spec.scale, (l.pos[2] * VOX + pv[2]) * spec.scale], color: l.color });
+  }
+  root.traverse((o) => { if (o instanceof THREE.Mesh && o.name === 'solid') { o.castShadow = !spec.ghost; o.receiveShadow = true; } });
+  return { root, diorama: zolla(), lights };
 }
 
-// ── Kit per gli altri personaggi (npcV2.ts) ─────────────────────────────
+/** Zolla del concept sotto i personaggi nelle tavole. */
+export function zolla(): THREE.Group {
+  const dio = instantiate(model(diorama, 'proto:zolla'), { castShadow: true });
+  dio.traverse((o) => { if (o instanceof THREE.Mesh) o.receiveShadow = true; });
+  return dio;
+}
+
+export function buildCustodeV2(look: Partial<CustodeLook> = {}, extra: V2Extra = {}): CustodeV2 {
+  return assemble(humanSpec(look, extra), `custode:${extra.name ?? ''}:${JSON.stringify(look)}`);
+}
+
+// ── Kit per gli altri personaggi (npc.ts) ───────────────────────────────
 /** Prepara lo stato per una creatura costruita a mano (fantasmi, animali). */
 export function beginCreature(head: Parameters<typeof setHeadShape>[0]) {
   X = {}; HAIR_HANG = false;
@@ -989,4 +1067,12 @@ export function beginCreature(head: Parameters<typeof setHeadShape>[0]) {
 }
 export const headCenter = () => C.clone();
 export const headRadii = () => R.clone();
-export { headAt, headFront, headGeo, surfaceAlong, onSkin, sheet, taperTube, star, rbox, shade, Tris, prng, smooth, lerp, DEG, O, footGeo, model, diorama, HEAD_S, HEAD_T };
+export { headAt, headFront, headGeo, surfaceAlong, onSkin, sheet, taperTube, star, rbox, shade, Tris, prng, smooth, lerp, DEG, O, footGeo };
+
+/** Solo i capelli del Custode (spazio della testa, prima della scala), per i controlli. */
+export function hairOnly(look: CustodeLook): { geo: THREE.BufferGeometry | undefined; center: THREE.Vector3; hatPh: number } {
+  X = {}; setHeadShape(); applyLook(look);
+  const lp = new LP('t:hair');
+  hair(lp);
+  return { geo: lp.build().geometries.solid, center: C.clone(), hatPh: hatPh() };
+}

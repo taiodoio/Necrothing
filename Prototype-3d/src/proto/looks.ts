@@ -2,8 +2,8 @@
 // personalizzazione del gioco. Solo per la valutazione: non fa parte del gioco.
 
 import * as THREE from 'three';
-import { buildCustodeV2, type CustodeV2 } from './custodeV2.ts';
-import { ANIMALS, HUMANS } from './npcV2.ts';
+import { assemble, buildCustodeV2, type CustodeV2 } from '../render/lowpoly/v2/custode.ts';
+import { ANIMALS, HUMANS, V2_SPECS } from '../render/lowpoly/v2/npc.ts';
 import type { CustodeLook } from '../game/look.ts';
 
 export const PRESETS: Array<{ name: string; look: Partial<CustodeLook> }> = [
@@ -20,7 +20,8 @@ export const PRESETS: Array<{ name: string; look: Partial<CustodeLook> }> = [
 const params = new URLSearchParams(location.search);
 // ?set=umani | animali: gli altri personaggi nello stesso stile
 const set = params.get('set');
-const ALL: Array<{ name: string; build: () => CustodeV2 }> = set === 'umani' ? HUMANS : set === 'animali' ? ANIMALS : PRESETS.map((p) => ({ name: p.name, build: () => buildCustodeV2(p.look) }));
+const fromKind = (l: Array<{ name: string; kind: string }>) => l.map((p) => ({ name: p.name, build: () => assemble(V2_SPECS[p.kind], p.kind) }));
+const ALL: Array<{ name: string; build: () => CustodeV2 }> = set === 'umani' ? fromKind(HUMANS) : set === 'animali' ? fromKind(ANIMALS) : PRESETS.map((p) => ({ name: p.name, build: () => buildCustodeV2(p.look) }));
 const only = params.get('i');
 const COLS = 4, CW = only !== null ? 720 : 360, CH = only !== null ? 1060 : 530;
 const list = only !== null ? [ALL[Number(only)]] : ALL;

@@ -3,7 +3,7 @@
 // Solo per la valutazione: non fa parte del gioco.
 
 import * as THREE from 'three';
-import { buildCustodeV2 } from './custodeV2.ts';
+import { buildCustodeV2 } from '../render/lowpoly/v2/custode.ts';
 import { buildRig } from '../view/characters.ts';
 import { DEFAULT_LOOK } from '../game/look.ts';
 

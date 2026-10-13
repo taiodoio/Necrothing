@@ -116,8 +116,13 @@ interagisci, `C` cambia vista, `V` cambia stile (low-poly → voxel → miniatur
   (fiori, vasi, corone, candele accese, muschio, erbacce, foglie, crepe, frammenti).
   Edifici con finestre gotiche illuminate, porte ad arco, tetti a lastre, cantonali;
   recinto con inferriata a lance; selciato fitto a pietre poligonali con bordi sfumati
-  nel prato (erba bassa e sassolini); terreno morbido senza poligoni a vista; sassi e rocce sparsi; personaggi "kawaii"
-  (testa grande, corpo piccolo, arti attaccati, faccine) con le stesse parti e animazioni del rig.
+  nel prato (erba bassa e sassolini); terreno morbido senza poligoni a vista; sassi e rocce sparsi; personaggi nello
+  stile "v2" (`src/render/lowpoly/v2/`): testa grande a superellissoide, capelli a casco di
+  ciocche, barba disegnata per contorni, corpo a pera, occhi lucidi con la stella; animali
+  e animaletti-scheletro sullo stesso schema. Ogni personaggio è diviso nelle parti del rig
+  (testa, busto, braccia, gambe) con il perno all'articolazione, quindi usa le stesse
+  animazioni. Tavole di prototipo: `/proto-custode.html`, `/proto-looks.html`
+  (`?set=umani` | `?set=animali`).
   Edifici in chiave "cozy spooky" (case storte con travi a vista, tetti muschiati,
   lanterne, edera, zucche intagliate), edicola votiva e angelo piangente, e **tutto il
   catalogo** (51 oggetti) più gli animali con un generatore dedicato.

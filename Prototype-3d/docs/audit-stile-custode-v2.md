@@ -162,6 +162,19 @@ Stesso approccio del Custode, nel prototipo `src/proto/npcV2.ts`. Pagina: `proto
 
 Triangoli (media misurata sulla pagina): circa 6.700 per umani, scheletro e fantasmi; circa 5.400 per gli animali (gli scheletri pesano di più: ogni vertebra e ogni giuntura è un pezzo). Il Custode con le sue varianti resta il più pesante, circa 12.600.
 
+## Nel gioco
+
+Lo stile v2 ha sostituito i personaggi "kawaii" per tutti: Custode (con ogni opzione della personalizzazione), becchino, prete, corteo, zombie, scheletro, fantasmi, gatto nero, ratto, corvo e animaletti-scheletro.
+
+- **Parti animate:** ogni personaggio è diviso nelle parti del rig (testa, busto, braccia, gambe; per gli animali le quattro zampe; per il corvo le ali), con il perno all'articolazione: collo, anca, spalle, anche. Le animazioni del gioco restano le stesse.
+- **Costruzione delle parti:** ogni parte si disegna nello spazio del personaggio, come nelle tavole, e poi viene portata nello spazio del suo perno. Le tavole di prototipo montano le stesse parti, quindi quello che si vede nelle tavole è quello che si vede nel gioco.
+- **Occhi:** fanno parte del modello della testa, in un materiale lucido dedicato (bucket `gloss`), quindi non costano mesh in più.
+- **Scintille della pelle brillantinata:** seguono i brillantini del nuovo viso.
+- **Esultanza e ballo:** con la testa grande e le braccia corte, le braccia alzate finirebbero dentro la testa, quindi in queste due pose si aprono di lato.
+- **Zombie:** le braccia tese gliele dà l'animazione della camminata, non il modello.
+- **Lanterna del Custode:** ha la stessa luce di prima, quindi di notte illumina il Custode.
+- **Tempi e pesi:** generare le parti di un personaggio richiede 10–100 ms, una volta sola, perché poi restano in cache. I triangoli vanno da circa 1.300 (fantasmi) a circa 11.000 (becchino); il Custode con ricci lunghi e treccia arriva a circa 25.000.
+
 ## Prestazioni su telefono (app Capacitor)
 
 Con Capacitor il gioco gira nel WebView del sistema (WKWebView su iOS, WebView di Chrome su Android): le prestazioni sono quelle del browser del telefono. Che il gioco funzioni offline non cambia nulla, perché il lavoro lo fanno GPU e CPU del dispositivo.

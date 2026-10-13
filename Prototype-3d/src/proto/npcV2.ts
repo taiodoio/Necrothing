@@ -540,6 +540,6 @@ export const ANIMALS: Preset[] = [
   { name: 'Gatto (scheletro)', build: () => quad({ name: 'gattosk', color: BONE, eyes: '#1b1a20', bones: true, head: [0.19, 0.16, 0.16], ears: 'cat', tail: 'up', nose: '#2b2730', inner: BONE_D }) },
   { name: 'Coniglio (scheletro)', build: () => quad({ name: 'coniglio', color: BONE, eyes: '#1b1a20', bones: true, head: [0.18, 0.16, 0.16], ears: 'rabbit', tail: 'pom', nose: '#2b2730', inner: BONE_D }) },
   { name: 'Corvo (scheletro)', build: () => bird({ name: 'corvosk', color: BONE, eyes: '#1b1a20', beak: BONE_D, bones: true }) },
-  { name: 'Papera (scheletro)', build: () => bird({ name: 'papera', color: BONE, eyes: '#1b1a20', beak: '#d8cdb0', bones: true, duck: true }) },
+  { name: 'Papera (scheletro)', build: () => bird({ name: 'papera', color: BONE, eyes: '#1b1a20', beak: '#e08a3a', bones: true, duck: true }) },
 ];
 

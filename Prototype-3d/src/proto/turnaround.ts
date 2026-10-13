@@ -76,6 +76,9 @@ const panels: Panel[] = [
   { x: 420, y: 10, w: 608, h: 1010, yaw: 0.42, hero: true }, // 3/4 sulla zolla
 ];
 
+// ?yaw=1.57 mostra un solo primo piano della testa con quella rotazione (controlli)
+const closeYaw = new URLSearchParams(location.search).get('yaw');
+if (closeYaw !== null) panels.splice(0, panels.length, { x: 0, y: 0, w: W, h: H, yaw: Number(closeYaw), close: true } as Panel & { close: boolean });
 const camera = new THREE.PerspectiveCamera(22, 1, 0.1, 50);
 for (const p of panels) {
   root.rotation.y = p.yaw;
@@ -83,7 +86,12 @@ for (const p of panels) {
   floor.visible = !p.hero;
   for (const pl of lanternLights) pl.intensity = p.hero ? 0.6 : 0.35;
   camera.aspect = p.w / p.h;
-  if (p.hero) {
+  if ((p as Panel & { close?: boolean }).close) {
+    diorama.visible = false;
+    camera.fov = 18;
+    camera.position.set(0, 0.85, 2.6);
+    camera.lookAt(0, 0.68, 0);
+  } else if (p.hero) {
     camera.fov = 26;
     camera.position.set(0.1, 1.3, 3.9);
     camera.lookAt(0, 0.56, 0);

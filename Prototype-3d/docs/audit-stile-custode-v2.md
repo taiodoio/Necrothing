@@ -98,6 +98,12 @@ Tredicesima passata:
 Quattordicesima passata:
 - **Barba di profilo:** stretta in alto, davanti all'orecchio; davanti scende dritta lungo la guancia fino a sotto il mento; dietro il bordo cala in diagonale dall'orecchio al mento. Il bordo inferiore sale verso l'orecchio (`beardLow`) e la massa diminuisce gradualmente verso i lati, quindi le guance restano sottili.
 
+Quindicesima passata (barba ricostruita):
+- **Metodo:** la barba non è più uno strato spostato lungo la normale della pelle, che si piegava e si stirava. Ora c'è un involucro, un superellissoide un po' più basso e avanzato della testa con il davanti quasi piatto, e la barba è la parte dell'involucro che sta fuori dalla testa. I punti si trovano lungo raggi dal centro della testa, quindi la superficie è continua e senza pieghe.
+- **Forma che ne risulta:** sottile sulle guance, piena sotto il mento, davanti che scende dritto, bordo dietro in diagonale dall'orecchio al mento, come nel concept e nel disegno di profilo.
+- **Barba lunga:** si ottiene aumentando `BEARD_DROP`.
+- **Primi piani:** `proto-custode.html?yaw=…` mostra la testa da vicino con la rotazione indicata (per i controlli).
+
 ## Prestazioni su telefono (app Capacitor)
 
 Con Capacitor il gioco gira nel WebView del sistema (WKWebView su iOS, WebView di Chrome su Android): le prestazioni sono quelle del browser del telefono. Che il gioco funzioni offline non cambia nulla, perché il lavoro lo fanno GPU e CPU del dispositivo.

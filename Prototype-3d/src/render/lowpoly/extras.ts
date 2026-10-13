@@ -529,11 +529,6 @@ export function npcHomeLP(v: PVis): LPModel {
       for (const x of [-0.8, 0.8]) lp.box(x, 0.0, 0, 0.06, 0.012, 0.62, LPC.bone, { jitter: 0, ao: 0 });
       break;
     }
-    case 'skeleton_pet': {
-      lp.lathe(0, 0, 0, [[0, 0], [0.16, 0], [0.2, 0.08], [0.17, 0.09], [0, 0.05]], 9, LPC.iron, { jitter: 0 });
-      lp.push([0, 0.07, 0], 0.4, 0, Math.PI / 2).cyl(0, -0.12, 0, 0.018, 0.018, 0.24, 4, LPC.bone, { jitter: 0 }).blob(0, -0.12, 0, 0.032, 0.026, 0.032, LPC.bone, { jitter: 0 }).blob(0, 0.12, 0, 0.032, 0.026, 0.032, LPC.bone, { jitter: 0 }).pop();
-      break;
-    }
     default:
       grassTuft(lp, 0, 0, 1);
   }

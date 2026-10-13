@@ -2,6 +2,7 @@
 // barra di posizionamento, banner Modifica, tutorial. Le schermate nei drawer
 // sono in screens.ts.
 
+import type * as THREE from 'three';
 import type { EntityAction, Game } from '../app/Game.ts';
 import { DECAY } from '../game/balance.ts';
 import { CATALOG, repairCost } from '../game/catalog.ts';
@@ -20,6 +21,8 @@ const WEATHER_ICONS = { clear: '', fog: 'fog', rain: 'rain', storm: 'rain' } as 
 export class UI {
   readonly game: Game;
   private ctxId: string | null = null;
+  /** Menù ancorato a un personaggio (animale, Custode) invece che a un oggetto. */
+  private ctxAnchor: (() => THREE.Vector3 | null) | null = null;
   private placementBar: HTMLElement | null = null;
   private tutorial: HTMLElement | null = null;
 
@@ -141,10 +144,29 @@ export class UI {
   closeContext() {
     $('#ctx').hidden = true;
     this.ctxId = null;
+    this.ctxAnchor = null;
+  }
+
+  /** Chiude il menù di un personaggio (se aperto), lasciando stare quello degli oggetti. */
+  closeActorMenu() { if (this.ctxAnchor) this.closeContext(); }
+
+  /** Menù sopra un personaggio: azioni con la loro funzione, segue il personaggio mentre si muove. */
+  openActorMenu(title: string, sub: string, actions: Array<{ label: string; icon: string; cls?: string; run: () => void }>, anchor: () => THREE.Vector3 | null) {
+    this.game.select(null);
+    this.ctxId = null;
+    this.ctxAnchor = anchor;
+    $('#ctx-title').replaceChildren(document.createTextNode(title), h('small', {}, sub));
+    $('#ctx-actions').replaceChildren(...actions.map((a) => h('button', {
+      class: a.cls ?? '',
+      onclick: () => { this.closeContext(); a.run(); },
+    }, icon(a.icon, 20), a.label)));
+    $('#ctx').hidden = false;
+    this.positionContext();
   }
 
   refreshContext() {
     const sel = this.game.selection;
+    if (!sel && this.ctxAnchor) return; // resta aperto il menù del personaggio
     if (!sel || this.game.placement || drawerOpen()) { this.closeContext(); return; }
     const s = this.game.state;
     const actions: Array<{ act: EntityAction; label: string; icon: string; cls?: string; cost?: number }> = [];
@@ -181,6 +203,12 @@ export class UI {
         if (p.broken) actions.push({ act: 'repair', label: 'Ripara', icon: 'hammer', cls: 'primary', cost: repairCost(def) });
         else if (p.dirty) actions.push({ act: 'clean', label: 'Pulisci', icon: 'broom' });
         if (def.light && !p.broken) actions.push({ act: 'light', label: p.lit ? 'Spegni' : 'Accendi', icon: p.lit ? 'lightOff' : 'lightOn' });
+        const pet = p.type === 'pet_house' && !p.broken ? this.game.actors.petList().find((q) => q.id === p.id) : undefined;
+        if (pet) {
+          if (pet.mode !== 'follow') actions.push({ act: 'petCall', label: 'Richiama', icon: 'paw', cls: 'primary' });
+          if (pet.mode !== 'home') actions.push({ act: 'petHome', label: 'A cuccia', icon: 'kennel' });
+          else actions.push({ act: 'petFree', label: 'Lascia libero', icon: 'sun' });
+        }
       }
     }
     this.ctxId = sel.id;
@@ -194,8 +222,8 @@ export class UI {
   }
 
   private positionContext() {
-    if (!this.ctxId) return;
-    const top = this.game.world.entityTop(this.ctxId);
+    if (!this.ctxId && !this.ctxAnchor) return;
+    const top = this.ctxAnchor ? this.ctxAnchor() : this.game.world.entityTop(this.ctxId!);
     const p = top ? this.game.project(top) : null;
     const el = $('#ctx');
     if (!p) { el.style.visibility = 'hidden'; return; }
@@ -251,6 +279,6 @@ export class UI {
 
   /** Chiamato ogni frame: riposiziona il menù contestuale. */
   frame() {
-    if (this.ctxId && !$('#ctx').hidden) this.positionContext();
+    if ((this.ctxId || this.ctxAnchor) && !$('#ctx').hidden) this.positionContext();
   }
 }

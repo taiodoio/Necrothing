@@ -90,7 +90,6 @@ frammento caduto, calcinacci.
 | `zombie_walker` | Zombie errante | Presenze | 1×1 | — | unico | calpestabile | presenze animate (rig) | ✅ low-poly dedicato |
 | `ghosts_roam` | Fantasmi erranti | Presenze | 1×1 | — | unico | calpestabile | presenze animate (rig) | ✅ low-poly dedicato |
 | `ghosts_ball` | Fantasmi a palla | Presenze | 2×2 | — | unico | calpestabile | presenze animate (rig) | ✅ low-poly dedicato |
-| `skeleton_pet` | Animale scheletro | Presenze | 1×1 | — | unico | calpestabile | presenze animate (rig) | ✅ low-poly dedicato |
 
 ## Scenografia (non selezionabile)
 

@@ -213,3 +213,19 @@ test('salvataggio v1 (mappa 48) migrato: oggetti spostati dentro il nuovo recint
   const p = s.placeables[0];
   assert.ok(p.x >= area.x && p.y >= area.y, 'la bottega è dentro il recinto');
 });
+
+test('animale domestico: la ciotola non è più in bottega; i salvataggi che l’avevano vengono rimborsati', async () => {
+  const { normalizeSave } = await import('../src/game/state.ts');
+  const { CATALOG } = await import('../src/game/catalog.ts');
+  assert.equal(CATALOG.skeleton_pet, undefined);
+  assert.ok(CATALOG.pet_house);
+  const s = createNewGame(NOW, 31);
+  const old = JSON.parse(JSON.stringify(s));
+  old.placeables.push({ ...old.placeables[0], id: 'ciotola', type: 'skeleton_pet', x: 20, y: 40, variant: 1 });
+  old.inventory.skeleton_pet = 1;
+  const wisps = old.player.wisps;
+  const fixed = normalizeSave(old);
+  assert.ok(!fixed.placeables.some((p) => p.type === 'skeleton_pet'));
+  assert.equal(fixed.inventory.skeleton_pet, undefined);
+  assert.equal(fixed.player.wisps, wisps + 36);
+});

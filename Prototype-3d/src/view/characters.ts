@@ -414,8 +414,11 @@ export function animateRig(rig: Rig, pose: Pose, t: number, phase: number) {
     else { set(p.armL, 0, -0.6 + Math.sin(t * 3) * 0.3); set(p.armR, 0, 0.6 - Math.sin(t * 3) * 0.3); }
     return;
   }
+  // animali contenti (coccole, osso riportato): saltellano sul posto
+  const hop = pose === 'cheer' && (rig.spec.flier || rig.spec.quadruped) ? Math.abs(Math.sin(t * 9)) * 1.3 : 0;
+  if (rig.spec.flier || rig.spec.quadruped) for (const part of Object.values(p)) bob(part, hop);
   if (rig.spec.flier) {
-    const flap = pose === 'fly' ? Math.sin(t * 18) * 0.9 : 0.05;
+    const flap = pose === 'fly' ? Math.sin(t * 18) * 0.9 : pose === 'cheer' ? Math.sin(t * 16) * 0.6 : 0.05;
     set(p.armL, 0, flap); set(p.armR, 0, -flap);
     set(p.head, pose === 'idle' ? Math.sin(t * 1.5) * 0.3 : 0);
     return;
@@ -423,7 +426,7 @@ export function animateRig(rig: Rig, pose: Pose, t: number, phase: number) {
   if (rig.spec.quadruped) {
     const k = pose === 'walk' ? 0.7 : 0;
     set(p.legL, swing * k); set(p.legR, swing * k); set(p.armL, -swing * k); set(p.armR, -swing * k);
-    set(p.head, pose === 'idle' ? Math.sin(t * 0.8) * 0.15 : 0);
+    set(p.head, pose === 'idle' ? Math.sin(t * 0.8) * 0.15 : pose === 'cheer' ? -0.25 + Math.sin(t * 9) * 0.12 : 0, pose === 'cheer' ? Math.sin(t * 4.5) * 0.18 : 0);
     return;
   }
   switch (pose) {

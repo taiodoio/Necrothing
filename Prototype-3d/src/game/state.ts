@@ -285,6 +285,14 @@ export function normalizeSave(raw: unknown): SaveData | null {
     for (const w of data.world?.looseWisps ?? []) { w.x += d; w.y += d; }
     if (data.world) data.world.expansionLevel = 0;
   }
+  // la "ciotola" (Animale scheletro) è stata tolta: l'animale arriva con la sua
+  // casetta. Chi l'aveva riceve indietro i fuochi fatui spesi.
+  const bowls = (data.placeables ?? []).filter((p) => p.type === 'skeleton_pet').length + ((data.inventory as Record<string, number> | undefined)?.skeleton_pet ?? 0);
+  if (bowls) {
+    data.placeables = (data.placeables ?? []).filter((p) => p.type !== 'skeleton_pet');
+    if (data.inventory) delete (data.inventory as Record<string, number>).skeleton_pet;
+    data.player = { ...data.player, wisps: (data.player.wisps ?? 0) + bowls * 18 };
+  }
   return {
     ...base,
     ...data,

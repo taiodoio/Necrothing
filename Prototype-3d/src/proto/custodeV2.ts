@@ -251,7 +251,7 @@ function glitter(lp: LP) {
 const BEARD_LOW = -72;
 const BEARD_DROP = 0.09;
 /** Bordo inferiore lungo la mandibola: sotto il mento davanti, sale verso l'orecchio (profilo a diagonale). */
-const beardLow = (u: number) => { const au = Math.abs(u), e = au * au * (3 - 2 * au); return lerp(-60, -26, e); }; // lungo il cuscinetto
+const beardLow = (u: number) => { const au = Math.abs(u), e = au * au * (3 - 2 * au); return lerp(-56, -22, e); }; // dentro il cuscinetto: nessuno stacco
 /** Bordo inferiore della barba sulla pelle: sotto il mento davanti, sotto l'orecchio ai lati. */
 function beardSkin(u: number, v: number) {
   const th = u * 92;
@@ -266,20 +266,46 @@ function beardSkin(u: number, v: number) {
  * forma la U sotto la bocca, di profilo pende sotto la mandibola.
  */
 function beardPad(): { geo: THREE.BufferGeometry; bottom: THREE.Vector3 } {
-  const pts: THREE.Vector3[] = [], radii: number[] = [];
+  // sezione ellittica pieni: il davanti è rotondo, dietro la sezione si
+  // allunga verso il collo e riempie il vuoto sotto la mandibola (un unico
+  // volume, niente "ricciolo" cavo); alle estremità si fonde con le basette
+  const N = 28, SEG = 12;
+  const C3: THREE.Vector3[] = [], R: number[] = [], L: number[] = [], back: THREE.Vector3[] = [];
   let bottom = new THREE.Vector3();
-  const N = 24;
   for (let i = 0; i <= N; i++) {
     const u = -1 + (2 * i) / N, au = Math.abs(u), e = au * au * (3 - 2 * au);
-    const { p, n } = headAt(u * 88 * DEG, lerp(-58, -26, e) * DEG);
-    const k = Math.pow(1 - u * u, 1.6); // massimo arrotondato al centro (niente punta)
-    const r = 0.012 + BEARD_DROP * 0.6 * k;
-    // al centro arretra: il davanti resta a filo del viso (di profilo scende dritto)
+    const th = u * 88 * DEG;
+    const { p, n } = headAt(th, lerp(-58, -26, e) * DEG); // finisce sotto la base della basetta (si sovrappongono)
+    const k = Math.pow(1 - u * u, 1.6);
+    const r = 0.022 + BEARD_DROP * 0.56 * k;
     const c = p.addScaledVector(n, r * 0.2).add(new THREE.Vector3(0, -r * 0.5, -r * 0.55).multiplyScalar(k));
-    pts.push(c); radii.push(r);
+    C3.push(c); R.push(r); L.push(r * (1 + 1.1 * k));
+    back.push(new THREE.Vector3(-Math.sin(th), 0.25, -Math.cos(th)).normalize()); // dietro, sotto la mandibola (non giù nel colletto)
     if (i === N / 2) bottom = c.clone().add(new THREE.Vector3(0, -r * 0.75, r * 0.1));
   }
-  return { geo: taperTube(pts, radii, 10), bottom };
+  const rings: THREE.Vector3[][] = [];
+  for (let i = 0; i <= N; i++) {
+    const T = C3[Math.min(N, i + 1)].clone().sub(C3[Math.max(0, i - 1)]).normalize();
+    const A = back[i].clone().addScaledVector(T, -back[i].dot(T)).normalize();
+    const B = new THREE.Vector3().crossVectors(T, A).normalize();
+    const center = C3[i].clone().addScaledVector(A, L[i] - R[i]); // il punto davanti resta dov'era
+    rings.push(Array.from({ length: SEG }, (_, k) => {
+      const a = (k / SEG) * Math.PI * 2;
+      return center.clone().addScaledVector(A, Math.cos(a) * L[i]).addScaledVector(B, Math.sin(a) * R[i]);
+    }));
+  }
+  const t = new Tris();
+  for (let i = 0; i < N; i++) for (let k = 0; k < SEG; k++) {
+    const a0 = rings[i][k], b0 = rings[i][(k + 1) % SEG], c0 = rings[i + 1][(k + 1) % SEG], d0 = rings[i + 1][k];
+    const mid = rings[i].reduce((m, q) => m.add(q), new THREE.Vector3()).multiplyScalar(1 / SEG);
+    t.quad(a0, b0, c0, d0, a0.clone().sub(mid));
+  }
+  for (const i of [0, N]) {
+    const mid = rings[i].reduce((m, q) => m.add(q), new THREE.Vector3()).multiplyScalar(1 / SEG);
+    const out = C3[i].clone().sub(C3[i === 0 ? 1 : N - 1]);
+    for (let k = 0; k < SEG; k++) t.tri(mid, rings[i][k], rings[i][(k + 1) % SEG], out);
+  }
+  return { geo: t.geo(), bottom };
 }
 
 /**
@@ -297,7 +323,9 @@ function beard(lp: LP) {
     for (let j = 0; j <= NV; j++) {
       const v = j / NV;
       const { p, n } = beardSkin(u, v);
-      P[i].push(p.addScaledVector(n, 0.003 + 0.013 * smooth(0, 0.08, 1 - Math.abs(u)) * smooth(0, 0.12, 1 - v)));
+      // più spessa verso il basso vicino all'orecchio: la basetta si fonde con il cuscinetto
+      const t = 0.013 + 0.012 * smooth(0.6, 1, Math.abs(u)) * (1 - v);
+      P[i].push(p.addScaledVector(n, 0.003 + t * smooth(0, 0.04, 1 - Math.abs(u)) * smooth(0, 0.12, 1 - v)));
       Nn[i].push(n);
     }
   }

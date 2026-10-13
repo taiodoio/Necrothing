@@ -109,6 +109,10 @@ Sedicesima passata (barba dallo schizzo):
 - **Strato sottile:** fa da basetta davanti alle orecchie e copre la zona sotto la bocca.
 - **Cuscinetto:** lungo la mandibola c'è un cuscinetto pieno (`beardPad`, un tubo per metà dentro la testa) che nasce sottile sotto l'orecchio e si ingrossa verso il mento. Di fronte forma la U sotto la bocca e la treccia esce dal suo punto più basso. `BEARD_DROP` ne regola il volume (barba lunga).
 
+Diciassettesima passata:
+- **Cuscinetto pieno:** ha una sezione ellittica, rotonda davanti e allungata dietro verso il collo. Riempie il vuoto sotto la mandibola, quindi di profilo la barba è un volume unico e non un ricciolo cavo.
+- **Basette:** più spesse in basso vicino all'orecchio; l'estremità del cuscinetto si sovrappone alla loro base, quindi basetta e barba sono continue.
+
 ## Prestazioni su telefono (app Capacitor)
 
 Con Capacitor il gioco gira nel WebView del sistema (WKWebView su iOS, WebView di Chrome su Android): le prestazioni sono quelle del browser del telefono. Che il gioco funzioni offline non cambia nulla, perché il lavoro lo fanno GPU e CPU del dispositivo.

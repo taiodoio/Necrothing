@@ -137,6 +137,25 @@ Punti ancora deboli:
 - **Capelli lunghi:** da dietro sono una tenda un po' rigida.
 - **Mantello:** di fronte si vede solo la tunica.
 
+## Gli altri personaggi e gli animali
+
+Stesso approccio del Custode, nel prototipo `src/proto/npcV2.ts`. Pagina: `proto-looks.html?set=umani` e `proto-looks.html?set=animali` (con `&yaw=0` di fronte). Immagini: `screenshots/proto/npc-34.png`, `npc-fronte.png`, `animali-34.png`, `animali-lato.png`.
+
+- **Umani:** becchino, prete, le due figure del corteo e lo zombie usano lo stesso costruttore del Custode, con le stesse opzioni della personalizzazione (capelli, barba, baffi, occhiali, cappelli, vestiti) e poche aggiunte:
+  - occhi assonnati (palpebra), chiusi (archetto), da zombie (uno tondo, uno cucito), orbite dello scheletro con la lucina;
+  - bocca piatta, a "o" o cucita, e guance rosa;
+  - capelli con un orlo proprio, anche solo su un arco (la corona grigia del prete);
+  - cappelli su misura: coppola, saturno, cappellino con veletta;
+  - tonaca fino a terra, braccia tese in avanti;
+  - oggetti in mano: pala, libro, giglio, ombrello, bende.
+- **Scheletro:** la stessa testa del Custode diventa un teschio (orbite, naso, denti, crepa) su un corpo di ossa.
+- **Fantasmi:** la testa stessa fa da corpo: sopra l'equatore è il superellissoide, sotto scende dritta e si chiude con l'orlo a onde. Hanno occhi lucidi con la stella e guance rosa, e restano nel materiale trasparente del gioco.
+- **Animali:** testa enorme a superellissoide come il Custode, occhi lucidi con la stella (luminosi per il gatto nero e il corvo), corpo a fagiolo, zampette.
+  - Al gatto nero le guance a ciuffi sono fatte con lo stesso casco a ciocche dei capelli, su un arco.
+  - Gli animaletti-scheletro (cane, gatto, coniglio, corvo, papera) hanno orbite scure e costole.
+
+Triangoli: umani circa 9–13k, fantasmi circa 5k, animali circa 2–4k.
+
 ## Prestazioni su telefono (app Capacitor)
 
 Con Capacitor il gioco gira nel WebView del sistema (WKWebView su iOS, WebView di Chrome su Android): le prestazioni sono quelle del browser del telefono. Che il gioco funzioni offline non cambia nulla, perché il lavoro lo fanno GPU e CPU del dispositivo.

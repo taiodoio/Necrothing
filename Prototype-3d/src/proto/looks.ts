@@ -2,7 +2,8 @@
 // personalizzazione del gioco. Solo per la valutazione: non fa parte del gioco.
 
 import * as THREE from 'three';
-import { buildCustodeV2 } from './custodeV2.ts';
+import { buildCustodeV2, type CustodeV2 } from './custodeV2.ts';
+import { ANIMALS, HUMANS } from './npcV2.ts';
 import type { CustodeLook } from '../game/look.ts';
 
 export const PRESETS: Array<{ name: string; look: Partial<CustodeLook> }> = [
@@ -17,9 +18,12 @@ export const PRESETS: Array<{ name: string; look: Partial<CustodeLook> }> = [
 ];
 
 const params = new URLSearchParams(location.search);
+// ?set=umani | animali: gli altri personaggi nello stesso stile
+const set = params.get('set');
+const ALL: Array<{ name: string; build: () => CustodeV2 }> = set === 'umani' ? HUMANS : set === 'animali' ? ANIMALS : PRESETS.map((p) => ({ name: p.name, build: () => buildCustodeV2(p.look) }));
 const only = params.get('i');
 const COLS = 4, CW = only !== null ? 720 : 360, CH = only !== null ? 1060 : 530;
-const list = only !== null ? [PRESETS[Number(only)]] : PRESETS;
+const list = only !== null ? [ALL[Number(only)]] : ALL;
 const cols = only !== null ? 1 : COLS, rows = Math.ceil(list.length / cols);
 const yaw = Number(params.get('yaw') ?? 0.42);
 const W = cols * CW, H = rows * CH;
@@ -55,12 +59,12 @@ fill.position.set(2.2, 0.8, 1.5);
 scene.add(fill);
 
 const camera = new THREE.PerspectiveCamera(26, CW / CH, 0.1, 50);
-camera.position.set(0.1, 1.3, 4.1);
-camera.lookAt(0, 0.66, 0);
+if (set === 'animali') { camera.position.set(0.1, 1.0, 3.2); camera.lookAt(0, 0.3, 0); }
+else { camera.position.set(0.1, 1.3, 4.1); camera.lookAt(0, 0.66, 0); }
 const labels = document.querySelector('#etichette')!;
 let tris = 0;
 list.forEach((p, i) => {
-  const { root, diorama, lights } = buildCustodeV2(p.look);
+  const { root, diorama, lights } = p.build();
   root.rotation.y = yaw;
   const pls = lights.map((l) => { const pl = new THREE.PointLight(l.color, 0.5, 1.2, 2); pl.position.set(...l.pos); root.add(pl); return pl; });
   scene.add(root, diorama);

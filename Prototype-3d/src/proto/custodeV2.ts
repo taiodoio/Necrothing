@@ -34,9 +34,40 @@ function applyLook(l: CustodeLook) {
   PANTS = l.outfit === 'overalls' ? l.outfitColor : '#5a3c2a';
   SCARF = l.accentColor; SCARF_STRIPE = shade(l.accentColor, -0.18);
   BEARD_DROP = l.beard === 'short' ? 0.035 : 0.11;
-  HAIR_TIP = HAIR_TIPS[l.hair === 'none' ? 'spiky' : l.hair];
+  HAIR_TIP = X.hair?.tip ?? HAIR_TIPS[l.hair === 'none' ? 'spiky' : l.hair];
   HAIR_HANG = l.hair === 'bob' || l.hair === 'long' || l.hair === 'longcurly';
 }
+/**
+ * Aggiunte per gli altri personaggi umani (stesso corpo e stessa testa del
+ * Custode): occhi e bocca, capelli con orlo proprio, cappello, tonaca,
+ * braccia in avanti, oggetti in mano, dettagli su testa e petto.
+ */
+export type EyeStyle = 'open' | 'sleepy' | 'closed' | 'zombie' | 'sockets';
+export interface V2Extra {
+  /** Nome del modello (cache e semi). */
+  name?: string;
+  eyes?: EyeStyle;
+  mouth?: 'smile' | 'flat' | 'o' | 'stitched' | 'none';
+  blush?: string;
+  ears?: boolean;
+  /** Capelli con orlo proprio (φ in gradi per angolo dal davanti), su un arco [da, a] in gradi. */
+  hair?: { tip: (a: number) => number; span?: [number, number]; depth?: number; top?: number };
+  /** Cappello su misura (spazio della testa) e fin dove arrivano i capelli sotto (φ). */
+  hat?: (lp: LP) => void;
+  hatPh?: number;
+  robe?: boolean;
+  armPose?: 'down' | 'forward';
+  sleeve?: string; cuff?: string; hand?: string; pants?: string; boot?: string;
+  /** Niente sciarpa né borsello sulla giacca. */
+  plainCoat?: boolean;
+  head?: (lp: LP) => void;
+  chest?: (lp: LP) => void;
+  /** Oggetti in mano: costruiti con l'origine al centro della mano. */
+  held?: Array<{ side: number; build: (lp: LP) => void }>;
+  /** Corpo completamente diverso (scheletro): sostituisce busto, braccia e gambe. */
+  body?: (lp: LP) => void;
+}
+let X: V2Extra = {};
 const GLITTER = ['#fff7d8', '#ffd2ec', '#d3f2ff', '#e8d6ff', '#fff0a0'];
 
 const DEG = Math.PI / 180;
@@ -58,11 +89,22 @@ const HEAD_T = new THREE.Vector3(0, CHIN_Y - HEAD_S * CHIN_Y, 0);
 // più piatta davanti) che si allarga un po' in basso sulle guance, come nel
 // concept. Superficie implicita F = 1; punti e normali si trovano per bisezione.
 // meno alta di prima (meno fronte): il mento resta dov'era, la sommità scende
-const C = new THREE.Vector3(0, 0.795, 0);
-const R = new THREE.Vector3(0.275, 0.252, 0.255);
-const PW = 2.5; // 2 = ellissoide, più alto = più squadrato
+let C = new THREE.Vector3(0, 0.795, 0);
+let R = new THREE.Vector3(0.275, 0.252, 0.255);
+let PW = 2.5; // 2 = ellissoide, più alto = più squadrato
+let CHEEK = 0.07;
 /** Allargamento sulle guance (in basso) e un po' meno in cima. */
-const cheeks = (yn: number) => 1 + 0.07 * smooth(0.15, -0.55, yn) - 0.03 * smooth(0.3, 0.9, yn);
+const cheeks = (yn: number) => 1 + CHEEK * smooth(0.15, -0.55, yn) - 0.03 * smooth(0.3, 0.9, yn);
+/**
+ * Forma della testa (la stessa per Custode e umani; gli animali ne usano una
+ * propria): centro, semiassi, squadratura, guance; occhi in (±x, y), grandezza.
+ */
+export function setHeadShape(o: { c?: [number, number, number]; r?: [number, number, number]; pw?: number; cheek?: number; eyeX?: number; eyeY?: number; eyeS?: number } = {}) {
+  C = new THREE.Vector3(...(o.c ?? [0, 0.795, 0]));
+  R = new THREE.Vector3(...(o.r ?? [0.275, 0.252, 0.255]));
+  PW = o.pw ?? 2.5; CHEEK = o.cheek ?? 0.07;
+  EYE_X = o.eyeX ?? 0.1; EYE_Y = o.eyeY ?? 0.707; EYE_S = o.eyeS ?? 1;
+}
 
 function headF(x: number, y: number, z: number): number {
   const yn = (y - C.y) / R.y;
@@ -221,7 +263,7 @@ const rbox = (w: number, h: number, d: number, r: number, seg = 2) => new Rounde
 // Misure ricavate dalla vista frontale del concept: occhi, baffi e bocca nella
 // metà bassa della testa (fronte grande), barba come fascia lungo la mandibola.
 
-const EYE_Y = 0.707, EYE_X = 0.1;
+let EYE_Y = 0.707, EYE_X = 0.1, EYE_S = 1;
 const absDeg = (th: number) => Math.abs(Math.atan2(Math.sin(th), Math.cos(th))) / DEG; // 0 davanti, 180 dietro
 /** Dove arrivano le punte dei capelli (φ in gradi): poco sopra gli occhi davanti, sopra le orecchie ai lati, alla nuca dietro. */
 const HAIR_TIPS: Record<Exclude<HairStyle, 'none'>, (a: number) => number> = {
@@ -264,9 +306,18 @@ const beardTop = (thDeg: number) => { const a = Math.abs(thDeg); return a < 70 ?
 
 function head(lp: LP) {
   lp.add(headGeo(), SKIN, { ...O, ao: 0.05 });
-  for (const s of [-1, 1]) lp.blob(s * (R.x - 0.004), 0.72, -0.012, 0.05, 0.064, 0.04, SKIN, { ...O, detail: 2 } as LPOpts); // orecchie grandi e tonde
-  // bocca: sorrisetto un po' di lato, sotto i baffi
-  onSkin(lp, headFront(0, 0.613), 0.002, 0, (q) => q.add(new THREE.TorusGeometry(0.022, 0.007, 3, 8, Math.PI).rotateZ(Math.PI), '#2a1a1c', O));
+  if (X.ears !== false) for (const s of [-1, 1]) lp.blob(s * (R.x - 0.004), 0.72, -0.012, 0.05, 0.064, 0.04, SKIN, { ...O, detail: 2 } as LPOpts); // orecchie grandi e tonde
+  // bocca: sorrisetto sotto i baffi
+  const mouth = X.mouth ?? 'smile', m = headFront(0, 0.613);
+  if (mouth === 'smile') onSkin(lp, m, 0.002, 0, (q) => q.add(new THREE.TorusGeometry(0.022, 0.007, 3, 8, Math.PI).rotateZ(Math.PI), '#2a1a1c', O));
+  if (mouth === 'flat') onSkin(lp, m, 0.002, 0, (q) => q.add(rbox(0.04, 0.009, 0.008, 0.004, 1), '#2a1a1c', O));
+  if (mouth === 'o') onSkin(lp, m, 0.002, 0, (q) => q.add(new THREE.CircleGeometry(0.016, 10).scale(1, 1.2, 1), '#2a1a1c', O));
+  if (mouth === 'stitched') onSkin(lp, m, 0.003, 0, (q) => {
+    q.add(rbox(0.11, 0.008, 0.006, 0.003, 1), '#2a1a1c', O);
+    for (let i = -2; i <= 2; i++) q.add(rbox(0.007, 0.034, 0.006, 0.003, 1).translate(i * 0.024, 0, 0.002), '#2a1a1c', O);
+  });
+  if (X.blush) for (const s of [-1, 1]) onSkin(lp, headFront(s * 0.17, 0.645), 0.002, 0, (q) => q.add(new THREE.CircleGeometry(0.03, 10).scale(1.3, 0.75, 1), X.blush!, { ...O, vary: 0 }));
+  X.head?.(lp);
 }
 
 /** Brillantini a stella, grandi e radi, su tutto il viso (non su occhi, baffi, barba, capelli). */
@@ -276,7 +327,7 @@ function glitter(lp: LP) {
   let placed = 0;
   for (let tries = 0; placed < 26 && tries < 4000; tries++) {
     const thD = (rnd() * 2 - 1) * 88, phD = -45 + rnd() * 55;
-    if ((L.beard !== 'none' && phD < beardTop(thD) + 6) || (L.hair !== 'none' && phD > hairTip(thD * DEG) - 4) || phD > HAT_PH[L.hat] - 4) continue;
+    if ((L.beard !== 'none' && phD < beardTop(thD) + 6) || (L.hair !== 'none' && phD > hairTip(thD * DEG) - 4) || phD > hatPh() - 4) continue;
     const at = headAt(thD * DEG, phD * DEG);
     const { p } = at;
     if (p.z > 0.08 && Math.abs(Math.abs(p.x) - EYE_X) < 0.078 && Math.abs(p.y - EYE_Y) < 0.09) continue; // occhi
@@ -447,7 +498,7 @@ function moustache(lp: LP) {
  * per ciocca che scende dal vortice girando un poco: le ciocche fanno parte
  * del volume, non possono staccarsi.
  */
-function hairLayer(lp: LP, o: { locks: number; hem: (thDeg: number) => number; depth: number; lift: number; thick: number; phase: number; swirl: number; seed: number; tone: (k: number) => string; top?: number }) {
+export function hairLayer(lp: LP, o: { locks: number; hem: (thDeg: number) => number; depth: number; lift: number; thick: number; phase: number; swirl: number; seed: number; tone: (k: number) => string; top?: number; span?: [number, number] }) {
   const rnd = prng(o.seed);
   const jitter = Array.from({ length: o.locks }, () => [0.75 + rnd() * 0.5, (rnd() - 0.5) * 0.3, rnd()]); // lunghezza, asimmetria, tono
   const NU = o.locks * 4, NV = 6; // pochi segmenti: bastano per punta e rilievo di ogni ciocca
@@ -462,12 +513,13 @@ function hairLayer(lp: LP, o: { locks: number; hem: (thDeg: number) => number; d
     P.push([]); Q.push([]); Nn.push([]);
     for (let j = 0; j <= NV; j++) {
       const v = j / NV; // 0 bordo, 1 cima
-      const thD = u * 360 + o.swirl * v;
+      const thD = (o.span ? lerp(o.span[0], o.span[1], u) : u * 360) + o.swirl * v;
+      const ends = o.span ? smooth(0, 0.1, u) * smooth(1, 0.9, u) : 1; // un arco si assottiglia agli estremi
       const hem = o.hem(thD) - o.depth * len * tooth;
       const top = o.top ?? 89;
       const phD = lerp(Math.min(hem, top - 3), top, Math.pow(v, 0.85));
       const { p, n } = hairPoint(thD * DEG, phD);
-      const t = o.thick * (0.55 + 0.45 * ridge) * smooth(0, 0.25, v + 0.05 * tooth) + o.lift * (1 - v) * (1 - v);
+      const t = (o.thick * (0.55 + 0.45 * ridge) * smooth(0, 0.25, v + 0.05 * tooth) + o.lift * (1 - v) * (1 - v)) * ends;
       P[i].push(p.clone().addScaledVector(n, 0.006 + t));
       Q[i].push(p.clone().addScaledVector(n, 0.004));
       Nn[i].push(n);
@@ -489,6 +541,7 @@ function hairLayer(lp: LP, o: { locks: number; hem: (thDeg: number) => number; d
 
 /** Fin dove arrivano i capelli sotto ciascun cappello (φ, gradi). */
 const HAT_PH: Record<HatStyle, number> = { none: 89, wide: 40, top: 42, beanie: 30 };
+const hatPh = () => X.hatPh ?? HAT_PH[L.hat];
 
 /** Riccioli: palline schiacciate distribuite a file regolari sulla superficie dei capelli. */
 function curls(lp: LP, tone: (k: number) => string, top: number) {
@@ -518,10 +571,14 @@ function hair(lp: LP) {
   if (L.hair === 'none') return;
   const tone = (k: number) => shade(HAIR, k);
   const tip = (thD: number) => hairTip(thD * DEG);
-  const top = HAT_PH[L.hat], hat = L.hat !== 'none';
+  const top = Math.min(hatPh(), X.hair?.top ?? 89), hat = hatPh() < 89;
   const style = L.hair;
   const neat = style === 'bob' || style === 'long' || style === 'bun' || style === 'longcurly';
-  const depth = ({ bob: 3, long: 5, bun: 4, longcurly: 6, curly: 7 } as Record<string, number>)[style] ?? 13;
+  const depth = X.hair?.depth ?? ({ bob: 3, long: 5, bun: 4, longcurly: 6, curly: 7 } as Record<string, number>)[style] ?? 13;
+  if (X.hair) { // orlo su misura (corona di capelli ai lati, ciuffi grigi…): un solo strato
+    hairLayer(lp, { locks: 14, hem: (t) => tip(t) + 4, depth, lift: 0.03, thick: 0.05, phase: 0, swirl: 6, seed: 3, tone, top: Math.min(top, X.hair.top ?? 89), span: X.hair.span });
+    return;
+  }
   hairLayer(lp, { locks: neat ? 20 : 15, hem: (t) => tip(t) + 4, depth, lift: 0.03, thick: hat ? 0.03 : 0.05, phase: 0, swirl: neat ? 6 : 14, seed: 3, tone, top });
   if (!hat) {
     hairLayer(lp, { locks: neat ? 16 : 12, hem: (t) => tip(t) + 26, depth: depth + 2, lift: 0.04, thick: 0.065, phase: 0.5, swirl: neat ? 8 : 18, seed: 7, tone });
@@ -551,6 +608,7 @@ function hair(lp: LP) {
 
 /** Cappelli: tesa larga, cilindro, berretto con risvolto e pompon. */
 function hatGeo(lp: LP) {
+  if (X.hat) { X.hat(lp); return; }
   if (L.hat === 'none') return;
   const c = L.hatColor, d = shade(c, -0.08);
   if (L.hat === 'beanie') {
@@ -560,7 +618,7 @@ function hatGeo(lp: LP) {
     return;
   }
   // la tesa poggia dove finiscono i capelli; la cupola li copre tutti
-  const at = (th: number) => headAt(th, (HAT_PH[L.hat] - 4) * DEG).p;
+  const at = (th: number) => headAt(th, (hatPh() - 4) * DEG).p;
   const brimY = at(0).y - 0.005;
   const headR = Math.max(...[0, 90, 180, -90].map((t) => Math.hypot(at(t * DEG).x - C.x, at(t * DEG).z - C.z)));
   const wide = L.hat === 'wide';
@@ -663,6 +721,7 @@ function scarfTail(lp: LP) {
 const torsoColor = () => (L.outfit === 'overalls' ? L.accentColor : L.outfit === 'cloak' ? shade(L.outfitColor, 0.12) : JACKET);
 
 function body(lp: LP) {
+  if (X.robe) { robe(lp); return; }
   const torso = torsoColor();
   // busto morbido a "pera": spalle strette, si allarga verso il fondo, sezione ovale
   lp.push([0, 0.19, 0], 0, 0, 0, [1, 1, 0.82]);
@@ -676,6 +735,7 @@ function body(lp: LP) {
   if (L.outfit === 'overalls') lp.lathe(0, 0, 0, [[0, 0], [0.218, 0], [0.24, 0.022], [0.246, 0.07], [0.242, 0.11], [0, 0.11]], 16, JACKET, { ...O, ao: 0.1 }); // vita della salopette
   lp.pop();
   if (L.outfit === 'coat') coatDetails(lp);
+  if (L.outfit === 'coat' && X.plainCoat) lp.add(rbox(0.05, 0.036, 0.012, 0.006, 1).translate(0, 0.214, 0.2), '#6a5a3e', O);
   if (L.outfit === 'sweater') {
     lp.push([0, 0.49, 0], 0, 0.12, 0, [1, 1, 0.88]);
     lp.lathe(0, -0.03, 0, [[0, 0], [0.15, 0], [0.155, 0.03], [0.145, 0.06], [0, 0.06]], 14, JACKET_D, O); // collo alto
@@ -683,11 +743,33 @@ function body(lp: LP) {
   }
   if (L.outfit === 'overalls') overalls(lp);
   if (L.outfit === 'cloak') cloak(lp);
+  X.chest?.(lp);
   legs(lp);
+}
+
+/** Tonaca lunga fino a terra (prete, corteo): dal collo si allarga a campana; spuntano le punte degli stivali. */
+function robe(lp: LP) {
+  const prof: Array<[number, number]> = [[0, 0], [0.235, 0], [0.255, 0.03], [0.258, 0.12], [0.25, 0.24], [0.232, 0.33], [0.2, 0.41], [0.16, 0.46], [0.13, 0.48], [0, 0.48]];
+  lp.push([0, 0.025, 0], 0, 0, 0, [1, 1, 0.84]);
+  lp.lathe(0, 0, 0, prof, 16, JACKET, { ...O, ao: 0.18 });
+  lp.lathe(0, 0, 0, [[0, 0], [0.238, 0], [0.258, 0.02], [0.258, 0.04], [0, 0.04]], 16, JACKET_D, O); // orlo
+  lp.pop();
+  lp.push([0, 0.49, -0.01], 0, 0.12, 0, [1, 1, 0.86]);
+  lp.add(new THREE.TorusGeometry(0.135, 0.04, 8, 18).rotateX(Math.PI / 2), JACKET_D, O); // colletto
+  lp.pop();
+  X.chest?.(lp);
+  for (const s of [-1, 1]) lp.add(footGeo(0.15, 0.2, 0.08, 0.03).translate(s * 0.09, 0, 0.08), X.boot ?? SOLE, O);
 }
 
 /** Giacca: fibbia, borsello, tasche, cappuccio, sciarpa. */
 function coatDetails(lp: LP) {
+  if (X.plainCoat) {
+    lp.blob(0, 0.475, -0.14, 0.2, 0.1, 0.105, JACKET_D, { ...O, detail: 2 } as LPOpts);
+    lp.push([0, 0.48, -0.01], 0, 0.12, 0, [1, 1, 0.86]);
+    lp.add(new THREE.TorusGeometry(0.15, 0.048, 8, 18).rotateX(Math.PI / 2), JACKET_D, O);
+    lp.pop();
+    return;
+  }
   lp.add(rbox(0.05, 0.036, 0.012, 0.006, 1).translate(0, 0.214, 0.2), '#6a5a3e', O);
   // borsello appeso al fianco destro, con passante
   lp.add(rbox(0.075, 0.085, 0.04, 0.014, 2).translate(0.175, 0.17, 0.12).rotateY(0.5), DARK, O);
@@ -743,25 +825,35 @@ function cloak(lp: LP) {
 function legs(lp: LP) {
   // gambe corte e un po' larghe, stivaloni tondi con suola spessa
   for (const s of [-1, 1]) {
-    lp.cyl(s * 0.095, 0.07, 0, 0.082, 0.076, 0.13, 12, PANTS, { ...O, ao: 0.12 });
+    lp.cyl(s * 0.095, 0.07, 0, 0.082, 0.076, 0.13, 12, X.pants ?? PANTS, { ...O, ao: 0.12 });
     // stivale e suola con la stessa pianta: la tomaia nasce dentro la suola,
     // così il bordo è continuo (niente tavoletta staccata sotto)
     lp.add(footGeo(0.172, 0.25, 0.036, 0.01).translate(s * 0.095, 0, 0.034), SOLE, O);
-    lp.add(footGeo(0.16, 0.236, 0.112, 0.04).translate(s * 0.095, 0.014, 0.034), BOOT, O);
+    lp.add(footGeo(0.16, 0.236, 0.112, 0.04).translate(s * 0.095, 0.014, 0.034), X.boot ?? BOOT, O);
   }
 }
 
+/** Centro della mano (braccia giù o tese in avanti, come lo zombie). */
+export function handPos(s: number): THREE.Vector3 {
+  return X.armPose === 'forward' ? new THREE.Vector3(s * 0.2, 0.43, 0.37) : new THREE.Vector3(s * 0.296, 0.215, 0.05);
+}
+
 function arm(lp: LP, s: number) {
-  // manica morbida che scende un po' in fuori e in avanti, più larga al polso
-  const pts = [new THREE.Vector3(s * 0.18, 0.46, -0.005), new THREE.Vector3(s * 0.235, 0.39, 0.01), new THREE.Vector3(s * 0.268, 0.31, 0.03), new THREE.Vector3(s * 0.282, 0.27, 0.04)];
-  const sleeve = torsoColor();
+  const fwd = X.armPose === 'forward';
+  // manica morbida che scende un po' in fuori e in avanti, più larga al polso (o tesa in avanti)
+  const pts = fwd
+    ? [new THREE.Vector3(s * 0.18, 0.46, -0.005), new THREE.Vector3(s * 0.2, 0.445, 0.1), new THREE.Vector3(s * 0.2, 0.435, 0.2), new THREE.Vector3(s * 0.2, 0.43, 0.26)]
+    : [new THREE.Vector3(s * 0.18, 0.46, -0.005), new THREE.Vector3(s * 0.235, 0.39, 0.01), new THREE.Vector3(s * 0.268, 0.31, 0.03), new THREE.Vector3(s * 0.282, 0.27, 0.04)];
+  const sleeve = X.sleeve ?? torsoColor();
   lp.add(taperTube(pts, [0.07, 0.072, 0.074, 0.076], 12), sleeve, { ...O, ao: 0.06 });
   lp.blob(s * 0.18, 0.46, -0.005, 0.075, 0.072, 0.075, sleeve, { ...O, detail: 2 } as LPOpts); // spalla
-  lp.push([s * 0.286, 0.262, 0.042], 0, 0.15, s * 0.32);
-  const cuff = L.outfit === 'coat' ? DARK : L.outfit === 'sweater' ? JACKET_D : shade(sleeve, -0.08);
+  if (fwd) lp.push([s * 0.2, 0.43, 0.28], 0, Math.PI / 2);
+  else lp.push([s * 0.286, 0.262, 0.042], 0, 0.15, s * 0.32);
+  const cuff = X.cuff ?? (L.outfit === 'coat' ? DARK : L.outfit === 'sweater' ? JACKET_D : shade(sleeve, -0.08));
   lp.cyl(0, -0.02, 0, 0.078, 0.078, 0.04, 12, cuff, O); // polsino
   lp.pop();
-  lp.blob(s * 0.296, 0.215, 0.05, 0.072, 0.072, 0.07, SKIN, { ...O, detail: 2 } as LPOpts); // manona
+  const h = handPos(s);
+  lp.blob(h.x, h.y, h.z, 0.072, 0.072, 0.07, X.hand ?? SKIN, { ...O, detail: 2 } as LPOpts); // manona
 }
 
 /** Lanterna appesa alla manona (al posto della borsa del concept). */
@@ -806,21 +898,53 @@ function model(build: (lp: LP) => void, name: string): CachedModel {
   return { geometries, lights, height: 1.1, mats: LOWPOLY_MATERIALS, dedicated: true };
 }
 
-/** Occhi grandi e lucidi (materiale a parte) con il riflesso a stella. */
-function eyes(): THREE.Group {
+/**
+ * Occhi grandi e lucidi (materiale a parte) con il riflesso a stella; varianti:
+ * assonnati (palpebra), chiusi (archetto), zombie (uno tondo, uno cucito),
+ * orbite (scheletro: buio con una lucina). `at` dà il punto sulla superficie.
+ */
+export function eyes(style: EyeStyle = 'open', color = EYE, lid = SKIN, at = (s: number) => headFront(s * EYE_X, EYE_Y), glow = false): THREE.Group {
   const g = new THREE.Group();
-  const mat = new THREE.MeshStandardMaterial({ color: EYE, roughness: 0.18, metalness: 0.05, flatShading: true });
+  const mat = glow
+    ? new THREE.MeshStandardMaterial({ color, emissive: color, emissiveIntensity: 0.9, roughness: 0.3, flatShading: true })
+    : new THREE.MeshStandardMaterial({ color, roughness: 0.18, metalness: 0.05, flatShading: true });
   const shine = new THREE.MeshBasicMaterial({ color: '#ffffff' });
+  const ink = new THREE.MeshStandardMaterial({ color: '#2a1a1c', roughness: 0.6, flatShading: true });
+  const lidMat = new THREE.MeshStandardMaterial({ color: shade(lid, -0.04), roughness: 0.8, flatShading: true });
+  const white = new THREE.MeshStandardMaterial({ color: '#f4efe4', roughness: 0.3, flatShading: true });
+  const hole = new THREE.MeshStandardMaterial({ color: '#1e1b22', roughness: 0.9, flatShading: true });
+  const spark = new THREE.MeshBasicMaterial({ color: color });
+  const k = EYE_S;
   for (const s of [-1, 1]) {
-    const { p, n } = headFront(s * EYE_X, EYE_Y);
+    const { p, n } = at(s);
     const e = new THREE.Group();
     e.position.copy(p.addScaledVector(n, 0.004));
     e.rotation.set(-Math.asin(n.y), Math.atan2(n.x, n.z), 0, 'YXZ');
-    const ball = new THREE.Mesh(new THREE.IcosahedronGeometry(1, 2).scale(0.042, 0.051, 0.018), mat);
-    ball.castShadow = true;
-    e.add(ball);
-    const st = new THREE.Mesh(star(0.015, 0.42), shine); st.position.set(-0.003, 0.012, 0.017); e.add(st);
-    const dot = new THREE.Mesh(new THREE.CircleGeometry(0.0046, 8), shine); dot.position.set(0.014, -0.019, 0.016); e.add(dot);
+    e.scale.setScalar(k);
+    const add = (geo: THREE.BufferGeometry, m: THREE.Material, x = 0, y = 0, z = 0) => { const mesh = new THREE.Mesh(geo, m); mesh.position.set(x, y, z); mesh.castShadow = true; e.add(mesh); return mesh; };
+    const glossy = () => {
+      add(new THREE.IcosahedronGeometry(1, 2).scale(0.042, 0.051, 0.018), mat);
+      add(star(0.015, 0.42), shine, -0.003, 0.012, 0.017);
+      add(new THREE.CircleGeometry(0.0046, 8), shine, 0.014, -0.019, 0.016);
+    };
+    if (style === 'open') glossy();
+    else if (style === 'sleepy') {
+      glossy();
+      // palpebra a metà: mezza calotta color pelle sopra l'occhio, con il bordo scuro
+      add(new THREE.SphereGeometry(1, 14, 6, 0, Math.PI * 2, 0, Math.PI / 2).scale(0.047, 0.056, 0.024), lidMat, 0, -0.004, 0.0);
+      add(new THREE.TorusGeometry(0.044, 0.005, 4, 14, Math.PI).scale(1, 0.32, 1).rotateX(-Math.PI / 2).rotateX(Math.PI / 2), ink, 0, -0.004, 0.012);
+    } else if (style === 'closed') {
+      add(new THREE.TorusGeometry(0.036, 0.007, 4, 12, Math.PI).rotateZ(Math.PI), ink, 0, 0.004, 0.004);
+    } else if (style === 'zombie') {
+      if (s < 0) {
+        add(new THREE.IcosahedronGeometry(1, 2).scale(0.058, 0.062, 0.02), white);
+        add(new THREE.IcosahedronGeometry(1, 1).scale(0.022, 0.022, 0.01), ink, 0.008, -0.006, 0.016);
+        add(new THREE.CircleGeometry(0.006, 8), shine, 0.004, 0.002, 0.027);
+      } else for (const r of [0.785, -0.785]) add(new THREE.BoxGeometry(0.012, 0.085, 0.01).rotateZ(r), ink, 0, 0, 0.004);
+    } else if (style === 'sockets') {
+      add(new THREE.IcosahedronGeometry(1, 2).scale(0.058, 0.064, 0.02), hole, 0, 0, -0.004);
+      add(new THREE.IcosahedronGeometry(1, 1).scale(0.016, 0.016, 0.008), spark, 0, -0.004, 0.013);
+    }
     g.add(e);
   }
   return g;
@@ -828,7 +952,9 @@ function eyes(): THREE.Group {
 
 export interface CustodeV2 { root: THREE.Group; diorama: THREE.Group; lights: Array<{ pos: [number, number, number]; color: string }> }
 
-export function buildCustodeV2(look: Partial<CustodeLook> = {}): CustodeV2 {
+export function buildCustodeV2(look: Partial<CustodeLook> = {}, extra: V2Extra = {}): CustodeV2 {
+  X = extra;
+  setHeadShape();
   applyLook({ ...CONCEPT_LOOK, ...look });
   const char = model((lp) => {
     // testa (con faccia, barba, baffi e capelli) più grande del 30%, scalata
@@ -837,12 +963,14 @@ export function buildCustodeV2(look: Partial<CustodeLook> = {}): CustodeV2 {
     head(lp); glitter(lp); faceExtras(lp); beard(lp); braid(lp); moustache(lp); hair(lp); hatGeo(lp);
     lp.pop();
     // la treccia pende davanti alla giacca (prima finiva dietro il nodo della sciarpa)
-    body(lp); arm(lp, -1); arm(lp, 1);
-    lantern(lp, -0.296);
-  }, `proto:custode-v2:${JSON.stringify(L)}`);
+    if (X.body) X.body(lp);
+    else { body(lp); arm(lp, -1); arm(lp, 1); }
+    if (X.held) for (const h of X.held) { const p = handPos(h.side); lp.push([p.x, p.y, p.z]); h.build(lp); lp.pop(); }
+    else lantern(lp, -0.296);
+  }, `proto:custode-v2:${X.name ?? ''}:${JSON.stringify(L)}`);
   const root = new THREE.Group();
   root.add(instantiate(char, { castShadow: true }));
-  const eyeGroup = eyes();
+  const eyeGroup = eyes(X.eyes ?? 'open', EYE, SKIN);
   eyeGroup.scale.setScalar(HEAD_S);
   eyeGroup.position.copy(HEAD_T);
   root.add(eyeGroup);
@@ -852,3 +980,13 @@ export function buildCustodeV2(look: Partial<CustodeLook> = {}): CustodeV2 {
   dio.traverse((o) => { if (o instanceof THREE.Mesh) o.receiveShadow = true; });
   return { root, diorama: dio, lights: char.lights.map((l) => ({ pos: l.pos, color: l.color })) };
 }
+
+// ── Kit per gli altri personaggi (npcV2.ts) ─────────────────────────────
+/** Prepara lo stato per una creatura costruita a mano (fantasmi, animali). */
+export function beginCreature(head: Parameters<typeof setHeadShape>[0]) {
+  X = {}; HAIR_HANG = false;
+  setHeadShape(head);
+}
+export const headCenter = () => C.clone();
+export const headRadii = () => R.clone();
+export { headAt, headFront, headGeo, surfaceAlong, onSkin, sheet, taperTube, star, rbox, shade, Tris, prng, smooth, lerp, DEG, O, footGeo, model, diorama, HEAD_S, HEAD_T };

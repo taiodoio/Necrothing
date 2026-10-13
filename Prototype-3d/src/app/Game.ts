@@ -33,8 +33,7 @@ import { loadSave, saveNow, scheduleSave } from './persistence.ts';
 export type Selection = { kind: 'grave' | 'placeable'; id: string } | null;
 
 export type EntityAction =
-  | 'detail' | 'clean' | 'repair' | 'flowers' | 'light' | 'shop' | 'rotate' | 'variant' | 'store' | 'confirm' | 'exhume' | 'move'
-  | 'petCall' | 'petHome' | 'petFree';
+  | 'detail' | 'clean' | 'repair' | 'flowers' | 'light' | 'shop' | 'rotate' | 'variant' | 'store' | 'confirm' | 'exhume' | 'move';
 
 const PET_STATUS: Record<PetMode, string> = { free: 'Gira libero', follow: 'Ti segue', home: 'A cuccia' };
 
@@ -318,7 +317,7 @@ export class Game {
     if (!cells) return;
     const center = cellCenter(cells.x, cells.y, cells.fp).setY(1.2);
     const grave = this.state.graves.find((g) => g.id === id);
-    const instant: EntityAction[] = ['detail', 'shop', 'rotate', 'variant', 'store', 'confirm', 'exhume', 'move', 'petCall', 'petHome', 'petFree'];
+    const instant: EntityAction[] = ['detail', 'shop', 'rotate', 'variant', 'store', 'confirm', 'exhume', 'move'];
     const run = () => {
       switch (action) {
         case 'clean': this.actors.work(); this.act((s, n) => (grave ? R.cleanGrave(s, id, n) : R.cleanPlaceable(s, id, n)), center); break;
@@ -333,9 +332,6 @@ export class Game {
         case 'detail': this.ui.openDetail(id); break;
         case 'shop': this.ui.openShop(); break;
         case 'move': this.setEditMode(true); this.select(this.selection); break;
-        case 'petCall': toast(this.actors.callPet(id)); this.select(null); break;
-        case 'petHome': toast(this.actors.sendPetHome(id)); this.select(null); break;
-        case 'petFree': toast(this.actors.freePet(id)); this.select(null); break;
       }
     };
     if (instant.includes(action)) { run(); return; }
@@ -461,15 +457,15 @@ export class Game {
     return new THREE.Vector2(((x - r.left) / r.width) * 2 - 1, -((y - r.top) / r.height) * 2 + 1);
   }
 
-  private pick(x: number, y: number): { entityId?: string; wispId?: string; roamerId?: string; petId?: string; avatar?: boolean } | null {
+  private pick(x: number, y: number): { entityId?: string; wispId?: string; roamerId?: string; petId?: string } | null {
     this.raycaster.setFromCamera(this.ndc(x, y), this.rig.camera);
     const hits = this.raycaster.intersectObjects([...this.actors.pickables(), ...this.world.hitboxes], false);
     if (!hits.length) return null;
-    // priorità: presenze erranti e animali > fuochi fatui > Custode > entità
-    const order = (o: THREE.Object3D) => (o.userData.roamerId || o.userData.petId ? 0 : o.userData.wispId ? 1 : o.userData.avatar ? 1.5 : 2);
+    // priorità: presenze erranti e animali > fuochi fatui > entità
+    const order = (o: THREE.Object3D) => (o.userData.roamerId || o.userData.petId ? 0 : o.userData.wispId ? 1 : 2);
     hits.sort((a, b) => order(a.object) - order(b.object) || a.distance - b.distance);
     const u = hits[0].object.userData;
-    return { entityId: u.entityId, wispId: u.wispId, roamerId: u.roamerId, petId: u.petId, avatar: u.avatar };
+    return { entityId: u.entityId, wispId: u.wispId, roamerId: u.roamerId, petId: u.petId };
   }
 
   groundCell(x: number, y: number) {
@@ -509,7 +505,6 @@ export class Game {
       if (w && !this.editMode) { this.actors.walkTo({ x: w.x, y: w.y }); this.rig.follow = this.actors.avatar.pos; }
       return;
     }
-    if (hit?.avatar && !this.editMode && this.tapAvatar()) return;
     if (hit?.entityId) {
       const id = hit.entityId;
       this.select({ kind: this.kindOf(id), id });
@@ -529,32 +524,38 @@ export class Game {
     }
   }
 
-  /** Toccando l'animale: coccole o osso da riportare. */
+  /**
+   * Menù dell'animale (ognuno il suo, così se ne gestiscono più d'uno):
+   * raggiungere il padrone, liberarlo, mandarlo a cuccia, coccolarlo, giocarci.
+   * Le voci che ora non hanno senso restano visibili ma disattivate.
+   */
+  petMenu(id: string): Array<{ label: string; icon: string; cls?: string; disabled?: boolean; run: () => void }> {
+    const p = this.actors.petAt(id);
+    if (!p) return [];
+    const off = p.broken;
+    return [
+      { label: 'Raggiungi il padrone', icon: 'paw', disabled: off || p.mode === 'follow', run: () => toast(this.actors.callPet(id)) },
+      { label: 'Libera', icon: 'sun', disabled: off || p.mode === 'free', run: () => toast(this.actors.freePet(id)) },
+      { label: 'A cuccia', icon: 'kennel', disabled: off || p.mode === 'home', run: () => toast(this.actors.sendPetHome(id)) },
+      { label: 'Accarezza', icon: 'heart', cls: 'primary', disabled: off || p.sleeping, run: () => this.actors.petPet(id) },
+      { label: 'Lancia l’osso', icon: 'bone', disabled: off || p.sleeping, run: () => { if (!this.actors.throwBone(id)) toast('Qui non c’è spazio per lanciare l’osso.'); } },
+    ];
+  }
+
+  /** Stato dell'animale in breve (sotto il nome nel menù). */
+  petStatus(id: string): string {
+    const p = this.actors.petAt(id);
+    if (!p) return '';
+    if (p.broken) return 'Casetta rotta: riparala per farlo uscire';
+    if (p.sleeping) return p.mode === 'home' ? 'A cuccia, dorme' : 'Dorme in tana';
+    return PET_STATUS[p.mode];
+  }
+
+  /** Toccando l'animale si apre il suo menù, che lo segue mentre si muove. */
   private tapPet(id: string) {
     const pet = this.actors.petAt(id);
     if (!pet) return;
-    this.ui.openActorMenu(pet.label, PET_STATUS[pet.mode], [
-      { label: 'Accarezza', icon: 'heart', cls: 'primary', run: () => this.actors.petPet(id) },
-      { label: 'Lancia l’osso', icon: 'bone', run: () => { if (!this.actors.throwBone(id)) toast('Qui non c’è spazio per lanciare l’osso.'); } },
-    ], () => this.actors.petTop(id));
-  }
-
-  /** Toccando il Custode: richiama l'animale, mandalo a cuccia o lascialo libero. */
-  private tapAvatar(): boolean {
-    const pets = this.actors.petList();
-    if (!pets.length) return false;
-    const many = pets.length > 1;
-    const actions = pets.flatMap((p) => {
-      const name = many ? ` ${p.label.toLowerCase()}` : '';
-      const out: Array<{ label: string; icon: string; cls?: string; run: () => void }> = [];
-      if (p.mode !== 'follow') out.push({ label: `Richiama${name}`, icon: 'paw', cls: 'primary', run: () => toast(this.actors.callPet(p.id)) });
-      if (p.mode === 'follow') out.push({ label: `Lascia libero${name}`, icon: 'sun', run: () => toast(this.actors.freePet(p.id)) });
-      if (p.mode !== 'home') out.push({ label: `A cuccia${name}`, icon: 'kennel', run: () => toast(this.actors.sendPetHome(p.id)) });
-      return out;
-    });
-    const sub = many ? 'I tuoi animali' : `${pets[0].label} · ${PET_STATUS[pets[0].mode]}`;
-    this.ui.openActorMenu(this.state.player.name, sub, actions, () => this.actors.avatarTop());
-    return true;
+    this.ui.openActorMenu(pet.label, this.petStatus(id), this.petMenu(id), () => this.actors.petTop(id));
   }
 
   private tapRoamer(id: string) {

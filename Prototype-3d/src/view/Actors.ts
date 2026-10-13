@@ -118,7 +118,6 @@ export class Actors {
   private readonly glyphs = new Glyphs();
   /** L'osso: in volo (lanciato dal Custode), a terra o in bocca all'animale. */
   private readonly bone = { obj: boneMesh(), from: new THREE.Vector3(), to: new THREE.Vector3(), t: 0, dur: 0, flying: false, landed: false, carrier: null as Pet | null };
-  private readonly avatarHitbox: THREE.Mesh;
   private ground: (p: THREE.Vector3) => number = () => 0;
 
   /** Aspetto del Custode (personalizzazione, solo low-poly). */
@@ -131,11 +130,6 @@ export class Actors {
     this.group.name = 'attori';
     scene.add(this.group);
     this.avatar = this.makeWalker('custode', start, 3.1);
-    // toccando il Custode si chiama o si manda a cuccia l'animale
-    this.avatarHitbox = new THREE.Mesh(new THREE.BoxGeometry(0.8, 1.3, 0.8), hitMat);
-    this.avatarHitbox.position.y = 0.65;
-    this.avatarHitbox.userData.avatar = true;
-    this.avatar.rig.root.add(this.avatarHitbox);
     this.group.add(this.glyphs.group, this.bone.obj);
   }
 
@@ -162,7 +156,6 @@ export class Actors {
     w.rig = fresh.rig;
     w.lightHandles = fresh.lightHandles;
     w.rig.root.rotation.y = w.facing;
-    w.rig.root.add(this.avatarHitbox);
   }
 
   setStyle(style: ArtStyle) {
@@ -176,7 +169,6 @@ export class Actors {
       w.rig.root.rotation.y = w.facing;
     };
     rebuild(this.avatar);
-    this.avatar.rig.root.add(this.avatarHitbox);
     for (const r of this.roamers.values()) { rebuild(r); r.rig.root.add(r.hitbox); }
     for (const p of this.pets.values()) { rebuild(p); p.rig.root.add(p.hitbox); p.rig.root.visible = p.act !== 'sleep'; }
     for (const p of this.presences) rebuild(p);
@@ -713,7 +705,7 @@ export class Actors {
     return [...this.pets.values()].map((p) => ({ id: p.placeId, label: p.label, mode: p.mode, sleeping: p.act === 'sleep', broken: p.broken }));
   }
 
-  petAt(id: string) { const p = this.pets.get(id); return p ? { label: p.label, mode: p.mode, sleeping: p.act === 'sleep' } : null; }
+  petAt(id: string) { const p = this.pets.get(id); return p ? { label: p.label, mode: p.mode, sleeping: p.act === 'sleep', broken: p.broken } : null; }
 
   /** Punto sopra la testa dell'animale (per il menù), o sopra la casetta se dorme. */
   petTop(id: string): THREE.Vector3 | null {
@@ -722,9 +714,7 @@ export class Actors {
     return p.act === 'sleep' ? p.home.clone().setY(1.4) : p.pos.clone().setY(this.ground(p.pos) + 0.9);
   }
 
-  avatarTop(): THREE.Vector3 { return this.avatar.pos.clone().setY(this.ground(this.avatar.pos) + 1.6); }
-
-  /** Richiamato dal padrone: esce dalla tana (se dorme) e lo segue per il cimitero. */
+  /** Raggiunge il padrone: esce dalla tana (se dorme) e lo segue per il cimitero. */
   callPet(id: string): string {
     const p = this.pets.get(id);
     if (!p) return '';
@@ -732,7 +722,7 @@ export class Actors {
     p.mode = 'follow';
     if (p.act === 'sleep') this.wake(p);
     else if (!['fetch', 'bring', 'happy', 'wait'].includes(p.act)) { p.act = 'follow'; p.path = []; }
-    return `${p.label} ti segue.`;
+    return `${p.label} ti raggiunge e ti segue.`;
   }
 
   /** A cuccia: torna alla casetta e resta a dormire finché non lo richiami. */
@@ -921,9 +911,9 @@ export class Actors {
     this.glyphs.update(dt);
   }
 
-  /** Oggetti toccabili: presenze erranti, animali fuori dalla tana, il Custode. */
+  /** Oggetti toccabili: presenze erranti e animali fuori dalla tana. */
   pickables(): THREE.Object3D[] {
-    return [...this.hitboxes, ...[...this.pets.values()].filter((p) => p.rig.root.visible).map((p) => p.hitbox), this.avatarHitbox];
+    return [...this.hitboxes, ...[...this.pets.values()].filter((p) => p.rig.root.visible).map((p) => p.hitbox)];
   }
 
   avatarCell(): Cell { return worldToCell(this.avatar.pos); }

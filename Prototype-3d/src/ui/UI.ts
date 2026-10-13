@@ -151,17 +151,18 @@ export class UI {
   closeActorMenu() { if (this.ctxAnchor) this.closeContext(); }
 
   /** Menù sopra un personaggio: azioni con la loro funzione, segue il personaggio mentre si muove. */
-  openActorMenu(title: string, sub: string, actions: Array<{ label: string; icon: string; cls?: string; run: () => void }>, anchor: () => THREE.Vector3 | null) {
+  openActorMenu(title: string, sub: string, actions: Array<{ label: string; icon: string; cls?: string; disabled?: boolean; run: () => void }>, anchor: () => THREE.Vector3 | null) {
     this.game.select(null);
     this.ctxId = null;
     this.ctxAnchor = anchor;
     $('#ctx-title').replaceChildren(document.createTextNode(title), h('small', {}, sub));
-    $('#ctx-actions').replaceChildren(...actions.map((a) => h('button', {
-      class: a.cls ?? '',
-      onclick: () => { this.closeContext(); a.run(); },
-    }, icon(a.icon, 20), a.label)));
+    $('#ctx-actions').replaceChildren(...actions.map((a) => this.runButton(a)));
     $('#ctx').hidden = false;
     this.positionContext();
+  }
+
+  private runButton(a: { label: string; icon: string; cls?: string; disabled?: boolean; run: () => void }) {
+    return h('button', { class: a.cls ?? '', disabled: !!a.disabled, onclick: () => { this.closeContext(); this.game.select(null); a.run(); } }, icon(a.icon, 20), a.label);
   }
 
   refreshContext() {
@@ -170,6 +171,7 @@ export class UI {
     if (!sel || this.game.placement || drawerOpen()) { this.closeContext(); return; }
     const s = this.game.state;
     const actions: Array<{ act: EntityAction; label: string; icon: string; cls?: string; cost?: number }> = [];
+    let petActions: ReturnType<Game['petMenu']> = [];
     let title = '';
     let sub = '';
     if (sel.kind === 'grave') {
@@ -203,12 +205,8 @@ export class UI {
         if (p.broken) actions.push({ act: 'repair', label: 'Ripara', icon: 'hammer', cls: 'primary', cost: repairCost(def) });
         else if (p.dirty) actions.push({ act: 'clean', label: 'Pulisci', icon: 'broom' });
         if (def.light && !p.broken) actions.push({ act: 'light', label: p.lit ? 'Spegni' : 'Accendi', icon: p.lit ? 'lightOff' : 'lightOn' });
-        const pet = p.type === 'pet_house' && !p.broken ? this.game.actors.petList().find((q) => q.id === p.id) : undefined;
-        if (pet) {
-          if (pet.mode !== 'follow') actions.push({ act: 'petCall', label: 'Richiama', icon: 'paw', cls: 'primary' });
-          if (pet.mode !== 'home') actions.push({ act: 'petHome', label: 'A cuccia', icon: 'kennel' });
-          else actions.push({ act: 'petFree', label: 'Lascia libero', icon: 'sun' });
-        }
+        // la casetta porta anche il menù del suo animale (utile quando dorme in tana)
+        if (p.type === 'pet_house') { petActions = this.game.petMenu(p.id); sub = `${sub} · ${this.game.petStatus(p.id)}`; }
       }
     }
     this.ctxId = sel.id;
@@ -216,7 +214,7 @@ export class UI {
     $('#ctx-actions').replaceChildren(...actions.map((a) => h('button', {
       class: a.cls ?? '',
       onclick: () => this.game.performEntityAction(sel.id, a.act),
-    }, icon(a.icon, 20), a.label, a.cost ? h('em', {}, ` −${a.cost}`, icon('wisp', 12)) : null)));
+    }, icon(a.icon, 20), a.label, a.cost ? h('em', {}, ` −${a.cost}`, icon('wisp', 12)) : null)), ...petActions.map((a) => this.runButton(a)));
     $('#ctx').hidden = false;
     this.positionContext();
   }

@@ -26,6 +26,16 @@ La prima versione era troppo lontana dal concept. Ho rifatto il modello misurand
 - **Dettagli:** baffi più larghi, brillantini più grandi e radi, orecchie grandi e tonde, manone, stivaloni con suola spessa.
 - **Zolla:** più piccola e più scura.
 
+Terza passata:
+- **Testa:** non più sferica ma "superellissoide", più piena di una sfera, con la faccia più piatta davanti e appena più larga sulle guance.
+- **Capelli:** la calotta è il volume vero e le ciocche ci si appoggiano sopra, quindi non sembrano più staccate dalla testa; tra una ciocca e l'altra si legge il solco.
+- **Barba:** ha un bordo inferiore pieno e più scuro, con il collo in ombra, così si stacca dalla giacca.
+- **Corpo:**
+  - giacca morbida "a pera" con sezione ovale, cappuccio ripiegato e bordo morbido attorno al collo;
+  - cintura con fibbia, borsello sul fianco e tasche oblique;
+  - maniche morbide che scendono in fuori e si allargano al polso, polsini scuri e manone;
+  - gambe larghe e stivaloni.
+
 Restano differenze con il concept:
 - l'ombreggiatura morbida da render (il gioco usa facce piatte);
 - la pelle, un po' più spenta per via della luce del gioco;
@@ -55,7 +65,7 @@ Il lavoro vero è **rifare le opzioni di personalizzazione** nel nuovo stile, ci
 |---|---|---|---|
 | Custode attuale, look base | 7.450 | 7 | — |
 | Custode attuale, look ricco (ricci lunghi, treccia, manubrio, monocolo, brillantini) | 17.370 | 9 | ~126 ms |
-| Prototipo v2 (completo, con lanterna) | 19.100 | 8 | ~40 ms |
+| Prototipo v2 (completo, con lanterna) | 22.400 | 8 | ~45 ms |
 
 Il v2 costa più o meno quanto un look ricco di oggi, ed è più veloce da generare perché la testa è un ellissoide. Diviso nelle parti del rig resterebbe a circa 8–10 draw call. Per il solo Custode non ci sono problemi di prestazioni.
 

@@ -81,12 +81,14 @@ export interface Pet extends Walker {
   timer: number;
   repath: number;
   roams: number;
+  /** Sta inseguendo il Custode (con isteresi: non si ferma e riparte a scatti). */
+  chasing: boolean;
   broken: boolean;
   hitbox: THREE.Mesh;
   den: Den;
 }
 
-const PET_SPEED = { roam: 1.3, run: 3.5 };
+const PET_SPEED = { roam: 1.3, run: 3.5, dash: 5 };
 
 interface Funeral {
   members: Walker[];
@@ -533,7 +535,7 @@ export class Actors {
     // riprende quello che faceva (salvato nella casetta); libero, si sveglia dopo poco
     return {
       ...w, placeId: h.id, label: labels[h.variant % labels.length] ?? 'Animale', variant: h.variant, home, door, porch: this.porchOf(h),
-      mode: h.petMode ?? 'free', act: 'sleep', timer: h.petMode === 'follow' ? 0.3 : 2 + createRng(h.id).next() * 10, repath: 0, roams: 0, broken: h.broken, hitbox, den,
+      mode: h.petMode ?? 'free', act: 'sleep', timer: h.petMode === 'follow' ? 0.3 : 2 + createRng(h.id).next() * 10, repath: 0, roams: 0, chasing: false, broken: h.broken, hitbox, den,
     };
   }
 
@@ -552,6 +554,46 @@ export class Actors {
     const pts = (path ?? []).slice(1).map((c) => cellCenter(c.x, c.y, [1, 1]));
     if (final) { if (pts.length) pts[pts.length - 1] = final.clone(); else pts.push(final.clone()); }
     return pts.length ? pts : [cellCenter(goal.x, goal.y, [1, 1])];
+  }
+
+  /** Linea libera da un punto all'altro (campionata lungo il segmento). */
+  private clearLine(from: THREE.Vector3, to: THREE.Vector3): boolean {
+    const start = worldToCell(from);
+    const len = Math.hypot(to.x - from.x, to.z - from.z);
+    const steps = Math.ceil(len / 0.2);
+    const p = new THREE.Vector3();
+    for (let i = 1; i <= steps; i++) {
+      p.lerpVectors(from, to, i / steps);
+      const c = worldToCell(p);
+      if (!(c.x === start.x && c.y === start.y) && !this.walkable(c.x, c.y)) return false;
+    }
+    return true;
+  }
+
+  /** Percorso "tirato": salta i centri delle celle quando il punto dopo è già in vista (niente zig-zag). */
+  private pullPath(w: Walker) {
+    while (w.path.length > 1 && this.clearLine(w.pos, w.path[1])) w.path.shift();
+  }
+
+  /**
+   * Insegue il Custode in modo fluido: dritto se la via è libera, altrimenti
+   * lungo un percorso tirato; tiene il passo e rallenta arrivando, e si
+   * ferma/riparte con un po' di margine (niente scatti avanti e indietro).
+   */
+  private chase(pet: Pet, dt: number, stop: number): boolean {
+    const a = this.avatar.pos;
+    const d = Math.hypot(a.x - pet.pos.x, a.z - pet.pos.z);
+    pet.chasing = pet.chasing ? d > stop : d > stop + 0.6;
+    if (!pet.chasing) { pet.path = []; return false; }
+    const target = a.clone().add(pet.pos.clone().sub(a).setY(0).normalize().multiplyScalar(stop - 0.05));
+    target.y = 0;
+    pet.repath -= dt;
+    if (this.clearLine(pet.pos, target)) pet.path = [target];
+    else if (pet.repath <= 0 || !pet.path.length) { pet.repath = 0.6; pet.path = this.pathTo(pet.pos, worldToCell(a), target); }
+    this.pullPath(pet);
+    // se è lontano (appena uscito dalla cuccia, o rimasto indietro) corre di più, ma ci arriva sempre a piedi
+    pet.speed = THREE.MathUtils.clamp((d - stop) * 3, 0.8, d > 6 ? PET_SPEED.dash : PET_SPEED.run);
+    return this.followPath(pet, dt);
   }
 
   /** Esce dalla tana dall'arco e si ferma sul davanzale. */
@@ -596,10 +638,11 @@ export class Actors {
       case 'sleep':
         pet.rig.root.visible = false;
         pet.pose = 'idle';
-        // libero: dopo un sonnellino esce di nuovo; al seguito (salvato così): esce subito dal padrone
+        // libero: dopo un sonnellino esce di nuovo; al seguito (salvato così): esce subito dal Custode
         if (pet.mode !== 'home' && !pet.broken) { pet.timer -= dt; if (pet.timer <= 0) this.wake(pet); }
         return;
       case 'enter':
+        this.pullPath(pet);
         if (this.followPath(pet, dt)) { pet.pose = 'walk'; return; }
         pet.act = 'sleep';
         pet.timer = 18 + Math.random() * 25;
@@ -607,6 +650,7 @@ export class Actors {
         return;
       case 'roam':
         pet.speed = PET_SPEED.roam;
+        this.pullPath(pet);
         if (this.followPath(pet, dt)) { pet.pose = 'walk'; return; }
         pet.act = 'rest';
         pet.timer = 1.5 + Math.random() * 3.5;
@@ -621,16 +665,7 @@ export class Actors {
         { const t = this.randomRoamTarget(pet); pet.path = t ? this.pathTo(pet.pos, t) : []; pet.act = 'roam'; }
         return;
       case 'follow': {
-        pet.speed = PET_SPEED.run;
-        if (toAvatar > 16) { pet.pos.copy(a).add(new THREE.Vector3(1, 0, 1)); pet.path = []; } // rimasto indietro: raggiunge il padrone
-        pet.repath -= dt;
-        if (toAvatar > 1.7 && (pet.repath <= 0 || !pet.path.length)) {
-          pet.repath = 0.5;
-          const stop = a.clone().add(pet.pos.clone().sub(a).setY(0).normalize().multiplyScalar(1.1));
-          pet.path = this.pathTo(pet.pos, worldToCell(a), stop);
-        }
-        if (toAvatar < 1.2) pet.path = [];
-        if (this.followPath(pet, dt)) pet.pose = 'walk';
+        if (this.chase(pet, dt, 1.2)) pet.pose = 'walk';
         else { pet.pose = 'idle'; face(a); }
         return;
       }
@@ -642,6 +677,7 @@ export class Actors {
         return;
       case 'fetch':
         pet.speed = PET_SPEED.run;
+        this.pullPath(pet);
         if (this.followPath(pet, dt)) { pet.pose = 'walk'; return; }
         if (!this.bone.landed) { pet.pose = 'idle'; face(this.bone.obj.position); return; }
         // l'osso è a terra: lo prende e lo riporta
@@ -650,14 +686,8 @@ export class Actors {
         pet.repath = 0;
         return;
       case 'bring': {
-        pet.speed = PET_SPEED.run;
-        pet.repath -= dt;
-        if (toAvatar > 1.2 && (pet.repath <= 0 || !pet.path.length)) {
-          pet.repath = 0.5;
-          const stop = a.clone().add(pet.pos.clone().sub(a).setY(0).normalize().multiplyScalar(0.95));
-          pet.path = this.pathTo(pet.pos, worldToCell(a), stop);
-        }
-        if (toAvatar > 1.15 && this.followPath(pet, dt)) { pet.pose = 'walk'; return; }
+        pet.chasing = true; // corre a consegnarlo, senza margine
+        if (toAvatar > 1.0 && this.chase(pet, dt, 1.0)) { pet.pose = 'walk'; return; }
         // consegnato: lascia l'osso ai piedi del Custode, tutto contento
         this.bone.carrier = null;
         this.bone.obj.visible = false;
@@ -714,7 +744,7 @@ export class Actors {
     return p.act === 'sleep' ? p.home.clone().setY(1.4) : p.pos.clone().setY(this.ground(p.pos) + 0.9);
   }
 
-  /** Raggiunge il padrone: esce dalla tana (se dorme) e lo segue per il cimitero. */
+  /** Raggiunge il Custode: esce dalla tana (se dorme) e lo segue per il cimitero. */
   callPet(id: string): string {
     const p = this.pets.get(id);
     if (!p) return '';

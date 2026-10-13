@@ -294,9 +294,9 @@ function beardSlices(): BeardSlice[] {
     const r6 = skinR(th, 0.6);
     let jaw = 0.6;
     while (jaw > 0.45 && skinR(th, jaw) > r6 * 0.82) jaw -= 0.004; // dove la pelle rientra sotto la mascella
-    const length = lerp(BEARD_DROP + 0.035, 0.045, Math.pow(au, 1.9)); // si accorcia piano: i lati restano pieni fin sotto l'orecchio
+    const length = lerp(BEARD_DROP + 0.035, 0.085, Math.pow(au, 2.6)); // i lati restano lunghi e pieni fin sotto l'orecchio
     const yHem = Math.min(jaw - length, yTop - 0.045) - 0.022 * len * tooth * (1 - 0.4 * au);
-    const rFloor = r6 * (0.985 - 0.04 * au) + 0.028 * (1 - au * au) + 0.012; // un po' bombata davanti, piena anche sui lati
+    const rFloor = r6 * (0.985 - 0.04 * au) + 0.028 * (1 - au * au) + 0.012 + 0.03 * smooth(0.55, 1, au); // bombata davanti, piena e larga anche sui lati
     out.push({ th, rad: new THREE.Vector3(Math.sin(th), 0, Math.cos(th)), yTop, yHem, rFloor, rIn: rFloor * 0.45, tone, ridge: Math.sin(Math.PI * w) });
   }
   return out;

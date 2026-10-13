@@ -122,7 +122,7 @@ Il prototipo ora accetta un `CustodeLook` (`buildCustodeV2(look)`): stesso corpo
 
 | Opzione | Come è fatta in v2 |
 | --- | --- |
-| Capelli | Tutti i tagli sono lo stesso casco a ciocche; cambia la forma dell'orlo per taglio. Spettinati e ciuffi hanno anche le punte in cima. Caschetto, lunghi e ricci lunghi sotto l'equatore della testa scendono dritti come una tenda invece di rientrare sulla nuca. Ricci e ricci lunghi sono il casco più riccioli a file regolari. Chignon è il casco più la crocchia con l'elastico del colore d'accento. Calvo non ha capelli. |
+| Capelli | Tutti i tagli sono lo stesso casco a ciocche; cambia la forma dell'orlo per taglio. Spettinati e ciuffi hanno anche le punte in cima. Caschetto, lunghi e ricci lunghi, sotto l'equatore della testa, dietro scendono dritti come una tenda invece di rientrare sulla nuca. Nei lunghi e nei ricci lunghi, ai lati scendono subito accanto all'occhio e restano aderenti alla guancia fino alla mandibola, incorniciando il viso. Ricci e ricci lunghi sono il casco più riccioli a file regolari. Chignon è il casco più la crocchia con l'elastico del colore d'accento. Calvo non ha capelli. |
 | Cappelli | Tesa larga, cilindro e berretto con risvolto e pompon. Sotto un cappello resta solo lo strato basso dei capelli, che finisce alla tesa; la cupola si allarga sul cranio, quindi niente capelli che bucano. |
 | Barba | Corta: stessa barba "a ciocche" ma aderente al viso e appena sotto la mandibola. Piena: quella del concept senza treccia. Treccia: quella del concept. |
 | Baffi | Sottili, folti e a manubrio (quelli del concept). |

@@ -228,9 +228,10 @@ const HAIR_TIPS: Record<Exclude<HairStyle, 'none'>, (a: number) => number> = {
   spiky: (a) => (a < 90 ? lerp(20, 0, smooth(30, 90, a)) : lerp(0, -32, smooth(90, 160, a))), // ai lati fin sopra l'orecchio, dietro alla nuca
   tufts: (a) => (a < 90 ? lerp(24, 6, smooth(30, 90, a)) : lerp(6, -26, smooth(90, 160, a))),
   bob: (a) => (a < 50 ? lerp(14, 8, smooth(0, 50, a)) : lerp(8, -42, smooth(50, 105, a))), // caschetto: frangia dritta, copre le orecchie
-  long: (a) => (a < 60 ? lerp(18, 10, smooth(0, 60, a)) : lerp(10, -78, smooth(60, 120, a))), // fin sulle spalle
+  // lunghi: ai lati scendono subito lungo la guancia (accanto all'occhio), dietro fin sulle spalle
+  long: (a) => (a < 45 ? lerp(18, 10, smooth(0, 45, a)) : a < 72 ? lerp(10, -50, smooth(45, 72, a)) : lerp(-50, -78, smooth(72, 130, a))),
   curly: (a) => (a < 90 ? lerp(22, 4, smooth(30, 90, a)) : lerp(4, -30, smooth(90, 160, a))),
-  longcurly: (a) => (a < 60 ? lerp(22, 10, smooth(0, 60, a)) : lerp(10, -70, smooth(60, 120, a))),
+  longcurly: (a) => (a < 45 ? lerp(22, 10, smooth(0, 45, a)) : a < 72 ? lerp(10, -48, smooth(45, 72, a)) : lerp(-48, -70, smooth(72, 130, a))),
   bun: (a) => (a < 90 ? lerp(30, 8, smooth(30, 90, a)) : lerp(8, -22, smooth(90, 160, a))), // raccolti: fronte scoperta
 };
 let HAIR_TIP = HAIR_TIPS.spiky;
@@ -244,7 +245,16 @@ function hairPoint(th: number, phD: number) {
   const { p, n } = headAt(th, 0);
   const h = new THREE.Vector3(n.x, 0, n.z).normalize();
   const dy = -phD * DEG * R.y * 1.05;
-  return { p: p.addScaledVector(h, 0.12 * dy).add(new THREE.Vector3(0, -dy, 0)), n: h };
+  const hang = { p: p.addScaledVector(h, 0.12 * dy).add(new THREE.Vector3(0, -dy, 0)), n: h };
+  // capelli lunghi: ai lati restano aderenti alla guancia fino alla mandibola,
+  // poi scendono dritti; dietro pendono come una tenda
+  const b = L.hair === 'long' || L.hair === 'longcurly' ? smooth(95, 145, absDeg(th)) : 1;
+  if (b >= 1) return hang;
+  const JAW = -55;
+  const s = headAt(th, Math.max(phD, JAW) * DEG);
+  const drop = Math.max(0, JAW - phD) * DEG * R.y * 1.05;
+  const hug = { p: s.p.add(new THREE.Vector3(0, -drop, 0)), n: drop > 0 ? h : s.n };
+  return { p: hug.p.lerp(hang.p, b), n: hug.n.clone().lerp(hang.n, b).normalize() };
 }
 const hairTip = (th: number) => HAIR_TIP(absDeg(th));
 /** Bordo superiore della barba (φ in gradi): sotto la bocca davanti, sale lungo la mandibola fino all'orecchio. */

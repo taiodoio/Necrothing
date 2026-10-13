@@ -247,93 +247,92 @@ function glitter(lp: LP) {
  * punta), verso il basso e un po' in avanti. `BEARD_DROP` regola quanto
  * scende: lo stesso schema serve per una barba lunga senza treccia.
  */
-/** Bordo inferiore della barba (φ, gradi): sotto il mento, ma non così in basso da finire dietro il colletto. */
-const BEARD_LOW = -72;
-const BEARD_DROP = 0.09;
-/** Bordo inferiore lungo la mandibola: sotto il mento davanti, sale verso l'orecchio (profilo a diagonale). */
-const beardLow = (u: number) => { const au = Math.abs(u), e = au * au * (3 - 2 * au); return lerp(-56, -22, e); }; // dentro il cuscinetto: nessuno stacco
-/** Bordo inferiore della barba sulla pelle: sotto il mento davanti, sotto l'orecchio ai lati. */
-function beardSkin(u: number, v: number) {
-  const th = u * 92;
-  return headAt(th * DEG, lerp(beardLow(u), beardTop(th), v) * DEG);
+/**
+ * Barba costruita come i capelli: si disegnano direttamente i due contorni
+ * e il volume sta tra la pelle e un involucro.
+ *  - bordo superiore: basetta davanti all'orecchio, guancia, sotto la bocca
+ *    (sulla pelle);
+ *  - orlo inferiore: la linea che va da sotto l'orecchio fino al mento, con
+ *    una punta per ciocca (come l'orlo dei capelli).
+ * Ogni "fetta" verticale attorno al viso è disegnata in altezza: sopra la
+ * mandibola la barba è uno strato sottile sulla guancia, sotto non rientra
+ * più con la testa ma scende dritta fino all'orlo, che si arrotonda.
+ * `BEARD_DROP` abbassa l'orlo (barba lunga).
+ */
+const BEARD_DROP = 0.11;
+const BEARD_LOCKS = 9;
+const BEARD_TH = 86; // gradi: fin dove arriva ai lati (basette davanti all'orecchio)
+
+/** Distanza della pelle dall'asse della testa, all'altezza y nella direzione θ (0 se sotto la testa). */
+function skinR(th: number, y: number): number {
+  const sx = Math.sin(th), sz = Math.cos(th);
+  if (headF(C.x, y, C.z) >= 1) return 0;
+  let lo = 0, hi = 0.6;
+  for (let i = 0; i < 22; i++) { const m = (lo + hi) / 2; if (headF(C.x + sx * m, y, C.z + sz * m) < 1) lo = m; else hi = m; }
+  return lo;
 }
 
-/**
- * Cuscinetto di barba lungo la mandibola, da un orecchio all'altro: un tubo
- * che nasce sottile sotto l'orecchio (dove finisce la basetta), segue la
- * linea della mascella e si ingrossa andando verso il mento. È per metà
- * dentro la testa, così non resta nessuno stacco con la pelle; di fronte
- * forma la U sotto la bocca, di profilo pende sotto la mandibola.
- */
-function beardPad(): { geo: THREE.BufferGeometry; bottom: THREE.Vector3 } {
-  // Una "tenda" piena che pende dalla linea della mandibola: per ogni punto
-  // attorno al viso una striscia verticale che scende di depth(u) (poco
-  // all'orecchio, molto al mento) con il davanti arrotondato e lo spessore
-  // che rientra verso il collo. Di profilo le strisce si sovrappongono e
-  // riempiono tutta la zona tra la mandibola e la linea che va
-  // dall'orecchio al mento: un volume unico, unito alla basetta.
-  const NU = 28, NV = 8;
-  const OUT: THREE.Vector3[][] = [], IN: THREE.Vector3[][] = [], RAD: THREE.Vector3[] = [];
-  let bottom = new THREE.Vector3();
+interface BeardSlice { th: number; rad: THREE.Vector3; yTop: number; yHem: number; rFloor: number; rIn: number; tone: number; ridge: number }
+
+function beardSlices(): BeardSlice[] {
+  const rnd = prng(41);
+  const lens = Array.from({ length: BEARD_LOCKS }, () => [0.7 + rnd() * 0.6, (rnd() - 0.5) * 0.3, Math.floor(rnd() * 3)]);
+  const NU = BEARD_LOCKS * 4;
+  const out: BeardSlice[] = [];
   for (let i = 0; i <= NU; i++) {
-    const u = -1 + (2 * i) / NU, au = Math.abs(u), e = au * au * (3 - 2 * au), k = 1 - u * u;
-    const th = u * 90 * DEG;
-    const rad = new THREE.Vector3(Math.sin(th), 0, Math.cos(th));
-    const J = headAt(th, lerp(-56, -22, e) * DEG).p; // linea della mandibola
-    const depth = 0.022 + BEARD_DROP * 0.95 * Math.pow(k, 1.1);
-    const bulge = 0.014 + BEARD_DROP * 0.3 * Math.pow(k, 1.2);
-    const back = 0.05 + depth * 0.7;
-    OUT.push([]); IN.push([]); RAD.push(rad);
-    for (let j = 0; j <= NV; j++) {
-      const sv = j / NV;
-      const o = bulge * Math.sqrt(Math.max(0, 1 - ((sv - 0.35) / 0.72) ** 2)); // davanti arrotondato
-      const y = -depth * sv;
-      OUT[i].push(J.clone().addScaledVector(rad, o).add(new THREE.Vector3(0, y, 0)));
-      IN[i].push(J.clone().addScaledVector(rad, -back).add(new THREE.Vector3(0, y * 0.85, 0)));
-    }
-    if (i === NU / 2) bottom = OUT[i][NV].clone();
+    const u = -1 + (2 * i) / NU, au = Math.abs(u);
+    const th = u * BEARD_TH * DEG;
+    const f = ((u + 1) / 2) * BEARD_LOCKS, k = Math.min(BEARD_LOCKS - 1, Math.floor(f)), w = f - k;
+    const [len, skew, tone] = lens[k];
+    const c = 0.5 + skew, tooth = w < c ? w / c : (1 - w) / (1 - c);
+    // bordo superiore: sotto la bocca al centro, risale lungo la guancia fino alla basetta
+    const yTop = au < 0.78 ? lerp(0.588, 0.63, au / 0.78) : lerp(0.63, 0.8, smooth(0.78, 1, au)); // lungo la mandibola, poi su come basetta
+    // orlo: diagonale da sotto l'orecchio al mento, con la punta di ogni ciocca
+    // lineare nella profondità (cos θ): di profilo l'orlo è una diagonale dritta dall'orecchio al mento
+    const yHem = lerp(0.543 - BEARD_DROP, 0.665, (1 - Math.cos(th)) / (1 - Math.cos(BEARD_TH * DEG))) - 0.022 * len * tooth * (1 - 0.6 * au);
+    const rFloor = skinR(th, 0.6) * (0.985 - 0.04 * au) + 0.028 * (1 - au * au); // un po' bombata davanti
+    out.push({ th, rad: new THREE.Vector3(Math.sin(th), 0, Math.cos(th)), yTop, yHem, rFloor, rIn: rFloor * 0.45, tone, ridge: Math.sin(Math.PI * w) });
   }
-  const t = new Tris();
-  const down = new THREE.Vector3(0, -1, 0);
-  for (let i = 0; i < NU; i++) {
-    for (let j = 0; j < NV; j++) {
-      t.quad(OUT[i][j], OUT[i + 1][j], OUT[i + 1][j + 1], OUT[i][j + 1], RAD[i]);
-      t.quad(IN[i][j], IN[i + 1][j], IN[i + 1][j + 1], IN[i][j + 1], RAD[i].clone().negate());
-    }
-    t.quad(OUT[i][NV], OUT[i + 1][NV], IN[i + 1][NV], IN[i][NV], down); // fondo
-    t.quad(OUT[i][0], OUT[i + 1][0], IN[i + 1][0], IN[i][0], new THREE.Vector3(0, 1, 0)); // sopra (dentro la testa)
-  }
-  for (const [i, sgn] of [[0, -1], [NU, 1]] as const) {
-    const side = new THREE.Vector3(sgn, 0, 0);
-    for (let j = 0; j < NV; j++) t.quad(OUT[i][j], OUT[i][j + 1], IN[i][j + 1], IN[i][j], side);
-  }
-  return { geo: t.geo(), bottom };
+  return out;
 }
 
-/**
- * Barba: basette sottili davanti alle orecchie e uno strato sotto la bocca,
- * più il cuscinetto pieno lungo la mandibola. `BEARD_DROP` regola il volume
- * del cuscinetto (barba lunga).
- */
+/** Punto esterno della fetta all'altezza v (0 orlo, 1 bordo superiore). */
+function beardOuter(sl: BeardSlice, v: number): THREE.Vector3 {
+  const y = lerp(sl.yHem, sl.yTop, Math.pow(v, 1.15));
+  const thin = 0.014 * (0.35 + 0.65 * smooth(0, 0.25, 1 - v)) + 0.008 * sl.ridge * (1 - v);
+  let r = Math.max(skinR(sl.th, y) + thin, sl.rFloor + 0.006 * sl.ridge);
+  // l'orlo si arrotonda verso l'interno
+  const ROUND = 0.055;
+  const q = THREE.MathUtils.clamp((y - sl.yHem) / ROUND, 0, 1);
+  r = sl.rIn + (r - sl.rIn) * Math.sqrt(1 - (1 - q) * (1 - q));
+  return new THREE.Vector3(C.x + sl.rad.x * r, y, C.z + sl.rad.z * r);
+}
+
 function beard(lp: LP) {
-  const NU = 30, NV = 10;
-  const tr = new Tris();
-  const P: THREE.Vector3[][] = [], Nn: THREE.Vector3[][] = [];
-  for (let i = 0; i <= NU; i++) {
-    P.push([]); Nn.push([]);
-    const u = -1 + (2 * i) / NU;
-    for (let j = 0; j <= NV; j++) {
-      const v = j / NV;
-      const { p, n } = beardSkin(u, v);
-      // più spessa verso il basso vicino all'orecchio: la basetta si fonde con il cuscinetto
-      const t = 0.013 + 0.012 * smooth(0.6, 1, Math.abs(u)) * (1 - v);
-      P[i].push(p.addScaledVector(n, 0.003 + t * smooth(0, 0.04, 1 - Math.abs(u)) * smooth(0, 0.12, 1 - v)));
-      Nn[i].push(n);
+  const S = beardSlices(), NV = 7;
+  const P = S.map((sl) => Array.from({ length: NV + 1 }, (_, j) => beardOuter(sl, j / NV)));
+  const IN = S.map((sl) => [new THREE.Vector3(C.x + sl.rad.x * sl.rIn, sl.yHem, C.z + sl.rad.z * sl.rIn), new THREE.Vector3(C.x + sl.rad.x * sl.rIn, C.y, C.z + sl.rad.z * sl.rIn)]);
+  const tr = [new Tris(), new Tris(), new Tris()];
+  for (let i = 0; i < S.length - 1; i++) {
+    const t = tr[S[i].tone];
+    for (let j = 0; j < NV; j++) t.quad(P[i][j], P[i + 1][j], P[i + 1][j + 1], P[i][j + 1], S[i].rad.clone().add(new THREE.Vector3(0, -0.3 * (1 - j / NV), 0)));
+    t.quad(P[i][0], P[i + 1][0], IN[i + 1][0], IN[i][0], new THREE.Vector3(0, -1, 0)); // sotto
+    t.quad(IN[i][0], IN[i + 1][0], IN[i + 1][1], IN[i][1], S[i].rad.clone().negate()); // dietro, verso il collo
+  }
+  for (const [i, sgn] of [[0, -1], [S.length - 1, 1]] as const) {
+    const side = new THREE.Vector3(Math.cos(S[i].th) * sgn, 0, -Math.sin(S[i].th) * sgn);
+    for (let j = 0; j < NV; j++) {
+      const sk = (q: THREE.Vector3) => { const r = skinR(S[i].th, q.y); return new THREE.Vector3(C.x + S[i].rad.x * r, q.y, C.z + S[i].rad.z * r); };
+      tr[0].quad(P[i][j], P[i][j + 1], sk(P[i][j + 1]), sk(P[i][j]), side);
     }
   }
-  for (let i = 0; i < NU; i++) for (let j = 0; j < NV; j++) tr.quad(P[i][j], P[i + 1][j], P[i + 1][j + 1], P[i][j + 1], Nn[i][j]);
-  lp.add(tr.geo(), BEARD, { ...O, vary: 0.05 });
-  lp.add(beardPad().geo, BEARD, { ...O, vary: 0.05 });
+  tr.forEach((t, k) => lp.add(t.geo(), `#${new THREE.Color(BEARD).offsetHSL(0, 0, [0.03, 0, -0.03][k]).getHexString()}`, { ...O, vary: 0.04 }));
+}
+
+/** Punta dell'orlo al centro: da qui esce la treccia. */
+function beardTip(): THREE.Vector3 {
+  const S = beardSlices();
+  return beardOuter(S[Math.floor(S.length / 2)], 0);
 }
 
 /**
@@ -343,7 +342,7 @@ function beard(lp: LP) {
  */
 function braid(lp: LP) {
   // punta del cuneo (u = 0, v = 0): il primo grano è per metà dentro la barba
-  const tip = beardPad().bottom.add(new THREE.Vector3(0, 0.02, -0.01)); // primo grano per metà dentro la barba
+  const tip = beardTip().add(new THREE.Vector3(0, 0.015, -0.02)); // primo grano per metà dentro la punta della barba
   const R0 = 0.039, STEPY = 0.052;
   const zMin = (y: number, r: number) => (jacketR(HEAD_T.y + HEAD_S * y) * 0.82 + r * HEAD_S * 0.9) / HEAD_S;
   let y = tip.y, z = tip.z;

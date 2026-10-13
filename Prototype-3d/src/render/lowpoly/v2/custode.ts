@@ -367,11 +367,35 @@ function pumpkinAt(dir: THREE.Vector3): THREE.Vector3 {
   const v = dir.clone().normalize();
   const p = surfaceAlong(v).sub(C);
   const lon = Math.atan2(v.x, v.z), lat = Math.asin(THREE.MathUtils.clamp(v.y, -1, 1));
-  const rib = 1 - 0.055 * (0.5 - 0.5 * Math.cos(lon * 10)) * Math.pow(Math.cos(lat), 0.6); // solchi tra gli spicchi
-  p.multiply(new THREE.Vector3(1.07 * rib, 0.9 - 0.06 * Math.pow(Math.abs(v.y), 6), 1.05 * rib)); // un po' schiacciata, sommità e base rientranti
-  p.y -= 0.1 * R.y; // schiacciata verso il basso: poggia sul collo come la testa (niente buco sotto)
+  // spicchi gonfi con solchi netti, come la zucca-lampada: un solco al centro (sotto il naso),
+  // così gli occhi cadono al centro di due spicchi; sulla faccia i solchi sono un po' più leggeri
+  const lobe = Math.pow(Math.abs(Math.sin(lon * PUMPKIN_LOBES / 2)), 0.4);
+  const soft = lerp(0.6, 1, smooth(25, 75, Math.abs(lon) / DEG));
+  const rib = 1 - (1 - lobe) * 0.22 * soft * Math.pow(Math.cos(lat), 0.6);
+  p.x *= 1.1 * rib; p.z *= 1.07 * rib;
+  // bassa e larga: sommità e base rientrano verso il picciolo (fossetta in cima)
+  const h = Math.hypot(v.x, v.z);
+  p.y *= 0.8 - 0.08 * Math.pow(Math.abs(v.y), 5);
+  if (v.y > 0) p.y -= 0.07 * R.y * Math.exp(-((h / 0.3) ** 2));
+  p.y -= 0.16 * R.y; // poggia sul collo come la testa (niente buco sotto)
   return p.add(C);
 }
+const PUMPKIN_LOBES = 8;
+/** Punto e normale sulla faccia della zucca, davanti, in (x, y) come `headFront`. */
+function pumpkinFront(x: number, y: number) {
+  const d = new THREE.Vector3(x / R.x, (y - C.y) / R.y, 0);
+  d.z = Math.sqrt(Math.max(0.05, 1 - d.x * d.x - d.y * d.y));
+  const p = pumpkinAt(d);
+  // normale dalle differenze (passo largo: media sopra i solchi, così occhiali e intagli restano dritti)
+  const e = 0.09, px = pumpkinAt(d.clone().add(new THREE.Vector3(e, 0, 0))), py = pumpkinAt(d.clone().add(new THREE.Vector3(0, e, 0)));
+  const n = px.sub(p).cross(py.sub(p)).normalize();
+  if (n.z < 0) n.negate();
+  return { p, n };
+}
+/** Dove stanno gli occhi (e quindi gli occhiali): sugli occhi intagliati per la zucca. */
+const PUMPKIN_EYE: [number, number] = [0.106, 0.823]; // baricentro del triangolo intagliato
+const faceAt = (x: number, y: number) => (HEAD === 'pumpkin' ? pumpkinFront(x, y) : headFront(x, y));
+const eyeAt = (): [number, number] => (HEAD === 'pumpkin' ? PUMPKIN_EYE : [EYE_X, EYE_Y]);
 
 /**
  * Intaglio sulla zucca: la regione tra `bot(u)` e `top(u)` (u da -1 a 1, x = cx + u·w)
@@ -379,12 +403,7 @@ function pumpkinAt(dir: THREE.Vector3): THREE.Vector3 {
  * Bordo scuro, e dentro la luce della candela un po' più rientrata.
  */
 function carve(lp: LP, cx: number, w: number, top: (u: number) => number, bot: (u: number) => number, nu = 8) {
-  const at = (x: number, y: number, out: number) => {
-    const d = new THREE.Vector3(x / R.x, (y - C.y) / R.y, 0);
-    d.z = Math.sqrt(Math.max(0.05, 1 - d.x * d.x - d.y * d.y));
-    const p = pumpkinAt(d);
-    return p.addScaledVector(p.clone().sub(C).normalize(), out);
-  };
+  const at = (x: number, y: number, out: number) => { const { p, n } = pumpkinFront(x, y); return p.addScaledVector(n, out); };
   const grid = (u0: number, u1: number, v0: number, v1: number, out: number, color: string, o: LPOpts) => {
     const t = new Tris();
     const P: THREE.Vector3[][] = [];
@@ -401,16 +420,28 @@ function carve(lp: LP, cx: number, w: number, top: (u: number) => number, bot: (
 
 /** Zucca: a spicchi, con il picciolo; faccia intagliata che brilla. */
 function pumpkin(lp: LP) {
-  const g = new THREE.IcosahedronGeometry(1, 4);
-  const pos = g.attributes.position as THREE.BufferAttribute;
-  const v = new THREE.Vector3();
-  for (let i = 0; i < pos.count; i++) {
-    const p = pumpkinAt(v.fromBufferAttribute(pos, i));
-    pos.setXYZ(i, p.x, p.y, p.z);
+  // ogni spicchio ha la sua tinta (come la zucca-lampada): i triangoli si dividono per spicchio
+  const src = new THREE.IcosahedronGeometry(1, 4).toNonIndexed().attributes.position as THREE.BufferAttribute;
+  const TINTS = ['#d97a2a', '#bf6420', '#e8913f'];
+  const ORDER = [0, 1, 0, 2, 0, 1, 0, 2]; // spicchi vicini sempre di tinta diversa
+  const buckets: number[][] = TINTS.map(() => []);
+  const v = new THREE.Vector3(), face: THREE.Vector3[] = [];
+  for (let i = 0; i < src.count; i += 3) {
+    face.length = 0;
+    for (let k = 0; k < 3; k++) face.push(pumpkinAt(v.fromBufferAttribute(src, i + k)));
+    const c = face[0].clone().add(face[1]).add(face[2]).divideScalar(3).sub(C);
+    const step = (Math.PI * 2) / PUMPKIN_LOBES;
+    const lobe = ((Math.floor(Math.atan2(c.x, c.z) / step) % PUMPKIN_LOBES) + PUMPKIN_LOBES) % PUMPKIN_LOBES; // i solchi stanno sui multipli del passo
+    for (const q of face) buckets[ORDER[lobe]].push(q.x, q.y, q.z);
   }
-  lp.add(g, '#e0832f', { ...O, ao: 0.08, vary: 0.05 });
-  if (hatPh() >= 89) { // picciolo (sotto un cappello non c'è posto)
-    const b = new THREE.Vector3(C.x, C.y + R.y * 0.72, C.z); // sulla sommità (rientrante)
+  buckets.forEach((arr, k) => {
+    const g = new THREE.BufferGeometry();
+    g.setAttribute('position', new THREE.Float32BufferAttribute(arr, 3));
+    g.computeVertexNormals();
+    lp.add(g, TINTS[k], { ...O, ao: 0.1, vary: 0.04 });
+  });
+  if (hatPh() >= 89) { // picciolo nella fossetta in cima (sotto un cappello non c'è posto)
+    const b = pumpkinAt(new THREE.Vector3(0, 1, 0)).add(new THREE.Vector3(0, -0.01, 0));
     lp.add(taperTube([b, b.clone().add(new THREE.Vector3(0.015, 0.08, 0)), b.clone().add(new THREE.Vector3(0.06, 0.13, -0.02))], [0.045, 0.034, 0.024], 6), '#5a6a2c', O);
     lp.blob(b.x - 0.05, b.y + 0.02, b.z + 0.02, 0.05, 0.012, 0.03, '#6f8a33', { ...O, detail: 1 } as LPOpts); // fogliolina
   }
@@ -821,19 +852,21 @@ function hatGeo(lp: LP) {
 /** Occhiali, lentiggini, cerotto. */
 function faceExtras(lp: LP) {
   const frame = L.glasses === 'square' ? '#6b4a33' : '#c9a227';
-  const lift = 0.03;
+  const lift = HEAD === 'pumpkin' ? 0.014 : 0.03; // sulla zucca gli occhiali poggiano sulla buccia
+  // (sulla zucca vanno sugli occhi intagliati, appoggiati alla buccia)
+  const [ex, ey] = eyeAt(), lens = HEAD === 'pumpkin' ? 0.07 : 0.062;
   if (L.glasses === 'round' || L.glasses === 'monocle') {
-    for (const s of L.glasses === 'monocle' ? [1] : [-1, 1]) onSkin(lp, headFront(s * EYE_X, EYE_Y), lift, 0, (q) => q.add(new THREE.TorusGeometry(0.062, 0.008, 5, 18), frame, O));
-    if (L.glasses === 'round') onSkin(lp, headFront(0, EYE_Y + 0.01), lift - 0.004, 0, (q) => q.add(new THREE.CylinderGeometry(0.006, 0.006, 0.08, 5).rotateZ(Math.PI / 2), frame, O));
+    for (const s of L.glasses === 'monocle' ? [1] : [-1, 1]) onSkin(lp, faceAt(s * ex, ey), lift, 0, (q) => q.add(new THREE.TorusGeometry(lens, 0.008, 5, 18), frame, O));
+    if (L.glasses === 'round') onSkin(lp, faceAt(0, ey + 0.01), lift - 0.004, 0, (q) => q.add(new THREE.CylinderGeometry(0.006, 0.006, ex * 2 - lens * 2 + 0.01, 5).rotateZ(Math.PI / 2), frame, O));
     else {
-      const a = headFront(EYE_X + 0.04, EYE_Y - 0.05), b = headFront(0.19, 0.6), c2 = headFront(0.2, 0.52);
+      const a = faceAt(ex + 0.04, ey - 0.05), b = faceAt(0.19, ey - 0.107), c2 = faceAt(0.2, ey - 0.187);
       lp.add(taperTube([a.p.addScaledVector(a.n, lift), b.p.addScaledVector(b.n, 0.02), c2.p.addScaledVector(c2.n, 0.02)], [0.004, 0.004, 0.004], 4), frame, O);
     }
   } else if (L.glasses === 'square') {
-    for (const s of [-1, 1]) onSkin(lp, headFront(s * EYE_X, EYE_Y), lift, 0, (q) => {
+    for (const s of [-1, 1]) onSkin(lp, faceAt(s * ex, ey), lift, 0, (q) => {
       for (const [x, y, w, h] of [[0, 0.05, 0.13, 0.014], [0, -0.05, 0.13, 0.014], [-0.06, 0, 0.014, 0.11], [0.06, 0, 0.014, 0.11]]) q.add(new THREE.BoxGeometry(w, h, 0.012).translate(x, y, 0), frame, O);
     });
-    onSkin(lp, headFront(0, EYE_Y + 0.02), lift - 0.004, 0, (q) => q.add(new THREE.BoxGeometry(0.08, 0.012, 0.01), frame, O));
+    onSkin(lp, faceAt(0, ey + 0.02), lift - 0.004, 0, (q) => q.add(new THREE.BoxGeometry(ex * 2 - 0.12, 0.012, 0.01), frame, O));
   }
   if (X.bare) return;
   if (L.freckles) for (const s of [-1, 1]) for (const [x, y] of [[0.17, 0.655], [0.2, 0.67], [0.185, 0.64], [0.215, 0.648]]) {

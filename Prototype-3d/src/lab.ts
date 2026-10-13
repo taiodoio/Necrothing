@@ -111,9 +111,9 @@ function rebuild() {
     addStatic('p:lamp_post:0:1:001', new THREE.Vector3(-1.9, 0, -0.7));
     addStatic('p:wreath:0:1:000', new THREE.Vector3(1.25, 0, 1.0));
     place(kawaiiRig('priest'), 0, -0.35, '', 'pray', 0);
-    place(kawaiiRig('mourner'), -0.95, -0.95, '', 'idle', 0.1);
-    place(kawaiiRig('mournerB'), 0.05, -1.35, '', 'idle', 0);
-    place(kawaiiRig('mourner'), 1.0, -1.0, '', 'pray', -0.1);
+    place(kawaiiRig('mourner'), -1.25, -1.05, '', 'idle', 0.1);
+    place(kawaiiRig('mournerB'), 0.1, -1.6, '', 'idle', 0);
+    place(kawaiiRig('mourner'), 1.35, -1.1, '', 'pray', -0.1);
     place(kawaiiRig('gravedigger'), 2.0, 0.55, '', 'work', -Math.PI / 2);
     place(kawaiiRig('custode'), -2.1, 1.0, '', 'idle', 0.9);
     place(kawaiiRig('ghost'), 2.7, 1.6, '', 'idle', -0.4);

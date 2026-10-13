@@ -6,6 +6,7 @@ import * as THREE from 'three';
 import { LP } from './kit.ts';
 import { LPC } from './palette.ts';
 import { instantiate, LOWPOLY_MATERIALS, type CachedModel } from '../modelCache.ts';
+import { radialGlowTexture } from '../glowTexture.ts';
 
 let flameModel: CachedModel | null = null;
 let sparkModel: CachedModel | null = null;
@@ -20,18 +21,7 @@ function model(build: (lp: LP) => void): CachedModel {
 }
 
 function glowTexture(): THREE.Texture {
-  if (glowTex) return glowTex;
-  const c = document.createElement('canvas');
-  c.width = c.height = 64;
-  const g = c.getContext('2d')!;
-  const grd = g.createRadialGradient(32, 32, 0, 32, 32, 32);
-  grd.addColorStop(0, 'rgba(255,255,255,1)');
-  grd.addColorStop(0.25, 'rgba(255,255,255,0.55)');
-  grd.addColorStop(1, 'rgba(255,255,255,0)');
-  g.fillStyle = grd;
-  g.fillRect(0, 0, 64, 64);
-  glowTex = new THREE.CanvasTexture(c);
-  glowTex.colorSpace = THREE.SRGBColorSpace;
+  glowTex ??= radialGlowTexture([[0, 1], [0.25, 0.55], [1, 0]]);
   return glowTex;
 }
 

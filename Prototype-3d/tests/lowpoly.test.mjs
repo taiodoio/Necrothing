@@ -449,3 +449,14 @@ test('animale domestico: richiamato, parte dalla cuccia e raggiunge il Custode a
   assert.ok(maxStep < 0.3, `nessun salto: passo massimo ${maxStep.toFixed(2)}`);
   assert.ok(pet.pos.distanceTo(a.avatar.pos) < 2.5, 'alla fine è dal Custode');
 });
+
+test('alone delle luci: sempre bianco, solo l’opacità sfuma (niente puntini colorati ai bordi)', async () => {
+  const { radialGlowTexture } = await import('../src/render/glowTexture.ts');
+  const t = radialGlowTexture([[0, 0.95], [0.18, 0.45], [0.5, 0.12], [1, 0]], 32);
+  const d = t.image.data;
+  for (let i = 0; i < d.length; i += 4) assert.ok(d[i] === 255 && d[i + 1] === 255 && d[i + 2] === 255, 'rgb bianco ovunque');
+  const a = (x, y) => d[(y * 32 + x) * 4 + 3];
+  assert.ok(a(16, 16) > 200, 'pieno al centro');
+  assert.equal(a(0, 0), 0, 'trasparente negli angoli');
+  assert.ok(a(16, 16) > a(24, 16) && a(24, 16) > a(30, 16), 'sfuma verso il bordo');
+});

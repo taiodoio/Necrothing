@@ -526,7 +526,7 @@ export class Game {
 
   /**
    * Menù dell'animale (ognuno il suo, così se ne gestiscono più d'uno):
-   * raggiungere il padrone, liberarlo, mandarlo a cuccia, coccolarlo, giocarci.
+   * raggiungere il Custode, liberarlo, mandarlo a cuccia, coccolarlo, giocarci.
    * Le voci che ora non hanno senso restano visibili ma disattivate.
    */
   petMenu(id: string): Array<{ label: string; icon: string; cls?: string; disabled?: boolean; run: () => void }> {
@@ -534,7 +534,7 @@ export class Game {
     if (!p) return [];
     const off = p.broken;
     return [
-      { label: 'Raggiungi il padrone', icon: 'paw', disabled: off || p.mode === 'follow', run: () => this.petCommand(id, this.actors.callPet(id)) },
+      { label: 'Raggiungi il Custode', icon: 'paw', disabled: off || p.mode === 'follow', run: () => this.petCommand(id, this.actors.callPet(id)) },
       { label: 'Libera', icon: 'sun', disabled: off || p.mode === 'free', run: () => this.petCommand(id, this.actors.freePet(id)) },
       { label: 'A cuccia', icon: 'kennel', disabled: off || p.mode === 'home', run: () => this.petCommand(id, this.actors.sendPetHome(id)) },
       { label: 'Accarezza', icon: 'heart', cls: 'primary', disabled: off || p.sleeping, run: () => this.actors.petPet(id) },

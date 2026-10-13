@@ -97,7 +97,7 @@ interagisci, `C` cambia vista, `V` cambia stile (low-poly → voxel → miniatur
   domestico**: la casetta per animali (cane, gatto, coniglio, papera, corvo scheletro) porta con sé
   il suo animaletto. Libero gira per il cimitero e ogni tanto torna a dormire in tana (si vedono
   gli occhietti nel buio dell'arco e salgono le "z"); ogni animale ha il suo menù (toccandolo,
-  o toccando la sua casetta quando dorme): raggiungi il padrone (ti segue), libera, a cuccia,
+  o toccando la sua casetta quando dorme): raggiungi il Custode (ti segue), libera, a cuccia,
   accarezza, lancia l'osso (che riporta). Le voci che in quel momento non servono restano visibili
   ma disattivate; con più casette si gestisce ogni animale per conto suo. Quello che fa (libero, al seguito, a
   cuccia) è salvato nella sua casetta e alla riapertura riprende da lì.

@@ -332,7 +332,7 @@ test('animale domestico: esce dalla tana, segue il Custode, riporta l’osso, va
   assert.ok(a.throwBone('casetta'), 'lancia l’osso');
   run(10);
   assert.ok(!a.bone.carrier && !a.bone.flying, 'osso riportato');
-  assert.ok(p.pos.distanceTo(a.avatar.pos) < 2, 'torna dal padrone');
+  assert.ok(p.pos.distanceTo(a.avatar.pos) < 2, 'torna dal Custode');
   a.sendPetHome('casetta');
   run(10);
   assert.equal(p.act, 'sleep', 'a cuccia dorme');
@@ -368,7 +368,7 @@ test('animale domestico: alla riapertura riprende quello che faceva (salvato nel
   assert.equal(home.act, 'sleep', 'chi era a cuccia resta in tana');
 });
 
-test('animale domestico: segue il padrone in modo fluido (niente inversioni di direzione)', async () => {
+test('animale domestico: segue il Custode in modo fluido (niente inversioni di direzione)', async () => {
   const { Actors } = await import('../src/view/Actors.ts');
   const { cellCenter } = await import('../src/view/WorldView.ts');
   const atmosphere = { addAnchor: () => ({}), removeAnchor() {}, moveAnchor() {} };
@@ -397,10 +397,10 @@ test('animale domestico: segue il padrone in modo fluido (niente inversioni di d
     }
   }
   assert.ok(reversals <= 2, `inversioni di marcia: ${reversals}`);
-  assert.ok(pet.pos.distanceTo(a.avatar.pos) < 3, 'resta vicino al padrone');
+  assert.ok(pet.pos.distanceTo(a.avatar.pos) < 3, 'resta vicino al Custode');
 });
 
-test('animale domestico: richiamato, parte dalla cuccia e raggiunge il padrone a piedi', async () => {
+test('animale domestico: richiamato, parte dalla cuccia e raggiunge il Custode a piedi', async () => {
   const { Actors } = await import('../src/view/Actors.ts');
   const { cellCenter } = await import('../src/view/WorldView.ts');
   const atmosphere = { addAnchor: () => ({}), removeAnchor() {}, moveAnchor() {} };
@@ -421,5 +421,5 @@ test('animale domestico: richiamato, parte dalla cuccia e raggiunge il padrone a
   let maxStep = 0, last = pet.pos.clone();
   for (let i = 0; i < 30 * 30; i++) { run(1 / 30); maxStep = Math.max(maxStep, pet.pos.distanceTo(last)); last = pet.pos.clone(); }
   assert.ok(maxStep < 0.3, `nessun salto: passo massimo ${maxStep.toFixed(2)}`);
-  assert.ok(pet.pos.distanceTo(a.avatar.pos) < 2.5, 'alla fine è dal padrone');
+  assert.ok(pet.pos.distanceTo(a.avatar.pos) < 2.5, 'alla fine è dal Custode');
 });

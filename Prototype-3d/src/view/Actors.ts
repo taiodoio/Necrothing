@@ -81,7 +81,7 @@ export interface Pet extends Walker {
   timer: number;
   repath: number;
   roams: number;
-  /** Sta inseguendo il padrone (con isteresi: non si ferma e riparte a scatti). */
+  /** Sta inseguendo il Custode (con isteresi: non si ferma e riparte a scatti). */
   chasing: boolean;
   broken: boolean;
   hitbox: THREE.Mesh;
@@ -576,7 +576,7 @@ export class Actors {
   }
 
   /**
-   * Insegue il padrone in modo fluido: dritto se la via è libera, altrimenti
+   * Insegue il Custode in modo fluido: dritto se la via è libera, altrimenti
    * lungo un percorso tirato; tiene il passo e rallenta arrivando, e si
    * ferma/riparte con un po' di margine (niente scatti avanti e indietro).
    */
@@ -638,7 +638,7 @@ export class Actors {
       case 'sleep':
         pet.rig.root.visible = false;
         pet.pose = 'idle';
-        // libero: dopo un sonnellino esce di nuovo; al seguito (salvato così): esce subito dal padrone
+        // libero: dopo un sonnellino esce di nuovo; al seguito (salvato così): esce subito dal Custode
         if (pet.mode !== 'home' && !pet.broken) { pet.timer -= dt; if (pet.timer <= 0) this.wake(pet); }
         return;
       case 'enter':
@@ -744,7 +744,7 @@ export class Actors {
     return p.act === 'sleep' ? p.home.clone().setY(1.4) : p.pos.clone().setY(this.ground(p.pos) + 0.9);
   }
 
-  /** Raggiunge il padrone: esce dalla tana (se dorme) e lo segue per il cimitero. */
+  /** Raggiunge il Custode: esce dalla tana (se dorme) e lo segue per il cimitero. */
   callPet(id: string): string {
     const p = this.pets.get(id);
     if (!p) return '';

@@ -1,11 +1,12 @@
 // Personalizzazione del Custode: anteprima 3D che gira e opzioni a tasselli
-// divise in schede (Aspetto: pelle, anche hoa-boa-hoa, occhi, occhiali;
+// con la miniatura, divise in schede (Aspetto: testa, pelle, anche hoa-boa-hoa, occhi, occhiali;
 // Capelli: taglio, barba e baffi; Vestiti: vestito, cappello e colori).
 // Le scelte si vedono subito nell'anteprima; il Custode in gioco cambia con
 // «Salva» (chiudendo con modifiche non salvate si chiede conferma).
 
 import * as THREE from 'three';
-import { DEFAULT_LOOK, LOOK_COLORS, LOOK_STYLES, lookKey, type CustodeLook } from '../game/look.ts';
+import { DEFAULT_LOOK, LOOK_COLORS, LOOK_STYLES, lookKey, lookUnused, type CustodeLook } from '../game/look.ts';
+import { lookThumb } from './lookThumbs.ts';
 import { animateRig, buildRig, type Rig } from '../view/characters.ts';
 import { LP } from '../render/lowpoly/kit.ts';
 import { GRASS, LPC } from '../render/lowpoly/palette.ts';
@@ -118,19 +119,27 @@ export function openCustomize(ui: UI) {
   } }, 'Salva') as HTMLButtonElement;
   const refresh = () => { saveBtn.disabled = !dirty(); };
   const apply = (patch: Partial<CustodeLook>) => {
+    const headChanged = patch.head !== undefined && patch.head !== look.head;
     look = { ...look, ...patch };
     preview.setLook(look);
     refresh();
+    // cambiando testa cambiano le scelte disponibili (zucca e teschio: niente capelli, barba…)
+    if (headChanged) { panes = buildPanes(); show(lastTab, false); }
   };
+  /** Scelte che la testa attuale non usa: visibili ma disattivate. */
+  const off = (key: keyof CustodeLook) => lookUnused(look.head).has(key);
 
-  /** Riga di scelte testuali (vanno a capo su schermi stretti). */
-  const options = <K extends 'hair' | 'hat' | 'outfit' | 'glasses' | 'beard' | 'mustache'>(key: K) => {
-    const box = h('div', { class: 'look-opts', role: 'group' });
+  /** Griglia di scelte con la miniatura (si riempie man mano che le miniature sono pronte). */
+  const options = <K extends 'head' | 'hair' | 'hat' | 'outfit' | 'glasses' | 'beard' | 'mustache'>(key: K) => {
+    const box = h('div', { class: 'look-tiles', role: 'group' });
+    const disabled = off(key);
     for (const [v, label] of LOOK_STYLES[key] as Array<[CustodeLook[K], string]>) {
-      const b = h('button', { class: look[key] === v ? 'active' : '', 'aria-pressed': String(look[key] === v), onclick: () => {
+      const img = h('img', { alt: '', width: 72, height: 72, draggable: false }) as HTMLImageElement;
+      const b = h('button', { class: `look-tile${look[key] === v ? ' active' : ''}`, 'aria-pressed': String(look[key] === v), disabled, onclick: () => {
         for (const x of Array.from(box.children)) { x.classList.toggle('active', x === b); x.setAttribute('aria-pressed', String(x === b)); }
         apply({ [key]: v } as Partial<CustodeLook>);
-      } }, label);
+      } }, h('span', { class: 'look-thumb' }, img), h('span', { class: 'look-tile-label' }, label));
+      void lookThumb(key, v).then((url) => { if (url) { img.src = url; img.classList.add('ready'); } });
       box.append(b);
     }
     return box;
@@ -140,7 +149,7 @@ export function openCustomize(ui: UI) {
   const swatches = (key: keyof typeof LOOK_COLORS) => {
     const box = h('div', { class: 'swatches', role: 'group' });
     for (const [c, label] of LOOK_COLORS[key]) {
-      const b = h('button', { class: `swatch${look[key] === c ? ' active' : ''}`, style: `background:${c}`, title: label, 'aria-label': label, 'aria-pressed': String(look[key] === c), onclick: () => {
+      const b = h('button', { class: `swatch${look[key] === c ? ' active' : ''}`, style: `background:${c}`, title: label, 'aria-label': label, 'aria-pressed': String(look[key] === c), disabled: off(key), onclick: () => {
         for (const x of Array.from(box.children)) { x.classList.toggle('active', x === b); x.setAttribute('aria-pressed', String(x === b)); }
         apply({ [key]: c } as Partial<CustodeLook>);
       } });
@@ -150,20 +159,24 @@ export function openCustomize(ui: UI) {
   };
 
   const toggle = (key: 'sparkle' | 'freckles' | 'bandaid', label: string) =>
-    h('label', { class: 'setting' }, label, h('input', { type: 'checkbox', checked: look[key], onchange: (e: Event) => apply({ [key]: (e.target as HTMLInputElement).checked } as Partial<CustodeLook>) }));
+    h('label', { class: `setting${off(key) ? ' off' : ''}` }, label, h('input', { type: 'checkbox', checked: look[key], disabled: off(key), onchange: (e: Event) => apply({ [key]: (e.target as HTMLInputElement).checked } as Partial<CustodeLook>) }));
 
   const lowpoly = game.state.settings.style === 'lowpoly';
   const title = (t: string) => h('div', { class: 'section-title' }, t);
   const sub = (t: string) => h('div', { class: 'muted look-sub' }, t);
+  /** Avviso quando la testa scelta non usa una parte delle scelte. */
+  const bald = () => (lookUnused(look.head).size ? h('p', { class: 'muted look-note' }, `Con la testa a ${look.head === 'pumpkin' ? 'zucca' : 'teschio'} capelli, barba, baffi, pelle e occhi non si usano: tornano scegliendo un’altra testa.`) : null);
   // schede: poche scelte alla volta invece di una pagina lunghissima (ricostruite
   // quando si torna all'aspetto originale, così i tasti attivi seguono la bozza)
   const buildPanes = (): Array<[LookTab, string, HTMLElement]> => [
     ['aspetto', 'Aspetto', h('div', {},
+      title('Testa'), options('head'), bald(),
       title('Pelle'), swatches('skin'),
       toggle('sparkle', 'Pelle hoa-boa-hoa ✨'), toggle('freckles', 'Lentiggini'), toggle('bandaid', 'Cerotto'),
       title('Occhi'), swatches('eyes'),
       title('Occhiali'), options('glasses'))],
     ['capelli', 'Capelli', h('div', {},
+      bald(),
       title('Taglio'), options('hair'), sub('Colore'), swatches('hairColor'),
       title('Barba e baffi'), sub('Barba'), options('beard'), sub('Baffi'), options('mustache'), sub('Colore di barba e baffi'), swatches('beardColor'))],
     ['vestiti', 'Vestiti', h('div', {},
@@ -174,11 +187,11 @@ export function openCustomize(ui: UI) {
   let panes = buildPanes();
   const content = h('div', { class: 'look-pane' });
   const tabs = h('div', { class: 'tabs look-tabs', role: 'tablist' });
-  const show = (id: LookTab) => {
+  const show = (id: LookTab, toTop = true) => {
     lastTab = id;
     for (const [tid, , pane] of panes) if (tid === id) content.replaceChildren(pane);
     for (const b of Array.from(tabs.children)) { const on = (b as HTMLElement).dataset.tab === id; b.classList.toggle('active', on); b.setAttribute('aria-selected', String(on)); }
-    content.parentElement?.parentElement?.scrollTo?.({ top: 0 });
+    if (toTop) content.parentElement?.parentElement?.scrollTo?.({ top: 0 });
   };
   for (const [id, label] of panes) tabs.append(h('button', { class: 'tab', role: 'tab', 'data-tab': id, onclick: () => show(id) }, label));
   const body = h('div', { class: 'look' },

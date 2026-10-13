@@ -13,7 +13,7 @@ import { instantiate, LOWPOLY_MATERIALS, type CachedModel } from '../../modelCac
 import { VOX } from '../../shape.ts';
 import { flower, grassTuft } from '../details.ts';
 import { mushroom } from '../nature.ts';
-import type { CustodeLook, HairStyle, HatStyle, HeadStyle } from '../../../game/look.ts';
+import { BALD_HEADS, type CustodeLook, type HairStyle, type HatStyle, type HeadStyle } from '../../../game/look.ts';
 
 // ── Parti del rig ───────────────────────────────────────────────────────
 
@@ -36,7 +36,7 @@ export interface KawaiiSpec {
 // Stesse opzioni della personalizzazione del gioco (CustodeLook); la palette
 // del concept è l'aspetto predefinito del prototipo.
 export const CONCEPT_LOOK: CustodeLook = {
-  skin: '#f6cba6', sparkle: true, hair: 'spiky', hairColor: '#d98238', eyes: '#1f4d2e',
+  head: 'human', skin: '#f6cba6', sparkle: true, hair: 'spiky', hairColor: '#d98238', eyes: '#1f4d2e',
   glasses: 'none', beard: 'braid', mustache: 'handlebar', beardColor: '#d4567c', freckles: false, bandaid: false,
   hat: 'none', hatColor: '#4a3326', outfit: 'coat', outfitColor: '#58722f', accentColor: '#eadcc0',
 };
@@ -46,14 +46,12 @@ const DARK = '#2c2a25';
 const BOOT = '#6c4830';
 const SOLE = '#2a221d';
 const shade = (c: string, k: number) => `#${new THREE.Color(c).offsetHSL(0, 0, k).getHexString()}`;
-/** Teste che non portano capelli, barba e baffi (la zucca ha il picciolo, il teschio è osso). */
-export const BALD_HEADS: HeadStyle[] = ['pumpkin', 'skull'];
 let HEAD: HeadStyle = 'human';
 const BONE = '#e2d9c3';
 const mix = (a: string, b: string, k: number) => `#${new THREE.Color(a).lerp(new THREE.Color(b), k).getHexString()}`;
 function applyLook(l: CustodeLook) {
   L = l;
-  HEAD = l.head ?? 'human';
+  HEAD = l.head;
   // lo zombie resta del colore scelto, ma verdognolo; il teschio è osso
   SKIN = HEAD === 'zombie' ? mix(l.skin, '#9cc27a', 0.68) : HEAD === 'skull' ? BONE : l.skin;
   if (BALD_HEADS.includes(HEAD)) L = { ...l, hair: 'none', beard: 'none', mustache: 'none', freckles: false, bandaid: false, sparkle: false };

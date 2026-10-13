@@ -1,5 +1,5 @@
 // Aspetto del Custode (personalizzabile, salvato nella partita). Nessun
-// genere: si scelgono pelle (anche "brillantinata"), capelli e colore, occhi,
+// genere: si scelgono la testa (anche zucca, teschio, zombie), pelle (anche "brillantinata"), capelli e colore, occhi,
 // dettagli (occhiali, lentiggini, cerotto), barba e baffi, cappello, vestiti e colori.
 
 export type HairStyle = 'tufts' | 'bob' | 'long' | 'curly' | 'longcurly' | 'bun' | 'spiky' | 'none'
@@ -13,8 +13,8 @@ export type Beard = 'none' | 'short' | 'full' | 'braid';
 export type Mustache = 'none' | 'thin' | 'handlebar' | 'bushy';
 
 export interface CustodeLook {
-  /** Tipo di testa (in anteprima: non ancora nel selettore del gioco). */
-  head?: HeadStyle;
+  /** Tipo di testa: umana, zucca intagliata, teschio, zombie. */
+  head: HeadStyle;
   skin: string;
   sparkle: boolean;
   hair: HairStyle;
@@ -47,7 +47,12 @@ export const LOOK_COLORS: Record<'skin' | 'hairColor' | 'beardColor' | 'eyes' | 
 };
 
 export const LOOK_STYLES = {
-  hair: [['tufts', 'Ciuffi'], ['bob', 'Caschetto'], ['long', 'Lunghi'], ['curly', 'Ricci'], ['longcurly', 'Ricci lunghi'], ['bun', 'Chignon'], ['spiky', 'Spettinati'], ['none', 'Nessuno']] as Array<[HairStyle, string]>,
+  head: [['human', 'Umana'], ['pumpkin', 'Zucca'], ['skull', 'Teschio'], ['zombie', 'Zombie']] as Array<[HeadStyle, string]>,
+  hair: [
+    ['tufts', 'Ciuffi'], ['spiky', 'Spettinati'], ['buzz', 'Rasati'], ['bob', 'Caschetto'], ['long', 'Lunghi'],
+    ['fringe', 'Frangia corta'], ['fringeLong', 'Frangia lunga'], ['side', 'Di lato corti'], ['sideLong', 'Di lato lunghi'], ['wavy', 'Mossi corti'],
+    ['wavyLong', 'Mossi lunghi'], ['curly', 'Ricci'], ['longcurly', 'Ricci lunghi'], ['bun', 'Chignon'], ['none', 'Nessuno'],
+  ] as Array<[HairStyle, string]>,
   hat: [['wide', 'Tesa larga'], ['top', 'Cilindro'], ['beanie', 'Berretto'], ['none', 'Nessuno']] as Array<[HatStyle, string]>,
   outfit: [['coat', 'Cappotto'], ['cloak', 'Mantella'], ['overalls', 'Salopette'], ['sweater', 'Maglione']] as Array<[Outfit, string]>,
   glasses: [['none', 'Nessuno'], ['round', 'Tondi'], ['square', 'Squadrati'], ['monocle', 'Monocolo']] as Array<[Glasses, string]>,
@@ -56,7 +61,7 @@ export const LOOK_STYLES = {
 };
 
 export const DEFAULT_LOOK: CustodeLook = {
-  skin: '#f2cfb0', sparkle: false, hair: 'tufts', hairColor: '#6b4a33', eyes: '#1b1a20',
+  head: 'human', skin: '#f2cfb0', sparkle: false, hair: 'tufts', hairColor: '#6b4a33', eyes: '#1b1a20',
   glasses: 'none', beard: 'none', mustache: 'none', beardColor: '#6b4a33', freckles: false, bandaid: false,
   hat: 'wide', hatColor: '#4a3326', outfit: 'coat', outfitColor: '#6e4c36', accentColor: '#a4473b',
 };
@@ -71,6 +76,7 @@ export function normalizeLook(raw: unknown): CustodeLook {
     // i salvataggi di prima avevano barba e baffi nel colore dei capelli
     beardColor: LOOK_COLORS.beardColor.some(([c]) => c === r.beardColor) ? r.beardColor as string : color('hairColor'),
     sparkle: r.sparkle === true, freckles: r.freckles === true, bandaid: r.bandaid === true,
+    head: pick(r.head, LOOK_STYLES.head, DEFAULT_LOOK.head),
     hair: pick(r.hair, LOOK_STYLES.hair, DEFAULT_LOOK.hair),
     hat: pick(r.hat, LOOK_STYLES.hat, DEFAULT_LOOK.hat),
     outfit: pick(r.outfit, LOOK_STYLES.outfit, DEFAULT_LOOK.outfit),
@@ -82,8 +88,20 @@ export function normalizeLook(raw: unknown): CustodeLook {
 
 /** Chiave breve e stabile di un aspetto (cache dei modelli). */
 export function lookKey(l: CustodeLook): string {
-  const s = JSON.stringify([l.skin, l.sparkle, l.hair, l.hairColor, l.eyes, l.glasses, l.beard, l.mustache, l.beardColor, l.freckles, l.bandaid, l.hat, l.hatColor, l.outfit, l.outfitColor, l.accentColor]);
+  const s = JSON.stringify([l.head === 'human' ? undefined : l.head, l.skin, l.sparkle, l.hair, l.hairColor, l.eyes, l.glasses, l.beard, l.mustache, l.beardColor, l.freckles, l.bandaid, l.hat, l.hatColor, l.outfit, l.outfitColor, l.accentColor]);
   let h = 2166136261;
   for (let i = 0; i < s.length; i++) h = Math.imul(h ^ s.charCodeAt(i), 16777619);
   return (h >>> 0).toString(36);
+}
+
+/** Teste senza capelli, barba e baffi (la zucca ha il picciolo, il teschio è osso). */
+export const BALD_HEADS: readonly HeadStyle[] = ['pumpkin', 'skull'];
+/**
+ * Scelte che una testa non usa (restano visibili ma disattivate nel selettore):
+ * zucca e teschio non hanno capelli, barba, baffi, lentiggini, cerotto né brillantini;
+ * la loro pelle e i loro occhi non cambiano colore.
+ */
+export function lookUnused(head: HeadStyle): Set<keyof CustodeLook> {
+  if (!BALD_HEADS.includes(head)) return new Set();
+  return new Set<keyof CustodeLook>(['hair', 'hairColor', 'beard', 'mustache', 'beardColor', 'freckles', 'bandaid', 'sparkle', 'skin', 'eyes']);
 }

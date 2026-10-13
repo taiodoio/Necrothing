@@ -282,9 +282,17 @@ button.slot:active, .icon-btn:active, .ctx-actions button:active, .big-btn:activ
 .look-sub { margin-top: 6px; }
 .look-foot > .big-btn { flex: 1; }
 .look-foot > .big-btn:disabled { opacity: 0.5; }
-.look-opts { display: flex; flex-wrap: wrap; gap: 6px; margin: 4px 0 8px; }
-.look-opts button { min-height: 36px; padding: 4px 10px; font-size: 13px; border: 2px solid #07080b; background: #1d2024; color: inherit; }
-.look-opts button.active { background: #4a3a1d; color: var(--gold-bright); border-color: var(--gold); }
+.look-tiles { display: grid; grid-template-columns: repeat(auto-fill, minmax(78px, 1fr)); gap: 6px; margin: 4px 0 8px; }
+.look-tile { display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 4px 2px 5px; border: 2px solid #07080b; background: #1d2024; color: inherit; font-size: 11px; line-height: 1.15; cursor: pointer; min-width: 0; }
+.look-tile.active { background: #4a3a1d; color: var(--gold-bright); border-color: var(--gold); }
+.look-tile:disabled { opacity: 0.35; cursor: default; }
+.look-thumb { display: block; width: 72px; max-width: 100%; aspect-ratio: 1; background: #141a18; }
+.look-thumb img { display: block; width: 100%; height: 100%; opacity: 0; transition: opacity 0.2s; }
+.look-thumb img.ready { opacity: 1; }
+.look-tile-label { text-align: center; overflow-wrap: anywhere; }
+.look-note { margin: 0 0 8px; font-size: 13px; }
+.swatch:disabled { opacity: 0.3; cursor: default; }
+.setting.off { opacity: 0.5; }
 .swatches { display: flex; flex-wrap: wrap; gap: 8px; margin: 4px 0 8px; }
 .swatch { width: 36px; height: 36px; padding: 0; border: 3px solid #07080b; box-shadow: inset 0 0 0 2px rgba(255,255,255,0.12); cursor: pointer; }
 .swatch.active { border-color: var(--gold-bright); box-shadow: 0 0 0 2px #07080b, inset 0 0 0 2px rgba(255,255,255,0.25); }

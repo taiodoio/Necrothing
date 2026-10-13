@@ -324,7 +324,8 @@ const HAIR_TIPS: Record<Exclude<HairStyle, 'none'>, (a: number, sd: number) => n
   fringe: (a) => (a < 50 ? -2 : a < 95 ? lerp(-2, -4, smooth(50, 95, a)) : lerp(-4, -40, smooth(95, 165, a))),
   fringeLong: longTip(-2),
   side: (a, sd) => (a < 95 ? lerp(sideFront(sd), 2, smooth(55, 95, a)) : lerp(2, -38, smooth(95, 165, a))),
-  sideLong: (a, sd) => (a < 72 ? lerp(sideFront(sd), -88, smooth(50, 72, a)) : lerp(-88, -95, smooth(72, 140, a))),
+  // ciuffo di lato lungo: la frangia spazzata scende fino a coprire un occhio, lati lisci e lunghi
+  sideLong: (a, sd) => (a < 72 ? lerp(sd < 0 ? lerp(-6, 8, smooth(-45, 0, sd)) : lerp(8, 34, smooth(0, 30, sd)), -88, smooth(50, 72, a)) : lerp(-88, -95, smooth(72, 140, a))),
   // mossi: riga di lato, ciocche a onde con le punte tonde che si aprono; corti fino al lobo
   wavy: (a, sd) => (a < 45 ? waveFront(sd) : a < 110 ? lerp(waveFront(sd * 0.3), -26, smooth(45, 100, a)) : lerp(-26, -34, smooth(110, 170, a))),
   wavyLong: (a, sd) => (a < 45 ? waveFront(sd) : longTip(waveFront(sd * 0.3), -92, -102)(a)),
@@ -602,7 +603,7 @@ function moustache(lp: LP) {
  * per ciocca che scende dal vortice girando un poco: le ciocche fanno parte
  * del volume, non possono staccarsi.
  */
-export function hairLayer(lp: LP, o: { locks: number; hem: (thDeg: number) => number; depth: number; lift: number; thick: number; phase: number; swirl: number; seed: number; tone: (k: number) => string; top?: number; span?: [number, number]; waveTh?: number; flare?: number; round?: boolean; sweep?: number }) {
+export function hairLayer(lp: LP, o: { locks: number; hem: (thDeg: number) => number; depth: number; lift: number; thick: number; phase: number; swirl: number; seed: number; tone: (k: number) => string; top?: number; span?: [number, number]; waveTh?: number; flare?: number; round?: boolean; sweep?: number; waveZone?: 'sides' | 'front' | 'all' }) {
   const rnd = prng(o.seed);
   const jitter = Array.from({ length: o.locks }, () => [0.75 + rnd() * 0.5, (rnd() - 0.5) * 0.3, rnd()]); // lunghezza, asimmetria, tono
   const NU = o.locks * 4, NV = o.waveTh ? 16 : 6; // pochi segmenti: bastano per punta e rilievo di ogni ciocca (le onde ne vogliono di più)
@@ -622,7 +623,9 @@ export function hairLayer(lp: LP, o: { locks: number; hem: (thDeg: number) => nu
       const th0 = (o.span ? lerp(o.span[0], o.span[1], u) : u * 360) + o.swirl * v;
       // ciuffo di lato (sweep): le ciocche davanti partono dalla riga e scendono di traverso sulla fronte, ondeggiando anche lì
       const front = 1 - smooth(10, 150, absDeg(th0 * DEG)); // calo dolce: le ciocche spostate non si accavallano
-      const sides = o.sweep ? 1 : smooth(30, 75, absDeg(th0 * DEG));
+      // dove ondeggiano le ciocche: ai lati e dietro (mossi), ovunque, o solo sulla fronte (ciuffo di lato lungo, lati lisci)
+      const zone = o.waveZone ?? (o.sweep ? 'all' : 'sides');
+      const sides = zone === 'all' ? 1 : zone === 'front' ? 1 - smooth(50, 95, absDeg(th0 * DEG)) : smooth(30, 75, absDeg(th0 * DEG));
       const wv = o.waveTh ? o.waveTh * Math.sin((1 - v) * Math.PI * 2.6 + k * 0.9) * smooth(0, 0.6, 1 - v) * sides : 0;
       const thD = th0 + wv + (o.sweep ?? 0) * front * Math.pow(1 - v, 1.3);
       const ends = o.span ? smooth(0, 0.1, u) * smooth(1, 0.9, u) : 1; // un arco si assottiglia agli estremi
@@ -686,7 +689,7 @@ function hair(lp: LP) {
   const tip = (thD: number) => hairTip(thD * DEG);
   const top = Math.min(hatPh(), X.hair?.top ?? 89), hat = hatPh() < 89;
   const style = L.hair;
-  const depth = X.hair?.depth ?? ({ bob: 1, long: 2, bun: 4, longcurly: 6, curly: 7, fringe: 2, fringeLong: 1, side: 6, sideLong: 5, wavy: 5, wavyLong: 6, tufts: 9 } as Record<string, number>)[style] ?? 13;
+  const depth = X.hair?.depth ?? ({ bob: 1, long: 2, bun: 4, longcurly: 6, curly: 7, fringe: 2, fringeLong: 1, side: 6, sideLong: 3, wavy: 5, wavyLong: 6, tufts: 9 } as Record<string, number>)[style] ?? 13;
   if (X.hair) { // orlo su misura (corona di capelli ai lati, ciuffi grigi…): un solo strato
     hairLayer(lp, { locks: 14, hem: (t) => tip(t) + 4, depth, lift: X.hair.lift ?? 0.03, thick: X.hair.thick ?? 0.05, phase: 0, swirl: 6, seed: 3, tone, top: Math.min(top, X.hair.top ?? 89), span: X.hair.span });
     return;
@@ -699,13 +702,15 @@ function hair(lp: LP) {
   const curly = style === 'curly' || style === 'longcurly';
   // mossi: poche ciocche grosse, a S, con le punte tonde che si aprono in fuori
   const wavy = style === 'wavy' || style === 'wavyLong';
-  const wave = wavy ? { waveTh: style === 'wavy' ? 9 : 15, flare: style === 'wavy' ? 0.05 : 0.07, round: true } : {};
-  const wave2 = wavy ? { waveTh: style === 'wavy' ? 7 : 11, flare: 0.03, round: true } : {};
+  const wave = wavy ? { waveTh: style === 'wavy' ? 9 : 18, flare: style === 'wavy' ? 0.05 : 0.11, round: true } : {};
+  const wave2 = wavy ? { waveTh: style === 'wavy' ? 7 : 13, flare: style === 'wavy' ? 0.03 : 0.06, round: true } : {};
   // ciuffo di lato: come i mossi ma più accentuato, con le ciocche davanti spazzate di traverso
   const swept = style === 'side' || style === 'sideLong';
-  const sw1 = swept ? { waveTh: 12, flare: 0.04, round: true, sweep: -40 } : wave;
-  const sw2 = swept ? { waveTh: 7, flare: 0.03, round: true, sweep: -45 } : wave2;
-  const sw3 = swept ? { round: true, sweep: -35 } : {};
+  // il lungo invece ha i lati lisci e dritti: solo la frangia spazzata ondeggia e copre un occhio
+  const sideLong = style === 'sideLong';
+  const sw1 = sideLong ? { waveTh: 12, sweep: -50, waveZone: 'front' as const } : swept ? { waveTh: 12, flare: 0.04, round: true, sweep: -40 } : wave;
+  const sw2 = sideLong ? { waveTh: 8, sweep: -55, waveZone: 'front' as const, round: true } : swept ? { waveTh: 7, flare: 0.03, round: true, sweep: -45 } : wave2;
+  const sw3 = sideLong ? { sweep: -40, round: true } : swept ? { round: true, sweep: -35 } : {};
   // i ricci hanno sotto un casco sottile e più scuro: si vedono solo i riccioli
   const base = curly ? (k: number) => tone(k - 0.07) : tone;
   const thick = curly ? 0.025 : hat ? 0.03 : 0.05;

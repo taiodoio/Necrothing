@@ -297,6 +297,32 @@ test('Custode personalizzabile: aspetto validato, chiave stabile, rig con tutte 
   assert.ok(sparkly.parts.head.children[0].children.some((m) => m.name === 'glow'), 'brillantini luminosi sul viso');
 });
 
+test('teste del Custode: zucca, teschio e zombie; zucca e teschio senza capelli né barba', async () => {
+  const { DEFAULT_LOOK, normalizeLook, lookKey, lookUnused, LOOK_STYLES } = await import('../src/game/look.ts');
+  const { buildRig } = await import('../src/view/characters.ts');
+  assert.equal(normalizeLook({}).head, 'human', 'salvataggi vecchi: testa umana');
+  assert.equal(normalizeLook({ head: 'pumpkin' }).head, 'pumpkin');
+  assert.equal(normalizeLook({ head: 'cavolo' }).head, 'human');
+  assert.equal(lookKey({ ...DEFAULT_LOOK }), lookKey(normalizeLook({})), 'la testa umana non cambia la chiave dei vecchi aspetti');
+  assert.ok(lookUnused('skull').has('hair') && lookUnused('pumpkin').has('beard'));
+  assert.equal(lookUnused('zombie').size, 0, 'lo zombie può avere capelli e barba');
+  const tris = (rig) => { let n = 0; rig.parts.head.traverse((o) => { if (o.geometry) n += o.geometry.attributes.position.count; }); return n; };
+  const hairy = { ...DEFAULT_LOOK, hat: 'none', hair: 'longcurly', beard: 'full', mustache: 'bushy' };
+  for (const [head] of LOOK_STYLES.head) {
+    const rig = buildRig('custode', 'lowpoly', { ...hairy, head });
+    assert.equal(Object.keys(rig.parts).length, 6, head);
+  }
+  // zucca e teschio ignorano capelli e barba: stessa testa con o senza
+  for (const head of ['pumpkin', 'skull']) {
+    const a = buildRig('custode', 'lowpoly', { ...hairy, head });
+    const b = buildRig('custode', 'lowpoly', { ...DEFAULT_LOOK, hat: 'none', hair: 'none', head });
+    assert.equal(tris(a), tris(b), `${head}: niente capelli né barba`);
+  }
+  // la faccia intagliata della zucca si illumina
+  const pumpkin = buildRig('custode', 'lowpoly', { ...DEFAULT_LOOK, head: 'pumpkin' });
+  assert.ok(pumpkin.parts.head.children[0].children.some((m) => m.name === 'glow'), 'intaglio luminoso');
+});
+
 test('nuovo salvataggio: aspetto predefinito; salvataggio vecchio senza aspetto viene completato', async () => {
   const { normalizeSave } = await import('../src/game/state.ts');
   const { DEFAULT_LOOK } = await import('../src/game/look.ts');

@@ -39,8 +39,9 @@ const O: LPOpts = { jitter: 0, vary: 0.04, ao: 0 };
 // Non una sfera: un "superellissoide" (più pieno di una sfera, con la faccia
 // più piatta davanti) che si allarga un po' in basso sulle guance, come nel
 // concept. Superficie implicita F = 1; punti e normali si trovano per bisezione.
-const C = new THREE.Vector3(0, 0.8, 0);
-const R = new THREE.Vector3(0.27, 0.285, 0.255);
+// meno alta di prima (meno fronte): il mento resta dov'era, la sommità scende
+const C = new THREE.Vector3(0, 0.77, 0);
+const R = new THREE.Vector3(0.275, 0.252, 0.255);
 const PW = 2.5; // 2 = ellissoide, più alto = più squadrato
 /** Allargamento sulle guance (in basso) e un po' meno in cima. */
 const cheeks = (yn: number) => 1 + 0.07 * smooth(0.15, -0.55, yn) - 0.03 * smooth(0.3, 0.9, yn);
@@ -206,15 +207,15 @@ const rbox = (w: number, h: number, d: number, r: number, seg = 2) => new Rounde
 const EYE_Y = 0.682, EYE_X = 0.1;
 const absDeg = (th: number) => Math.abs(Math.atan2(Math.sin(th), Math.cos(th))) / DEG; // 0 davanti, 180 dietro
 /** Dove arrivano le punte dei capelli (φ in gradi): poco sopra gli occhi davanti, sopra le orecchie ai lati, alla nuca dietro. */
-const hairTip = (th: number) => { const a = absDeg(th); return a < 90 ? lerp(24, 2, smooth(30, 90, a)) : lerp(2, -34, smooth(90, 160, a)); };
+const hairTip = (th: number) => { const a = absDeg(th); return a < 90 ? lerp(20, 0, smooth(30, 90, a)) : lerp(2, -34, smooth(90, 160, a)); };
 /** Bordo superiore della barba (φ in gradi): sotto la bocca davanti, sale lungo la mandibola fino all'orecchio. */
-const beardTop = (thDeg: number) => lerp(-53, -16, smooth(0, 96, Math.abs(thDeg)));
+const beardTop = (thDeg: number) => lerp(-60, -18, smooth(0, 96, Math.abs(thDeg)));
 
 function head(lp: LP) {
   lp.add(headGeo(), SKIN, { ...O, ao: 0.05 });
-  for (const s of [-1, 1]) lp.blob(s * (R.x - 0.004), 0.708, -0.012, 0.05, 0.064, 0.04, SKIN, { ...O, detail: 2 } as LPOpts); // orecchie grandi e tonde
+  for (const s of [-1, 1]) lp.blob(s * (R.x - 0.004), 0.695, -0.012, 0.05, 0.064, 0.04, SKIN, { ...O, detail: 2 } as LPOpts); // orecchie grandi e tonde
   // bocca: sorrisetto un po' di lato, sotto i baffi
-  onSkin(lp, headFront(0.03, 0.575), 0.002, 0.15, (q) => q.add(new THREE.TorusGeometry(0.024, 0.007, 3, 8, Math.PI).rotateZ(Math.PI), '#2a1a1c', O));
+  onSkin(lp, headFront(0.03, 0.58), 0.002, 0.15, (q) => q.add(new THREE.TorusGeometry(0.028, 0.008, 3, 8, Math.PI).rotateZ(Math.PI), '#2a1a1c', O));
 }
 
 /** Brillantini a stella, grandi e radi, su tutto il viso (non su occhi, baffi, barba, capelli). */
@@ -299,8 +300,8 @@ function hair(lp: LP) {
     for (let k = 0; k < row.n; k++) {
       const th0 = (k + (r % 2) * 0.5) * (360 / row.n) + (rnd() - 0.5) * 8;
       lock(lp, {
-        th0, th1: th0 + 6 + (rnd() - 0.5) * 10, ph0: row.root, ph1: row.tip(th0) - rnd() * 5,
-        w: row.w * (0.9 + rnd() * 0.2), t: 0.05, surface: (th: number, ph: number) => capT(th * DEG, ph) * 0.8, bulge: 0.016, lift: 0.012 + rnd() * 0.012,
+        th0, th1: th0 + (r % 2 ? 9 : -4) + (rnd() - 0.5) * 14, ph0: row.root + (rnd() - 0.5) * 6, ph1: row.tip(th0) - rnd() * 9,
+        w: row.w * (0.8 + rnd() * 0.45), t: 0.058 + rnd() * 0.012, surface: (th: number, ph: number) => capT(th * DEG, ph) * 0.78, bulge: 0.018, lift: 0.01 + rnd() * 0.022,
         col: tone([0.03, -0.02, 0.05, 0.01, -0.035][(k + r) % 5]),
       });
     }
@@ -340,8 +341,10 @@ function body(lp: LP) {
   lp.push([0, 0.505, 0.005], 0, 0.12, 0, [1, 1, 0.9]);
   lp.add(new THREE.TorusGeometry(0.13, 0.032, 6, 18).rotateX(Math.PI / 2), SCARF, O);
   lp.pop();
-  lp.push([-0.075, 0.47, 0.2], 0, 0.22, 0.1);
-  lp.add(rbox(0.082, 0.16, 0.024, 0.01, 1).translate(0, -0.075, 0), SCARF, O);
+  // nodo sotto la barba, poi il capo che scende sul petto
+  lp.blob(-0.07, 0.48, 0.17, 0.05, 0.04, 0.035, SCARF, { ...O, detail: 1 } as LPOpts);
+  lp.push([-0.085, 0.475, 0.205], 0, 0.22, 0.14);
+  lp.add(rbox(0.086, 0.17, 0.024, 0.01, 1).translate(0, -0.08, 0), SCARF, O);
   for (const y of [-0.04, -0.085, -0.13]) lp.add(new THREE.BoxGeometry(0.084, 0.016, 0.005).translate(0, y, 0.013), SCARF_STRIPE, O);
   lp.pop();
   // gambe corte e un po' larghe, stivaloni tondi con suola spessa

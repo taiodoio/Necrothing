@@ -36,6 +36,12 @@ Terza passata:
   - maniche morbide che scendono in fuori e si allargano al polso, polsini scuri e manone;
   - gambe larghe e stivaloni.
 
+Quarta passata:
+- **Testa:** più bassa, quindi meno fronte; il mento resta dov'era, scende la sommità. Anche la frangia è più bassa.
+- **Ciocche:** più spesse, più varie in larghezza, lunghezza e direzione, con le punte un po' sollevate.
+- **Sciarpa:** ha un nodo che esce da sotto la barba, prima del capo che scende sul petto.
+- **Bocca:** un po' più grande, tra baffi e barba.
+
 Restano differenze con il concept:
 - l'ombreggiatura morbida da render (il gioco usa facce piatte);
 - la pelle, un po' più spenta per via della luce del gioco;

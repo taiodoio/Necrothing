@@ -213,7 +213,9 @@ const absDeg = (th: number) => Math.abs(Math.atan2(Math.sin(th), Math.cos(th))) 
 /** Dove arrivano le punte dei capelli (φ in gradi): poco sopra gli occhi davanti, sopra le orecchie ai lati, alla nuca dietro. */
 const hairTip = (th: number) => { const a = absDeg(th); return a < 90 ? lerp(20, 0, smooth(30, 90, a)) : lerp(0, -32, smooth(90, 160, a)); }; // ai lati scende fin sopra l'orecchio, dietro alla nuca
 /** Bordo superiore della barba (φ in gradi): sotto la bocca davanti, sale lungo la mandibola fino all'orecchio. */
-const beardTop = (thDeg: number) => lerp(-54, 6, smooth(16, 86, Math.abs(thDeg))); // davanti appena sotto la bocca, ai lati sale fino ai capelli alla tempia // sale lungo la guancia e raggiunge i capelli davanti all'orecchio
+// bordo superiore: davanti subito sotto la bocca, sulle guance resta basso
+// (lungo la mandibola) e solo vicino all'orecchio sale come basetta fino ai capelli
+const beardTop = (thDeg: number) => { const a = Math.abs(thDeg); return a < 70 ? lerp(-53, -48, smooth(0, 70, a)) : lerp(-50, 6, smooth(70, 88, a)); };
 
 function head(lp: LP) {
   lp.add(headGeo(), SKIN, { ...O, ao: 0.05 });
@@ -247,61 +249,61 @@ function glitter(lp: LP) {
  */
 /** Bordo inferiore della barba (φ, gradi): sotto il mento, ma non così in basso da finire dietro il colletto. */
 const BEARD_LOW = -72;
-const BEARD_DROP = 0.12;
+const BEARD_DROP = 0.09;
 /** Bordo inferiore lungo la mandibola: sotto il mento davanti, sale verso l'orecchio (profilo a diagonale). */
-const beardLow = (u: number) => lerp(BEARD_LOW, -28, smooth(0.25, 1, Math.abs(u)));
-/**
- * Involucro della barba: un "superellissoide" un po' più basso e avanzato
- * della testa, con il davanti quasi piatto. La barba è la parte di questo
- * involucro che sta fuori dalla testa: sottile sulle guance (dove l'involucro
- * quasi coincide con la faccia), piena sotto il mento, con il davanti che
- * scende dritto. I punti si trovano lungo raggi dal centro della testa, così
- * la superficie non si piega e non si stira.
- */
-const ENV = { cy: 0.0, b: 0, k: 2.8 };
-function envF(x: number, y: number, z: number): number {
-  const a = R.x * 1.0, c = R.z * 1.03, cz = 0.035;
-  return Math.abs(x / a) ** ENV.k + Math.abs((y - ENV.cy) / ENV.b) ** ENV.k + Math.abs((z - cz) / c) ** ENV.k;
-}
-function beardPoint(u: number, v: number): { p: THREE.Vector3; n: THREE.Vector3; q: THREE.Vector3 } {
-  if (!ENV.b) { ENV.cy = C.y - 0.04; ENV.b = R.y * 1.0 + BEARD_DROP * 0.3; }
+const beardLow = (u: number) => { const au = Math.abs(u), e = au * au * (3 - 2 * au); return lerp(-60, -26, e); }; // lungo il cuscinetto
+/** Bordo inferiore della barba sulla pelle: sotto il mento davanti, sotto l'orecchio ai lati. */
+function beardSkin(u: number, v: number) {
   const th = u * 92;
-  const { p, n } = headAt(th * DEG, lerp(beardLow(u), beardTop(th), v) * DEG);
-  const d = p.clone().sub(C).normalize();
-  let lo = 0, hi = 0.8;
-  for (let i = 0; i < 24; i++) { const m = (lo + hi) / 2; if (envF(C.x + d.x * m, C.y + d.y * m, C.z + d.z * m) < 1) lo = m; else hi = m; }
-  const r = Math.max(p.distanceTo(C), lo);
-  // vicino ai bordi (su, ai lati) la barba torna sottile sulla pelle
-  const edge = smooth(0, 0.12, 1 - Math.abs(u)) * smooth(0, 0.18, 1 - v);
-  const q = C.clone().addScaledVector(d, lerp(p.distanceTo(C), r, edge)).addScaledVector(n, 0.008 + 0.004 * edge);
-  return { p, n, q };
+  return headAt(th * DEG, lerp(beardLow(u), beardTop(th), v) * DEG);
 }
 
 /**
- * Barba come un unico guscio continuo (niente forme appiccicate): parte dalla
- * pelle con un bordo superiore netto (dalla bocca a davanti all'orecchio),
- * avvolge guance e mandibola e sotto il mento si ispessisce spingendo in
- * avanti e in basso. Superficie esterna + parete inferiore che la chiude.
+ * Cuscinetto di barba lungo la mandibola, da un orecchio all'altro: un tubo
+ * che nasce sottile sotto l'orecchio (dove finisce la basetta), segue la
+ * linea della mascella e si ingrossa andando verso il mento. È per metà
+ * dentro la testa, così non resta nessuno stacco con la pelle; di fronte
+ * forma la U sotto la bocca, di profilo pende sotto la mandibola.
+ */
+function beardPad(): { geo: THREE.BufferGeometry; bottom: THREE.Vector3 } {
+  const pts: THREE.Vector3[] = [], radii: number[] = [];
+  let bottom = new THREE.Vector3();
+  const N = 24;
+  for (let i = 0; i <= N; i++) {
+    const u = -1 + (2 * i) / N, au = Math.abs(u), e = au * au * (3 - 2 * au);
+    const { p, n } = headAt(u * 88 * DEG, lerp(-58, -26, e) * DEG);
+    const k = Math.pow(1 - u * u, 1.6); // massimo arrotondato al centro (niente punta)
+    const r = 0.012 + BEARD_DROP * 0.6 * k;
+    // al centro arretra: il davanti resta a filo del viso (di profilo scende dritto)
+    const c = p.addScaledVector(n, r * 0.2).add(new THREE.Vector3(0, -r * 0.5, -r * 0.55).multiplyScalar(k));
+    pts.push(c); radii.push(r);
+    if (i === N / 2) bottom = c.clone().add(new THREE.Vector3(0, -r * 0.75, r * 0.1));
+  }
+  return { geo: taperTube(pts, radii, 10), bottom };
+}
+
+/**
+ * Barba: basette sottili davanti alle orecchie e uno strato sotto la bocca,
+ * più il cuscinetto pieno lungo la mandibola. `BEARD_DROP` regola il volume
+ * del cuscinetto (barba lunga).
  */
 function beard(lp: LP) {
-  const NU = 30, NV = 12;
-  const outer: THREE.Vector3[][] = [], inner: THREE.Vector3[][] = [], norms: THREE.Vector3[][] = [];
+  const NU = 30, NV = 10;
+  const tr = new Tris();
+  const P: THREE.Vector3[][] = [], Nn: THREE.Vector3[][] = [];
   for (let i = 0; i <= NU; i++) {
-    outer.push([]); inner.push([]); norms.push([]);
+    P.push([]); Nn.push([]);
     const u = -1 + (2 * i) / NU;
     for (let j = 0; j <= NV; j++) {
-      const { p, n, q } = beardPoint(u, j / NV); // v: 0 sotto il mento, 1 bordo superiore
-      inner[i].push(p);
-      outer[i].push(q);
-      norms[i].push(n);
+      const v = j / NV;
+      const { p, n } = beardSkin(u, v);
+      P[i].push(p.addScaledVector(n, 0.003 + 0.013 * smooth(0, 0.08, 1 - Math.abs(u)) * smooth(0, 0.12, 1 - v)));
+      Nn[i].push(n);
     }
   }
-  const tr = new Tris();
-  // orientamento: verso l'esterno dal centro della testa (la normale della pelle sotto il mento guarda indietro)
-  for (let i = 0; i < NU; i++) for (let j = 0; j < NV; j++) tr.quad(outer[i][j], outer[i + 1][j], outer[i + 1][j + 1], outer[i][j + 1], outer[i][j].clone().sub(C));
-  // parete inferiore: chiude il guscio tornando alla pelle sotto il mento
-  for (let i = 0; i < NU; i++) tr.quad(outer[i][0], outer[i + 1][0], inner[i + 1][0], inner[i][0], new THREE.Vector3(0, -1, 0.2));
+  for (let i = 0; i < NU; i++) for (let j = 0; j < NV; j++) tr.quad(P[i][j], P[i + 1][j], P[i + 1][j + 1], P[i][j + 1], Nn[i][j]);
   lp.add(tr.geo(), BEARD, { ...O, vary: 0.05 });
+  lp.add(beardPad().geo, BEARD, { ...O, vary: 0.05 });
 }
 
 /**
@@ -311,7 +313,7 @@ function beard(lp: LP) {
  */
 function braid(lp: LP) {
   // punta del cuneo (u = 0, v = 0): il primo grano è per metà dentro la barba
-  const tip = beardPoint(0, 0).q.add(new THREE.Vector3(0, 0.02, -0.03));
+  const tip = beardPad().bottom.add(new THREE.Vector3(0, 0.02, 0)); // primo grano per metà dentro il cuscinetto
   const R0 = 0.039, STEPY = 0.052;
   const zMin = (y: number, r: number) => (jacketR(HEAD_T.y + HEAD_S * y) * 0.82 + r * HEAD_S * 0.9) / HEAD_S;
   let y = tip.y, z = tip.z;

@@ -116,6 +116,27 @@ Diciassettesima passata:
 Diciottesima passata:
 - **Barba di profilo:** la massa lungo la mandibola non è più un tubo, ma una "tenda" piena che pende dalla linea della mascella. Per ogni punto attorno al viso c'è una striscia verticale che scende poco sotto l'orecchio e molto al mento, con il davanti arrotondato e lo spessore che rientra verso il collo. Di profilo riempie tutta la zona tra mandibola e linea orecchio-mento, unita alla basetta.
 
+## Varianti con le opzioni della personalizzazione
+
+Il prototipo ora accetta un `CustodeLook` (`buildCustodeV2(look)`): stesso corpo, stesse proporzioni, stessi metodi per barba e capelli, con tutte le opzioni che la personalizzazione del gioco offre già. La pagina `proto-looks.html` mostra otto varianti che coprono tutte le opzioni; `?yaw=0` la mostra di fronte, `?yaw=3.14` di spalle, `?i=N` mostra una sola variante grande. Le immagini sono in `screenshots/proto/varianti-34.png`, `varianti-fronte.png` e `varianti-retro.png`.
+
+| Opzione | Come è fatta in v2 |
+| --- | --- |
+| Capelli | Tutti i tagli sono lo stesso casco a ciocche; cambia la forma dell'orlo per taglio. Spettinati e ciuffi hanno anche le punte in cima. Caschetto, lunghi e ricci lunghi sotto l'equatore della testa scendono dritti come una tenda invece di rientrare sulla nuca. Ricci e ricci lunghi sono il casco più riccioli a file regolari. Chignon è il casco più la crocchia con l'elastico del colore d'accento. Calvo non ha capelli. |
+| Cappelli | Tesa larga, cilindro e berretto con risvolto e pompon. Sotto un cappello resta solo lo strato basso dei capelli, che finisce alla tesa; la cupola si allarga sul cranio, quindi niente capelli che bucano. |
+| Barba | Corta: stessa barba "a ciocche" ma aderente al viso e appena sotto la mandibola. Piena: quella del concept senza treccia. Treccia: quella del concept. |
+| Baffi | Sottili, folti e a manubrio (quelli del concept). |
+| Occhiali | Tondi, squadrati e monocolo con la catenella; il monocolo segue il volto. |
+| Viso | Lentiggini, cerotto e brillantini, quest'ultimi solo se attivi. |
+| Vestiti | Giacca: quella del concept, con sciarpa del colore d'accento. Maglione: orlo a coste, due righe d'accento e collo alto. Mantello: tunica chiara, mantello dietro, cappuccio e fermagli. Salopette: camicia del colore d'accento, pettorina, bretelle con bottoni e pantaloni. |
+
+Triangoli: da circa 9k (calvo, caschetto) a circa 17k (ricci lunghi), in media circa 12,6k. I riccioli sono l'opzione più pesante.
+
+Punti ancora deboli:
+- **Calvo:** il cranio grande del nuovo stile resta tutto scoperto e la fronte sembra alta.
+- **Capelli lunghi:** da dietro sono una tenda un po' rigida.
+- **Mantello:** di fronte si vede solo la tunica.
+
 ## Prestazioni su telefono (app Capacitor)
 
 Con Capacitor il gioco gira nel WebView del sistema (WKWebView su iOS, WebView di Chrome su Android): le prestazioni sono quelle del browser del telefono. Che il gioco funzioni offline non cambia nulla, perché il lavoro lo fanno GPU e CPU del dispositivo.

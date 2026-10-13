@@ -306,12 +306,15 @@ const bump = (a: number, a0: number, a1: number, w = 5) => smooth(a0 - w, a0 + w
 const longTip = (front: number, side = -88, back = -95) => (a: number) => (a < 45 ? lerp(front + 6, front, smooth(0, 45, a)) : a < 72 ? lerp(front, side, smooth(45, 72, a)) : lerp(side, back, smooth(72, 140, a)));
 /** Ciuffo di lato: da una parte la frangia scende sulla fronte, dall'altra la riga lascia la fronte scoperta. */
 const sideFront = (sd: number) => (sd < 0 ? lerp(4, 10, smooth(-70, -20, sd)) : lerp(10, 34, smooth(0, 30, sd)));
+/** Mossi: riga di lato, la frangia scende morbida da una parte. */
+const waveFront = (sd: number) => (sd < 0 ? lerp(8, 16, smooth(-60, -10, sd)) : lerp(16, 30, smooth(0, 35, sd)));
 const HAIR_TIPS: Record<Exclude<HairStyle, 'none'>, (a: number, sd: number) => number> = {
   spiky: (a) => (a < 90 ? lerp(20, 0, smooth(30, 90, a)) : lerp(0, -32, smooth(90, 160, a))), // ai lati fin sopra l'orecchio, dietro alla nuca
   // ciuffi: fronte scoperta (attaccatura alta), corti ai lati; i ciuffi salgono dalla cima
   tufts: (a) => (a < 40 ? 42 : a < 90 ? lerp(42, 8, smooth(40, 90, a)) : lerp(8, -38, smooth(90, 160, a))),
   bob: (a) => (a < 50 ? lerp(14, 8, smooth(0, 50, a)) : lerp(8, -42, smooth(50, 105, a))), // caschetto: frangia dritta, copre le orecchie
-  long: longTip(10),
+  // lunghi: riga in mezzo, due tende che lasciano scoperta la fronte al centro
+  long: (a) => (a < 45 ? lerp(40, 8, smooth(0, 38, a)) : longTip(8)(a)),
   // ricci: scendono sotto le orecchie, dietro fino alla nuca
   curly: (a) => (a < 40 ? lerp(22, 14, smooth(0, 40, a)) : a < 110 ? lerp(14, -40, smooth(40, 110, a)) : lerp(-40, -46, smooth(110, 170, a))),
   longcurly: longTip(12, -84, -90),
@@ -322,9 +325,9 @@ const HAIR_TIPS: Record<Exclude<HairStyle, 'none'>, (a: number, sd: number) => n
   fringeLong: longTip(-2),
   side: (a, sd) => (a < 95 ? lerp(sideFront(sd), 2, smooth(55, 95, a)) : lerp(2, -38, smooth(95, 165, a))),
   sideLong: (a, sd) => (a < 72 ? lerp(sideFront(sd), -88, smooth(50, 72, a)) : lerp(-88, -95, smooth(72, 140, a))),
-  // mossi: come un caschetto lungo, a onde
-  wavy: (a) => (a < 45 ? lerp(16, 10, smooth(0, 45, a)) : lerp(10, -46, smooth(45, 105, a))),
-  wavyLong: longTip(12),
+  // mossi: riga di lato, ciocche a onde con le punte tonde che si aprono; corti fino al lobo
+  wavy: (a, sd) => (a < 45 ? waveFront(sd) : a < 110 ? lerp(waveFront(sd * 0.3), -26, smooth(45, 100, a)) : lerp(-26, -34, smooth(110, 170, a))),
+  wavyLong: (a, sd) => (a < 45 ? waveFront(sd) : longTip(waveFront(sd * 0.3), -92, -102)(a)),
   // rasati: un velo cortissimo che segue l'attaccatura
   buzz: (a) => (a < 40 ? 30 : a < 95 ? lerp(30, 6, smooth(40, 95, a)) : lerp(6, -44, smooth(95, 165, a))),
 };
@@ -599,29 +602,34 @@ function moustache(lp: LP) {
  * per ciocca che scende dal vortice girando un poco: le ciocche fanno parte
  * del volume, non possono staccarsi.
  */
-export function hairLayer(lp: LP, o: { locks: number; hem: (thDeg: number) => number; depth: number; lift: number; thick: number; phase: number; swirl: number; seed: number; tone: (k: number) => string; top?: number; span?: [number, number]; wave?: number }) {
+export function hairLayer(lp: LP, o: { locks: number; hem: (thDeg: number) => number; depth: number; lift: number; thick: number; phase: number; swirl: number; seed: number; tone: (k: number) => string; top?: number; span?: [number, number]; waveTh?: number; flare?: number; round?: boolean }) {
   const rnd = prng(o.seed);
   const jitter = Array.from({ length: o.locks }, () => [0.75 + rnd() * 0.5, (rnd() - 0.5) * 0.3, rnd()]); // lunghezza, asimmetria, tono
-  const NU = o.locks * 4, NV = o.wave ? 18 : 6; // pochi segmenti: bastano per punta e rilievo di ogni ciocca (le onde ne vogliono di più)
+  const NU = o.locks * 4, NV = o.waveTh ? 16 : 6; // pochi segmenti: bastano per punta e rilievo di ogni ciocca (le onde ne vogliono di più)
   const P: THREE.Vector3[][] = [], Q: THREE.Vector3[][] = [], Nn: THREE.Vector3[][] = [], lockOf: number[] = [];
   for (let i = 0; i <= NU; i++) {
     const u = i / NU, f = (u * o.locks + o.phase) % o.locks, k = Math.floor(f), w = f - k;
     const [len, skew] = jitter[k];
-    // dente di sega: punta al centro della ciocca (spostata un po' di lato)
-    const c = 0.5 + skew, tooth = w < c ? w / c : (1 - w) / (1 - c);
+    // dente di sega (punta al centro della ciocca, spostata un po' di lato) o, per i mossi, punte tonde
+    const c = 0.5 + skew, tooth = o.round ? Math.pow(Math.sin(Math.PI * w), 0.5) : w < c ? w / c : (1 - w) / (1 - c);
     const ridge = Math.sin(Math.PI * Math.min(1, Math.max(0, w))); // rilievo al centro della ciocca
     lockOf.push(k);
     P.push([]); Q.push([]); Nn.push([]);
     for (let j = 0; j <= NV; j++) {
       const v = j / NV; // 0 bordo, 1 cima
-      const thD = (o.span ? lerp(o.span[0], o.span[1], u) : u * 360) + o.swirl * v;
+      // mossi: ogni ciocca ondeggia di lato (a S) scendendo, di più verso le punte
+      // (sulla fronte la frangia resta liscia: onde e volume solo ai lati e dietro)
+      const th0 = (o.span ? lerp(o.span[0], o.span[1], u) : u * 360) + o.swirl * v;
+      const sides = smooth(30, 75, absDeg(th0 * DEG));
+      const wv = o.waveTh ? o.waveTh * Math.sin((1 - v) * Math.PI * 2.6 + k * 0.9) * smooth(0, 0.6, 1 - v) * sides : 0;
+      const thD = th0 + wv;
       const ends = o.span ? smooth(0, 0.1, u) * smooth(1, 0.9, u) : 1; // un arco si assottiglia agli estremi
-      const hem = o.hem(thD) - o.depth * len * tooth;
+      const hem = o.hem(thD) - o.depth * len * tooth * (o.round ? 0.25 + 0.75 * sides : 1);
       const top = o.top ?? 89;
       const phD = lerp(Math.min(hem, top - 3), top, Math.pow(v, 0.85));
       const { p, n } = hairPoint(thD * DEG, phD);
-      const wave = o.wave ? o.wave * Math.sin(v * Math.PI * 7 + u * Math.PI * 2 * o.locks * 0.02) * (1 - v) : 0; // onde orizzontali, più marcate in basso
-      const t = (o.thick * (0.55 + 0.45 * ridge) * smooth(0, 0.25, v + 0.05 * tooth) + o.lift * (1 - v) * (1 - v) + Math.max(-o.thick * 0.5, wave)) * ends;
+      const flare = (o.flare ?? 0) * Math.pow(1 - v, 3) * sides; // le punte si aprono verso l'esterno (volume)
+      const t = (o.thick * (0.55 + 0.45 * ridge) * smooth(0, 0.25, v + 0.05 * tooth) + o.lift * (1 - v) * (1 - v) + flare) * ends;
       P[i].push(p.clone().addScaledVector(n, 0.006 + t));
       Q[i].push(p.clone().addScaledVector(n, 0.004));
       Nn[i].push(n);
@@ -676,7 +684,7 @@ function hair(lp: LP) {
   const tip = (thD: number) => hairTip(thD * DEG);
   const top = Math.min(hatPh(), X.hair?.top ?? 89), hat = hatPh() < 89;
   const style = L.hair;
-  const depth = X.hair?.depth ?? ({ bob: 3, long: 5, bun: 4, longcurly: 6, curly: 7, fringe: 2, fringeLong: 3, side: 6, sideLong: 5, wavy: 3, wavyLong: 4, tufts: 9 } as Record<string, number>)[style] ?? 13;
+  const depth = X.hair?.depth ?? ({ bob: 1, long: 2, bun: 4, longcurly: 6, curly: 7, fringe: 2, fringeLong: 1, side: 6, sideLong: 5, wavy: 5, wavyLong: 6, tufts: 9 } as Record<string, number>)[style] ?? 13;
   if (X.hair) { // orlo su misura (corona di capelli ai lati, ciuffi grigi…): un solo strato
     hairLayer(lp, { locks: 14, hem: (t) => tip(t) + 4, depth, lift: X.hair.lift ?? 0.03, thick: X.hair.thick ?? 0.05, phase: 0, swirl: 6, seed: 3, tone, top: Math.min(top, X.hair.top ?? 89), span: X.hair.span });
     return;
@@ -687,13 +695,16 @@ function hair(lp: LP) {
   }
   const messy = style === 'spiky' || style === 'tufts';
   const curly = style === 'curly' || style === 'longcurly';
-  const wave = style === 'wavy' || style === 'wavyLong' ? 0.018 : 0;
+  // mossi: poche ciocche grosse, a S, con le punte tonde che si aprono in fuori
+  const wavy = style === 'wavy' || style === 'wavyLong';
+  const wave = wavy ? { waveTh: style === 'wavy' ? 9 : 15, flare: style === 'wavy' ? 0.05 : 0.07, round: true } : {};
+  const wave2 = wavy ? { waveTh: style === 'wavy' ? 7 : 11, flare: 0.03, round: true } : {};
   // i ricci hanno sotto un casco sottile e più scuro: si vedono solo i riccioli
   const base = curly ? (k: number) => tone(k - 0.07) : tone;
   const thick = curly ? 0.025 : hat ? 0.03 : 0.05;
-  hairLayer(lp, { locks: messy ? 15 : 20, hem: (t) => tip(t) + 4, depth, lift: 0.03, thick, phase: 0, swirl: messy ? 14 : 6, seed: 3, tone: base, top, wave });
+  hairLayer(lp, { locks: messy ? 15 : wavy ? 14 : 20, hem: (t) => tip(t) + 4, depth, lift: 0.03, thick, phase: 0, swirl: messy ? 14 : 6, seed: 3, tone: base, top, ...wave });
   if (!hat && !curly) {
-    hairLayer(lp, { locks: messy ? 12 : 16, hem: (t) => tip(t) + 26, depth: depth + 2, lift: 0.04, thick: 0.065, phase: 0.5, swirl: messy ? 18 : 8, seed: 7, tone, wave: wave * 0.6 });
+    hairLayer(lp, { locks: messy ? 12 : wavy ? 11 : 16, hem: (t) => tip(t) + 26, depth: depth + 2, lift: 0.04, thick: 0.065, phase: 0.5, swirl: messy ? 18 : 8, seed: 7, tone, ...wave2 });
     hairLayer(lp, { locks: messy ? 9 : 12, hem: (t) => tip(t) + 48, depth: depth + 3, lift: 0.05, thick: 0.08, phase: 0.2, swirl: messy ? 22 : 10, seed: 11, tone });
   }
   if (curly) curls(lp, tone, hat ? top : 86);
@@ -726,7 +737,9 @@ function hair(lp: LP) {
  */
 function tufts(lp: LP, tone: (k: number) => string) {
   const list: Array<[number, number, number, number]> = [ // θ, φ della radice, altezza, piega all'indietro
-    [-28, 66, 0.2, 0.35], [0, 70, 0.25, 0.25], [28, 66, 0.2, 0.4], [-55, 58, 0.15, 0.5], [55, 58, 0.15, 0.55], [-14, 80, 0.21, 0.6], [16, 80, 0.2, 0.7],
+    [-28, 66, 0.15, 0.35], [0, 70, 0.18, 0.25], [28, 66, 0.15, 0.4], [-55, 58, 0.11, 0.5], [55, 58, 0.11, 0.55], [-14, 80, 0.15, 0.6], [16, 80, 0.14, 0.7],
+    // a scalare verso la nuca: più piccoli e più piegati, danno movimento alla cima
+    [-100, 62, 0.1, 0.9], [100, 62, 0.1, 0.9], [-60, 80, 0.11, 0.8], [60, 80, 0.11, 0.85], [150, 70, 0.09, 1], [-150, 72, 0.09, 1], [180, 82, 0.1, 0.9],
   ];
   list.forEach(([th, ph, h, back], k) => {
     const { p, n } = headAt(th * DEG, ph * DEG);
@@ -735,7 +748,7 @@ function tufts(lp: LP, tone: (k: number) => string) {
     const bend = new THREE.Vector3(Math.sin(th * DEG) * 0.3, 0, -1).normalize(); // si piega indietro e un po' in fuori
     const mid = rootP.clone().addScaledVector(up, h * 0.55).addScaledVector(bend, h * back * 0.25);
     const tipP = rootP.clone().addScaledVector(up, h).addScaledVector(bend, h * back * 0.7);
-    lp.add(taperTube([rootP, mid, tipP], [0.055, 0.04, 0.006], 6), tone([0.04, 0.0, 0.03, -0.02, 0.02, 0.05, 0.01][k]), { ...O, vary: 0.04 });
+    lp.add(taperTube([rootP, mid, tipP], [0.03 + h * 0.14, 0.022 + h * 0.1, 0.005], 6), tone([0.04, 0.0, 0.03, -0.02, 0.02, 0.05, 0.01][k % 7]), { ...O, vary: 0.04 });
   });
 }
 

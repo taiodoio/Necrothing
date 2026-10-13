@@ -219,7 +219,7 @@ function head(lp: LP) {
   lp.add(headGeo(), SKIN, { ...O, ao: 0.05 });
   for (const s of [-1, 1]) lp.blob(s * (R.x - 0.004), 0.72, -0.012, 0.05, 0.064, 0.04, SKIN, { ...O, detail: 2 } as LPOpts); // orecchie grandi e tonde
   // bocca: sorrisetto un po' di lato, sotto i baffi
-  onSkin(lp, headFront(0.026, 0.603), 0.002, 0.15, (q) => q.add(new THREE.TorusGeometry(0.028, 0.008, 3, 8, Math.PI).rotateZ(Math.PI), '#2a1a1c', O));
+  onSkin(lp, headFront(0, 0.603), 0.002, 0, (q) => q.add(new THREE.TorusGeometry(0.028, 0.008, 3, 8, Math.PI).rotateZ(Math.PI), '#2a1a1c', O));
 }
 
 /** Brillantini a stella, grandi e radi, su tutto il viso (non su occhi, baffi, barba, capelli). */
@@ -247,13 +247,13 @@ function glitter(lp: LP) {
  */
 /** Bordo inferiore della barba (φ, gradi): sotto il mento, ma non così in basso da finire dietro il colletto. */
 const BEARD_LOW = -72;
-const BEARD_DROP = 0.1;
+const BEARD_DROP = 0.13;
 function beardOffset(u: number, v: number, n: THREE.Vector3): { t: number; dir: THREE.Vector3 } {
   const side = smooth(0, 0.1, 1 - Math.abs(u));
   const jaw = smooth(0.8, 0.35, Math.abs(u)); // largo sotto la mandibola, sfuma prima delle guance
   const low = Math.pow(1 - v, 2.2); // solo la parte bassa si allunga: le guance restano sottili
   const t = side * smooth(0, 0.06, 1 - v) * (0.008 + 0.006 * (1 - Math.abs(u)) + BEARD_DROP * low * jaw);
-  const dir = n.clone().add(new THREE.Vector3(0, -0.7, 0.45).multiplyScalar(low * jaw)).normalize();
+  const dir = n.clone().add(new THREE.Vector3(0, -0.55, 0.8).multiplyScalar(low * jaw)).normalize(); // sotto la mandibola cresce anche in avanti
   return { t, dir };
 }
 

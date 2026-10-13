@@ -90,6 +90,11 @@ Dodicesima passata:
 - **Barba:** sotto il mento si allunga in modo uniforme da una mandibola all'altra, con forma a U e non a punta, verso il basso e un po' in avanti; le guance restano sottili.
 - **Barba lunga:** lo stesso schema vale per una barba lunga senza treccia; basta aumentare `BEARD_DROP`.
 
+Tredicesima passata:
+- **Barba:** sotto la mandibola cresce anche in avanti, quindi la parte bassa vista di lato è più spessa.
+- **Treccia:** di conseguenza si attacca un po' più avanti.
+- **Bocca:** centrata.
+
 ## Prestazioni su telefono (app Capacitor)
 
 Con Capacitor il gioco gira nel WebView del sistema (WKWebView su iOS, WebView di Chrome su Android): le prestazioni sono quelle del browser del telefono. Che il gioco funzioni offline non cambia nulla, perché il lavoro lo fanno GPU e CPU del dispositivo.

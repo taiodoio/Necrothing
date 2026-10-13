@@ -1,6 +1,7 @@
 // Personalizzazione del Custode: anteprima 3D che gira e opzioni a tasselli
 // con la miniatura, divise in schede (Aspetto: testa, pelle, anche hoa-boa-hoa, occhi, occhiali;
 // Capelli: taglio, barba e baffi; Vestiti: vestito, cappello e colori).
+// L'anteprima gira su sé stessa e si può trascinare per girarla a mano.
 // Le scelte si vedono subito nell'anteprima; il Custode in gioco cambia con
 // «Salva» (chiudendo con modifiche non salvate si chiede conferma).
 
@@ -60,6 +61,10 @@ class CustodePreview {
   private rig: Rig | null = null;
   private raf = 0;
   private readonly clock = new THREE.Clock();
+  /** Gira da solo (giro completo); si può trascinare per girarlo a mano, poi riparte. */
+  private angle = 0.5;
+  private dragX: number | null = null;
+  private resumeAt = 0;
 
   constructor(look: CustodeLook) {
     this.renderer = new THREE.WebGLRenderer({ canvas: this.canvas, antialias: true, alpha: true });
@@ -76,11 +81,25 @@ class CustodePreview {
     this.camera.position.set(1.9, 1.75, 2.9);
     this.camera.lookAt(0, 0.68, 0);
     this.setLook(look);
+    const c = this.canvas;
+    c.addEventListener('pointerdown', (e) => { this.dragX = e.clientX; c.setPointerCapture(e.pointerId); });
+    c.addEventListener('pointermove', (e) => {
+      if (this.dragX === null) return;
+      this.angle += (e.clientX - this.dragX) * 0.012;
+      this.dragX = e.clientX;
+    });
+    const release = () => { this.dragX = null; this.resumeAt = this.clock.getElapsedTime() + 2.5; };
+    c.addEventListener('pointerup', release);
+    c.addEventListener('pointercancel', release);
+    let last = 0;
     const loop = () => {
       this.raf = requestAnimationFrame(loop);
-      const t = this.clock.getElapsedTime();
+      const t = this.clock.getElapsedTime(), dt = Math.min(0.1, t - last);
+      last = t;
+      // giro lento e continuo; fermo mentre lo si trascina e per un attimo dopo
+      if (this.dragX === null && t > this.resumeAt) this.angle += dt * 0.45;
       if (this.rig) {
-        this.rig.root.rotation.y = Math.sin(t * 0.6) * 0.9;
+        this.rig.root.rotation.y = this.angle;
         animateRig(this.rig, 'idle', t, 0);
       }
       this.renderer.render(this.scene, this.camera);

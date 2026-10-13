@@ -379,11 +379,11 @@ function pumpkinAt(dir: THREE.Vector3): THREE.Vector3 {
   const lobe = Math.pow(Math.sin(Math.PI * w), 0.6);
   const soft = lerp(0.6, 1, smooth(25, 75, Math.abs(lon) / DEG));
   const rib = 1 - (1 - lobe) * 0.2 * soft * Math.pow(h, 0.6);
-  // un po' più larga che alta; sommità e base rientrano (fossetta del picciolo)
+  // un po' più larga che alta; la sommità rientra (fossetta del picciolo)
   const p = new THREE.Vector3(v.x * PUMPKIN_R.x * rib, v.y * PUMPKIN_R.y, v.z * PUMPKIN_R.z * rib);
   if (v.y > 0) p.y -= 0.05 * Math.exp(-((h / 0.35) ** 2));
-  else p.y += 0.03 * Math.exp(-((h / 0.3) ** 2));
-  p.y += PUMPKIN_R.y - R.y + 0.006; // la base poggia sul collo come il mento
+  // la base affonda un po' nel colletto come le altre teste (niente collo scoperto sotto)
+  p.y += PUMPKIN_R.y - R.y - 0.035;
   return p.add(C);
 }
 /** Semiassi della zucca (più larga della testa, quasi alta uguale). */

@@ -338,8 +338,9 @@ export function pondLP(v: PVis): LPModel {
   }
   pts.forEach(([x, y], i) => (i ? water.lineTo(x, y) : water.moveTo(x, y)));
   water.closePath();
-  // fondale scuro sotto un'acqua semitrasparente
-  lp.push([0, -0.02, 0], 0, -Math.PI / 2).plate(water, 0.02, LPC.charcoal, { ao: 0 }).pop();
+  // fondale scuro sotto un'acqua semitrasparente: sopra il terreno, mai alla stessa quota
+  // (complanari, terreno e fondale si contendevano i pixel e l'acqua sfarfallava muovendo la camera)
+  lp.push([0, 0.008, 0], 0, -Math.PI / 2).plate(water, 0.012, LPC.charcoal, { ao: 0 }).pop();
   lp.push([0, 0.035, 0], 0, -Math.PI / 2).plate(water, 0.01, v.dirty ? '#3a4a3a' : LPC.water, { bucket: 'water', vary: 0.04, ao: 0 }).pop();
   // sponda
   for (const [x, y] of pts) {

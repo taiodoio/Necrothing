@@ -1,6 +1,7 @@
 // Parti animate degli oggetti low-poly: piccoli gruppi di mesh agganciati
 // all'oggetto (ereditano posizione e rotazione) e aggiornati a ogni frame.
-// Lo stagno ha pesci morti a pancia in su che galleggiano alla deriva,
+// Lo stagno ha pesci morti a pancia in su che galleggiano alla deriva e
+// pesci scheletrici che ogni tanto saltano,
 // ninfee, canne che ondeggiano, cerchi nell'acqua e una rana; le "case"
 // delle presenze hanno carte che volano, un disco che gira con le note, una
 // mano che saluta dalla tomba, fuochi fatui; pozze e buchi fanno bolle e
@@ -47,6 +48,25 @@ const deadFish = (color: string) => (lp: LP) => {
   for (const s of [-1, 1]) lp.push([s * 0.068, 0.0, 0.07], 0, 0, s * 0.3).plate(new THREE.Shape([new THREE.Vector2(0, 0), new THREE.Vector2(0.05, -0.03), new THREE.Vector2(0.0, -0.05)]), 0.008, color, { ao: 0 }).pop();
   for (const s of [-1, 1]) for (const k of [-1, 1]) lp.push([s * 0.055, 0.012, 0.085], s * Math.PI / 2, 0, k * 0.785).box(0, -0.016, 0, 0.006, 0.032, 0.006, LPC.charcoal, { jitter: 0, ao: 0 }).pop();
 };
+
+/** Pesce scheletrico (muso verso +z): cranio con l'orbita vuota, spina, costole e coda d'osso. */
+const boneFish = (lp: LP) => {
+  const b = LPC.bone, d = '#cfc6a8';
+  ball(lp, 0, 0, 0.11, 0.045, 0.05, 0.065, b); // cranio
+  lp.push([0, -0.022, 0.16], 0, 0.25).box(0, 0, 0, 0.05, 0.016, 0.06, d, { jitter: 0, ao: 0 }).pop(); // mandibola aperta
+  for (const sx of [-1, 1]) ball(lp, sx * 0.036, 0.012, 0.125, 0.016, 0.018, 0.018, LPC.charcoal); // orbite
+  lp.push([0, 0, -0.17], 0, Math.PI / 2).cyl(0, 0, 0, 0.007, 0.01, 0.25, 4, b, { jitter: 0 }).pop(); // spina
+  for (let k = 0; k < 5; k++) {
+    const z = 0.05 - k * 0.04, len = 0.075 - k * 0.01;
+    for (const sx of [-1, 1]) lp.push([0, 0.004, z], 0, 0, sx * 2.3).cyl(0, 0, 0, 0.005, 0.003, len, 3, k % 2 ? d : b, { jitter: 0 }).pop();
+    lp.push([0, 0.004, z], 0, 0, 0).cyl(0, 0, 0, 0.004, 0.002, 0.03 - k * 0.003, 3, d, { jitter: 0 }).pop(); // spina dorsale
+  }
+  const tail = new THREE.Shape(); tail.moveTo(0, 0); tail.lineTo(0.06, -0.08); tail.lineTo(0, -0.05); tail.lineTo(-0.06, -0.08); tail.closePath();
+  lp.push([0, 0, -0.16], 0, 0, Math.PI / 2).push([0, 0, 0], 0, -Math.PI / 2).plate(tail, 0.006, d, { ao: 0 }).pop().pop();
+};
+
+/** Spruzzo: gocciolina d'acqua. */
+const drop = (lp: LP) => ball(lp, 0, 0, 0, 0.018, 0.024, 0.018, '#c9e2df');
 
 const lilyPad = (flower: boolean) => (lp: LP) => {
   const s = new THREE.Shape();
@@ -164,6 +184,61 @@ function pond(v: PVis): Animated {
     root.add(c);
     updates.push((t) => { c.rotation.z = Math.sin(t * 1.3 + ph) * 0.07; c.rotation.x = Math.sin(t * 0.9 + ph) * 0.04; });
   }
+  // pesci scheletrici che ogni tanto saltano fuori dall'acqua: arco, schizzi, cerchi dove rientrano
+  for (let i = 0; i < 2; i++) {
+    const f = piece('bonefish', boneFish);
+    f.scale.setScalar(1.7);
+    f.traverse((o) => { o.castShadow = true; }); // in volo, la sua ombra sull'acqua dice quanto è alto
+    const mk = () => {
+      const mat = new THREE.MeshBasicMaterial({ color: '#cfe6e2', transparent: true, opacity: 0, depthWrite: false });
+      const m = new THREE.Mesh(new THREE.RingGeometry(0.9, 1, 20).rotateX(-Math.PI / 2), mat);
+      m.renderOrder = 3;
+      root.add(m);
+      return { m, mat };
+    };
+    const rings = [mk(), mk()];
+    const drops = Array.from({ length: 5 }, () => { const o = piece('drop', drop); root.add(o); return o; });
+    root.add(f);
+    const period = 6.5 + i * 2.7 + r.next() * 1.5, offset = r.range(0, period), seed = r.int(1000);
+    const DUR = 1.05;
+    updates.push((t) => {
+      const c = Math.floor((t + offset) / period), local = (t + offset) - c * period;
+      // ogni salto parte da un punto diverso del laghetto, sempre dentro l'acqua
+      const h = (k: number) => { const x = Math.sin((c * 7.13 + seed + k * 3.7) * 12.9898) * 43758.5453; return x - Math.floor(x); };
+      const ax = (h(1) - 0.5) * 1.5, az = (h(2) - 0.5) * 0.7, yaw = h(3) * Math.PI * 2, len = 0.55 + h(4) * 0.3;
+      const bx = THREE.MathUtils.clamp(ax + Math.sin(yaw) * len, -1.15, 1.15), bz = THREE.MathUtils.clamp(az + Math.cos(yaw) * len, -0.6, 0.6);
+      const s = local / DUR;
+      f.visible = s < 1;
+      if (s < 1) {
+        const hgt = 0.42 + h(5) * 0.18;
+        f.position.set(ax + (bx - ax) * s, waterY - 0.06 + (hgt + 0.06) * Math.sin(s * Math.PI), az + (bz - az) * s);
+        f.rotation.set(0, 0, 0);
+        f.rotation.y = Math.atan2(bx - ax, bz - az);
+        f.rotateX(-Math.atan2((hgt + 0.06) * Math.PI * Math.cos(s * Math.PI), Math.hypot(bx - ax, bz - az)) * 0.85);
+        f.rotateZ(Math.sin(t * 18) * 0.15);
+      }
+      // cerchi: dove esce e dove rientra
+      const ring = (g: { m: THREE.Mesh; mat: THREE.MeshBasicMaterial }, x: number, z: number, k: number) => {
+        g.m.visible = k >= 0 && k < 1;
+        if (!g.m.visible) return;
+        g.m.position.set(x, waterY + 0.007, z);
+        g.m.scale.setScalar(0.04 + k * 0.28);
+        g.mat.opacity = 0.7 * (1 - k);
+      };
+      ring(rings[0], ax, az, local / 1.4);
+      ring(rings[1], bx, bz, (local - DUR) / 1.6);
+      // schizzi all'arrivo
+      const k = (local - DUR * 0.92) / 0.5;
+      drops.forEach((o, j) => {
+        o.visible = k >= 0 && k < 1;
+        if (!o.visible) return;
+        const a = (j / drops.length) * Math.PI * 2 + c;
+        const d = 0.05 + k * 0.16;
+        o.position.set(bx + Math.cos(a) * d, waterY + Math.sin(k * Math.PI) * 0.14, bz + Math.sin(a) * d);
+        o.scale.setScalar(1 - k * 0.6);
+      });
+    });
+  }
   // cerchi nell'acqua che si allargano e svaniscono
   for (let i = 0; i < 3; i++) {
     const mat = new THREE.MeshBasicMaterial({ color: '#b8d6d2', transparent: true, opacity: 0.5, depthWrite: false });
@@ -261,6 +336,46 @@ function rising(kind: 'bubble' | 'ember', color: string, n: number, spread: [num
   };
 }
 
+const VAPOR_GEO = new THREE.IcosahedronGeometry(1, 1);
+
+/** Pozza avvelenata: bolle che salgono e scoppiano lasciando un cerchio, e un filo di vapore verde. */
+function toxic(seed: number): Animated {
+  const bub = rising('bubble', '#c8f07c', 6, [0.5, 0.18], 0.12, seed);
+  const root = bub.root;
+  const r = createRng(`toxic:${seed}`);
+  const pops = Array.from({ length: 3 }, (_, i) => {
+    const mat = new THREE.MeshBasicMaterial({ color: '#d8f59a', transparent: true, opacity: 0, depthWrite: false });
+    const m = new THREE.Mesh(new THREE.RingGeometry(0.8, 1, 16).rotateX(-Math.PI / 2), mat);
+    m.renderOrder = 3;
+    root.add(m);
+    return { m, mat, x: r.range(-0.45, 0.45), z: r.range(-0.15, 0.15), ph: i / 3, sp: 0.4 + r.next() * 0.2 };
+  });
+  // vapore: sbuffi semitrasparenti che salgono, si allargano e svaniscono
+  const puffs = Array.from({ length: 4 }, (_, i) => {
+    const mat = new THREE.MeshBasicMaterial({ color: '#b9e27a', transparent: true, opacity: 0, depthWrite: false, toneMapped: false });
+    const o = new THREE.Mesh(VAPOR_GEO, mat);
+    root.add(o);
+    return { o, mat, x: r.range(-0.4, 0.4), z: r.range(-0.12, 0.12), ph: i / 4 };
+  });
+  return {
+    root, update: (t) => {
+      bub.update(t);
+      for (const p of pops) {
+        const k = (t * p.sp + p.ph) % 1;
+        p.m.position.set(p.x, 0.03, p.z);
+        p.m.scale.setScalar(0.02 + k * 0.12);
+        p.mat.opacity = 0.6 * (1 - k);
+      }
+      for (const p of puffs) {
+        const k = (t * 0.22 + p.ph) % 1;
+        p.o.position.set(p.x + Math.sin(t * 0.9 + p.ph * 6) * 0.06, 0.06 + k * 0.55, p.z);
+        p.o.scale.set(0.035 + k * 0.07, 0.03 + k * 0.045, 0.035 + k * 0.07);
+        p.mat.opacity = 0.26 * Math.sin(k * Math.PI);
+      }
+    },
+  };
+}
+
 const leaf = (c: string) => (lp: LP) => lp.blob(0, 0, 0, 0.045, 0.008, 0.03, c, { jitter: 0, ao: 0 });
 const firefly = (lp: LP) => { ball(lp, 0, 0, 0, 0.018, 0.018, 0.018, '#e9f59a', { bucket: 'glow' }); };
 const butterfly = (c: string) => (lp: LP) => {
@@ -314,7 +429,7 @@ export function createAnimated(v: PVis): Animated | null {
     case 'zombies_dance': return zombiesDance();
     case 'zombie_walker': return zombieWalker();
     case 'ghosts_roam': return wisps(LPC.spectral, 3, 0.38, 0.55);
-    case 'toxic_puddle': return rising('bubble', '#c8f07c', 6, [0.7, 0.3], 0.18, v.seed);
+    case 'toxic_puddle': return toxic(v.seed);
     case 'mud': return rising('bubble', '#5a4a3a', 2, [0.2, 0.2], 0.06, v.seed, false);
     case 'dead_tree': return fallingLeaves(v.seed, 4, 1.9, 0.6);
     case 'spectral_tree': return v.lit ? wisps('#9fe0d0', 4, 0.95, 1.4) : null;

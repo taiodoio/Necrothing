@@ -207,6 +207,22 @@ test('espansione a scelta: il prestigio sblocca, il giocatore amplia o stringe',
   assert.ok(!s.world.looseWisps.some((w) => w.id === 'w-fuori'), 'i fuochi fatui rimasti fuori svaniscono');
 });
 
+test('scheda del Custode: il recinto mostrato è quello vero, non quello del prestigio del momento', async () => {
+  const { expansionStatus } = await import('../src/game/world.ts');
+  const s = createNewGame(NOW, 5);
+  // allargato quando il prestigio era alto; ora il prestigio è sceso sotto la soglia
+  s.world.unlockedLevel = 1; s.world.expansionLevel = 1;
+  assert.ok(computePrestige(s) < EXPANSION[1].minPrestige);
+  const st = expansionStatus(s);
+  assert.equal(st.label, EXPANSION[1].label);
+  assert.equal(st.size, 40);
+  assert.equal(st.next.label, EXPANSION[2].label, 'la prossima area è quella dopo lo sblocco');
+  // sbloccato ma non ancora ampliato
+  s.world.unlockedLevel = 2; s.world.expansionLevel = 0;
+  assert.equal(expansionStatus(s).size, 34);
+  assert.equal(expansionStatus(s).unlocked, 2);
+});
+
 test('espansione: i salvataggi con un recinto già allargato lo tengono (sbloccato e già notificato)', async () => {
   const { normalizeSave } = await import('../src/game/state.ts');
   const old = createNewGame(NOW, 4);

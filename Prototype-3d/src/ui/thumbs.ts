@@ -7,7 +7,7 @@ import { GRAVE_FOOTPRINT } from '../game/balance.ts';
 import { CATALOG } from '../game/catalog.ts';
 import type { GraveType, GraveVisualState } from '../game/graves.ts';
 import type { ArtStyle } from '../game/state.ts';
-import { getModel, instantiate } from '../render/modelCache.ts';
+import { getModel, instantiate, type CachedModel } from '../render/modelCache.ts';
 import { graveModel } from '../render/models/graves.ts';
 import { placeableKey, placeableModel, type PVis } from '../render/models/registry.ts';
 
@@ -49,6 +49,12 @@ function snapshot(key: string, group: THREE.Group, fp: [number, number]): string
   scene.remove(group);
   cache.set(key, url);
   return url;
+}
+
+/** Miniatura di un modello qualsiasi (con la sua chiave di cache). */
+export function modelThumb(key: string, model: CachedModel, fp: [number, number]): string {
+  if (cache.has(key)) return cache.get(key)!;
+  return snapshot(key, instantiate(model), fp);
 }
 
 export function placeableThumb(type: string, style: ArtStyle, variant = 0): string {

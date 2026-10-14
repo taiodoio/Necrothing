@@ -588,3 +588,36 @@ test('becchino in visita: fa le tappe, lavora a ciascuna e se ne va da dove è v
   assert.ok(left, 'poi se ne va');
   assert.ok(r.pos.distanceTo(door) < 1, 'esce da dove è entrato');
 });
+
+test('presenze erranti: a frame regolari camminano davvero (prima restavano a girare su se stesse); lo zombie zoppica, più lento del Custode', async () => {
+  const { Actors, zombieLurch } = await import('../src/view/Actors.ts');
+  const { cellCenter, worldToCell } = await import('../src/view/WorldView.ts');
+  const s = createNewGame(new Date('2026-10-09T12:00:00Z'), 717);
+  const occ = buildOccupancy(s);
+  const area = areaForLevel(0);
+  const atmosphere = { addAnchor: () => ({}), removeAnchor() {}, moveAnchor() {} };
+  const a = new Actors(new THREE.Scene(), atmosphere, 'lowpoly', cellCenter(24, 42, [1, 1]));
+  a.setWorld(area, (x, y) => occ.blocked.has(`${x},${y}`));
+  const far = {};
+  for (const kind of ['zombie', 'cat', 'rat', 'ghost']) {
+    const r = a.spawnRoamer({ kind }, cellCenter(30, 30, [1, 1]));
+    r.life = 999;
+    const start = r.pos.clone();
+    let maxd = 0;
+    for (let t = 0; t < 12; t += 1 / 60) {
+      a.update(1 / 60, t, [], () => 0);
+      maxd = Math.max(maxd, r.pos.distanceTo(start));
+      const c = worldToCell(r.pos);
+      assert.ok(c.x >= area.x && c.y >= area.y && c.x < area.x + area.w && c.y < area.y + area.h, `${kind} resta nel recinto`);
+      if (kind !== 'ghost') assert.ok(!occ.blocked.has(`${c.x},${c.y}`), `${kind} non entra negli ostacoli`);
+    }
+    far[kind] = maxd;
+    a.removeRoamer(r.id, false);
+  }
+  for (const [kind, d] of Object.entries(far)) assert.ok(d > 1.2, `${kind} si sposta (${d.toFixed(2)})`);
+  // andatura zoppa: scatti e quasi-fermate, media ben sotto il passo pieno
+  let sum = 0, lo = Infinity, hi = 0;
+  for (let i = 0; i < 1000; i++) { const v = zombieLurch(i * 0.01); sum += v; lo = Math.min(lo, v); hi = Math.max(hi, v); }
+  assert.ok(lo < 0.35 && hi > 1.2 && sum / 1000 < 0.7, 'zoppica');
+  assert.ok(a.avatar.speed > 0.85 * 2, 'il Custode è molto più svelto');
+});

@@ -460,3 +460,38 @@ test('alone delle luci: sempre bianco, solo l’opacità sfuma (niente puntini c
   assert.equal(a(0, 0), 0, 'trasparente negli angoli');
   assert.ok(a(16, 16) > a(24, 16) && a(24, 16) > a(30, 16), 'sfuma verso il bordo');
 });
+
+test('rito dell’Albero dei ricordi: il corteo porta la bara all’albero, poi la terra la accoglie', async () => {
+  const { Actors } = await import('../src/view/Actors.ts');
+  const { cellCenter } = await import('../src/view/WorldView.ts');
+  const { closedCoffinLP, memoryTreeLP } = await import('../src/render/lowpoly/memoryTree.ts');
+  const atmosphere = { addAnchor: () => ({}), removeAnchor() {}, moveAnchor() {} };
+  const s = createNewGame(new Date('2026-10-09T12:00:00Z'), 717);
+  const occ = buildOccupancy(s);
+  const a = new Actors(new THREE.Scene(), atmosphere, 'lowpoly', cellCenter(24, 42, [1, 1]));
+  a.setWorld(areaForLevel(0), (x, y) => occ.blocked.has(`${x},${y}`));
+  const g = s.graves[0];
+  const tree = cellCenter(36, 38, [5, 5]);
+  let lifted = false, done = 0;
+  const coffin = new THREE.Group();
+  a.startRite({ grave: cellCenter(g.x, g.y, [2, 2]), graveFront: { x: g.x, y: g.y + 2 }, tree, treeFront: { x: 38, y: 43 }, gate: { x: 31, y: 49 }, coffin, onLift: () => { lifted = true; }, onDone: () => { done++; } });
+  assert.ok(a.funeralActive);
+  let carried = false;
+  for (let t = 0; t < 90 && !done; t += 0.05) { a.update(0.05, t, [], () => 0); if (coffin.visible && coffin.position.y > 0.4) carried = true; }
+  assert.ok(lifted, 'la bara esce dalla tomba');
+  assert.ok(carried, 'portata a spalla');
+  assert.equal(done, 1, 'il rito si conclude');
+  assert.ok(coffin.position.distanceTo(tree.clone().setY(coffin.position.y)) < 2.3, 'davanti all’albero');
+  for (let t = 0; t < 30 && a.funeralActive; t += 0.1) a.update(0.1, t, [], () => 0);
+  assert.ok(!a.funeralActive, 'il corteo se ne va');
+  // si può saltare: la tomba lascia comunque il cimitero
+  let skipped = 0;
+  a.startRite({ grave: cellCenter(g.x, g.y, [2, 2]), graveFront: { x: g.x, y: g.y + 2 }, tree, treeFront: { x: 38, y: 43 }, gate: { x: 31, y: 49 }, coffin: new THREE.Group(), onLift() {}, onDone: () => { skipped++; } });
+  a.skipFuneral();
+  assert.equal(skipped, 1);
+  assert.ok(!a.funeralActive);
+  // un frutto acceso per ricordo; senza ricordi la cavità non brilla
+  const glow = (n) => memoryTreeLP(n).geometries.glow?.attributes.position.count ?? 0;
+  assert.ok(glow(5) > glow(1) && glow(1) > glow(0));
+  assert.ok(closedCoffinLP().geometries.solid);
+});

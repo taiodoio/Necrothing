@@ -8,11 +8,13 @@ import { DECAY } from '../game/balance.ts';
 import { CATALOG, repairCost } from '../game/catalog.ts';
 import { GRAVE_STATE_LABELS, GRAVE_TYPE_LABELS, graveVisualState } from '../game/graves.ts';
 import { nextRank, rankForXp, rankProgress } from '../game/progression.ts';
+import type * as R from '../game/rules.ts';
 import type { BurialDraft } from '../game/rules.ts';
 import { DAY_PHASE_LABELS } from '../game/time.ts';
 import { $, closeDrawer, drawerOpen, h, toast } from './dom.ts';
 import { hydrateIcons, icon, iconUrl, installFrames } from './icons.ts';
 import * as S from './screens.ts';
+import * as T from './memoryTree.ts';
 
 const WEATHER_LABELS = { clear: 'Sereno', fog: 'Nebbia', rain: 'Pioggia', storm: 'Temporale' } as const;
 const PHASE_ICONS = { dawn: 'dawn', day: 'sun', dusk: 'dusk', night: 'moon' } as const;
@@ -126,6 +128,9 @@ export class UI {
 
   openShop() { S.openShop(this); }
   openDetail(id: string) { S.openDetail(this, id); }
+  openEntrust(graveId: string) { T.openEntrust(this, graveId); }
+  openMemoryTree() { T.openMemoryTree(this); }
+  openMemory(id: string, visit?: R.ActionResult) { T.openMemory(this, id, visit); }
   reopenBurial(draft: BurialDraft) { S.openBurial(this, draft, 4); }
 
   refreshEditBanner() {
@@ -184,6 +189,7 @@ export class UI {
         actions.push({ act: 'detail', label: 'Dettagli', icon: 'search' }, { act: 'exhume', label: 'Esuma', icon: 'shovel', cls: 'danger' }, { act: 'confirm', label: 'Fatto', icon: 'check', cls: 'primary' });
       } else {
         actions.push({ act: 'detail', label: 'Dettagli', icon: 'search' });
+        if (s.placeables.some((p) => p.type === 'memory_tree')) actions.push({ act: 'entrust', label: 'Affida all’albero', icon: 'tree' });
         if (g.broken) actions.push({ act: 'repair', label: 'Ripara', icon: 'hammer', cls: 'primary', cost: DECAY.graveRepairCost });
         else if (g.dirty || g.weeds) actions.push({ act: 'clean', label: 'Pulisci', icon: 'broom', cls: 'primary' });
         else actions.push({ act: 'flowers', label: g.hasFlowers ? 'Rinnova fiori' : 'Porta fiori', icon: 'flower', cls: 'primary' });
@@ -201,6 +207,7 @@ export class UI {
         actions.push({ act: 'confirm', label: 'Fatto', icon: 'check', cls: 'primary' });
       } else {
         if (p.type === 'shop') actions.push({ act: 'shop', label: 'Entra in bottega', icon: 'shop', cls: 'primary' });
+        if (p.type === 'memory_tree') { actions.push({ act: 'memories', label: 'Ricordi', icon: 'tree', cls: 'primary' }); sub = `${s.entrusted.length} ${s.entrusted.length === 1 ? 'ricordo' : 'ricordi'}`; }
         actions.push({ act: 'detail', label: 'Dettagli', icon: 'search' });
         if (p.broken) actions.push({ act: 'repair', label: 'Ripara', icon: 'hammer', cls: 'primary', cost: repairCost(def) });
         else if (p.dirty) actions.push({ act: 'clean', label: 'Pulisci', icon: 'broom' });

@@ -22,6 +22,7 @@ import {
   bushesLP, deadTreeLP, flowerbedLP, pathDirt, pathStone, pineLP, pondLP, poisonShroomsLP, sceneryBushLP, sceneryFernLP,
   sceneryFlowersLP, sceneryLeavesLP, sceneryPebblesLP, sceneryRockLP, sceneryShroomsLP, sceneryTuftLP, sceneryWildGrassLP, tallGrassLP,
 } from './nature.ts';
+import { memoryTreeLP } from './memoryTree.ts';
 
 type Builder = () => LPModel;
 
@@ -55,6 +56,8 @@ export const LP_PLACEABLES: Record<string, (v: PVis) => LPModel> = {
   bonfire: bonfireLP,
   candle_tree: candleTreeLP,
   open_coffin: openCoffinLP,
+  // variante = quanti ricordi gli sono stati affidati (un frutto acceso per ciascuno)
+  memory_tree: (v) => memoryTreeLP(v.variant, v.seed + 1),
   shrine: shrineLP,
   open_grave: openGraveLP,
   wall_stone: wallStoneLP,

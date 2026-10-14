@@ -111,6 +111,9 @@ export const SPAWN_CHANCE = {
   priest: 0.04,
   gravedigger: 0.05,
   ratNight: 0.06,
+  /** Fantasma di un ricordo affidato all'Albero dei ricordi. */
+  memoryGhostNight: 0.07,
+  memoryGhostDay: 0.025,
 } as const;
 
 export const SPAWN_MODIFIERS = {

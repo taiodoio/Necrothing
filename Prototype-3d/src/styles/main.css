@@ -297,3 +297,6 @@ button.slot:active, .icon-btn:active, .ctx-actions button:active, .big-btn:activ
 .swatches { display: flex; flex-wrap: wrap; gap: 8px; margin: 4px 0 8px; }
 .swatch { width: 36px; height: 36px; padding: 0; border: 3px solid #07080b; box-shadow: inset 0 0 0 2px rgba(255,255,255,0.12); cursor: pointer; }
 .swatch.active { border-color: var(--gold-bright); box-shadow: 0 0 0 2px #07080b, inset 0 0 0 2px rgba(255,255,255,0.25); }
+/* lista dei ricordi dell'albero: righe toccabili come gli achievement */
+.memory-row { width: 100%; text-align: left; color: inherit; cursor: pointer; font: inherit; }
+.memory-row .ico { filter: none; }

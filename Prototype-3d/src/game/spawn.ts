@@ -18,6 +18,8 @@ export interface SpawnRequest {
   graveId?: string;
   /** Variante rara: il fantasma dell'oggetto sepolto. */
   rare?: boolean;
+  /** Fantasma di un ricordo affidato all'Albero dei ricordi (appare vicino all'albero). */
+  memoryId?: string;
 }
 
 export interface BuildingCounts {
@@ -42,7 +44,7 @@ export function countBuildings(state: Pick<SaveData, 'placeables'>): BuildingCou
 }
 
 export function computeSpawns(
-  state: Pick<SaveData, 'graves' | 'placeables'>,
+  state: Pick<SaveData, 'graves' | 'placeables'> & Partial<Pick<SaveData, 'entrusted'>>,
   isNight: boolean,
   rng: Rng,
 ): SpawnRequest[] {
@@ -72,6 +74,11 @@ export function computeSpawns(
   if (b.openGraves > 0) {
     const p = Math.min(SPAWN_MODIFIERS.zombieChanceMax, SPAWN_MODIFIERS.zombiePerOpenGrave * b.openGraves);
     if (rng.chance(p)) out.push({ kind: 'zombie' });
+  }
+  // l'albero ogni tanto lascia uscire il fantasma di uno dei ricordi affidatigli
+  const kept = state.entrusted ?? [];
+  if (kept.length > 0 && state.placeables.some((p) => p.type === 'memory_tree')) {
+    if (rng.chance(isNight ? SPAWN_CHANCE.memoryGhostNight : SPAWN_CHANCE.memoryGhostDay)) out.push({ kind: 'ghost', memoryId: rng.pick(kept).grave.id });
   }
   return out;
 }

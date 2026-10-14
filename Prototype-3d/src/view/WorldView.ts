@@ -138,6 +138,7 @@ export class WorldView {
 
   sync(state: SaveData) {
     this.area = areaForLevel(state.world.expansionLevel);
+    this.treeMemories = Math.min(30, state.entrusted.length);
     this.syncTerrain(state);
     this.syncScenery(state);
     this.syncDecor(state);
@@ -447,8 +448,11 @@ export class WorldView {
     this.setBadge(e, g.broken ? 'broken' : g.dirty || g.weeds ? 'dirty' : null);
   }
 
+  /** Ricordi affidati all'albero: un frutto acceso per ciascuno (fino a 30). */
+  private treeMemories = 0;
+
   pvis(p: Placed): PVis {
-    return { type: p.type, variant: p.variant, dirty: p.dirty, broken: p.broken, lit: p.lit && !p.broken, seed: placeableSeed(p.type, hashString(p.id)) };
+    return { type: p.type, variant: p.type === 'memory_tree' ? this.treeMemories : p.variant, dirty: p.dirty, broken: p.broken, lit: p.lit && !p.broken, seed: placeableSeed(p.type, hashString(p.id)) };
   }
 
   private syncPlaceable(p: Placed) {

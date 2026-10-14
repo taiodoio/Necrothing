@@ -229,3 +229,57 @@ test('animale domestico: la ciotola non è più in bottega; i salvataggi che l�
   assert.equal(fixed.inventory.skeleton_pet, undefined);
   assert.equal(fixed.player.wisps, wisps + 36);
 });
+
+test('Albero dei ricordi: si sblocca a 20 tombe, accoglie una tomba (libera lo spazio) e ne fa tornare il fantasma', () => {
+  const s = createNewGame(NOW, 42);
+  s.player.wisps = 1000;
+  s.player.xp = 99999;
+  const base = s.graves.length; // anche le tombe del vecchio custode contano
+  assert.equal(R.shopAvailability(s, 'memory_tree', NOW), 'graves', 'bloccato sotto le 20 tombe');
+  for (let i = base; i < 20; i++) { const p = spot(s); R.bury(s, draft({ name: `Oggetto ${i}` }), p.x, p.y, NOW); }
+  assert.equal(R.graveTotal(s), 20);
+  assert.equal(R.shopAvailability(s, 'memory_tree', NOW), 'ok');
+  // senza albero non si affida nulla
+  assert.throws(() => R.entrustGrave(s, s.graves[0].id, NOW));
+  R.buy(s, 'memory_tree', 1, NOW);
+  assert.equal(s.player.wisps, 1000 - 150 + WISPS.burial * (20 - base));
+  const at = spot(s, [5, 5]);
+  R.placeFromInventory(s, 'memory_tree', at.x, at.y, 0, NOW);
+  assert.ok(R.memoryTree(s));
+  assert.equal(R.shopAvailability(s, 'memory_tree', NOW), 'owned', 'pezzo unico');
+  // si affida anche una tomba del lascito: sparisce, lo spazio si libera, il ricordo resta
+  const g = s.graves.find((x) => x.legacy);
+  const wisps = s.player.wisps;
+  const res = R.entrustGrave(s, g.id, NOW);
+  assert.ok(!s.graves.some((x) => x.id === g.id));
+  assert.ok(canPlaceAt(g.x, g.y, [2, 2], buildOccupancy(s), areaForLevel(s.world.expansionLevel)), 'lo spazio è di nuovo libero');
+  assert.equal(s.entrusted.length, 1);
+  assert.equal(s.entrusted[0].grave.name, g.name);
+  assert.equal(s.player.wisps, wisps + WISPS.burial, 'ricompensa come una sepoltura');
+  assert.ok(res.xp > 0);
+  assert.ok(s.memories.some((m) => m.graveId === g.id && m.type === 'entrusted'));
+  assert.equal(R.graveTotal(s), 20, 'le tombe affidate contano ancora');
+  // il fantasma del ricordo: ricompensa classica, la visita resta nella sua storia
+  const w2 = s.player.wisps;
+  const visit = R.interactRoamer(s, 'ghost', NOW, { memoryId: g.id });
+  assert.equal(s.player.wisps, w2 + WISPS.ghost);
+  assert.equal(visit.xp, XP.ghost);
+  assert.match(visit.message, new RegExp(g.name));
+  assert.equal(s.entrusted[0].ghostVisits, 1);
+  // l'albero fa comparire i fantasmi dei suoi ricordi (solo se c'è l'albero)
+  const rng = createRng(7);
+  let seen = 0;
+  for (let i = 0; i < 400; i++) seen += computeSpawns(s, true, rng).filter((q) => q.memoryId === g.id).length;
+  assert.ok(seen > 5, `fantasmi dei ricordi: ${seen}`);
+  const noTree = { ...s, placeables: s.placeables.filter((p) => p.type !== 'memory_tree') };
+  let none = 0;
+  for (let i = 0; i < 400; i++) none += computeSpawns(noTree, true, rng).filter((q) => q.memoryId).length;
+  assert.equal(none, 0);
+});
+
+test('salvataggio vecchio senza ricordi affidati: lista vuota', async () => {
+  const { normalizeSave } = await import('../src/game/state.ts');
+  const s = createNewGame(NOW, 42);
+  delete s.entrusted;
+  assert.deepEqual(normalizeSave(JSON.parse(JSON.stringify(s))).entrusted, []);
+});

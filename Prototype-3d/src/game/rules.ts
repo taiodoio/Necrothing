@@ -2,7 +2,7 @@
 // rispetto a three/DOM. Ogni azione muta lo SaveData passato e ritorna un
 // esito (messaggio + ricompense) oppure lancia GameError.
 
-import { DECAY, ECONOMY, EXPANSION, GRAVE_FOOTPRINT, GRAVEDIGGER, WISP_SPAWN, WISPS, XP } from './balance.ts';
+import { DECAY, ECONOMY, RELEASE_LOCKS, EXPANSION, GRAVE_FOOTPRINT, GRAVEDIGGER, WISP_SPAWN, WISPS, XP } from './balance.ts';
 import { CATALOG, isSeasonallyAvailable, placeableDef, repairCost, rotatedFootprint } from './catalog.ts';
 import { CATEGORIES, DEATH_CAUSES, GRAVE_TYPE_MIN_RANK, GRAVE_TYPES, type Category, type DeathCause, type GraveType } from './graves.ts';
 import { evaluateAchievements, rankForXp, type AchievementDef } from './progression.ts';
@@ -277,7 +277,7 @@ export function shopAvailability(s: SaveData, type: string, now: Date): ShopAvai
   if (!isSeasonallyAvailable(def, now.getMonth())) return 'season';
   if (def.minRank > rankForXp(s.player.xp).level) return 'rank';
   if (def.unique && ownedCount(s, type) + placedCount(s, type) > 0) return 'owned';
-  if (def.minGraves && graveTotal(s) < def.minGraves) return 'graves';
+  if (RELEASE_LOCKS.minGraves && def.minGraves && graveTotal(s) < def.minGraves) return 'graves';
   if (s.player.wisps < def.cost) return 'funds';
   return 'ok';
 }

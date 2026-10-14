@@ -52,7 +52,7 @@ export interface Placed {
   variant: number;
   text?: string;
   lit: boolean;
-  /** Ultima cura (pulizia/riparazione/posa): base del decadimento 3/7 giorni. */
+  /** Ultima cura (pulizia/riparazione/posa): da qui partono i tempi (casuali) di sporco e rotto. */
   caredAt: string;
   dirty: boolean;
   broken: boolean;

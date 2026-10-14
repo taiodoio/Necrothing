@@ -29,7 +29,7 @@ export interface PlaceableDef {
   unique?: boolean;
   /** Non eliminabile né vendibile (solo spostabile): la Bottega. */
   permanent?: boolean;
-  /** Si sporca (3 gg) e si rompe (7 gg) senza cure. */
+  /** Senza cure prima o poi si sporca e poi si rompe (tempi casuali, vedi DECAY). */
   decays?: boolean;
   /** Ha una luce accendibile/spegnibile. */
   light?: boolean;

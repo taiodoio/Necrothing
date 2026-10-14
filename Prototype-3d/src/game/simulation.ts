@@ -7,7 +7,7 @@
 
 import { DECAY, SIM, WISPS, XP } from './balance.ts';
 import { CATALOG } from './catalog.ts';
-import { createRng, newId, type Rng } from './rng.ts';
+import { createRng, hashString, newId, type Rng } from './rng.ts';
 import { computeSpawns, liveWispChance, wispCap, type SpawnRequest } from './spawn.ts';
 import type { SaveData, Weather } from './state.ts';
 import { dayPhaseForHour, daysBetween, isoDate } from './time.ts';
@@ -46,6 +46,18 @@ export function randomWispCell(s: SaveData, rng: Rng): { x: number; y: number } 
     if (!occ.blocked.has(k) && !taken.has(k)) return { x, y };
   }
   return null;
+}
+
+/**
+ * Quando un oggetto si sporca e quando si rompe, in giorni dall'ultima cura.
+ * Ogni ciclo di cura ha i suoi tempi (dal suo id e dalla data della cura):
+ * casuali ma stabili, così riaprendo il gioco non cambiano.
+ */
+export function placeableDecayDays(p: { id: string; caredAt: string }): { dirty: number; broken: number } {
+  const u = (salt: string) => (hashString(`${p.id}|${p.caredAt}|${salt}`) >>> 0) / 4294967296;
+  const [d0, d1] = DECAY.placeableDirtyDays, [b0, b1] = DECAY.placeableBreakDays;
+  const dirty = Math.round(d0 + (d1 - d0) * u('sporco'));
+  return { dirty, broken: dirty + Math.round(b0 + (b1 - b0) * u('rotto')) };
 }
 
 export function runCatchUp(s: SaveData, now: Date): CatchUpReport {
@@ -92,12 +104,13 @@ export function runCatchUp(s: SaveData, now: Date): CatchUpReport {
     }
   }
 
-  // Luci e costruzioni: sporche dopo 3 giorni senza cure, rotte dopo 7 (Excel).
+  // Luci e costruzioni: si sporcano e si rompono con tempi larghi e diversi a ogni ciclo di cura.
   for (const p of s.placeables) {
     if (!CATALOG[p.type]?.decays) continue;
     const age = daysBetween(p.caredAt, now);
-    if (!p.dirty && age >= DECAY.placeableDirtyDays) { p.dirty = true; r.placeablesDirty++; }
-    if (!p.broken && age >= DECAY.placeableBreakDays) { p.broken = true; r.placeablesBroken++; }
+    const d = placeableDecayDays(p);
+    if (!p.dirty && age >= d.dirty) { p.dirty = true; r.placeablesDirty++; }
+    if (!p.broken && age >= d.broken) { p.dirty = true; p.broken = true; r.placeablesBroken++; }
   }
 
   // Benedizione narrativa del prete (offline).

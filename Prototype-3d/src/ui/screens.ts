@@ -248,7 +248,7 @@ export function openDetail(ui: UI, id: string) {
     h('dl', { class: 'kv' },
       h('dt', {}, 'Categoria'), h('dd', {}, PLACEABLE_CATEGORY_LABELS[d.category]),
       d.variantLabels ? h('dt', {}, 'Variante') : null, d.variantLabels ? h('dd', {}, d.variantLabels[p.variant]) : null,
-      d.decays ? h('dt', {}, 'Condizione') : null, d.decays ? h('dd', {}, p.broken ? `Rotto (riparare: ${repairCost(d)} fuochi fatui)` : p.dirty ? 'Sporco: va pulito' : 'In ordine — si sporca dopo 3 giorni senza cure') : null,
+      d.decays ? h('dt', {}, 'Condizione') : null, d.decays ? h('dd', {}, p.broken ? `Rotto (riparare: ${repairCost(d)} fuochi fatui)` : p.dirty ? 'Sporco: va pulito' : 'In ordine — prima o poi avrà bisogno di una pulita') : null,
       d.light ? h('dt', {}, 'Luce') : null, d.light ? h('dd', {}, p.broken ? 'Guasta' : p.lit ? 'Accesa' : 'Spenta') : null,
     ),
   );

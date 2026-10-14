@@ -129,6 +129,8 @@ export class WorldView {
    * altrimenti resterebbero ferme dove le ha lasciate l'ultimo aggiornamento.
    */
   staticShadows = false;
+  /** Moltiplicatore della densità del bosco attorno al recinto (1 = come il livello di qualità). */
+  forestScale = 1;
   /** Cresce a ogni cambiamento visibile della scena: chi lo osserva sa quando ridisegnare le ombre. */
   version = 0;
 
@@ -264,7 +266,7 @@ export class WorldView {
 
   /** Recinto + cancello (instancing) e bosco (cotto per chunk). */
   private syncScenery(state: SaveData) {
-    const sig = `${this.style}|${state.world.expansionLevel}|${this.quality}`;
+    const sig = `${this.style}|${state.world.expansionLevel}|${this.quality}|${this.forestScale}`;
     if (sig === this.scenerySig) return;
     this.scenerySig = sig;
     for (const h of this.sceneryAnchors) this.atmosphere.removeAnchor(h);
@@ -301,7 +303,7 @@ export class WorldView {
     // nebbia ne nascondono la semplificazione.
     const rng = createRng(state.seed + 77);
     const input = this.groundInput!;
-    const density = this.quality === 'low' ? 0.22 : this.quality === 'medium' ? 0.32 : 0.42;
+    const density = (this.quality === 'low' ? 0.22 : this.quality === 'medium' ? 0.32 : 0.42) * this.forestScale;
     const baker = new ChunkBaker();
     const nearRes = this.quality === 'high' ? 1.6 : 1.0;
     const farRes = this.quality === 'high' ? 1.0 : 0.7;

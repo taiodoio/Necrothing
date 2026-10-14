@@ -315,3 +315,25 @@ test('i pezzi in serie (sentieri, muretti, staccionate, inferriate) non si sporc
   const fixed = normalizeSave(old).placeables.find((p) => p.type === 'path_stone');
   assert.equal(fixed.dirty || fixed.broken, false);
 });
+
+test('becchino in visita: sistema metà delle cose sporche; prete: la prima preghiera benedice il cimitero', () => {
+  const s = createNewGame(NOW, 7);
+  runCatchUp(s, later(40)); // tante cose sporche (e qualcuna rotta)
+  const dirty = [...s.graves.filter((g) => !g.broken && (g.dirty || g.weeds)), ...s.placeables.filter((p) => !p.broken && p.dirty)];
+  assert.ok(dirty.length >= 2, `cose sporche: ${dirty.length}`);
+  const round = R.gravediggerRound(s);
+  assert.equal(round.length, Math.ceil(dirty.length / 2), 'metà, per eccesso');
+  assert.ok(round.every((id) => dirty.some((d) => d.id === id)), 'solo cose sporche (non rotte)');
+  const w = s.player.wisps;
+  for (const id of round) assert.ok(R.gravediggerClean(s, id, later(40)).xp > 0);
+  assert.equal(s.player.wisps, w + round.length * WISPS.gravediggerPerGrave);
+  const still = [...s.graves.filter((g) => !g.broken && (g.dirty || g.weeds)), ...s.placeables.filter((p) => !p.broken && p.dirty)];
+  assert.equal(still.length, dirty.length - round.length, 'il resto tocca al Custode');
+  assert.equal(R.gravediggerClean(s, round[0], later(40)).xp, 0, 'già pulita: niente doppio premio');
+  // prete
+  const g = s.graves[0];
+  const first = R.priestBless(s, g.id, later(40), true);
+  assert.ok(first.wisps > 0 && s.world.blessingUntil);
+  assert.equal(R.priestBless(s, s.graves[1].id, later(40), false).wisps, 0);
+  assert.ok(s.memories.some((m) => m.graveId === g.id && m.type === 'blessing'));
+});

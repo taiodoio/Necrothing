@@ -43,6 +43,8 @@ export interface Roamer extends Walker {
   graveId?: string;
   /** Fantasma di un ricordo affidato all'Albero dei ricordi. */
   memoryId?: string;
+  /** Becchino e prete: un giro con delle tappe, poi se ne vanno da dove sono venuti. */
+  visit?: Visit;
   heading: Cell;
   age: number;
   life: number;
@@ -50,6 +52,20 @@ export interface Roamer extends Walker {
   hitbox: THREE.Mesh;
   dying: number; // >0 durante la dissolvenza
   perched: boolean;
+}
+
+/** Una tappa del giro: una tomba o un oggetto (cella e ingombro). */
+export interface VisitStop { id: string; x: number; y: number; fp: [number, number] }
+
+interface Visit {
+  stops: VisitStop[];
+  i: number;
+  stage: 'go' | 'work' | 'leave';
+  timer: number;
+  planned: boolean;
+  exit: THREE.Vector3;
+  onStop: (id: string) => void;
+  onDone: () => void;
 }
 
 interface Presence extends Walker {
@@ -348,6 +364,65 @@ export class Actors {
     return r;
   }
 
+  /**
+   * Becchino o prete in visita: entra da `start`, fa le sue tappe (lavora o prega
+   * accanto a ciascuna) e se ne va da `exit`. Non svanisce se lo si tocca.
+   */
+  spawnVisitor(kind: 'priest' | 'gravedigger', start: THREE.Vector3, exit: THREE.Vector3, stops: VisitStop[], onStop: (id: string) => void, onDone: () => void): Roamer {
+    const r = this.spawnRoamer({ kind }, start);
+    r.speed = kind === 'gravedigger' ? 1.9 : 1.6;
+    r.visit = { stops, i: 0, stage: 'go', timer: 0, planned: false, exit, onStop, onDone };
+    return r;
+  }
+
+  /** Percorso a piedi fino a una cella (si può partire anche da una cella occupata); null se non c'è. */
+  private visitPath(from: THREE.Vector3, to: Cell): THREE.Vector3[] | null {
+    const a = worldToCell(from);
+    const p = findPath(a, to, (x, y) => !this.walkable(x, y) && !(x === a.x && y === a.y) && !(x === to.x && y === to.y), MAP_SIZE);
+    return p ? p.slice(1).map((c) => cellCenter(c.x, c.y, [1, 1])) : null;
+  }
+
+  private stepVisit(r: Roamer, v: Visit, dt: number) {
+    if (v.stage === 'go') {
+      if (!v.planned) {
+        const s = v.stops[v.i];
+        if (!s) {
+          v.stage = 'leave';
+          const p = this.visitPath(r.pos, worldToCell(v.exit));
+          r.path = [...(p ?? []), v.exit.clone()];
+          return;
+        }
+        // una cella libera accanto alla tappa (meglio davanti), la più vicina
+        const from = worldToCell(r.pos);
+        const ring: Cell[] = [];
+        for (let i = -1; i <= s.fp[0]; i++) { ring.push({ x: s.x + i, y: s.y + s.fp[1] }); ring.push({ x: s.x + i, y: s.y - 1 }); }
+        for (let j = 0; j < s.fp[1]; j++) { ring.push({ x: s.x - 1, y: s.y + j }); ring.push({ x: s.x + s.fp[0], y: s.y + j }); }
+        const near = ring.filter((c) => this.walkable(c.x, c.y)).sort((a, b) => Math.hypot(a.x - from.x, a.y - from.y) - Math.hypot(b.x - from.x, b.y - from.y) + (a.y === s.y + s.fp[1] ? -1 : 0) - (b.y === s.y + s.fp[1] ? -1 : 0));
+        let path: THREE.Vector3[] | null = null;
+        for (const c of near.slice(0, 4)) { path = this.visitPath(r.pos, c); if (path) { path.push(cellCenter(c.x, c.y, [1, 1])); break; } }
+        if (!path) { v.i++; return; } // irraggiungibile: passa alla prossima
+        r.path = path;
+        v.planned = true;
+      }
+      if (this.followPath(r, dt)) { r.pose = 'walk'; return; }
+      const s = v.stops[v.i];
+      const c = cellCenter(s.x, s.y, s.fp);
+      r.facing = Math.atan2(c.x - r.pos.x, c.z - r.pos.z);
+      v.stage = 'work';
+      v.timer = r.kind === 'gravedigger' ? 2.2 : 2.8;
+    } else if (v.stage === 'work') {
+      r.pose = r.kind === 'gravedigger' ? 'work' : 'pray';
+      v.timer -= dt;
+      if (v.timer <= 0) {
+        v.onStop(v.stops[v.i].id);
+        v.i++;
+        v.stage = 'go';
+        v.planned = false;
+      }
+    } else if (this.followPath(r, dt)) r.pose = 'walk';
+    else { const done = v.onDone; v.onDone = () => undefined; done(); r.visit = undefined; this.removeRoamer(r.id, true); }
+  }
+
   removeRoamer(id: string, animate = true) {
     const r = this.roamers.get(id);
     if (!r) return;
@@ -369,6 +444,7 @@ export class Actors {
       if (r.dying <= 0) this.removeRoamer(r.id, false);
       return;
     }
+    if (r.visit) { this.stepVisit(r, r.visit, dt); return; }
     if (r.age > r.life) { r.dying = 0.6; return; }
     if (r.kind === 'crow') {
       // vola verso una lapide, si posa, riparte

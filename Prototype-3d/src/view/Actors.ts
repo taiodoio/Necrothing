@@ -41,6 +41,8 @@ interface Walker {
   pose: Pose;
   facing: number;
   lightHandles: AnchorHandle[];
+  /** Ombra a disco (qualità Auto con ombre ferme). */
+  blob?: THREE.Mesh;
 }
 
 export interface Roamer extends Walker {
@@ -207,7 +209,24 @@ export class Actors {
     return { rig, pos: pos.clone(), path: [], speed, phase: Math.random() * 6, pose: 'idle', facing: 0, lightHandles };
   }
 
+  /**
+   * Ombre a disco: con le ombre della scena ferme (qualità Auto) i personaggi
+   * non entrano nella mappa delle ombre (resterebbero indietro) e hanno un
+   * disco scuro sotto i piedi che li segue.
+   */
+  private blobShadows = false;
+  private readonly blobGeo = new THREE.CircleGeometry(1, 20).rotateX(-Math.PI / 2);
+  private readonly blobMat = new THREE.MeshBasicMaterial({ color: '#000000', transparent: true, opacity: 0.3, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -2 });
+
+  setBlobShadows(on: boolean) { this.blobShadows = on; }
+
+  private blobRadius(w: Walker): number {
+    const sp = w.rig.spec;
+    return sp.flier ? 0.17 : sp.quadruped ? 0.26 : 0.34;
+  }
+
   private disposeWalker(w: Walker) {
+    if (w.blob) { this.group.remove(w.blob); w.blob = undefined; }
     this.group.remove(w.rig.root);
     for (const h of w.lightHandles) this.atmosphere.removeAnchor(h);
   }
@@ -1242,6 +1261,24 @@ export class Actors {
       d = Math.atan2(Math.sin(d), Math.cos(d));
       w.rig.root.rotation.y += d * Math.min(1, dt * 12);
       animateRig(w.rig, w.pose, t + w.phase, w.phase);
+      // ombra vera nella mappa delle ombre, oppure disco sotto i piedi
+      const cast = !this.blobShadows;
+      if (w.rig.root.userData.cast !== cast) {
+        w.rig.root.traverse((o) => {
+          if (!(o as THREE.Mesh).isMesh) return;
+          if (o.userData.cast0 === undefined) o.userData.cast0 = o.castShadow;
+          o.castShadow = cast && o.userData.cast0;
+        });
+        w.rig.root.userData.cast = cast;
+      }
+      if (this.blobShadows && w.rig.root.visible && w.rig.spec.bucket !== 'ghost') {
+        if (!w.blob) { w.blob = new THREE.Mesh(this.blobGeo, this.blobMat); w.blob.renderOrder = 1; this.group.add(w.blob); }
+        const gy = ground(w.pos);
+        const lift = Math.max(0, y - gy);
+        w.blob.visible = true;
+        w.blob.position.set(w.pos.x, gy + 0.03, w.pos.z);
+        w.blob.scale.setScalar(this.blobRadius(w) * w.rig.root.scale.x * Math.max(0.35, 1 - lift * 0.18));
+      } else if (w.blob) w.blob.visible = false;
       if (w.lightHandles.length) {
         w.rig.root.updateMatrixWorld(true);
         w.lightHandles.forEach((h, i) => this.atmosphere.moveAnchor(h, rigLightPos(w.rig, i)));

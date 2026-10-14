@@ -93,6 +93,13 @@ export class PostFX {
     this.quad.frustumCulled = false;
   }
 
+  /** Campioni MSAA della scena sotto la sfocatura (qualità Auto: meno sui dispositivi deboli). */
+  setSamples(n: number) {
+    if (this.rtScene.samples === n) return;
+    this.rtScene.samples = n;
+    this.rtScene.dispose(); // si rialloca al prossimo uso con i nuovi campioni
+  }
+
   /** Raggio massimo in pixel CSS (moltiplicato per il pixel ratio). */
   configure(enabled: boolean, maxBlurCss: number) {
     this.enabled = enabled;

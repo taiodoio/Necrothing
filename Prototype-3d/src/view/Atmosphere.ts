@@ -125,9 +125,33 @@ export class Atmosphere {
     this.sun.shadow.map = null as unknown as THREE.WebGLRenderTarget;
   }
 
+  /** Luci reali nella scena (qualità Auto): le altre non ci sono proprio, così lo shader non le calcola. */
+  private lightBudget: number | null = null;
+
   /** Numero di luci reali attive per qualità (le altre restano a intensità 0). */
   private activePool(): number {
-    return this.quality === 'low' ? 4 : this.quality === 'medium' ? 7 : 10;
+    return this.lightBudget ?? (this.quality === 'low' ? 4 : this.quality === 'medium' ? 7 : 10);
+  }
+
+  /**
+   * Quante luci puntiformi tenere davvero nella scena (null: tutte, come nei
+   * livelli manuali). Cambiarlo ricompila gli shader: si fa di rado.
+   */
+  setLightBudget(n: number | null) {
+    this.lightBudget = n;
+    this.pool.forEach((l, i) => {
+      const keep = n === null || i < n;
+      if (keep && !l.parent) this.group.add(l);
+      if (!keep && l.parent) { this.group.remove(l); l.userData.entry = undefined; l.intensity = 0; }
+    });
+  }
+
+  /** Lato della mappa delle ombre (qualità Auto: segue il gradino). */
+  setShadowSize(size: number) {
+    if (this.sun.shadow.mapSize.x === size) return;
+    this.sun.shadow.mapSize.set(size, size);
+    this.sun.shadow.map?.dispose();
+    this.sun.shadow.map = null as unknown as THREE.WebGLRenderTarget;
   }
 
   /**
@@ -293,7 +317,7 @@ export class Atmosphere {
       for (const e of want) {
         if (assigned.has(e)) continue;
         // la sorgente è stata rifatta nello stesso punto (oggetto con un modello nuovo): la luce passa a lei senza spegnersi
-        const handover = this.pool.find((l) => l.userData.leaving && l.userData.entry && !this.anchors.has(this.idOf(l.userData.entry as AnchorEntry)) && (l.userData.entry as AnchorEntry).pos.distanceToSquared(e.pos) < 0.04);
+        const handover = this.pool.find((l) => l.parent && l.userData.leaving && l.userData.entry && !this.anchors.has(this.idOf(l.userData.entry as AnchorEntry)) && (l.userData.entry as AnchorEntry).pos.distanceToSquared(e.pos) < 0.04);
         if (handover) {
           handover.userData.entry = e;
           handover.userData.leaving = false;
@@ -302,7 +326,7 @@ export class Atmosphere {
           assigned.add(e);
           continue;
         }
-        const free = this.pool.find((l) => !l.userData.entry);
+        const free = this.pool.find((l) => !l.userData.entry && l.parent);
         if (!free) break;
         free.userData.entry = e;
         free.userData.leaving = false;
@@ -315,7 +339,7 @@ export class Atmosphere {
     }
     for (const light of this.pool) {
       const e = light.userData.entry as AnchorEntry | undefined;
-      if (!e) { light.intensity = 0; continue; }
+      if (!e || !light.parent) { light.intensity = 0; continue; }
       let w = (light.userData.w as number | undefined) ?? 1;
       w = light.userData.leaving ? Math.max(0, w - dt / LIGHT_OUT) : Math.min(1, w + dt / LIGHT_IN);
       light.userData.w = w;

@@ -15,6 +15,8 @@ export const SAVE_VERSION = 2;
 export type ArtStyle = 'voxel' | 'miniature' | 'lowpoly';
 export type CameraMode = 'angled' | 'top';
 export type Quality = 'low' | 'medium' | 'high';
+/** Qualità scelta nelle impostazioni: un livello fisso, o «auto» (si adatta al dispositivo). */
+export type QualitySetting = Quality | 'auto';
 export type TimeOverride = 'auto' | DayPhase;
 export type Weather = 'clear' | 'fog' | 'rain' | 'storm';
 
@@ -127,7 +129,7 @@ export interface WorldMeta {
 export interface Settings {
   style: ArtStyle;
   camera: CameraMode;
-  quality: Quality;
+  quality: QualitySetting;
   timeOverride: TimeOverride;
   weatherEffects: boolean;
   /** Sfocatura tilt-shift ai bordi (media/alta qualità). */
@@ -156,7 +158,7 @@ export interface SaveData {
 export const DEFAULT_SETTINGS: Settings = {
   style: 'lowpoly',
   camera: 'angled',
-  quality: 'medium',
+  quality: 'auto',
   timeOverride: 'auto',
   weatherEffects: true,
   edgeBlur: true,

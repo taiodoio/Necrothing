@@ -123,6 +123,19 @@ export class WorldView {
     scene.add(this.root);
   }
 
+  /**
+   * Ombre della scena ridisegnate solo quando cambia qualcosa (qualità Auto):
+   * ciò che si muove da solo (fuochi fatui, parti animate) non proietta ombre,
+   * altrimenti resterebbero ferme dove le ha lasciate l'ultimo aggiornamento.
+   */
+  staticShadows = false;
+  /** Cresce a ogni cambiamento visibile della scena: chi lo osserva sa quando ridisegnare le ombre. */
+  version = 0;
+
+  private noShadow(o: THREE.Object3D) {
+    if (this.staticShadows) o.traverse((m) => { m.castShadow = false; });
+  }
+
   setStyle(style: ArtStyle, state: SaveData, force = false) {
     if (style === this.style && !force) return;
     this.style = style;
@@ -139,6 +152,7 @@ export class WorldView {
   // ── Sincronizzazione ─────────────────────────────────────────────────
 
   sync(state: SaveData) {
+    this.version++;
     this.area = areaForLevel(state.world.expansionLevel);
     this.treeMemories = Math.min(30, state.entrusted.length);
     this.syncTerrain(state);
@@ -441,6 +455,7 @@ export class WorldView {
   private hidden = new Set<string>();
 
   setHidden(id: string, on: boolean) {
+    this.version++;
     if (on) this.hidden.add(id); else this.hidden.delete(id);
     const e = this.entities.get(id);
     if (e) e.group.visible = !on;
@@ -483,7 +498,7 @@ export class WorldView {
       if (p.type === 'sign') this.addSignText(e, p.text ?? '');
       if (this.style === 'lowpoly') {
         e.anim = createAnimated(v) ?? undefined;
-        if (e.anim) e.visual.add(e.anim.root);
+        if (e.anim) { this.noShadow(e.anim.root); e.visual.add(e.anim.root); }
       }
     }
     e.fault = p.broken ? 2 : p.dirty ? 1 : 0;
@@ -498,6 +513,8 @@ export class WorldView {
   private createEntity(id: string, kind: EntityKind, key: string, model: CachedModel, baseFp: [number, number], rot: number): EntityView {
     const group = new THREE.Group();
     group.name = id;
+    // tombe e oggetti stanno fermi: la matrice si ricalcola solo quando si spostano
+    group.matrixAutoUpdate = false;
     const visual = instantiate(model);
     group.add(visual);
     const h = Math.max(0.4, model.height);
@@ -517,6 +534,7 @@ export class WorldView {
   private placeEntity(e: EntityView, center: THREE.Vector3, rot: number) {
     e.group.position.copy(center);
     e.group.rotation.y = -rot * Math.PI / 2;
+    e.group.updateMatrix();
     e.group.updateMatrixWorld(true);
     const model = e.group.userData.model as CachedModel;
     // stesse sorgenti: si aggiornano sul posto (toglierle e rimetterle faceva spegnere e riaccendere le luci vicine)
@@ -593,7 +611,7 @@ export class WorldView {
       const group = new THREE.Group();
       // low-poly: fiammella a goccia con faccina, scintille e alone; voxel/miniatura: cubetti
       const visual = this.style === 'lowpoly' ? createWispVisual() : undefined;
-      if (visual) group.add(visual.root);
+      if (visual) { this.noShadow(visual.root); group.add(visual.root); }
       else {
         const core = new THREE.Mesh(new THREE.BoxGeometry(0.16, 0.22, 0.16), new THREE.MeshBasicMaterial({ color: '#c9fff0', toneMapped: false }));
         const shell = new THREE.Mesh(new THREE.BoxGeometry(0.28, 0.34, 0.28), new THREE.MeshBasicMaterial({ color: P.spectral, transparent: true, opacity: 0.45, depthWrite: false, blending: THREE.AdditiveBlending }));
@@ -707,6 +725,8 @@ export class WorldView {
     const c = cellCenter(x, y, e.fp);
     c.y = this.heightAt(c.x, c.z);
     e.group.position.copy(c);
+    e.group.updateMatrix();
+    this.version++;
     this.ghostFrame.visible = true;
     this.ghostFrame.position.set(c.x, c.y + 0.05, c.z);
     this.ghostFrame.scale.set(e.fp[0], 1, e.fp[1]);

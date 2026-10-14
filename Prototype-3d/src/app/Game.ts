@@ -9,7 +9,7 @@ import type { GraveVisualState } from '../game/graves.ts';
 import { graveVisualState } from '../game/graves.ts';
 import * as R from '../game/rules.ts';
 import { catchUpMessage, liveTick, runCatchUp } from '../game/simulation.ts';
-import { createNewGame, type ArtStyle, type CameraMode, type Quality, type SaveData, type TimeOverride } from '../game/state.ts';
+import { createNewGame, type ArtStyle, type CameraMode, type Quality, type QualitySetting, type SaveData, type TimeOverride } from '../game/state.ts';
 import { dayPhaseForHour, type DayPhase } from '../game/time.ts';
 import type { CustodeLook } from '../game/look.ts';
 import { areaForLevel, buildOccupancy, canPlaceAt, gateCells, nearestFreeSpot } from '../game/world.ts';
@@ -27,6 +27,7 @@ import { Effects } from '../view/Effects.ts';
 import { ForestMist } from '../view/ForestMist.ts';
 import { PostFX } from '../view/PostFX.ts';
 import { cellCenter, HALF, worldToCell, WorldView } from '../view/WorldView.ts';
+import { AUTO_STEPS, AutoGovernor, detectTier, TIER_LABELS, TIERS, type AutoProfile } from './AutoQuality.ts';
 import { Input } from './Input.ts';
 import { loadSave, saveNow, scheduleSave } from './persistence.ts';
 import { closedCoffinLP } from '../render/lowpoly/memoryTree.ts';
@@ -95,7 +96,8 @@ export class Game {
     // flag di sviluppo: ?style=voxel|miniature|lowpoly (alias ?renderer=legacy|lowpoly)
     const forced = params.get('style') ?? ({ legacy: 'voxel', lowpoly: 'lowpoly' } as Record<string, string>)[params.get('renderer') ?? ''];
     if (forced === 'voxel' || forced === 'miniature' || forced === 'lowpoly') this.state.settings.style = forced;
-    const q = this.state.settings.quality;
+    if (this.state.settings.quality === 'auto') this.auto = new AutoGovernor(loadAutoProfile());
+    const q = this.baseQuality();
     this.renderer = new THREE.WebGLRenderer({ canvas, antialias: q !== 'low', powerPreference: 'high-performance', preserveDrawingBuffer: false });
     this.renderer.outputColorSpace = THREE.SRGBColorSpace;
     this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
@@ -110,6 +112,7 @@ export class Game {
     this.atmosphere = new Atmosphere(this.scene, q);
     this.effects = new Effects(this.scene, q);
     this.world = new WorldView(this.scene, this.atmosphere, this.state.settings.style);
+    this.world.staticShadows = !!this.auto && TIERS[this.auto.tier].staticShadows;
     this.world.quality = q;
     if (params.get('mist') !== '0') this.mist = new ForestMist(this.scene, q);
     const report = runCatchUp(this.state, now);
@@ -133,7 +136,7 @@ export class Game {
       zoom: (f) => this.rig.zoomBy(f),
       key: (k, down) => this.onKey(k, down),
     });
-    this.applyQuality(q);
+    this.applySettingQuality();
     this.updatePhase(true);
     window.addEventListener('resize', this.resize);
     document.addEventListener('visibilitychange', this.onVisibility);
@@ -159,11 +162,15 @@ export class Game {
 
   private readonly tick = () => {
     if (this.disposed) return;
-    const dt = Math.min(0.05, this.clock.getDelta());
+    const raw = this.clock.getDelta();
+    const dt = Math.min(0.05, raw);
     const t = this.clock.elapsedTime;
+    if (this.auto) this.autoFrame(raw);
 
     this.steerFromKeys(dt);
-    this.actors.update(dt, t, graveSpots(this.state), (p) => this.groundAt(p));
+    // le posizioni delle tombe cambiano solo quando cambia la scena: niente array nuovi a ogni frame
+    if (this.spotsVersion !== this.world.version) { this.spots = graveSpots(this.state); this.spotsVersion = this.world.version; }
+    this.actors.update(dt, t, this.spots, (p) => this.groundAt(p));
     this.collectNearbyWisps();
     this.world.update(dt, t);
     this.mist?.update(dt, (this.scene.fog as THREE.Fog).color);
@@ -181,6 +188,7 @@ export class Game {
     this.hudTimer -= dt;
     if (this.hudTimer <= 0) { this.hudTimer = 1; this.ui.refreshClock(); }
 
+    if (!this.renderer.shadowMap.autoUpdate) this.refreshStaticShadows();
     this.renderer.info.reset();
     this.updateFocus();
     this.postfx.render(this.scene, this.rig.camera);
@@ -766,7 +774,8 @@ export class Game {
     const gate = [...gateCells(area)][1].split(',').map(Number);
     const grave = cellCenter(g.x, g.y, GRAVE_FOOTPRINT);
     const coffinModel = closedCoffinLP();
-    const coffin = instantiate({ geometries: coffinModel.geometries, lights: [], height: 0.4, mats: LOWPOLY_MATERIALS, dedicated: true }, { castShadow: true });
+    // con le ombre ferme la bara in viaggio non proietta ombra (resterebbe indietro)
+    const coffin = instantiate({ geometries: coffinModel.geometries, lights: [], height: 0.4, mats: LOWPOLY_MATERIALS, dedicated: true }, { castShadow: !this.world.staticShadows });
     this.rig.jumpTo(grave.clone().lerp(t.center, 0.5));
     this.rig.follow = null;
     toast('Il corteo arriva per accompagnarlo all’albero…');
@@ -903,11 +912,80 @@ export class Game {
     this.ui.refreshSettingsButtons();
   }
 
-  setQuality(q: Quality) {
+  setQuality(q: QualitySetting) {
     this.state.settings.quality = q;
-    this.applyQuality(q);
+    this.auto = q === 'auto' ? new AutoGovernor(loadAutoProfile()) : null;
+    this.applySettingQuality();
     scheduleSave(this.state);
     this.ui.refreshSettingsButtons();
+  }
+
+  // ── Qualità Auto ─────────────────────────────────────────────────────
+
+  /** Regolatore della qualità Auto (null con un livello fisso). */
+  private auto: AutoGovernor | null = null;
+  private spots: THREE.Vector3[] = [];
+  private spotsVersion = -1;
+  private shadowSig = '';
+
+  /** Il livello di base da usare: quello scelto, o quello della fascia del dispositivo in Auto. */
+  private baseQuality(): Quality {
+    const q = this.state.settings.quality;
+    return q === 'auto' ? TIERS[this.auto?.tier ?? 'mid'].bake : q;
+  }
+
+  /** Applica la qualità scelta: un livello fisso (come sempre) o Auto (fascia + gradino). */
+  private applySettingQuality() {
+    const auto = this.auto;
+    const tier = auto ? TIERS[auto.tier] : null;
+    // ombre ferme e ombre a disco solo in Auto (fascia economica e media)
+    const still = !!tier?.staticShadows;
+    if (this.world.staticShadows !== still) {
+      this.world.staticShadows = still;
+      this.world.setStyle(this.state.settings.style, this.state, true); // ricrea ciò che si muove senza ombra
+    }
+    this.actors.setBlobShadows(still);
+    this.renderer.shadowMap.autoUpdate = !still;
+    this.renderer.shadowMap.needsUpdate = true;
+    this.atmosphere.setLightBudget(tier ? tier.lights : null);
+    if (!auto) this.postfx.setSamples(4);
+    this.applyQuality(this.baseQuality());
+    if (auto) this.applyAutoStep();
+  }
+
+  /** Gradino corrente della qualità Auto: pixel ratio, mappa ombre, sfocatura, MSAA. */
+  private applyAutoStep() {
+    const auto = this.auto;
+    if (!auto) return;
+    const st = AUTO_STEPS[auto.step];
+    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, st.dpr));
+    this.atmosphere.setShadowSize(st.shadow);
+    this.renderer.shadowMap.needsUpdate = true;
+    this.postfx.setSamples(st.msaa);
+    this.postfx.configure(st.blur && this.state.settings.edgeBlur, auto.tier === 'high' ? 5 : 3.5);
+    this.resize();
+    saveAutoProfile(auto.profile());
+  }
+
+  private autoFrame(raw: number) {
+    const d = this.auto!.frame(raw);
+    if (d === 'up' || d === 'down') this.applyAutoStep();
+    else if (d === 'tierDown') { this.applySettingQuality(); saveAutoProfile(this.auto!.profile()); }
+  }
+
+  /** Ombre ferme: si ridisegnano solo se si muove la camera o il sole, o se cambia la scena. */
+  private refreshStaticShadows() {
+    const sun = this.atmosphere.sun.position, tg = this.rig.target;
+    const sig = `${tg.x.toFixed(2)}|${tg.z.toFixed(2)}|${this.rig.viewHeight.toFixed(2)}|${sun.x.toFixed(2)}|${sun.y.toFixed(2)}|${sun.z.toFixed(2)}|${this.world.version}`;
+    if (sig !== this.shadowSig) { this.shadowSig = sig; this.renderer.shadowMap.needsUpdate = true; }
+  }
+
+  /** Per le statistiche tecniche: fascia e gradino della qualità Auto. */
+  autoInfo(): string | null {
+    const a = this.auto;
+    if (!a) return null;
+    const st = AUTO_STEPS[a.step];
+    return `auto · ${TIER_LABELS[a.tier]} · gradino ${a.step}/${a.ceiling} · dpr ${this.renderer.getPixelRatio()} · ombre ${st.shadow}${TIERS[a.tier].staticShadows ? ' ferme' : ''} · luci ${TIERS[a.tier].lights} · sfocatura ${st.blur && this.state.settings.edgeBlur ? 'sì' : 'no'}`;
   }
 
   /** La fascia nitida segue il Custode (o la selezione), senza scatti. */
@@ -963,7 +1041,7 @@ export class Game {
 
   setEdgeBlur(on: boolean) {
     this.state.settings.edgeBlur = on;
-    this.applyQuality(this.state.settings.quality);
+    this.applySettingQuality();
     scheduleSave(this.state);
   }
 
@@ -1024,7 +1102,8 @@ export class Game {
     const shop = next.placeables.find((p) => p.type === 'shop');
     if (shop) this.actors.teleport(cellCenter(shop.x + 1, shop.y + 4, [1, 1]));
     this.rig.setMode(next.settings.camera);
-    this.applyQuality(next.settings.quality);
+    this.auto = next.settings.quality === 'auto' ? new AutoGovernor(loadAutoProfile()) : null;
+    this.applySettingQuality();
     this.afterChange();
     this.updatePhase(true);
     saveNow(next);
@@ -1040,6 +1119,7 @@ export class Game {
     const cs = cacheStats();
     return [
       `FPS ${this.fps.value}`,
+      ...(this.autoInfo() ? [this.autoInfo()!] : []),
       `draw calls ${info.calls} · tri ${info.triangles.toLocaleString('it-IT')}`,
       `stile ${this.state.settings.style} · camera ${this.state.settings.camera}`,
       `seed ${this.state.seed} · fase ${this.phase} · meteo ${this.state.world.weather}`,
@@ -1069,4 +1149,39 @@ export class Game {
     this.renderer.setAnimationLoop(null);
     this.renderer.dispose();
   }
+}
+
+// ── Profilo della qualità Auto (per dispositivo: resta nel browser, non nel salvataggio) ──
+
+const AUTO_KEY = 'necro3d:auto-quality';
+let gpuName: string | null = null;
+
+/** GPU e memoria del dispositivo (per stimare la fascia). */
+function deviceInfo() {
+  let gpu = '';
+  try {
+    const gl = document.createElement('canvas').getContext('webgl');
+    const ext = gl?.getExtension('WEBGL_debug_renderer_info');
+    gpu = String((ext && gl?.getParameter(ext.UNMASKED_RENDERER_WEBGL)) || gl?.getParameter(gl.RENDERER) || '');
+    gl?.getExtension('WEBGL_lose_context')?.loseContext();
+  } catch { /* nessuna informazione: si parte da «medio» */ }
+  const nav = navigator as Navigator & { deviceMemory?: number };
+  const mobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent) || (navigator.maxTouchPoints > 1 && /Macintosh/.test(navigator.userAgent));
+  gpuName = gpu;
+  return { gpu, memory: nav.deviceMemory, cores: navigator.hardwareConcurrency, mobile };
+}
+
+/** Il profilo ricordato per questo dispositivo, o uno nuovo dalla fascia stimata. */
+function loadAutoProfile(): AutoProfile {
+  const info = deviceInfo();
+  try {
+    const saved = JSON.parse(localStorage.getItem(AUTO_KEY) ?? 'null') as (AutoProfile & { gpu: string }) | null;
+    if (saved && saved.gpu === info.gpu && saved.tier in TIERS) return saved;
+  } catch { /* profilo illeggibile: si riparte */ }
+  const tier = detectTier(info);
+  return { tier, step: TIERS[tier].startStep, ceiling: TIERS[tier].maxStep };
+}
+
+function saveAutoProfile(p: AutoProfile) {
+  try { localStorage.setItem(AUTO_KEY, JSON.stringify({ ...p, gpu: gpuName ?? deviceInfo().gpu })); } catch { /* storage pieno o bloccato */ }
 }

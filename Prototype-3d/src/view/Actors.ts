@@ -41,6 +41,8 @@ export interface Roamer extends Walker {
   kind: RoamerKind;
   rare: boolean;
   graveId?: string;
+  /** Fantasma di un ricordo affidato all'Albero dei ricordi. */
+  memoryId?: string;
   heading: Cell;
   age: number;
   life: number;
@@ -90,6 +92,37 @@ export interface Pet extends Walker {
 
 const PET_SPEED = { roam: 1.3, run: 3.5, dash: 5 };
 
+/**
+ * Rito dell'Albero dei ricordi: il corteo arriva alla tomba, la bara esce dalla
+ * terra, due portatori la portano all'albero (prete davanti, gli altri dietro,
+ * tutti sullo stesso percorso), la posano davanti alla cavità e la terra la accoglie.
+ */
+interface Rite {
+  members: Walker[]; // prete, portatore davanti, portatore dietro, due dolenti
+  stage: 'arrive' | 'lift' | 'carry' | 'place' | 'pray' | 'absorb' | 'leave';
+  timer: number;
+  route: THREE.Vector3[];
+  cum: number[];
+  s: number;
+  coffin: THREE.Object3D;
+  fx: THREE.Group;
+  ring: THREE.Mesh;
+  sparks: Array<{ m: THREE.Mesh; from: THREE.Vector3; t: number }>;
+  rest: THREE.Vector3;
+  spots: THREE.Vector3[];
+  starts: THREE.Vector3[];
+  carryFrom: THREE.Vector3;
+  canopy: THREE.Vector3;
+  onLift: () => void;
+  onDone: () => void;
+  exit: THREE.Vector3;
+}
+
+/** Distanze lungo il corteo (rispetto alla bara): prete, portatori, dolenti. */
+const RITE_OFFSETS = [2.1, 0.72, -0.72, -1.9, -3.0];
+const RITE_KINDS: CharacterKind[] = ['priest', 'gravedigger', 'mourner', 'mournerB', 'mourner'];
+const RITE_GLOW = '#ffd98a';
+
 interface Funeral {
   members: Walker[];
   stage: 'arrive' | 'rite' | 'leave';
@@ -109,6 +142,7 @@ export class Actors {
   private presences: Presence[] = [];
   private presenceSig = '';
   private funeral: Funeral | null = null;
+  private rite: Rite | null = null;
   private style: ArtStyle;
   private area: Rect = { x: 9, y: 9, w: 14, h: 14 };
   private blocked: (x: number, y: number) => boolean = () => false;
@@ -175,6 +209,7 @@ export class Actors {
     for (const p of this.pets.values()) { rebuild(p); p.rig.root.add(p.hitbox); p.rig.root.visible = p.act !== 'sleep'; }
     for (const p of this.presences) rebuild(p);
     if (this.funeral) for (const m of this.funeral.members) rebuild(m);
+    if (this.rite) for (const m of this.rite.members) rebuild(m);
   }
 
   setWorld(area: Rect, blocked: (x: number, y: number) => boolean) {
@@ -299,7 +334,7 @@ export class Actors {
     this.hitboxes.push(hitbox);
     const dirs: Cell[] = [{ x: 1, y: 0 }, { x: -1, y: 0 }, { x: 0, y: 1 }, { x: 0, y: -1 }];
     const r: Roamer = {
-      ...w, id, kind: req.kind, rare: !!req.rare, graveId: req.graveId,
+      ...w, id, kind: req.kind, rare: !!req.rare, graveId: req.graveId, memoryId: req.memoryId,
       heading: dirs[Math.floor(Math.random() * 4)], age: 0, life: LIFESPAN[req.kind] * (req.rare ? 0.6 : 1),
       pause: 0, hitbox, dying: 0, perched: false,
     };
@@ -842,13 +877,195 @@ export class Actors {
   }
 
   skipFuneral() {
+    if (this.rite) { this.skipRite(); return; }
     if (!this.funeral) return;
     const done = this.funeral.onDone;
     this.endFuneral();
     done();
   }
 
-  get funeralActive() { return !!this.funeral; }
+  get funeralActive() { return !!this.funeral || !!this.rite; }
+
+  // ── Rito dell'Albero dei ricordi ─────────────────────────────────────
+
+  /**
+   * Avvia il rito: `grave` è il centro della tomba, `graveFront` la cella libera
+   * davanti, `tree` il centro dell'albero (fronte verso +z), `treeFront` la cella
+   * davanti al varco. `onLift` quando la bara esce (si nasconde la tomba),
+   * `onDone` quando la terra l'ha accolta (o se si salta il rito).
+   */
+  startRite(o: { grave: THREE.Vector3; graveFront: Cell; tree: THREE.Vector3; treeFront: Cell; gate: Cell; coffin: THREE.Object3D; onLift: () => void; onDone: () => void }) {
+    this.endRite();
+    const blockedFor = (allow: Cell[]) => (x: number, y: number) => !this.walkable(x, y) && !allow.some((c) => c.x === x && c.y === y);
+    const path = findPath(o.graveFront, o.treeFront, blockedFor([o.graveFront, o.treeFront]), MAP_SIZE);
+    const route = [o.grave.clone().setY(0), ...(path ?? [o.graveFront, o.treeFront]).map((c) => cellCenter(c.x, c.y, [1, 1]))];
+    const cum = [0];
+    for (let i = 1; i < route.length; i++) cum.push(cum[i - 1] + route[i].distanceTo(route[i - 1]));
+    const gate = cellCenter(o.gate.x, o.gate.y, [1, 1]);
+    const rest = o.tree.clone().add(new THREE.Vector3(0, 0, 1.95)).setY(0);
+    // attorno alla bara posata, ai lati (nessuno davanti: dalla camera la bara resta in vista)
+    const spots = [[-1.0, 1.5], [1.0, 1.5], [-1.75, 2.55], [1.75, 2.55], [-2.25, 1.3]].map(([x, z]) => o.tree.clone().add(new THREE.Vector3(x, 0, z)).setY(0));
+    const ring = new THREE.Mesh(new THREE.RingGeometry(0.72, 0.95, 40).rotateX(-Math.PI / 2), new THREE.MeshBasicMaterial({ color: RITE_GLOW, transparent: true, opacity: 0, blending: THREE.AdditiveBlending, depthWrite: false, toneMapped: false, side: THREE.DoubleSide }));
+    const fx = new THREE.Group();
+    fx.add(ring);
+    this.group.add(fx, o.coffin);
+    o.coffin.visible = false;
+    const r: Rite = {
+      members: [], stage: 'arrive', timer: 0, route, cum, s: 0, coffin: o.coffin, fx, ring, sparks: [],
+      rest, spots, starts: [], carryFrom: new THREE.Vector3(), canopy: o.tree.clone().add(new THREE.Vector3(0, 3.8, 0)),
+      onLift: o.onLift, onDone: o.onDone, exit: gate,
+    };
+    r.members = RITE_KINDS.map((k, i) => {
+      const w = this.makeWalker(k, gate.clone().add(new THREE.Vector3((i - 2) * 0.7, 0, 0.5 + i * 0.45)), 1.6);
+      const dest = this.routeAt(r, RITE_OFFSETS[i]).p;
+      const p = findPath(worldToCell(w.pos), worldToCell(dest), (x, y) => !this.walkable(x, y), MAP_SIZE);
+      w.path = (p ?? []).slice(1).map((c) => cellCenter(c.x, c.y, [1, 1]));
+      w.path.push(dest);
+      return w;
+    });
+    this.rite = r;
+  }
+
+  /** Punto e direzione a distanza `s` lungo il percorso (oltre gli estremi prosegue dritto). */
+  private routeAt(r: Rite, s: number): { p: THREE.Vector3; dir: THREE.Vector3 } {
+    const { route, cum } = r;
+    const n = route.length;
+    if (n < 2) return { p: route[0].clone(), dir: new THREE.Vector3(0, 0, 1) };
+    let i = 1;
+    while (i < n - 1 && cum[i] < s) i++;
+    const a = route[i - 1], b = route[i];
+    const dir = b.clone().sub(a).setY(0);
+    const len = dir.length() || 1;
+    dir.divideScalar(len);
+    const p = a.clone().addScaledVector(dir, s - cum[i - 1]);
+    return { p, dir };
+  }
+
+  private skipRite() {
+    const r = this.rite;
+    if (!r) return;
+    const done = r.onDone;
+    r.onDone = () => undefined;
+    if (r.stage === 'arrive') r.onLift();
+    this.endRite();
+    done();
+  }
+
+  private endRite() {
+    const r = this.rite;
+    if (!r) return;
+    for (const m of r.members) this.disposeWalker(m);
+    this.group.remove(r.fx, r.coffin);
+    r.ring.geometry.dispose();
+    (r.ring.material as THREE.Material).dispose();
+    for (const sp of r.sparks) sp.m.geometry.dispose();
+    this.rite = null;
+  }
+
+  private stepRite(dt: number) {
+    const r = this.rite!;
+    r.timer += dt;
+    const g = (p: THREE.Vector3) => this.ground(p);
+    const total = r.cum[r.cum.length - 1];
+    const face = (m: Walker, at: THREE.Vector3) => { const d = at.clone().sub(m.pos); m.facing = Math.atan2(d.x, d.z); };
+    const smooth = (x: number) => { const t = Math.min(1, Math.max(0, x)); return t * t * (3 - 2 * t); };
+    if (r.stage === 'arrive') {
+      let moving = false;
+      for (const m of r.members) { if (this.followPath(m, dt)) { moving = true; m.pose = 'walk'; } else { m.pose = 'idle'; face(m, r.route[0]); } }
+      if (!moving || r.timer > 16) {
+        r.stage = 'lift'; r.timer = 0;
+        r.members.forEach((m, i) => { m.path = []; m.pos.copy(this.routeAt(r, RITE_OFFSETS[i]).p); });
+        r.onLift();
+        r.coffin.visible = true;
+      }
+    }
+    if (r.stage === 'lift') {
+      // la bara esce dalla terra e i portatori la sollevano
+      const { p, dir } = this.routeAt(r, 0);
+      const k = smooth(r.timer / 1.6);
+      r.coffin.position.set(p.x, g(p) - 0.35 + k * 0.9, p.z);
+      r.coffin.rotation.y = Math.atan2(dir.x, dir.z);
+      r.members.forEach((m, i) => { m.pose = i === 1 || i === 2 ? 'work' : 'pray'; face(m, p); });
+      if (r.timer > 1.8) { r.stage = 'carry'; r.timer = 0; }
+    } else if (r.stage === 'carry') {
+      const speed = 1.15;
+      r.s = Math.min(total, r.s + speed * dt);
+      const c = this.routeAt(r, r.s);
+      r.coffin.position.set(c.p.x, g(c.p) + 0.55, c.p.z);
+      let dy = Math.atan2(c.dir.x, c.dir.z) - r.coffin.rotation.y;
+      dy = Math.atan2(Math.sin(dy), Math.cos(dy));
+      r.coffin.rotation.y += dy * Math.min(1, dt * 6);
+      r.members.forEach((m, i) => {
+        const q = this.routeAt(r, Math.min(total, r.s + RITE_OFFSETS[i]));
+        if (q.p.distanceToSquared(m.pos) > 1e-6) m.phase += speed * dt * 2.6;
+        m.pos.copy(q.p);
+        m.facing = Math.atan2(q.dir.x, q.dir.z);
+        m.pose = 'walk';
+      });
+      if (r.s >= total) {
+        r.stage = 'place'; r.timer = 0;
+        r.starts = r.members.map((m) => m.pos.clone());
+        r.carryFrom = r.coffin.position.clone();
+      }
+    } else if (r.stage === 'place') {
+      // la bara viene posata davanti alla cavità; gli altri si dispongono ai lati
+      const k = smooth(r.timer / 1.8);
+      const at = r.carryFrom.clone().lerp(r.rest, k);
+      r.coffin.position.set(at.x, THREE.MathUtils.lerp(r.carryFrom.y, g(r.rest) + 0.02, k), at.z);
+      let dy = 0 - r.coffin.rotation.y;
+      dy = Math.atan2(Math.sin(dy), Math.cos(dy));
+      r.coffin.rotation.y += dy * Math.min(1, dt * 4);
+      r.members.forEach((m, i) => {
+        const prev = m.pos.clone();
+        m.pos.copy(r.starts[i].clone().lerp(r.spots[i], k));
+        if (k < 1) { m.pose = 'walk'; m.phase += prev.distanceTo(m.pos) * 2.6; face(m, r.spots[i]); }
+        else { m.pose = 'pray'; face(m, r.rest); }
+      });
+      if (r.timer > 2.2) { r.stage = 'pray'; r.timer = 0; }
+    } else if (r.stage === 'pray') {
+      r.members.forEach((m) => { m.pose = 'pray'; face(m, r.rest); });
+      if (r.timer > 2.6) { r.stage = 'absorb'; r.timer = 0; r.fx.position.set(r.rest.x, g(r.rest) + 0.06, r.rest.z); }
+    } else if (r.stage === 'absorb') {
+      // la terra accoglie la bara: un anello di luce, la bara sprofonda, lucciole salgono verso la chioma
+      const k = r.timer / 3.2;
+      (r.ring.material as THREE.MeshBasicMaterial).opacity = 0.45 * Math.sin(Math.min(1, k) * Math.PI);
+      r.ring.scale.setScalar(0.85 + 0.25 * Math.min(1, k));
+      r.coffin.position.y = g(r.rest) + 0.02 - smooth(k * 1.1) * 0.6;
+      r.members[0].pose = k > 0.35 ? 'cheer' : 'pray';
+      if (r.sparks.length < 28 && Math.random() < dt * 12) {
+        const m = new THREE.Mesh(new THREE.SphereGeometry(0.03 + Math.random() * 0.025, 6, 4), new THREE.MeshBasicMaterial({ color: Math.random() < 0.7 ? RITE_GLOW : '#fff4d6', toneMapped: false }));
+        const from = r.rest.clone().add(new THREE.Vector3((Math.random() - 0.5) * 0.7, g(r.rest) + 0.1, (Math.random() - 0.5) * 1.2));
+        m.position.copy(from);
+        this.group.add(m);
+        r.sparks.push({ m, from, t: 0 });
+      }
+      if (k >= 1) {
+        r.stage = 'leave'; r.timer = 0;
+        r.coffin.visible = false;
+        const done = r.onDone; r.onDone = () => undefined; done();
+        for (const m of r.members) {
+          const path = findPath(worldToCell(m.pos), worldToCell(r.exit), (x, y) => !this.walkable(x, y) && !(worldToCell(m.pos).x === x && worldToCell(m.pos).y === y), MAP_SIZE);
+          m.path = (path ?? []).slice(1).map((c) => cellCenter(c.x, c.y, [1, 1]));
+          m.path.push(r.exit.clone().add(new THREE.Vector3(0, 0, 2)));
+        }
+      }
+    } else if (r.stage === 'leave') {
+      (r.ring.material as THREE.MeshBasicMaterial).opacity = Math.max(0, (r.ring.material as THREE.MeshBasicMaterial).opacity - dt);
+      let moving = false;
+      for (const m of r.members) { if (this.followPath(m, dt)) { moving = true; m.pose = 'walk'; } else m.rig.root.visible = false; }
+      if ((!moving && !r.sparks.length) || r.timer > 20) { this.endRite(); return; }
+    }
+    // lucciole: salgono a spirale verso la chioma e svaniscono
+    for (const sp of r.sparks) {
+      sp.t += dt / 2.4;
+      const a = sp.t * 9 + sp.from.x * 5;
+      const p = sp.from.clone().lerp(r.canopy, sp.t);
+      sp.m.position.set(p.x + Math.cos(a) * 0.3 * (1 - sp.t), p.y + Math.sin(sp.t * Math.PI) * 0.4, p.z + Math.sin(a) * 0.3 * (1 - sp.t));
+      sp.m.scale.setScalar(1 - sp.t * 0.6);
+    }
+    for (const sp of r.sparks.filter((q) => q.t >= 1)) { this.group.remove(sp.m); sp.m.geometry.dispose(); }
+    r.sparks = r.sparks.filter((q) => q.t < 1);
+  }
 
   private endFuneral() {
     if (!this.funeral) return;
@@ -918,6 +1135,7 @@ export class Actors {
     this.ground = ground;
     for (const p of this.pets.values()) this.stepPet(p, dt);
     if (this.funeral) this.stepFuneral(dt);
+    if (this.rite) this.stepRite(dt);
 
     const apply = (w: Walker) => {
       const y = w.pos.y > 0.5 ? w.pos.y : ground(w.pos);
@@ -937,6 +1155,7 @@ export class Actors {
     for (const p of this.presences) if (!p.hidden) apply(p);
     for (const p of this.pets.values()) { if (p.rig.root.visible) apply(p); p.den.group.position.y = ground(p.home); p.den.update(dt, t, this.glyphs); }
     if (this.funeral) for (const m of this.funeral.members) apply(m);
+    if (this.rite) for (const m of this.rite.members) apply(m);
     this.updateBone(dt);
     this.glyphs.update(dt);
   }

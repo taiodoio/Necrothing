@@ -13,7 +13,7 @@ import { createNewGame, type ArtStyle, type CameraMode, type Quality, type SaveD
 import { dayPhaseForHour, type DayPhase } from '../game/time.ts';
 import type { CustodeLook } from '../game/look.ts';
 import { areaForLevel, buildOccupancy, canPlaceAt, gateCells, nearestFreeSpot } from '../game/world.ts';
-import { applyStyleUniforms, cacheStats, clearAll, getModel, LOWPOLY_MATERIALS, LOWPOLY_TERRAIN, MATERIALS } from '../render/modelCache.ts';
+import { applyStyleUniforms, cacheStats, clearAll, getModel, instantiate, LOWPOLY_MATERIALS, LOWPOLY_TERRAIN, MATERIALS } from '../render/modelCache.ts';
 import '../render/lowpoly/index.ts';
 import { setVoxelResolution, voxelResolution, voxelsPerWorldUnit } from '../render/voxelMesher.ts';
 import { graveModel } from '../render/models/graves.ts';
@@ -29,11 +29,12 @@ import { PostFX } from '../view/PostFX.ts';
 import { cellCenter, HALF, worldToCell, WorldView } from '../view/WorldView.ts';
 import { Input } from './Input.ts';
 import { loadSave, saveNow, scheduleSave } from './persistence.ts';
+import { closedCoffinLP } from '../render/lowpoly/memoryTree.ts';
 
 export type Selection = { kind: 'grave' | 'placeable'; id: string } | null;
 
 export type EntityAction =
-  | 'detail' | 'clean' | 'repair' | 'flowers' | 'light' | 'shop' | 'rotate' | 'variant' | 'store' | 'confirm' | 'exhume' | 'move';
+  | 'detail' | 'clean' | 'repair' | 'flowers' | 'light' | 'shop' | 'rotate' | 'variant' | 'store' | 'confirm' | 'exhume' | 'move' | 'entrust' | 'memories';
 
 const PET_STATUS: Record<PetMode, string> = { free: 'Gira libero', follow: 'Ti segue', home: 'A cuccia' };
 
@@ -193,6 +194,7 @@ export class Game {
     const now = this.now();
     const res = liveTick(this.state, now, ++this.liveSalt);
     for (const s of res.spawns) {
+      if (s.memoryId) { this.spawnMemoryGhost(s.memoryId); continue; }
       const g = s.graveId ? this.state.graves.find((x) => x.id === s.graveId) : undefined;
       this.actors.spawnRoamer(s, g ? cellCenter(g.x, g.y + 2, [2, 1]) : undefined);
     }
@@ -317,7 +319,7 @@ export class Game {
     if (!cells) return;
     const center = cellCenter(cells.x, cells.y, cells.fp).setY(1.2);
     const grave = this.state.graves.find((g) => g.id === id);
-    const instant: EntityAction[] = ['detail', 'shop', 'rotate', 'variant', 'store', 'confirm', 'exhume', 'move'];
+    const instant: EntityAction[] = ['detail', 'shop', 'rotate', 'variant', 'store', 'confirm', 'exhume', 'move', 'entrust', 'memories'];
     const run = () => {
       switch (action) {
         case 'clean': this.actors.work(); this.act((s, n) => (grave ? R.cleanGrave(s, id, n) : R.cleanPlaceable(s, id, n)), center); break;
@@ -332,6 +334,8 @@ export class Game {
         case 'detail': this.ui.openDetail(id); break;
         case 'shop': this.ui.openShop(); break;
         case 'move': this.setEditMode(true); this.select(this.selection); break;
+        case 'entrust': this.select(null); this.ui.openEntrust(id); break;
+        case 'memories': this.select(null); this.ui.openMemoryTree(); break;
       }
     };
     if (instant.includes(action)) { run(); return; }
@@ -573,9 +577,55 @@ export class Game {
     const cell = worldToCell(r.pos);
     this.actors.faceTowards(r.pos);
     this.actors.cheer(0.9);
-    this.act((s, n) => R.interactRoamer(s, r.kind, n, { rare: r.rare, graveId: r.graveId, x: cell.x, y: cell.y }), at);
+    let visit: R.ActionResult | null = null;
+    this.act((s, n) => (visit = R.interactRoamer(s, r.kind, n, { rare: r.rare, graveId: r.graveId, memoryId: r.memoryId, x: cell.x, y: cell.y })), at);
     this.effects.puff(r.pos, r.kind === 'ghost' ? '#cfeee6' : r.kind === 'zombie' ? '#9bd34a' : '#e8dfcc');
     this.actors.removeRoamer(id);
+    // il fantasma di un ricordo dell'albero: dopo la ricompensa si apre la sua scheda
+    if (r.memoryId && visit) this.ui.openMemory(r.memoryId, visit);
+  }
+
+  // ── Albero dei ricordi ───────────────────────────────────────────────
+
+  /** Centro dell'albero e cella libera davanti al varco (dove arriva il corteo). */
+  private treeSpot(): { center: THREE.Vector3; front: { x: number; y: number } } | null {
+    const t = R.memoryTree(this.state);
+    if (!t) return null;
+    const fp = rotatedFootprint(t.type, t.rot);
+    return { center: cellCenter(t.x, t.y, fp), front: { x: t.x + Math.floor(fp[0] / 2), y: t.y + fp[1] } };
+  }
+
+  /** Il fantasma di un ricordo esce dall'albero (uguale agli altri: la sorpresa è toccarlo). */
+  spawnMemoryGhost(memoryId: string) {
+    const t = this.treeSpot();
+    if (!t) return;
+    const a = Math.random() * Math.PI * 2;
+    this.actors.spawnRoamer({ kind: 'ghost', memoryId }, t.center.clone().add(new THREE.Vector3(Math.cos(a) * 1.2, 0, 2.4 + Math.abs(Math.sin(a)) * 0.8)));
+  }
+
+  /**
+   * Affida una tomba all'albero con il rito: il corteo porta la bara all'albero
+   * e la terra la accoglie; solo allora la tomba lascia il cimitero (se si
+   * salta il rito, avviene subito).
+   */
+  entrust(graveId: string) {
+    const g = this.state.graves.find((x) => x.id === graveId);
+    const t = this.treeSpot();
+    if (!g || !t) { toast('Serve l’Albero dei ricordi.'); return; }
+    if (this.actors.funeralActive) { toast('Aspetta che finisca il rito in corso.'); return; }
+    const area = areaForLevel(this.state.world.expansionLevel);
+    const gate = [...gateCells(area)][1].split(',').map(Number);
+    const grave = cellCenter(g.x, g.y, GRAVE_FOOTPRINT);
+    const coffinModel = closedCoffinLP();
+    const coffin = instantiate({ geometries: coffinModel.geometries, lights: [], height: 0.4, mats: LOWPOLY_MATERIALS, dedicated: true }, { castShadow: true });
+    this.rig.jumpTo(grave.clone().lerp(t.center, 0.5));
+    this.rig.follow = null;
+    toast('Il corteo arriva per accompagnarlo all’albero…');
+    this.actors.startRite({
+      grave, graveFront: { x: g.x, y: g.y + 2 }, tree: t.center, treeFront: t.front, gate: { x: gate[0], y: gate[1] }, coffin,
+      onLift: () => { const e = this.world.entities.get(graveId); if (e) e.group.visible = false; this.effects.puff(grave, '#8a7a62'); },
+      onDone: () => { this.act((s, n) => R.entrustGrave(s, graveId, n), t.center.clone().setY(3)); this.ui.refreshHud(); },
+    });
   }
 
   private onDragStart(x: number, y: number): boolean {

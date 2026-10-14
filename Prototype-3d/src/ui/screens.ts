@@ -122,7 +122,7 @@ export function openEditIntro(ui: UI) {
 
 // ── Bottega ────────────────────────────────────────────────────────────
 
-const LOCK_LABEL: Record<R.ShopAvailability, string> = { ok: '', rank: 'rango', season: 'dicembre', owned: 'posseduto', funds: '' };
+const LOCK_LABEL: Record<R.ShopAvailability, string> = { ok: '', rank: 'rango', season: 'dicembre', owned: 'posseduto', graves: 'tombe', funds: '' };
 
 export function openShop(ui: UI, cat: PlaceableCategory = 'light', selected: string | null = null) {
   const game = ui.game;
@@ -141,7 +141,7 @@ export function openShop(ui: UI, cat: PlaceableCategory = 'light', selected: str
       h('img', { src: placeableThumb(d.id, s.settings.style), alt: '' }),
       h('b', {}, d.label),
       h('span', { class: 'price' }, String(d.cost), icon('wisp', 12)),
-      LOCK_LABEL[av] ? h('span', { class: 'lock' }, av === 'rank' ? icon('lock', 12) : null, av === 'rank' ? `R${d.minRank}` : LOCK_LABEL[av]) : null,
+      LOCK_LABEL[av] ? h('span', { class: 'lock' }, av === 'rank' || av === 'graves' ? icon('lock', 12) : null, av === 'rank' ? `R${d.minRank}` : av === 'graves' ? `${d.minGraves} tombe` : LOCK_LABEL[av]) : null,
       (s.inventory[d.id] ?? 0) > 0 ? h('span', { class: 'badge' }, String(s.inventory[d.id])) : null);
     }));
     setDrawerBody(h('div', {}, h('p', { class: 'muted' }, `Hai ${s.player.wisps} fuochi fatui. Gli oggetti grigi richiedono rango, stagione o più fuochi fatui.`), tabs, grid));
@@ -153,6 +153,7 @@ export function openShop(ui: UI, cat: PlaceableCategory = 'light', selected: str
     setDrawerFooter(h('div', { style: 'display:grid;gap:8px' },
       h('div', { class: 'row' }, h('b', {}, d.label), h('span', { class: 'muted', style: 'text-align:right' }, d.unique ? 'Pezzo unico' : `Max ${R.maxBuyable(s, d.id)}`)),
       h('p', { class: 'muted', style: 'margin:0' }, d.description),
+      av === 'graves' ? h('div', { class: 'xp-bar', style: 'height:6px' }, h('i', { style: `width:${Math.round((R.graveTotal(s) / d.minGraves!) * 100)}%` })) : null,
       !d.unique && av === 'ok' ? h('div', { class: 'qty' },
         h('button', { onclick: () => { qty = Math.max(1, qty - 1); render(); } }, '−'),
         h('b', {}, String(qty)),
@@ -167,7 +168,7 @@ export function openShop(ui: UI, cat: PlaceableCategory = 'light', selected: str
             setDrawerBody(h('div', {}, h('div', { class: 'hero' }, h('img', { src: placeableThumb(d.id, s.settings.style), alt: '' }), h('h3', {}, d.label), h('p', { class: 'muted' }, 'Acquistato: è nell’inventario.'))));
           }
         },
-      }, av === 'ok' ? `Acquista · ${d.cost * qty} fuochi fatui` : av === 'funds' ? 'Fuochi fatui insufficienti' : av === 'rank' ? `Serve il rango ${d.minRank}` : av === 'owned' ? 'Già posseduto' : 'Solo a dicembre'),
+      }, av === 'ok' ? `Acquista · ${d.cost * qty} fuochi fatui` : av === 'funds' ? 'Fuochi fatui insufficienti' : av === 'rank' ? `Serve il rango ${d.minRank}` : av === 'graves' ? `Servono ${d.minGraves} tombe (ne hai ${R.graveTotal(s)})` : av === 'owned' ? 'Già posseduto' : 'Solo a dicembre'),
       h('button', { class: 'big-btn ghost', onclick: () => { selected = null; render(); } }, 'Annulla'),
     ));
   };
@@ -211,7 +212,7 @@ export function openInventory(ui: UI, cat: PlaceableCategory | 'all' = 'all') {
 
 // ── Dettaglio ──────────────────────────────────────────────────────────
 
-const MEMORY_LABELS = { burial: 'Sepoltura', flower: 'Fiori', cleaned: 'Pulizia', repaired: 'Riparazione', anniversary: 'Anniversario', ghost: 'Apparizione', blessing: 'Benedizione', zombie: 'Zombie' } as const;
+export const MEMORY_LABELS = { burial: 'Sepoltura', flower: 'Fiori', cleaned: 'Pulizia', repaired: 'Riparazione', anniversary: 'Anniversario', ghost: 'Apparizione', blessing: 'Benedizione', zombie: 'Zombie', entrusted: 'Affidato all’albero' } as const;
 
 export function openDetail(ui: UI, id: string) {
   const game = ui.game;
@@ -234,7 +235,9 @@ export function openDetail(ui: UI, id: string) {
         h('dt', {}, 'Stato'), h('dd', {}, GRAVE_STATE_LABELS[vs] + (g.broken ? ` (riparare costa ${DECAY.graveRepairCost} fuochi fatui)` : '')),
       ),
       mem.length ? h('div', {}, h('div', { class: 'section-title' }, 'Ricordi'), h('ul', { class: 'timeline' }, ...mem.map((m) => h('li', {}, h('time', {}, fmtDate(m.at)), MEMORY_LABELS[m.type])))) : null,
-    ), { footer: h('button', { class: 'big-btn ghost', onclick: () => { closeDrawer(); game.focusEntity(id); } }, 'Mostra sulla mappa') });
+    ), { footer: h('div', { class: 'row' },
+      h('button', { class: 'big-btn ghost', onclick: () => { closeDrawer(); game.focusEntity(id); } }, 'Mostra sulla mappa'),
+      R.memoryTree(s) ? h('button', { class: 'big-btn', onclick: () => ui.openEntrust(id) }, 'Affida all’albero') : null) });
     return;
   }
   const p = s.placeables.find((x) => x.id === id);

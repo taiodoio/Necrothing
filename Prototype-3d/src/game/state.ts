@@ -67,7 +67,17 @@ export interface LooseWisp {
   y: number;
 }
 
-export type MemoryType = 'burial' | 'flower' | 'cleaned' | 'repaired' | 'anniversary' | 'ghost' | 'blessing' | 'zombie';
+export type MemoryType = 'burial' | 'flower' | 'cleaned' | 'repaired' | 'anniversary' | 'ghost' | 'blessing' | 'zombie' | 'entrusted';
+
+/**
+ * Ricordo affidato all'Albero dei ricordi: la tomba com'era (nome, epitaffio,
+ * date…), quando è stata affidata e quante volte è tornato il suo fantasma.
+ */
+export interface EntrustedMemory {
+  grave: Grave;
+  entrustedAt: string;
+  ghostVisits: number;
+}
 
 export interface MemoryEvent {
   id: string;
@@ -133,6 +143,8 @@ export interface SaveData {
   world: WorldMeta;
   achievements: { id: string; at: string }[];
   memories: MemoryEvent[];
+  /** Ricordi affidati all'Albero dei ricordi (le loro tombe non ci sono più). */
+  entrusted: EntrustedMemory[];
   settings: Settings;
 }
 
@@ -268,6 +280,7 @@ export function createNewGame(now: Date, seed = Math.floor(Math.random() * 1e9))
     },
     achievements: [],
     memories: [],
+    entrusted: [],
     settings: { ...DEFAULT_SETTINGS },
   };
 }
@@ -305,6 +318,7 @@ export function normalizeSave(raw: unknown): SaveData | null {
     placeables: data.placeables ?? base.placeables,
     achievements: data.achievements ?? [],
     memories: data.memories ?? [],
+    entrusted: Array.isArray(data.entrusted) ? data.entrusted : [],
     version: SAVE_VERSION,
   } as SaveData;
 }

@@ -54,7 +54,7 @@ function fruitSpots(crowns: Array<{ c: THREE.Vector3; s: number }>, n: number): 
 }
 
 /**
- * Albero dei ricordi, ingombro 4×4 (origine al centro della base).
+ * Albero dei ricordi, ingombro 5×5 (origine al centro della base); fronte verso +z.
  * `memories`: quanti ricordi gli sono stati affidati (frutti accesi, fino a 30).
  */
 export function memoryTreeLP(memories: number, seed = 1): LPModel {
@@ -69,13 +69,13 @@ export function memoryTreeLP(memories: number, seed = 1): LPModel {
   for (let i = 0; i < 16; i++) {
     const a = (i / 16) * Math.PI * 2 + r.range(-0.06, 0.06);
     if (nearFront(a, 0.3)) continue; // varco davanti, per il corteo
-    const d = 1.82 + r.range(-0.05, 0.05);
+    const d = 1.74 + r.range(-0.04, 0.04);
     lp.blob(Math.cos(a) * d, 0.04, Math.sin(a) * d, 0.17, 0.08, 0.13, r.pick([LPC.stone, LPC.stoneWarm, LPC.stoneLight]), { vary: 0.1, topTint: LPC.moss, topAmount: 0.4, jitter: 0.03 });
   }
   // ai lati del varco due cippi con il lumino rosso, come all'ingresso di una cappella
   for (const sx of [-1, 1]) {
-    lp.box(sx * 0.42, 0, 1.82, 0.16, 0.26, 0.16, LPC.stoneLight, { bevel: 0.015, vary: 0.08, topTint: LPC.moss, topAmount: 0.3 });
-    graveLight(lp, sx * 0.42, 0.26, 1.82);
+    lp.box(sx * 0.42, 0, 1.76, 0.16, 0.26, 0.16, LPC.stoneLight, { bevel: 0.015, vary: 0.08, topTint: LPC.moss, topAmount: 0.3 });
+    graveLight(lp, sx * 0.42, 0.26, 1.76);
   }
   for (let i = 0; i < 9; i++) { const a = r.range(0, 6.28), d = r.range(1.1, 1.7); flower(lp, Math.cos(a) * d, Math.sin(a) * d, r.pick(LPC.flowers), 0.08 + r.next() * 0.06); }
   for (let i = 0; i < 5; i++) { const a = r.range(0, 6.28); moss(lp, Math.cos(a) * 0.9, 0.02, Math.sin(a) * 0.9, 0.12); }
@@ -107,7 +107,7 @@ export function memoryTreeLP(memories: number, seed = 1): LPModel {
   for (let i = 0; i < 9; i++) {
     const a = (i / 9) * Math.PI * 2 + 0.2 + r.range(-0.12, 0.12);
     if (nearFront(a, 0.45)) continue; // davanti c'è la cavità
-    root(a, 1 + r.range(0, 0.25), r.range(-0.35, 0.35));
+    root(a, 1 + r.range(0, 0.12), r.range(-0.35, 0.35)); // dentro l'anello di pietre (ingombro 5×5)
   }
 
   // ── tronco: tre fusti intrecciati che salgono girando
@@ -151,13 +151,13 @@ export function memoryTreeLP(memories: number, seed = 1): LPModel {
   }
   // cupola: tanti ciuffi medi su un ellissoide schiacciato (più fitti in alto), con un'anima scura dentro
   const C0 = V(0, H + 0.95, 0);
-  lp.blob(C0.x, C0.y - 0.05, C0.z, 1.55, 0.72, 1.55, '#4d6656', { detail: 1, vary: 0.06, ao: 0.35, jitter: 0.05 });
+  lp.blob(C0.x, C0.y - 0.05, C0.z, 1.3, 0.72, 1.3, '#4d6656', { detail: 1, vary: 0.06, ao: 0.35, jitter: 0.05 });
   const crowns: Array<{ c: THREE.Vector3; s: number }> = [];
   const N = 44;
   for (let i = 0; i < N; i++) {
     const u = (i + 0.5) / N, phi = Math.acos(1 - u * 1.12), th = i * 2.39996;
     const k = 0.9 + r.next() * 0.12;
-    crowns.push({ c: V(Math.sin(phi) * Math.cos(th) * 1.85 * k, Math.cos(phi) * 0.9 * k, Math.sin(phi) * Math.sin(th) * 1.85 * k).add(C0), s: 0.27 + r.next() * 0.2 - u * 0.05 });
+    crowns.push({ c: V(Math.sin(phi) * Math.cos(th) * 1.45 * k, Math.cos(phi) * 0.9 * k, Math.sin(phi) * Math.sin(th) * 1.45 * k).add(C0), s: 0.27 + r.next() * 0.2 - u * 0.05 });
   }
   for (const { c, s } of crowns) leafy(lp, c, s);
   // nastri votivi legati ai rami bassi e due lanterne appese

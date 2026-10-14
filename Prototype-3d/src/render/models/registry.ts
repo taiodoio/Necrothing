@@ -50,6 +50,7 @@ const BUILDERS: Record<string, (v: PVis) => Model> = {
   pond,
   dead_tree: (v) => deadTree(v),
   spectral_tree: spectralTree,
+  memory_tree: (v) => deadTree({ ...v, seed: 3 }), // stile voxel: un grande albero (le chiome-ricordo sono del low-poly)
   half_pine: (v) => pine(v.seed, true),
   xmas_tree: (v) => pine(v.seed, false, true, v.lit),
   toxic_puddle: toxicPuddle,

@@ -182,6 +182,32 @@ export function exhumeGrave(s: SaveData, graveId: string): ActionResult {
   return ok('Tomba rimossa. Il ricordo resta a te.');
 }
 
+// ── Albero dei ricordi ──────────────────────────────────────────────────
+
+/** L'Albero dei ricordi piazzato nel cimitero (ce n'è al massimo uno). */
+export function memoryTree(s: SaveData): Placed | undefined {
+  return s.placeables.find((p) => p.type === 'memory_tree');
+}
+
+/**
+ * Affida una tomba all'albero: la tomba sparisce (lo spazio si libera) e il
+ * ricordo resta all'albero, con la sua storia. Si guadagna come per una sepoltura.
+ */
+export function entrustGrave(s: SaveData, graveId: string, now: Date): ActionResult {
+  const g = graveById(s, graveId);
+  if (!memoryTree(s)) throw new GameError('Serve l’Albero dei ricordi.');
+  s.graves = s.graves.filter((x) => x.id !== graveId);
+  s.entrusted.push({ grave: { ...g }, entrustedAt: now.toISOString(), ghostVisits: 0 });
+  memory(s, graveId, 'entrusted', now);
+  const xp = g.category === 'abstract' ? XP.burialAbstract : XP.burialPhysical;
+  reward(s, xp, WISPS.burial);
+  return ok(`${g.name} riposa ora tra le radici dell’Albero dei ricordi.`, xp, WISPS.burial);
+}
+
+export function entrustedById(s: SaveData, id: string) {
+  return s.entrusted.find((e) => e.grave.id === id);
+}
+
 // ── Cura degli oggetti ──────────────────────────────────────────────────
 
 export function cleanPlaceable(s: SaveData, id: string, now: Date): ActionResult {
@@ -239,13 +265,19 @@ export function placedCount(s: SaveData, type: string): number {
   return s.placeables.filter((p) => p.type === type).length;
 }
 
-export type ShopAvailability = 'ok' | 'rank' | 'season' | 'owned' | 'funds';
+export type ShopAvailability = 'ok' | 'rank' | 'season' | 'owned' | 'graves' | 'funds';
+
+/** Tombe che contano per gli sblocchi: quelle nel cimitero più quelle affidate all'albero. */
+export function graveTotal(s: SaveData): number {
+  return s.graves.length + (s.entrusted?.length ?? 0);
+}
 
 export function shopAvailability(s: SaveData, type: string, now: Date): ShopAvailability {
   const def = placeableDef(type);
   if (!isSeasonallyAvailable(def, now.getMonth())) return 'season';
   if (def.minRank > rankForXp(s.player.xp).level) return 'rank';
   if (def.unique && ownedCount(s, type) + placedCount(s, type) > 0) return 'owned';
+  if (def.minGraves && graveTotal(s) < def.minGraves) return 'graves';
   if (s.player.wisps < def.cost) return 'funds';
   return 'ok';
 }
@@ -361,13 +393,21 @@ export function gravesNear(s: SaveData, x: number, y: number, radius: number): G
 }
 
 export function interactRoamer(
-  s: SaveData, kind: RoamerKind, now: Date, opts: { rare?: boolean; graveId?: string; x?: number; y?: number } = {},
+  s: SaveData, kind: RoamerKind, now: Date, opts: { rare?: boolean; graveId?: string; memoryId?: string; x?: number; y?: number } = {},
 ): ActionResult {
   const c = s.player.counters;
   c.npcEncountered++;
   switch (kind) {
     case 'ghost': {
       c.ghostsWitnessed++;
+      // il fantasma di un ricordo affidato all'albero: ricompensa classica, e la visita resta nella sua storia
+      const kept = opts.memoryId ? entrustedById(s, opts.memoryId) : undefined;
+      if (kept) {
+        kept.ghostVisits++;
+        memory(s, kept.grave.id, 'ghost', now);
+        reward(s, XP.ghost, WISPS.ghost);
+        return ok(`Il fantasma di ${kept.grave.name} è tornato a trovarti.`, XP.ghost, WISPS.ghost);
+      }
       if (opts.graveId && s.graves.some((g) => g.id === opts.graveId)) memory(s, opts.graveId, 'ghost', now);
       const xp = opts.rare ? XP.ghostObject : XP.ghost;
       const w = opts.rare ? WISPS.ghostObject : WISPS.ghost;

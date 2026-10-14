@@ -44,6 +44,8 @@ export interface PlaceableDef {
   onlyMonth?: number;
   /** Testo personalizzabile (cartello). */
   editableText?: boolean;
+  /** Si sblocca solo con almeno queste tombe nel cimitero (contando anche quelle già affidate all'albero). */
+  minGraves?: number;
   /** Descrizione ironica mostrata nel dettaglio. */
   description: string;
 }
@@ -85,6 +87,7 @@ const defs: PlaceableDef[] = [
   { id: 'well', label: 'Pozzo', category: 'structure', footprint: [2, 2], cost: 25, minRank: 2, unique: true, decays: true, description: 'Se butti una moneta, qualcuno da sotto la restituisce.' },
   { id: 'fountain', label: 'Fontana', category: 'structure', footprint: [3, 3], cost: 40, minRank: 3, unique: true, decays: true, description: 'L’acqua è torbida e canticchia.' },
   { id: 'hell_hole', label: 'Buco infernale', category: 'structure', footprint: [2, 2], cost: 45, minRank: 4, unique: true, decays: true, light: true, description: 'Un bagliore rosso dal profondo. Aumenta le apparizioni.' },
+  { id: 'memory_tree', label: 'Albero dei ricordi', category: 'structure', footprint: [5, 5], cost: 150, minRank: 1, unique: true, minGraves: 20, description: 'Un albero antico che accoglie ciò che non vuoi più tenere in una tomba. Affidagli una sepoltura: la terra se la prende, lo spazio si libera, il ricordo resta appeso ai suoi rami.' },
   { id: 'pet_house', label: 'Casetta per animale', category: 'structure', footprint: [2, 2], cost: 20, minRank: 2, decays: true, variants: 5, variantLabels: ['Cane', 'Gatto', 'Coniglio', 'Papera', 'Corvo'], description: 'Ci vive un animaletto scheletro: gira libero per il cimitero e torna a dormire in tana. Toccalo per farti raggiungere, liberarlo, mandarlo a cuccia, accarezzarlo o lanciargli l’osso.' },
 
   // ── Ambiente ──────────────────────────────────────────────────────────

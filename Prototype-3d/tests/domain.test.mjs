@@ -171,20 +171,52 @@ test('spawn deterministico con lo stesso seed', () => {
   assert.deepEqual(t.spawns, u.spawns);
 });
 
-test('espansione monotona: il recinto cresce col prestigio e non si restringe', () => {
+test('espansione a scelta: il prestigio sblocca, il giocatore amplia o stringe', () => {
   const s = createNewGame(NOW, 10);
   ['toys', 'tools', 'plants', 'clothing', 'vehicles', 'expensive', 'other', 'toys', 'tools'].forEach((category, i) => {
     const p = spot(s);
     R.bury(s, draft({ name: `Oggetto ${i}`, category }), p.x, p.y, NOW);
   });
   s.graves.forEach((g) => { g.hasFlowers = true; g.dirty = false; g.weeds = false; });
-  const { expanded } = R.afterAction(s, NOW);
+  const { unlocked } = R.afterAction(s, NOW);
   assert.ok(computePrestige(s) >= EXPANSION[1].minPrestige);
-  assert.equal(expanded, true);
-  const level = s.world.expansionLevel;
+  assert.ok(unlocked >= 1, 'nuova area sbloccata');
+  assert.equal(s.world.expansionLevel, 0, 'ma il recinto non si allarga da solo');
+  const level = s.world.unlockedLevel;
+  // lo sblocco non torna indietro se il prestigio cala
   s.graves.forEach((g) => { g.hasFlowers = false; g.dirty = true; });
-  R.afterAction(s, NOW);
+  assert.equal(R.afterAction(s, NOW).unlocked, null);
+  assert.equal(s.world.unlockedLevel, level);
+  // oltre il livello sbloccato non si va
+  assert.throws(() => R.setExpansionLevel(s, level + 1), /si sblocca/);
+  // ampliare
+  R.setExpansionLevel(s, level);
   assert.equal(s.world.expansionLevel, level);
+  // un oggetto nella terra nuova: stringere è bloccato finché non torna dentro
+  const big = areaForLevel(level), small = areaForLevel(0);
+  const lamp = { id: 'fuori', type: 'lamp_post', x: big.x, y: big.y, rot: 0, variant: 0, dirty: false, broken: false, lit: true, placedAt: NOW.toISOString(), caredAt: NOW.toISOString() };
+  s.placeables.push(lamp);
+  s.world.looseWisps.push({ id: 'w-fuori', x: big.x + 1, y: big.y + 1 });
+  assert.deepEqual(R.outsideArea(s, 0).map((o) => o.id), ['fuori']);
+  assert.deepEqual(R.outsideArea(s, level), [], 'nell\'area grande c\'entra');
+  assert.throws(() => R.setExpansionLevel(s, 0), /fuori dall'area/);
+  assert.equal(s.world.expansionLevel, level);
+  lamp.x = small.x + 2; lamp.y = small.y + 2;
+  R.setExpansionLevel(s, 0);
+  assert.equal(s.world.expansionLevel, 0);
+  assert.ok(!s.world.looseWisps.some((w) => w.id === 'w-fuori'), 'i fuochi fatui rimasti fuori svaniscono');
+});
+
+test('espansione: i salvataggi con un recinto già allargato lo tengono (sbloccato e già notificato)', async () => {
+  const { normalizeSave } = await import('../src/game/state.ts');
+  const old = createNewGame(NOW, 4);
+  old.world.expansionLevel = 2;
+  delete old.world.unlockedLevel;
+  delete old.world.notifiedLevel;
+  const s = normalizeSave(JSON.parse(JSON.stringify(old)));
+  assert.equal(s.world.expansionLevel, 2);
+  assert.equal(s.world.unlockedLevel, 2);
+  assert.equal(s.world.notifiedLevel, 2);
 });
 
 test('achievement e ranghi', () => {

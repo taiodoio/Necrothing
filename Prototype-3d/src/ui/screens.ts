@@ -1,6 +1,7 @@
 // Schermate nei drawer: sepoltura (wizard con anteprima), Bottega,
 // Inventario, dettaglio, profilo/achievement, impostazioni, foto e galleria.
 
+import { terrainSection } from './expansion.ts';
 import { exportBackup, gallery, importBackup, type PhotoRecord } from '../app/persistence.ts';
 import { DECAY } from '../game/balance.ts';
 import { CATALOG, CATALOG_LIST, CATEGORY_ORDER, PLACEABLE_CATEGORY_LABELS, isSeasonallyAvailable, repairCost, type PlaceableCategory } from '../game/catalog.ts';
@@ -331,6 +332,8 @@ export function openSettings(ui: UI) {
   });
   const body = h('div', { 'data-settings': 'true' },
     h('button', { class: 'big-btn ghost', style: 'margin-bottom:6px', onclick: () => openCustomize(ui) }, 'Personalizza il Custode'),
+    h('div', { class: 'section-title' }, 'Terreno'),
+    terrainSection(ui),
     h('div', { class: 'section-title' }, 'Resa grafica'),
     h('div', { class: 'setting' }, 'Stile', seg(s.style, [['lowpoly', 'Low-Poly'], ['voxel', 'Voxel'], ['miniature', 'Miniatura']], (v) => game.setStyle(v))),
     h('div', { class: 'setting' }, 'Vista', seg(s.camera, [['angled', 'Obliqua'], ['top', 'Dall’alto']], (v) => game.setCamera(v))),

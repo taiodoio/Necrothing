@@ -149,6 +149,7 @@ export class WorldView {
     for (const p of state.placeables) { alive.add(p.id); this.syncPlaceable(p); }
     for (const id of [...this.entities.keys()]) if (!alive.has(id)) this.removeEntity(id);
     for (const id of [...this.hidden]) if (!alive.has(id)) this.hidden.delete(id);
+    for (const id of [...this.marked]) if (!alive.has(id)) this.marked.delete(id); else if (id !== this.selectedId) this.setHighlight(id, null);
     this.syncWisps(state);
     this.refreshSelection();
   }
@@ -626,7 +627,60 @@ export class WorldView {
     this.refreshSelection();
   }
 
+  /** Elementi segnati in rosso (fuori dall'area scelta mentre si restringe il recinto). */
+  private marked = new Set<string>();
+
+  setMarked(ids: Iterable<string>) {
+    const next = new Set(ids);
+    for (const id of this.marked) if (!next.has(id)) { this.marked.delete(id); this.setHighlight(id, id === this.selectedId ? 'selected' : null); }
+    for (const id of next) { this.marked.add(id); if (id !== this.selectedId) this.setHighlight(id, null); }
+  }
+
+  private areaOutline: THREE.Mesh | null = null;
+
+  /**
+   * Contorno luminoso dell'area scelta (sul terreno, segue i dislivelli),
+   * con un velo sul resto: si vede subito cosa resta fuori. null lo toglie.
+   */
+  showAreaOutline(rect: Rect | null) {
+    if (this.areaOutline) {
+      this.root.remove(this.areaOutline);
+      this.areaOutline.geometry.dispose();
+      (this.areaOutline.material as THREE.Material).dispose();
+      this.areaOutline = null;
+    }
+    if (!rect) return;
+    const x0 = rect.x - HALF, z0 = rect.y - HALF, x1 = x0 + rect.w, z1 = z0 + rect.h;
+    const corners: Array<[number, number]> = [[x0, z0], [x1, z0], [x1, z1], [x0, z1], [x0, z0]];
+    const pos: number[] = [];
+    const idx: number[] = [];
+    const W = 0.16, STEP = 0.25;
+    for (let k = 0; k < 4; k++) {
+      const [ax, az] = corners[k], [bx, bz] = corners[k + 1];
+      const len = Math.hypot(bx - ax, bz - az), n = Math.ceil(len / STEP);
+      // normale verso l'interno: il nastro sta appena dentro il confine
+      const nx = -(bz - az) / len, nz = (bx - ax) / len;
+      const base = pos.length / 3;
+      for (let i = 0; i <= n; i++) {
+        const x = ax + ((bx - ax) * i) / n, z = az + ((bz - az) * i) / n;
+        for (const off of [0, W]) {
+          const px = x + nx * off, pz = z + nz * off;
+          pos.push(px, this.heightAt(px, pz) + 0.07, pz);
+        }
+        if (i < n) { const a = base + i * 2; idx.push(a, a + 1, a + 2, a + 1, a + 3, a + 2); }
+      }
+    }
+    const geo = new THREE.BufferGeometry();
+    geo.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+    geo.setIndex(idx);
+    const mat = new THREE.MeshBasicMaterial({ color: '#f2c27a', transparent: true, opacity: 0.9, side: THREE.DoubleSide, depthWrite: false, toneMapped: false, polygonOffset: true, polygonOffsetFactor: -2 });
+    this.areaOutline = new THREE.Mesh(geo, mat);
+    this.areaOutline.renderOrder = 4;
+    this.root.add(this.areaOutline);
+  }
+
   private setHighlight(id: string, which: 'selected' | 'invalid' | null) {
+    if (!which && this.marked.has(id)) which = 'invalid';
     const e = this.entities.get(id);
     if (!e) return;
     const mats = (e.group.userData.model as CachedModel).mats;
@@ -726,6 +780,7 @@ export class WorldView {
       this.atmosphere.moveAnchor(w.anchor, w.group.position);
     }
     for (const e of this.entities.values()) e.anim?.update(t + e.group.position.x * 0.37);
+    if (this.areaOutline) (this.areaOutline.material as THREE.MeshBasicMaterial).opacity = 0.65 + Math.sin(t * 3) * 0.25;
     for (const e of this.entities.values()) if (e.badge) e.badge.position.y = e.height + 0.45 + Math.sin(t * 2.5 + e.group.position.x) * 0.06;
     if (this.selectionFrame.visible) {
       (this.selectionFrame.material as THREE.LineBasicMaterial).opacity = 0.55 + Math.sin(t * 4) * 0.4;

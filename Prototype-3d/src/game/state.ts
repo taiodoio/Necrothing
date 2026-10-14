@@ -116,8 +116,12 @@ export interface WorldMeta {
   looseWisps: LooseWisp[];
   /** Fino a quando vale la benedizione del prete (+fuochi fatui). */
   blessingUntil: string | null;
-  /** Livello di espansione raggiunto (non decresce). */
+  /** Ampiezza del recinto scelta dal giocatore (≤ livello sbloccato). */
   expansionLevel: number;
+  /** Livello di espansione sbloccato col prestigio (non decresce). */
+  unlockedLevel: number;
+  /** Ultimo livello sbloccato di cui il giocatore è stato avvisato. */
+  notifiedLevel: number;
 }
 
 export interface Settings {
@@ -278,6 +282,8 @@ export function createNewGame(now: Date, seed = Math.floor(Math.random() * 1e9))
       ],
       blessingUntil: null,
       expansionLevel: 0,
+      unlockedLevel: 0,
+      notifiedLevel: 0,
     },
     achievements: [],
     memories: [],
@@ -311,6 +317,12 @@ export function normalizeSave(raw: unknown): SaveData | null {
   }
   // i pezzi in serie (sentieri, muretti, staccionate…) non si sporcano più: tornano puliti
   for (const p of data.placeables ?? []) if (CATALOG[p.type] && !CATALOG[p.type].decays) { p.dirty = false; p.broken = false; }
+  // l'espansione ora è a scelta: chi aveva già un recinto più grande lo tiene, sbloccato e già notificato
+  if (data.world) {
+    const lvl = data.world.expansionLevel ?? 0;
+    data.world.unlockedLevel = Math.max(data.world.unlockedLevel ?? lvl, lvl);
+    data.world.notifiedLevel = Math.max(data.world.notifiedLevel ?? data.world.unlockedLevel, lvl);
+  }
   return {
     ...base,
     ...data,

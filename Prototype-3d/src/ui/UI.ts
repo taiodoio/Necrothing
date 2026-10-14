@@ -2,6 +2,7 @@
 // barra di posizionamento, banner Modifica, tutorial. Le schermate nei drawer
 // sono in screens.ts.
 
+import { areaBanner, openExpansionOffer } from './expansion.ts';
 import type * as THREE from 'three';
 import type { EntityAction, Game } from '../app/Game.ts';
 import { DECAY } from '../game/balance.ts';
@@ -134,8 +135,20 @@ export class UI {
   reopenBurial(draft: BurialDraft) { S.openBurial(this, draft, 4); }
 
   refreshEditBanner() {
-    $('#edit-banner').hidden = !this.game.editMode || !!this.game.placement;
+    // durante la riduzione del recinto le istruzioni le dà il suo banner
+    $('#edit-banner').hidden = !this.game.editMode || !!this.game.placement || !!this.game.shrink;
   }
+
+  /** Banner della riduzione del recinto (null lo toglie). */
+  refreshAreaBanner(left: number | null) {
+    document.querySelector('#area-banner')?.remove();
+    this.refreshEditBanner();
+    if (left === null || !this.game.shrink) { $('#bubble').classList.remove('hidden'); return; }
+    $('#bubble').classList.add('hidden');
+    $('#game').append(areaBanner(this, left));
+  }
+
+  openExpansionOffer(level: number) { openExpansionOffer(this, level); }
 
   escape() {
     if (drawerOpen()) { closeDrawer(); return; }

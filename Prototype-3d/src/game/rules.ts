@@ -49,15 +49,47 @@ function placedById(s: SaveData, id: string): Placed {
   return p;
 }
 
-/** Da chiamare dopo ogni azione: espansione monotona + achievement. */
-export function afterAction(s: SaveData, now: Date): { achievements: AchievementDef[]; expanded: boolean } {
+/**
+ * Da chiamare dopo ogni azione: sblocco delle espansioni (monotono) +
+ * achievement. Il recinto non si allarga da solo: `unlocked` è il nuovo
+ * livello sbloccato (o null) e il giocatore sceglie se ampliare.
+ */
+export function afterAction(s: SaveData, now: Date): { achievements: AchievementDef[]; unlocked: number | null } {
   const prestige = computePrestige(s);
-  let expanded = false;
-  while (s.world.expansionLevel < EXPANSION.length - 1 && prestige >= EXPANSION[s.world.expansionLevel + 1].minPrestige) {
-    s.world.expansionLevel++;
-    expanded = true;
+  let unlocked: number | null = null;
+  while (s.world.unlockedLevel < EXPANSION.length - 1 && prestige >= EXPANSION[s.world.unlockedLevel + 1].minPrestige) {
+    s.world.unlockedLevel++;
+    unlocked = s.world.unlockedLevel;
   }
-  return { achievements: evaluateAchievements(s, now), expanded };
+  return { achievements: evaluateAchievements(s, now), unlocked };
+}
+
+/** Tombe e oggetti che non entrano (anche solo in parte) nel recinto di un certo livello. */
+export function outsideArea(s: SaveData, level: number): Array<{ id: string; kind: 'grave' | 'placeable'; label: string }> {
+  const a = areaForLevel(level);
+  const out = (x: number, y: number, [w, d]: [number, number]) => x < a.x || y < a.y || x + w > a.x + a.w || y + d > a.y + a.h;
+  return [
+    ...s.graves.filter((g) => out(g.x, g.y, GRAVE_FOOTPRINT)).map((g) => ({ id: g.id, kind: 'grave' as const, label: g.name })),
+    ...s.placeables.filter((p) => out(p.x, p.y, rotatedFootprint(p.type, p.rot))).map((p) => ({ id: p.id, kind: 'placeable' as const, label: CATALOG[p.type]?.label ?? p.type })),
+  ];
+}
+
+/**
+ * Cambia l'ampiezza del recinto: si può scegliere solo tra i livelli
+ * sbloccati, e restringere solo se nell'area più piccola entra tutto.
+ * I fuochi fatui rimasti fuori svaniscono.
+ */
+export function setExpansionLevel(s: SaveData, level: number): ActionResult {
+  if (!Number.isInteger(level) || level < 0 || level >= EXPANSION.length) throw new GameError('Ampiezza non valida.');
+  if (level > s.world.unlockedLevel) throw new GameError(`«${EXPANSION[level].label}» si sblocca con ${EXPANSION[level].minPrestige} di prestigio.`);
+  if (level === s.world.expansionLevel) return ok('', 0, 0);
+  const left = outsideArea(s, level);
+  if (left.length) throw new GameError(`${left.length === 1 ? 'C’è ancora un elemento' : `Ci sono ancora ${left.length} elementi`} fuori dall'area: spostali o rimettili in inventario.`);
+  const grow = level > s.world.expansionLevel;
+  s.world.expansionLevel = level;
+  const a = areaForLevel(level);
+  s.world.looseWisps = s.world.looseWisps.filter((w) => w.x >= a.x && w.y >= a.y && w.x < a.x + a.w && w.y < a.y + a.h);
+  return ok(`${grow ? 'Il recinto si allarga' : 'Il recinto si stringe'}: ${EXPANSION[level].label}, ${a.w}×${a.h}.`, 0, 0);
 }
 
 // ── Sepoltura ───────────────────────────────────────────────────────────

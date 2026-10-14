@@ -112,10 +112,48 @@ export function weathered(m: LPModel, v: PVis, fp: [number, number], category: P
     lp.push([cx + r.range(-hx, hx) * 0.8, 0.004, cz + r.range(-hz, hz) * 0.8], r.range(0, 6), -Math.PI / 2)
       .plate(irregularShape(r, 0.1 + r.next() * 0.08, 7), 0.004, '#2f2a22', { ao: 0, vary: 0.08 }).pop();
   }
+  // erba alta che cresce attorno all'oggetto trascurato (più fitta e più alta da rotto)
+  const ring = Math.round((path ? 4 : 6) + (hx + hz) * (v.broken ? 5 : 3));
+  for (let i = 0; i < ring; i++) {
+    const a = (i / ring) * Math.PI * 2 + r.range(-0.2, 0.2);
+    const k = Math.min(1 / Math.abs(Math.cos(a)), 1 / Math.abs(Math.sin(a)));
+    const out = r.range(0.85, 1.02);
+    const x = cx + Math.cos(a) * k * hx * out, z = cz + Math.sin(a) * k * hz * out;
+    grassTuft(lp, x, z, (v.broken ? r.range(2.1, 3) : r.range(1.4, 2)) * (path ? 0.7 : 1), r.chance(0.3) ? ['#6b6242', '#7d7048', '#55603a'] : undefined, v.broken ? 9 + r.int(5) : 6 + r.int(4));
+  }
+
+  // per ragnatele, crepe e assi serve la superficie vera: un raggio dal davanti (+z) trova il muro
+  const solid = m.geometries.solid;
+  const hit = solid ? new THREE.Mesh(solid, new THREE.MeshBasicMaterial({ side: THREE.DoubleSide })) : null;
+  const ray = new THREE.Raycaster();
+  const back = new THREE.Vector3(0, 0, -1);
+  const wallZ = (x: number, y: number): number | null => {
+    if (!hit) return null;
+    ray.set(new THREE.Vector3(x, y, box.max.z + 1), back);
+    const h = ray.intersectObject(hit, false)[0];
+    return h ? h.point.z : null;
+  };
   const tall = size.y > 0.75 && !path;
-  const front = box.max.z + 0.005;
-  // ragnatela in un angolo in alto sul davanti
-  if (tall && size.x > 0.8) cobweb(lp, box.min.x + size.x * (r.chance(0.5) ? 0.12 : 0.88), box.min.y + size.y * 0.78, front - Math.min(0.1, size.z * 0.2), Math.min(0.28, size.x * 0.3), r.chance(0.5));
+  if (tall && size.x > 0.6) {
+    // ragnatela nell'angolo tra il muro e la sporgenza sopra (gronda, tenda), o sullo spigolo del muro
+    let web: { x: number; y: number; z: number; flip: boolean } | null = null;
+    for (let fy = 0.82; fy >= 0.45 && !web; fy -= 0.06) {
+      for (let fx = 0.12; fx <= 0.88 && !web; fx += 0.08) {
+        const x = box.min.x + size.x * fx, y = box.min.y + size.y * fy;
+        const z = wallZ(x, y), above = wallZ(x, y + 0.12);
+        if (z !== null && above !== null && above > z + 0.1) web = { x, y: y + 0.08, z: z + 0.01, flip: fx > 0.5 };
+      }
+    }
+    if (!web) {
+      const sx = r.chance(0.5) ? -1 : 1, y = box.min.y + size.y * 0.7;
+      for (let k = 0; k < 20 && !web; k++) {
+        const x = cx + sx * (size.x / 2) * (1 - k / 20);
+        const z = wallZ(x, y);
+        if (z !== null) web = { x, y, z: z + 0.01, flip: sx > 0 };
+      }
+    }
+    if (web) cobweb(lp, web.x, web.y, web.z, Math.min(0.26, size.x * 0.22), web.flip);
+  }
   if (v.broken) {
     // macerie: sassi, schegge e assi spezzate davanti
     for (let i = 0; i < 6 + Math.round(hx * 4); i++) {
@@ -127,16 +165,25 @@ export function weathered(m: LPModel, v: PVis, fp: [number, number], category: P
         .box(0, 0, 0, 0.06, 0.025, 0.2 + r.next() * 0.25, r.pick([LPC.wood, LPC.woodDark]), { vary: 0.1 }).pop();
     }
     if (tall && category === 'structure' && size.y > 1.2 && !NO_BOARDS.has(v.type)) {
-      // crepe e due assi inchiodate a croce sul davanti, all'altezza dell'ingresso
-      const zf = front - 0.04;
-      crack(lp, cx - size.x * 0.28, box.min.y + size.y * 0.72, zf, Math.min(0.6, size.y * 0.3));
-      crack(lp, cx + size.x * 0.3, box.min.y + size.y * 0.5, zf, Math.min(0.45, size.y * 0.22));
+      // crepe sul muro vero
+      for (const [fx, fy, len] of [[-0.28, 0.72, 0.3], [0.3, 0.5, 0.22]] as const) {
+        const x = cx + size.x * fx, y = box.min.y + size.y * fy, z = wallZ(x, y);
+        if (z !== null) crack(lp, x, y, z + 0.008, Math.min(0.6, size.y * len));
+      }
+      // due assi a croce inchiodate ai due lati (stipiti, pilastri): solo se entrambi i lati sono sullo stesso piano
       const w = Math.min(size.x * 0.55, 1.1), y = box.min.y + Math.min(size.y * 0.36, 0.6);
-      for (const s of [-1, 1]) {
-        lp.push([cx, y, zf + 0.03], 0, 0, s * 0.55).box(0, -0.05, 0, w, 0.1, 0.03, '#7a5c42', { vary: 0.12, ao: 0 })
-          .box(-w * 0.42, -0.012, 0.02, 0.025, 0.025, 0.01, LPC.iron, { jitter: 0 }).box(w * 0.42, -0.012, 0.02, 0.025, 0.025, 0.01, LPC.iron, { jitter: 0 }).pop();
+      const zl = wallZ(cx - w * 0.45, y - 0.12), zr = wallZ(cx + w * 0.45, y + 0.12), zc = wallZ(cx, y);
+      if (zl !== null && zr !== null && Math.abs(zl - zr) < 0.12) {
+        const zf = Math.max(zl, zr) + 0.03;
+        if (zc === null || zc < zf + 0.03) {
+          for (const s of [-1, 1]) {
+            lp.push([cx, y, zf], 0, 0, s * 0.55).box(0, -0.05, 0, w, 0.1, 0.03, '#7a5c42', { vary: 0.12, ao: 0 })
+              .box(-w * 0.42, -0.012, 0.02, 0.025, 0.025, 0.01, LPC.iron, { jitter: 0 }).box(w * 0.42, -0.012, 0.02, 0.025, 0.025, 0.01, LPC.iron, { jitter: 0 }).pop();
+          }
+        }
       }
     }
   }
+  hit?.material.dispose();
   return merge(m, lp.build());
 }

@@ -148,6 +148,7 @@ export class WorldView {
     for (const g of state.graves) { alive.add(g.id); this.syncGrave(g); }
     for (const p of state.placeables) { alive.add(p.id); this.syncPlaceable(p); }
     for (const id of [...this.entities.keys()]) if (!alive.has(id)) this.removeEntity(id);
+    for (const id of [...this.hidden]) if (!alive.has(id)) this.hidden.delete(id);
     this.syncWisps(state);
     this.refreshSelection();
   }
@@ -435,6 +436,17 @@ export class WorldView {
     return `g:${g.graveType}:${graveVisualState(g)}:${g.seed % 4}`;
   }
 
+  /** Entità nascoste (la tomba la cui bara è in viaggio verso l'albero): non si vedono né si toccano. */
+  private hidden = new Set<string>();
+
+  setHidden(id: string, on: boolean) {
+    if (on) this.hidden.add(id); else this.hidden.delete(id);
+    const e = this.entities.get(id);
+    if (e) e.group.visible = !on;
+  }
+
+  isHidden(id: string) { return this.hidden.has(id); }
+
   private syncGrave(g: Grave) {
     const key = this.graveKey(g);
     const center = cellCenter(g.x, g.y, GRAVE_FOOTPRINT);
@@ -446,6 +458,7 @@ export class WorldView {
       const model = getModel(key, this.style, () => graveModel(g.graveType, state, g.seed % 4), g.seed % 4);
       e = this.createEntity(g.id, 'grave', key, model, GRAVE_FOOTPRINT, 0);
     }
+    e.group.visible = !this.hidden.has(g.id);
     this.placeEntity(e, center, 0);
     this.setBadge(e, g.broken ? 'broken' : g.dirty || g.weeds ? 'dirty' : null);
   }
@@ -504,13 +517,16 @@ export class WorldView {
     e.group.position.copy(center);
     e.group.rotation.y = -rot * Math.PI / 2;
     e.group.updateMatrixWorld(true);
-    for (const h of e.anchors) this.atmosphere.removeAnchor(h);
-    e.anchors = [];
     const model = e.group.userData.model as CachedModel;
-    for (const a of model.lights) {
+    // stesse sorgenti: si aggiornano sul posto (toglierle e rimetterle faceva spegnere e riaccendere le luci vicine)
+    const reuse = e.anchors.length === model.lights.length;
+    if (!reuse) { for (const h of e.anchors) this.atmosphere.removeAnchor(h); e.anchors = []; }
+    model.lights.forEach((a, i) => {
       const pos = lightWorldPos(a).applyMatrix4(e.group.matrixWorld);
-      e.anchors.push(this.atmosphere.addAnchor(pos, e.fault ? { ...a, fault: e.fault } : a));
-    }
+      const anchor = e.fault ? { ...a, fault: e.fault } : a;
+      if (reuse) this.atmosphere.updateAnchor(e.anchors[i], pos, anchor);
+      else e.anchors.push(this.atmosphere.addAnchor(pos, anchor));
+    });
   }
 
   private setBadge(e: EntityView, need: 'dirty' | 'broken' | null) {

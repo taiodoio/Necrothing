@@ -226,6 +226,27 @@ export class Atmosphere {
     this.anchors.delete(h.id);
   }
 
+  /**
+   * Aggiorna una sorgente esistente (stessa luce, magari spostata o con un
+   * guasto diverso) senza toglierla: così la luce reale che la illumina resta
+   * accesa invece di spegnersi e riaccendersi a ogni modifica della scena.
+   */
+  updateAnchor(h: AnchorHandle, pos: THREE.Vector3, anchor: LightAnchor) {
+    const e = this.anchors.get(h.id);
+    if (!e) return;
+    const moved = e.pos.distanceToSquared(pos) > 1e-6;
+    if (moved || (e.anchor.fault ?? 0) !== (anchor.fault ?? 0) || e.anchor.flicker !== anchor.flicker) {
+      e.flicker = new FireFlicker(seedFromPosition(pos.x, pos.y, pos.z), anchor.flicker, 1, anchor.fault ?? 0);
+    }
+    e.pos.copy(pos);
+    e.sprite.position.copy(pos);
+    if (e.anchor.color !== anchor.color) (e.sprite.material as THREE.SpriteMaterial).color.set(anchor.color);
+    const s = 0.5 + anchor.halo * 1.6;
+    e.sprite.scale.set(s, s, s);
+    e.anchor = anchor;
+    for (const light of this.pool) if (light.userData.entry === e) { light.color.set(anchor.color); light.distance = anchor.range; }
+  }
+
   moveAnchor(h: AnchorHandle, pos: THREE.Vector3) {
     const e = this.anchors.get(h.id);
     if (!e) return;
@@ -271,6 +292,16 @@ export class Atmosphere {
       }
       for (const e of want) {
         if (assigned.has(e)) continue;
+        // la sorgente è stata rifatta nello stesso punto (oggetto con un modello nuovo): la luce passa a lei senza spegnersi
+        const handover = this.pool.find((l) => l.userData.leaving && l.userData.entry && !this.anchors.has(this.idOf(l.userData.entry as AnchorEntry)) && (l.userData.entry as AnchorEntry).pos.distanceToSquared(e.pos) < 0.04);
+        if (handover) {
+          handover.userData.entry = e;
+          handover.userData.leaving = false;
+          handover.color.set(e.anchor.color);
+          handover.distance = e.anchor.range;
+          assigned.add(e);
+          continue;
+        }
         const free = this.pool.find((l) => !l.userData.entry);
         if (!free) break;
         free.userData.entry = e;

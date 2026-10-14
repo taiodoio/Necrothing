@@ -259,6 +259,25 @@ test('atmosfera: cambi di fase graduali e luci del pool che si accendono in diss
   const first = light.intensity;
   atm.update(0.3, 20.3, new THREE.Camera());
   assert.ok(light.intensity > first, 'si accende in dissolvenza');
+  // il pool pieno: ogni sorgente ha la sua luce accesa
+  const src = [];
+  for (let i = 0; i < 12; i++) src.push({ pos: new THREE.Vector3((i % 4) - 1.5, 1, Math.floor(i / 4) - 1), a: { pos: [0, 0, 0], color: '#ffaa55', intensity: 1, range: 4, flicker: 0, halo: 1 } });
+  let handles = src.map((q) => atm.addAnchor(q.pos, q.a));
+  let tt = 21;
+  for (let i = 0; i < 40; i++) atm.update(0.05, (tt += 0.05), new THREE.Camera());
+  const lit = () => scene.getObjectsByProperty('type', 'PointLight').reduce((a, l) => a + l.intensity, 0);
+  const full = lit();
+  // la scena si risincronizza (azione, fuoco fatuo…): aggiornate sul posto le luci non calano
+  src.forEach((q, i) => atm.updateAnchor(handles[i], q.pos, q.a));
+  let low = full;
+  for (let i = 0; i < 40; i++) { atm.update(0.05, (tt += 0.05), new THREE.Camera()); low = Math.min(low, lit()); }
+  assert.ok(low > full * 0.97, `aggiornando non si spengono (${(low / full).toFixed(2)})`);
+  // oggetti rifatti con un modello nuovo nello stesso punto: la luce passa alla sorgente nuova senza buio
+  handles.forEach((h) => atm.removeAnchor(h));
+  handles = src.map((q) => atm.addAnchor(q.pos, q.a));
+  low = full;
+  for (let i = 0; i < 40; i++) { atm.update(0.05, (tt += 0.05), new THREE.Camera()); low = Math.min(low, lit()); }
+  assert.ok(low > full * 0.9, `rifatte, restano accese (${(low / full).toFixed(2)})`);
 });
 
 test('Custode personalizzabile: aspetto validato, chiave stabile, rig con tutte le parti e la lanterna', async () => {
@@ -491,16 +510,16 @@ test('rito dell’Albero dei ricordi: il corteo porta la bara all’albero, poi 
   assert.ok(!a.funeralActive, 'mentre se ne va il corteo non blocca i tocchi');
   const leaving = a.departing.length;
   assert.equal(leaving, 5, 'tutti si avviano all’uscita');
-  a.skipFuneral();
-  assert.equal(a.departing.length, leaving, 'toccando non spariscono');
   for (let t = 0; t < 60 && a.departing.length; t += 0.1) a.update(0.1, t, [], () => 0);
   assert.equal(a.departing.length, 0, 'arrivati all’uscita escono di scena');
-  // si può saltare: la tomba lascia comunque il cimitero
-  let skipped = 0;
-  a.startRite({ grave: cellCenter(g.x, g.y, [2, 2]), graveFront: { x: g.x, y: g.y + 2 }, tree, treeFront: { x: 38, y: 43 }, gate: { x: 31, y: 49 }, coffin: new THREE.Group(), onLift() {}, onDone: () => { skipped++; } });
-  a.skipFuneral();
-  assert.equal(skipped, 1);
-  assert.ok(!a.funeralActive);
+  assert.equal(typeof a.skipFuneral, 'undefined', 'il rito non si salta più toccando la mappa');
+  // un nuovo funerale mentre il primo è in corso: il primo corteo non sparisce, si avvia all'uscita
+  let first = 0;
+  a.startFuneral(cellCenter(g.x, g.y, [2, 2]), { x: 31, y: 49 }, () => { first++; });
+  a.update(0.1, 0, [], () => 0);
+  a.startFuneral(cellCenter(g.x, g.y, [2, 2]), { x: 31, y: 49 }, () => undefined);
+  assert.equal(first, 1, 'il primo funerale si chiude comunque');
+  assert.equal(a.departing.length, 5, 'e il suo corteo esce camminando');
   // un frutto acceso per ricordo; senza ricordi la cavità non brilla
   const glow = (n) => memoryTreeLP(n).geometries.glow?.attributes.position.count ?? 0;
   assert.ok(glow(5) > glow(1) && glow(1) > glow(0));

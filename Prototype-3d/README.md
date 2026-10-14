@@ -125,6 +125,11 @@ interagisci, `C` cambia vista, `V` cambia stile (low-poly → voxel → miniatur
   al gradino più basso ancora lento scende di fascia. Il profilo è ricordato per dispositivo
   (localStorage). Nelle fasce economica e media le ombre della scena si ridisegnano solo
   quando cambia qualcosa (camera, sole, scena) e i personaggi hanno un'ombra a disco.
+  In tutte le fasce (fase 2): tombe e oggetti fermi sono fusi per zona di 8×8 celle (una
+  mesh per materiale: stesso disegno, circa metà delle draw call); un oggetto esce dalla
+  fusione quando va visto da solo (selezionato, segnato in rosso, nascosto, trascinato,
+  animato) e la sua zona si ricompone. Il prato ha due versioni, ricca nella fascia nitida
+  e leggera in quelle sfocate; nelle fasce media e top il bosco è due volte più fitto.
   In *Statistiche tecniche* compaiono fascia e gradino.
 
 ### Mondo, camera e resa

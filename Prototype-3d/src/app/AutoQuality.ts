@@ -4,7 +4,9 @@
 //
 // - fascia (economico / medio / top): fissa le scelte costose da cambiare
 //   (densità di bosco e prato, numero di luci reali: cambiarli ricostruisce
-//   la scena o ricompila gli shader) e il gradino di partenza;
+//   la scena o ricompila gli shader), la densità del bosco, il prato a due
+//   versioni (ricco al centro, leggero nelle fasce sfocate) e il gradino di
+//   partenza; in tutte le fasce gli oggetti fermi sono fusi per zona;
 // - gradini: dal più leggero al più ricco, cambiano solo cose economiche da
 //   cambiare (pixel ratio, mappa ombre, sfocatura, MSAA);
 // - regolatore: scende subito se si resta sotto i 30 FPS per qualche
@@ -42,12 +44,16 @@ export interface TierSpec {
   maxStep: number;
   /** Ombre della scena ridisegnate solo quando cambia qualcosa; i personaggi hanno un'ombra a disco. */
   staticShadows: boolean;
+  /** Densità del bosco attorno al recinto rispetto al livello `bake`. */
+  forest: number;
+  /** Prato [ricco nella fascia nitida, leggero in quelle sfocate]. */
+  decor: [Quality, Quality];
 }
 
 export const TIERS: Record<Tier, TierSpec> = {
-  low: { bake: 'low', lights: 4, startStep: 1, maxStep: 3, staticShadows: true },
-  mid: { bake: 'medium', lights: 7, startStep: 3, maxStep: 4, staticShadows: true },
-  high: { bake: 'high', lights: 10, startStep: 5, maxStep: 5, staticShadows: false },
+  low: { bake: 'low', lights: 4, startStep: 1, maxStep: 3, staticShadows: true, forest: 1, decor: ['medium', 'low'] },
+  mid: { bake: 'medium', lights: 7, startStep: 3, maxStep: 4, staticShadows: true, forest: 2, decor: ['medium', 'low'] },
+  high: { bake: 'high', lights: 10, startStep: 5, maxStep: 5, staticShadows: false, forest: 2, decor: ['high', 'medium'] },
 };
 
 export const TIER_LABELS: Record<Tier, string> = { low: 'economico', mid: 'medio', high: 'top' };

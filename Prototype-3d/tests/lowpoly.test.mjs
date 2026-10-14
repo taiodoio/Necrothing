@@ -680,3 +680,72 @@ test('qualità Auto: le luci in più escono proprio dalla scena (lo shader non l
   atm.setShadowSize(1024);
   assert.equal(atm.sun.shadow.mapSize.x, 1024);
 });
+
+test('qualità Auto, fase 2: oggetti fermi fusi per zona (stesso disegno, meno mesh) che si ricompongono quando serve', async () => {
+  const ctx = { createLinearGradient: () => ({ addColorStop() {} }), createRadialGradient: () => ({ addColorStop() {} }), fillRect() {}, fillText() {}, beginPath() {}, arc() {}, fill() {}, stroke() {}, moveTo() {}, lineTo() {}, closePath() {}, save() {}, restore() {}, translate() {}, scale() {}, rotate() {}, measureText: () => ({ width: 10 }), drawImage() {}, getImageData: () => ({ data: new Uint8ClampedArray(4) }), putImageData() {}, createImageData: (w, h) => ({ data: new Uint8ClampedArray(w * h * 4) }), clearRect() {}, strokeRect() {}, setTransform() {}, fillStyle: '' };
+  const prevDoc = globalThis.document;
+  globalThis.document = { createElement: () => ({ width: 0, height: 0, getContext: () => ctx }) };
+  try {
+    const { WorldView } = await import('../src/view/WorldView.ts');
+    const atm = { addAnchor: () => ({}), removeAnchor() {}, moveAnchor() {}, updateAnchor() {}, setAnchorOn() {} };
+    const s = createNewGame(new Date('2026-10-09T12:00:00Z'), 717);
+    const w = new WorldView(new THREE.Scene(), atm, 'lowpoly');
+    w.sync(s);
+    // triangoli e mesh visibili di tombe e oggetti (le entità + le zone fuse)
+    const visible = (o) => { for (let p = o; p; p = p.parent) if (!p.visible) return false; return true; };
+    const count = () => {
+      let tri = 0, meshes = 0;
+      const add = (o) => { if (!o.isMesh || !visible(o) || o.userData.entityId) return; const g = o.geometry; tri += (g.index ? g.index.count : g.attributes.position.count) / 3; meshes++; };
+      for (const e of w.entities.values()) e.visual.traverse(add);
+      w.mergedLayer.traverse(add);
+      return { tri, meshes };
+    };
+    const before = count();
+    w.setMergeStatic(true);
+    const merged = count();
+    assert.equal(merged.tri, before.tri, 'si disegnano esattamente gli stessi triangoli');
+    assert.ok(merged.meshes < before.meshes * 0.6, `molte meno mesh (${before.meshes} → ${merged.meshes})`);
+    const g = s.graves[0];
+    const ge = w.entities.get(g.id);
+    assert.equal(ge.visual.visible, false, 'la tomba è nella sua zona');
+    // selezionata: esce dalla zona (si vede da sola, evidenziata), senza doppioni
+    w.select(g.id);
+    assert.equal(ge.visual.visible, true);
+    assert.equal(count().tri, before.tri, 'nessun doppione');
+    w.select(null);
+    assert.equal(ge.visual.visible, false, 'deselezionata torna nella zona');
+    // nascosta (bara del rito in viaggio): non si vede né da sola né nella zona
+    const own = (() => { let t = 0; ge.visual.traverse((o) => { if (o.isMesh) t += (o.geometry.index ? o.geometry.index.count : o.geometry.attributes.position.count) / 3; }); return t; })();
+    w.setHidden(g.id, true);
+    assert.equal(count().tri, before.tri - own);
+    w.setHidden(g.id, false);
+    assert.equal(count().tri, before.tri);
+    // trascinata in Modifica: fuori dalla zona finché non si posa
+    w.previewMove(g.id, g.x + 1, g.y, true);
+    assert.equal(ge.visual.visible, true);
+    assert.equal(count().tri, before.tri);
+    w.endPreview();
+    w.sync(s);
+    assert.equal(ge.visual.visible, false);
+    // tolta dal cimitero: sparisce anche dalla zona
+    s.graves = s.graves.filter((x) => x.id !== g.id);
+    w.sync(s);
+    assert.equal(count().tri, before.tri - own);
+    // spenta (livelli manuali): tutto torna com'era, oggetto per oggetto
+    w.setMergeStatic(false);
+    assert.equal(w.mergedLayer.children.length, 0);
+    assert.equal(count().tri, before.tri - own);
+    for (const e of w.entities.values()) assert.equal(e.visual.visible, true);
+    // prato a due versioni: per ogni blocco se ne vede una sola
+    w.decorLod = ['high', 'medium'];
+    w.sync(s);
+    assert.ok(w.decorLight.children.length > 0);
+    const cam = new THREE.OrthographicCamera(-12, 12, 12, -12, 0.1, 200);
+    cam.position.set(20, 30, 20); cam.lookAt(0, 0, 0); cam.updateMatrixWorld(); cam.updateProjectionMatrix();
+    w.updateDecorLod(cam);
+    const shown = new Map();
+    for (const m of [...w.decorLayer.children, ...w.decorLight.children]) if (m.visible) shown.set(m.userData.chunk, (shown.get(m.userData.chunk) ?? new Set()).add(m.parent === w.decorLayer ? 'ricco' : 'leggero'));
+    for (const [chunk, kinds] of shown) assert.equal(kinds.size, 1, `blocco ${chunk}: una sola versione`);
+    assert.ok([...shown.values()].some((k) => k.has('ricco')) && [...shown.values()].some((k) => k.has('leggero')));
+  } finally { globalThis.document = prevDoc; }
+});

@@ -113,6 +113,7 @@ export class Game {
     this.effects = new Effects(this.scene, q);
     this.world = new WorldView(this.scene, this.atmosphere, this.state.settings.style);
     this.world.staticShadows = !!this.auto && TIERS[this.auto.tier].staticShadows;
+    if (this.auto) { this.world.forestScale = TIERS[this.auto.tier].forest; this.world.decorLod = TIERS[this.auto.tier].decor; }
     this.world.quality = q;
     if (params.get('mist') !== '0') this.mist = new ForestMist(this.scene, q);
     const report = runCatchUp(this.state, now);
@@ -189,6 +190,7 @@ export class Game {
     if (this.hudTimer <= 0) { this.hudTimer = 1; this.ui.refreshClock(); }
 
     if (!this.renderer.shadowMap.autoUpdate) this.refreshStaticShadows();
+    this.world.updateDecorLod(this.rig.camera);
     this.renderer.info.reset();
     this.updateFocus();
     this.postfx.render(this.scene, this.rig.camera);
@@ -948,6 +950,10 @@ export class Game {
     this.renderer.shadowMap.autoUpdate = !still;
     this.renderer.shadowMap.needsUpdate = true;
     this.atmosphere.setLightBudget(tier ? tier.lights : null);
+    // fase 2: bosco più fitto (media e top), prato a due versioni, oggetti fermi fusi per zona
+    this.world.forestScale = tier?.forest ?? 1;
+    this.world.decorLod = tier ? tier.decor : null;
+    this.world.setMergeStatic(!!tier);
     if (!auto) this.postfx.setSamples(4);
     this.applyQuality(this.baseQuality());
     if (auto) this.applyAutoStep();

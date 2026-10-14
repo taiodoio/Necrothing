@@ -182,6 +182,45 @@ export function exhumeGrave(s: SaveData, graveId: string): ActionResult {
   return ok('Tomba rimossa. Il ricordo resta a te.');
 }
 
+// ── Visite del becchino e del prete ─────────────────────────────────────
+
+/**
+ * Il giro del becchino: metà (arrotondata per eccesso) delle cose sporche del
+ * cimitero, tombe e oggetti, scelte a caso. Le rotte no: vanno riparate.
+ */
+export function gravediggerRound(s: SaveData, rand: () => number = Math.random): string[] {
+  const dirty = [
+    ...s.graves.filter((g) => !g.broken && (g.dirty || g.weeds)).map((g) => g.id),
+    ...s.placeables.filter((p) => !p.broken && p.dirty && CATALOG[p.type]?.decays).map((p) => p.id),
+  ];
+  for (let i = dirty.length - 1; i > 0; i--) { const j = Math.floor(rand() * (i + 1)); [dirty[i], dirty[j]] = [dirty[j], dirty[i]]; }
+  return dirty.slice(0, Math.ceil(dirty.length * GRAVEDIGGER.roundShare));
+}
+
+/** Il becchino pulisce una cosa durante il giro (gratis per il Custode, che ci guadagna pure). */
+export function gravediggerClean(s: SaveData, id: string, now: Date): ActionResult {
+  const g = s.graves.find((x) => x.id === id);
+  const p = g ? undefined : s.placeables.find((x) => x.id === id);
+  if (g && !g.broken && (g.dirty || g.weeds)) {
+    g.dirty = false; g.weeds = false; g.dirtySince = null;
+    memory(s, g.id, 'cleaned', now);
+  } else if (p && !p.broken && p.dirty) {
+    p.dirty = false; p.caredAt = now.toISOString();
+  } else return ok('', 0, 0); // già pulita (o rotta nel frattempo)
+  s.player.counters.cleanups++;
+  reward(s, XP.gravediggerPerGrave, WISPS.gravediggerPerGrave);
+  return ok('', XP.gravediggerPerGrave, WISPS.gravediggerPerGrave);
+}
+
+/** Il prete prega su una tomba; la prima preghiera del giro benedice il cimitero (più fuochi fatui per un giorno). */
+export function priestBless(s: SaveData, graveId: string, now: Date, first: boolean): ActionResult {
+  if (s.graves.some((g) => g.id === graveId)) memory(s, graveId, 'blessing', now);
+  if (!first) return ok('', 0, 0);
+  s.world.blessingUntil = new Date(now.getTime() + WISP_SPAWN.blessingHours * 3_600_000).toISOString();
+  reward(s, XP.blessing, WISPS.blessing);
+  return ok('Il prete benedice il cimitero: più fuochi fatui fino a domani.', XP.blessing, WISPS.blessing);
+}
+
 // ── Albero dei ricordi ──────────────────────────────────────────────────
 
 /** L'Albero dei ricordi piazzato nel cimitero (ce n'è al massimo uno). */

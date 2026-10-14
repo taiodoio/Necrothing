@@ -5,6 +5,7 @@ import { DEFAULT_LOOK, normalizeLook, type CustodeLook } from './look.ts';
 import type { Category, DeathCause, GraveType } from './graves.ts';
 import type { DayPhase } from './time.ts';
 import { MAP_SIZE, WISPS } from './balance.ts';
+import { CATALOG } from './catalog.ts';
 import { createRng, hashString } from './rng.ts';
 import { isoDate } from './time.ts';
 
@@ -308,6 +309,8 @@ export function normalizeSave(raw: unknown): SaveData | null {
     if (data.inventory) delete (data.inventory as Record<string, number>).skeleton_pet;
     data.player = { ...data.player, wisps: (data.player.wisps ?? 0) + bowls * 18 };
   }
+  // i pezzi in serie (sentieri, muretti, staccionate…) non si sporcano più: tornano puliti
+  for (const p of data.placeables ?? []) if (CATALOG[p.type] && !CATALOG[p.type].decays) { p.dirty = false; p.broken = false; }
   return {
     ...base,
     ...data,

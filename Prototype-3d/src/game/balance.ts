@@ -136,7 +136,8 @@ export const SPAWN_MODIFIERS = {
   flowerEventBonus: 0.01,
 } as const;
 
-export const GRAVEDIGGER = { cleanRadius: 4 } as const;
+/** Becchino: raggio della vecchia pulizia al tocco; quota delle cose sporche che sistema in ogni giro. */
+export const GRAVEDIGGER = { cleanRadius: 4, roundShare: 0.5 } as const;
 
 export const ECONOMY = { sellRefund: 0.7 } as const;
 

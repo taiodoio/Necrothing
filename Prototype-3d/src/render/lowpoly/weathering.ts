@@ -96,8 +96,10 @@ export function weathered(m: LPModel, v: PVis, fp: [number, number], category: P
 
   const lp = new LP(`degrado:${v.type}:${v.seed}:${+v.dirty}${+v.broken}`);
   const r = lp.rng;
-  const hx = Math.min(fp[0] / 2, Math.max(0.25, size.x / 2 + 0.1)), hz = Math.min(fp[1] / 2, Math.max(0.25, size.z / 2 + 0.1));
-  const cx = (box.min.x + box.max.x) / 2, cz = (box.min.z + box.max.z) / 2;
+  // tutto ciò che si aggiunge a terra resta dentro l'ingombro (con un margine per i ciuffi)
+  const mx = fp[0] / 2 - 0.22, mz = fp[1] / 2 - 0.22;
+  const hx = Math.min(mx, Math.max(0.25, size.x / 2 + 0.1)), hz = Math.min(mz, Math.max(0.25, size.z / 2 + 0.1));
+  const cx = THREE.MathUtils.clamp((box.min.x + box.max.x) / 2, -(mx - hx), mx - hx), cz = THREE.MathUtils.clamp((box.min.z + box.max.z) / 2, -(mz - hz), mz - hz);
   // a terra: foglie secche ed erbacce lungo il bordo (sui sentieri crescono tra le pietre)
   deadLeaves(lp, cx - hx, cz - hz, cx + hx, cz + hz, Math.round(6 + hx * hz * (v.broken ? 26 : 16)));
   const tufts = Math.round((path ? 3 : 4) + (hx + hz) * (v.broken ? 3 : 2));
@@ -117,7 +119,7 @@ export function weathered(m: LPModel, v: PVis, fp: [number, number], category: P
   for (let i = 0; i < ring; i++) {
     const a = (i / ring) * Math.PI * 2 + r.range(-0.2, 0.2);
     const k = Math.min(1 / Math.abs(Math.cos(a)), 1 / Math.abs(Math.sin(a)));
-    const out = r.range(0.85, 1.02);
+    const out = r.range(0.76, 0.9); // dentro l'ingombro: non invade le celle vicine
     const x = cx + Math.cos(a) * k * hx * out, z = cz + Math.sin(a) * k * hz * out;
     grassTuft(lp, x, z, (v.broken ? r.range(2.1, 3) : r.range(1.4, 2)) * (path ? 0.7 : 1), r.chance(0.3) ? ['#6b6242', '#7d7048', '#55603a'] : undefined, v.broken ? 9 + r.int(5) : 6 + r.int(4));
   }
@@ -162,11 +164,11 @@ export function weathered(m: LPModel, v: PVis, fp: [number, number], category: P
     // macerie: sassi, schegge e assi spezzate davanti
     for (let i = 0; i < 6 + Math.round(hx * 4); i++) {
       const s = 0.04 + r.next() * 0.06;
-      lp.blob(cx + r.range(-hx, hx), s * 0.4, cz + hz * r.range(0.4, 1), s, s * 0.6, s * 0.8, r.pick([LPC.stone, LPC.stoneDark, LPC.stoneWarm]), { vary: 0.12 });
+      lp.blob(cx + r.range(-hx, hx) * 0.85, s * 0.4, cz + hz * r.range(0.4, 0.85), s, s * 0.6, s * 0.8, r.pick([LPC.stone, LPC.stoneDark, LPC.stoneWarm]), { vary: 0.12 });
     }
     for (let i = 0; i < 2 + Math.round(hx * 2); i++) {
-      lp.push([cx + r.range(-hx, hx) * 0.8, 0.02, cz + hz * r.range(0.3, 0.95)], r.range(0, 6.28), 0, r.range(-0.15, 0.15))
-        .box(0, 0, 0, 0.06, 0.025, 0.2 + r.next() * 0.25, r.pick([LPC.wood, LPC.woodDark]), { vary: 0.1 }).pop();
+      lp.push([cx + r.range(-hx, hx) * 0.6, 0.02, cz + hz * r.range(0.3, 0.7)], r.range(0, 6.28), 0, r.range(-0.15, 0.15))
+        .box(0, 0, 0, 0.06, 0.025, 0.18 + r.next() * 0.17, r.pick([LPC.wood, LPC.woodDark]), { vary: 0.1 }).pop();
     }
     if (tall && category === 'structure' && size.y > 1.2 && !NO_BOARDS.has(v.type)) {
       // crepe sul muro vero

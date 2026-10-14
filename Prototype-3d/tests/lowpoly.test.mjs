@@ -476,14 +476,25 @@ test('rito dell’Albero dei ricordi: il corteo porta la bara all’albero, poi 
   const coffin = new THREE.Group();
   a.startRite({ grave: cellCenter(g.x, g.y, [2, 2]), graveFront: { x: g.x, y: g.y + 2 }, tree, treeFront: { x: 38, y: 43 }, gate: { x: 31, y: 49 }, coffin, onLift: () => { lifted = true; }, onDone: () => { done++; } });
   assert.ok(a.funeralActive);
-  let carried = false;
-  for (let t = 0; t < 90 && !done; t += 0.05) { a.update(0.05, t, [], () => 0); if (coffin.visible && coffin.position.y > 0.4) carried = true; }
+  let carried = false, jump = 0;
+  const last = new Map();
+  for (let t = 0; t < 90 && !done; t += 0.05) {
+    a.update(0.05, t, [], () => 0);
+    if (coffin.visible && coffin.position.y > 0.4) carried = true;
+    for (const m of [...(a.rite?.members ?? []), ...a.departing]) { const p = last.get(m); if (p) jump = Math.max(jump, p.distanceTo(m.pos)); last.set(m, m.pos.clone()); }
+  }
+  assert.ok(jump < 0.3, `nessuno si teletrasporta (salto massimo ${jump.toFixed(2)})`);
   assert.ok(lifted, 'la bara esce dalla tomba');
   assert.ok(carried, 'portata a spalla');
   assert.equal(done, 1, 'il rito si conclude');
   assert.ok(coffin.position.distanceTo(tree.clone().setY(coffin.position.y)) < 2.3, 'davanti all’albero');
-  for (let t = 0; t < 30 && a.funeralActive; t += 0.1) a.update(0.1, t, [], () => 0);
-  assert.ok(!a.funeralActive, 'il corteo se ne va');
+  assert.ok(!a.funeralActive, 'mentre se ne va il corteo non blocca i tocchi');
+  const leaving = a.departing.length;
+  assert.equal(leaving, 5, 'tutti si avviano all’uscita');
+  a.skipFuneral();
+  assert.equal(a.departing.length, leaving, 'toccando non spariscono');
+  for (let t = 0; t < 60 && a.departing.length; t += 0.1) a.update(0.1, t, [], () => 0);
+  assert.equal(a.departing.length, 0, 'arrivati all’uscita escono di scena');
   // si può saltare: la tomba lascia comunque il cimitero
   let skipped = 0;
   a.startRite({ grave: cellCenter(g.x, g.y, [2, 2]), graveFront: { x: g.x, y: g.y + 2 }, tree, treeFront: { x: 38, y: 43 }, gate: { x: 31, y: 49 }, coffin: new THREE.Group(), onLift() {}, onDone: () => { skipped++; } });
@@ -499,7 +510,7 @@ test('rito dell’Albero dei ricordi: il corteo porta la bara all’albero, poi 
 test('sporco e rotto si leggono su tutti gli oggetti; le luci guaste sfarfallano', async () => {
   const { FireFlicker } = await import('../src/view/FireFlicker.ts');
   const count = (key) => { const m = resolveLowpoly(key)(); return Object.values(m.geometries).reduce((n, g) => n + (g ? g.attributes.position.count : 0), 0); };
-  for (const id of ['fence_wood', 'shop', 'lamp_post', 'well']) {
+  for (const id of ['pet_house', 'shop', 'lamp_post', 'well']) {
     const k = (st) => placeableKey(vis(id, st));
     assert.ok(count(k({ dirty: true })) > count(k({})), `${id}: lo sporco aggiunge erbacce, foglie, ragnatele`);
     assert.ok(count(k({ dirty: true, broken: true })) > count(k({ dirty: true })), `${id}: il rotto aggiunge macerie`);
@@ -511,4 +522,24 @@ test('sporco e rotto si leggono su tutti gli oggetti; le luci guaste sfarfallano
   assert.equal(dips(0), 0, 'sana: mai quasi spenta');
   assert.ok(dips(2) > 200, 'rotta: si spegne e riaccende a raffiche');
   assert.ok(dips(2) > dips(1));
+});
+
+test('becchino in visita: fa le tappe, lavora a ciascuna e se ne va da dove è venuto (non svanisce prima)', async () => {
+  const { Actors } = await import('../src/view/Actors.ts');
+  const { cellCenter } = await import('../src/view/WorldView.ts');
+  const atmosphere = { addAnchor: () => ({}), removeAnchor() {}, moveAnchor() {} };
+  const s = createNewGame(new Date('2026-10-09T12:00:00Z'), 717);
+  const occ = buildOccupancy(s);
+  const a = new Actors(new THREE.Scene(), atmosphere, 'lowpoly', cellCenter(24, 42, [1, 1]));
+  a.setWorld(areaForLevel(0), (x, y) => occ.blocked.has(`${x},${y}`));
+  const door = cellCenter(31, 48, [1, 1]);
+  const stops = s.graves.slice(0, 3).map((g) => ({ id: g.id, x: g.x, y: g.y, fp: [2, 2] }));
+  const done = [];
+  let left = false, worked = false;
+  const r = a.spawnVisitor('gravedigger', door, door.clone(), stops, (id) => done.push(id), () => { left = true; });
+  for (let t = 0; t < 200 && !left; t += 0.1) { a.update(0.1, t, [], () => 0); if (r.pose === 'work') worked = true; }
+  assert.deepEqual(done, stops.map((q) => q.id), 'tutte le tappe, in ordine');
+  assert.ok(worked, 'lavora alle tappe');
+  assert.ok(left, 'poi se ne va');
+  assert.ok(r.pos.distanceTo(door) < 1, 'esce da dove è entrato');
 });

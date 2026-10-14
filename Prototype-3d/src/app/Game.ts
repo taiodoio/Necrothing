@@ -20,7 +20,7 @@ import { graveModel } from '../render/models/graves.ts';
 import { placeableKey, placeableModel, type PVis } from '../render/models/registry.ts';
 import { UI } from '../ui/UI.ts';
 import { floater, toast } from '../ui/dom.ts';
-import { Actors, graveSpots, type PetMode } from '../view/Actors.ts';
+import { Actors, graveSpots, type PetMode, type VisitStop } from '../view/Actors.ts';
 import { Atmosphere } from '../view/Atmosphere.ts';
 import { CameraRig } from '../view/CameraRig.ts';
 import { Effects } from '../view/Effects.ts';
@@ -195,6 +195,7 @@ export class Game {
     const res = liveTick(this.state, now, ++this.liveSalt);
     for (const s of res.spawns) {
       if (s.memoryId) { this.spawnMemoryGhost(s.memoryId); continue; }
+      if (s.kind === 'priest' || s.kind === 'gravedigger') { this.spawnVisitor(s.kind); continue; }
       const g = s.graveId ? this.state.graves.find((x) => x.id === s.graveId) : undefined;
       this.actors.spawnRoamer(s, g ? cellCenter(g.x, g.y + 2, [2, 1]) : undefined);
     }
@@ -573,6 +574,21 @@ export class Game {
   private tapRoamer(id: string) {
     const r = this.actors.roamerAt(id);
     if (!r || r.dying > 0) return;
+    // becchino e prete in visita: non svaniscono, raccontano cosa stanno facendo
+    if (r.visit) {
+      const v = r.visit, left = Math.max(0, v.stops.length - v.i);
+      const back = (kind: 'priest' | 'gravedigger', home: string) => (this.visitorHome(kind) ? home : 'da dove è venuto');
+      if (r.kind === 'gravedigger') {
+        toast(v.stage === 'leave' || !left
+          ? (v.stops.length ? `Il becchino ha finito il giro (${v.i} cose ripulite) e torna ${back('gravedigger', 'a casa')}.` : `Il becchino ha controllato: niente da pulire. Torna ${back('gravedigger', 'a casa')}.`)
+          : `Il becchino fa il giro e ripulisce metà delle cose sporche del cimitero: ${v.i} fatte, ancora ${left}. Poi torna ${back('gravedigger', 'a casa')}.`);
+      } else {
+        toast(v.stage === 'leave' || !left
+          ? `Il prete ha benedetto il cimitero (più fuochi fatui fino a domani) e torna ${back('priest', 'al santuario')}.`
+          : `Il prete prega sulle tombe e benedice il cimitero: più fuochi fatui fino a domani. Ancora ${left} ${left === 1 ? 'tomba' : 'tombe'}, poi torna ${back('priest', 'al santuario')}.`);
+      }
+      return;
+    }
     const at = r.pos.clone().setY(1.4);
     const cell = worldToCell(r.pos);
     this.actors.faceTowards(r.pos);
@@ -583,6 +599,52 @@ export class Game {
     this.actors.removeRoamer(id);
     // il fantasma di un ricordo dell'albero: dopo la ricompensa si apre la sua scheda
     if (r.memoryId && visit) this.ui.openMemory(r.memoryId, visit);
+  }
+
+  // ── Becchino e prete in visita ───────────────────────────────────────
+
+  /** La casa del becchino o il santuario (se ci sono e funzionano): da lì escono e lì tornano. */
+  private visitorHome(kind: 'priest' | 'gravedigger') {
+    return this.state.placeables.find((p) => p.type === (kind === 'gravedigger' ? 'gravedigger_house' : 'shrine') && !p.broken);
+  }
+
+  /**
+   * Arriva il becchino (pulisce metà delle cose sporche) o il prete (prega su
+   * qualche tomba e benedice il cimitero): fa il giro e se ne va da dove è venuto.
+   */
+  spawnVisitor(kind: 'priest' | 'gravedigger') {
+    if ([...this.actors.roamers.values()].some((r) => r.kind === kind && r.visit)) return; // uno alla volta
+    const home = this.visitorHome(kind);
+    let door: THREE.Vector3;
+    if (home) {
+      const fp = rotatedFootprint(home.type, home.rot);
+      door = cellCenter(home.x + Math.floor(fp[0] / 2), home.y + fp[1], [1, 1]);
+    } else {
+      const gate = [...gateCells(areaForLevel(this.state.world.expansionLevel))][1].split(',').map(Number);
+      door = cellCenter(gate[0], gate[1], [1, 1]).add(new THREE.Vector3(0, 0, 1.5));
+    }
+    const ids = kind === 'gravedigger'
+      ? R.gravediggerRound(this.state)
+      : [...this.state.graves].sort(() => Math.random() - 0.5).slice(0, 3).map((g) => g.id);
+    // tappe in ordine di vicinanza, partendo dalla porta
+    const stops: VisitStop[] = [];
+    const left = ids.map((id) => ({ id, ...this.entityCells(id)! })).filter((s) => s.fp);
+    let at = worldToCell(door);
+    while (left.length) {
+      left.sort((a, b) => Math.hypot(a.x - at.x, a.y - at.y) - Math.hypot(b.x - at.x, b.y - at.y));
+      const s = left.shift()!;
+      stops.push(s);
+      at = { x: s.x, y: s.y };
+    }
+    let cleaned = 0, blessed = false;
+    this.actors.spawnVisitor(kind, door, door.clone(), stops, (id) => {
+      const c = this.entityCells(id);
+      const top = c ? cellCenter(c.x, c.y, c.fp).setY(1.4) : undefined;
+      if (kind === 'gravedigger') { this.act((s, n) => { const r = R.gravediggerClean(s, id, n); if (r.xp) cleaned++; return r; }, top); }
+      else { this.act((s, n) => R.priestBless(s, id, n, !blessed), top); blessed = true; }
+    }, () => {
+      if (kind === 'gravedigger' && cleaned) toast(`Il becchino ha finito il giro: ${cleaned} ${cleaned === 1 ? 'cosa ripulita' : 'cose ripulite'}.`);
+    });
   }
 
   // ── Albero dei ricordi ───────────────────────────────────────────────

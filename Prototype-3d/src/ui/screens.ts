@@ -3,7 +3,7 @@
 
 import { terrainSection } from './expansion.ts';
 import { exportBackup, gallery, importBackup, type PhotoRecord } from '../app/persistence.ts';
-import { DECAY } from '../game/balance.ts';
+import { DECAY, EXPANSION } from '../game/balance.ts';
 import { CATALOG, CATALOG_LIST, CATEGORY_ORDER, PLACEABLE_CATEGORY_LABELS, isSeasonallyAvailable, repairCost, type PlaceableCategory } from '../game/catalog.ts';
 import {
   CATEGORIES, CATEGORY_LABELS, DEATH_CAUSE_LABELS, DEATH_CAUSES, GRAVE_STATE_LABELS,
@@ -12,7 +12,7 @@ import {
 import { ACHIEVEMENTS, achievementProgress, nextRank, rankForXp, rankProgress } from '../game/progression.ts';
 import * as R from '../game/rules.ts';
 import { createNewGame, type TimeOverride } from '../game/state.ts';
-import { computePrestige, detectDistricts, DISTRICT_LABELS, expansionFor } from '../game/world.ts';
+import { computePrestige, detectDistricts, DISTRICT_LABELS, expansionStatus } from '../game/world.ts';
 import { newId } from '../game/rng.ts';
 import { $, closeDrawer, fmtDate, h, openDrawer, setDrawerBody, setDrawerFooter, toast } from './dom.ts';
 import { graveThumb, placeableThumb } from './thumbs.ts';
@@ -270,7 +270,7 @@ export function openPlayer(ui: UI) {
   const rank = rankForXp(p.xp);
   const next = nextRank(p.xp);
   const prestige = computePrestige(s);
-  const exp = expansionFor(prestige);
+  const exp = expansionStatus(s);
   const districts = detectDistricts(s.graves);
   const name = h('input', { value: p.name, maxLength: 24, onchange: (e: Event) => { p.name = (e.target as HTMLInputElement).value.trim() || 'Custode'; game.afterChange(); } });
   const got = new Set(s.achievements.map((a) => a.id));
@@ -283,7 +283,9 @@ export function openPlayer(ui: UI) {
       h('dt', {}, 'Punti Necro'), h('dd', {}, `${p.xp}${next ? ` / ${next.minXp}` : ''}`),
       h('dt', {}, 'Fuochi fatui'), h('dd', {}, `${p.wisps} fuochi fatui`),
       h('dt', {}, 'Prestigio'), h('dd', {}, String(prestige)),
-      h('dt', {}, 'Recinto'), h('dd', {}, `${exp.label}${exp.next ? ` — prossimo a ${exp.next.minPrestige} (mancano ${exp.toNext})` : ''}`),
+      h('dt', {}, 'Recinto'), h('dd', {}, `${exp.label} · ${exp.size}×${exp.size}${exp.unlocked > exp.level
+        ? ` — sbloccato fino a ${EXPANSION[exp.unlocked].size}×${EXPANSION[exp.unlocked].size}: si amplia da Impostazioni › Terreno`
+        : exp.next ? ` — prossima area a ${exp.next.minPrestige} di prestigio (mancano ${exp.toNext})` : ''}`),
       h('dt', {}, 'Distretti'), h('dd', {}, districts.length ? districts.map((d) => DISTRICT_LABELS[d.theme]).join(', ') : 'Nessuno (4 tombe coerenti vicine)'),
     ),
     h('div', { class: 'xp-bar', style: 'height:6px;margin-bottom:10px' }, h('i', { style: `width:${Math.round(rankProgress(p.xp) * 100)}%` })),

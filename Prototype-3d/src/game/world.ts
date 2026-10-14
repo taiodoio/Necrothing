@@ -7,17 +7,20 @@ import type { Grave, Placed, SaveData } from './state.ts';
 
 export interface Rect { x: number; y: number; w: number; h: number }
 
-export function expansionFor(prestige: number) {
-  let level = 0;
-  for (let i = 0; i < EXPANSION.length; i++) if (prestige >= EXPANSION[i].minPrestige) level = i;
-  const tier = EXPANSION[level];
-  const next = EXPANSION[level + 1] ?? null;
+/**
+ * Il recinto com'è davvero (dal salvataggio, non dal prestigio del momento:
+ * il prestigio può calare, il recinto scelto resta): livello attivo,
+ * livello sbloccato e prossima soglia da raggiungere.
+ */
+export function expansionStatus(s: SaveData) {
+  const level = s.world.expansionLevel, unlocked = s.world.unlockedLevel;
+  const next = EXPANSION[unlocked + 1] ?? null;
   return {
-    level,
-    size: tier.size,
-    label: tier.label,
+    level, unlocked,
+    size: EXPANSION[level].size,
+    label: EXPANSION[level].label,
     next,
-    toNext: next ? Math.max(0, next.minPrestige - prestige) : 0,
+    toNext: next ? Math.max(0, next.minPrestige - computePrestige(s)) : 0,
   };
 }
 

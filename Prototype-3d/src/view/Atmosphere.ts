@@ -213,7 +213,7 @@ export class Atmosphere {
     sprite.scale.set(s, s, s);
     sprite.renderOrder = 3;
     this.group.add(sprite);
-    this.anchors.set(id, { pos: pos.clone(), anchor, sprite, flicker: new FireFlicker(seedFromPosition(pos.x, pos.y, pos.z), anchor.flicker), on });
+    this.anchors.set(id, { pos: pos.clone(), anchor, sprite, flicker: new FireFlicker(seedFromPosition(pos.x, pos.y, pos.z), anchor.flicker, 1, anchor.fault ?? 0), on });
     return { id };
   }
 

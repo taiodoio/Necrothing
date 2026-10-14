@@ -35,7 +35,7 @@ function lampHead(lp: LP, y: number, on: boolean, gothic = false, s = 1) {
 
 export function lampPost(v: PVis): LPModel {
   const lp = new LP(`lp:lamp:${v.variant}:${v.seed}:${v.dirty}${v.broken}`);
-  const on = v.lit && !v.broken;
+  const on = v.lit; // rotto resta acceso, ma sfarfalla forte (vedi la vista)
   // basamento in pietra a due gradini
   lp.box(0, 0, 0, 0.56, 0.12, 0.56, LPC.stoneDark, { bevel: 0.02, ...(v.dirty ? { topTint: LPC.moss, topAmount: 0.5 } : {}) });
   lp.box(0, 0.12, 0, 0.4, 0.1, 0.4, LPC.stone, { bevel: 0.015 });
@@ -87,7 +87,7 @@ function lanternBody(lp: LP, y: number, on: boolean, s = 1) {
 
 export function lantern(v: PVis): LPModel {
   const lp = new LP(`lp:lantern:${v.variant}:${v.seed}:${v.dirty}${v.broken}`);
-  const on = v.lit && !v.broken;
+  const on = v.lit;
   if (v.variant === 1) {
     // su paletto di legno con braccio
     lp.cyl(0, 0, 0, 0.07, 0.06, 1.4, 5, LPC.woodDark, { vary: 0.12 });
@@ -115,7 +115,7 @@ export function lantern(v: PVis): LPModel {
 
 export function torch(v: PVis): LPModel {
   const lp = new LP(`lp:torch:${v.seed}:${v.dirty}${v.broken}`);
-  const on = v.lit && !v.broken;
+  const on = v.lit;
   lp.blob(0, 0.06, 0, 0.18, 0.1, 0.16, LPC.stone, { vary: 0.12 });
   lp.push([0, 0, 0], 0, 0, v.broken ? 0.35 : 0.04);
   lp.cyl(0, 0.05, 0, 0.045, 0.06, 1.15, 6, LPC.woodDark, { vary: 0.15 });

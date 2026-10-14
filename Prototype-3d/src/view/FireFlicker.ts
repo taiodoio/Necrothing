@@ -11,11 +11,13 @@ export class FireFlicker {
   private readonly seed: number;
   readonly amount: number;
   readonly speed: number;
+  readonly fault: number;
 
-  /** `amount` 0..1: ampiezza relativa; `speed` scala le frequenze. */
-  constructor(seed: number, amount = 0.2, speed = 1) {
+  /** `amount` 0..1: ampiezza relativa; `speed` scala le frequenze; `fault` 0 sana, 1 sporca, 2 rotta. */
+  constructor(seed: number, amount = 0.2, speed = 1, fault = 0) {
     this.seed = seed | 0;
-    this.amount = amount;
+    this.fault = fault;
+    this.amount = amount + (fault >= 1 ? 0.12 : 0);
     this.speed = speed;
     const h = (k: number) => hash3(this.seed, k, 17, 991);
     this.f = [(7 + h(1) * 4) * speed, (13 + h(2) * 7) * speed, (2.1 + h(3) * 1.4) * speed];
@@ -24,6 +26,20 @@ export class FireFlicker {
 
   /** Moltiplicatore d'intensità al tempo t (secondi), attorno a 1. */
   value(t: number): number {
+    const v = this.steady(t);
+    if (this.fault <= 0) return v;
+    if (this.fault >= 2) {
+      // rotta: a periodi va in crisi e sfarfalla, spegnendosi quasi del tutto a scatti
+      const crisis = hash3(Math.floor(t * 0.6), this.seed, 43, 9) < 0.65;
+      const q = hash3(Math.floor(t * 12), this.seed, 41, 5);
+      return crisis && q < 0.55 ? v * (0.04 + q * 0.35) : v;
+    }
+    // sporca: ogni tanto un calo breve
+    const q = hash3(Math.floor(t * 3.5), this.seed, 47, 3);
+    return q < 0.12 ? v * 0.55 : v;
+  }
+
+  private steady(t: number): number {
     if (this.amount <= 0) return 1;
     const s = Math.sin(t * this.f[0] + this.p[0]) * 0.45 + Math.sin(t * this.f[1] + this.p[1]) * 0.25 + Math.sin(t * this.f[2] + this.p[2]) * 0.2;
     // guizzo: valore casuale a gradini di ~0.12 s interpolato

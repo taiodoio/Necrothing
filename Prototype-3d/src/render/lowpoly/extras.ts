@@ -14,7 +14,8 @@ import { frontGable, gableRoof, quoins } from './architecture.ts';
 import { LPC } from './palette.ts';
 import type { PVis } from '../models/types.ts';
 
-const on = (v: PVis) => v.lit && !v.broken;
+/** Accesa: le luci rotte restano accese (sfarfallano forte); il falò e il buco infernale rotti no. */
+const on = (v: PVis) => v.lit && (!v.broken || !['bonfire', 'hell_hole'].includes(v.type));
 const mossy = (v: PVis, k = 0.45) => (v.dirty ? { topTint: LPC.moss, topAmount: k } : {});
 
 /** Teschio stilizzato (orbite, naso, mandibola, denti). */

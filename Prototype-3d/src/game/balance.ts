@@ -66,15 +66,24 @@ export const SIM = {
 } as const;
 
 /** Decadimento & riparazione. */
+/**
+ * Sblocchi da attivare solo nella versione finale: per ora (test) l'Albero
+ * dei ricordi si compra subito, senza aspettare le 20 tombe.
+ */
+export const RELEASE_LOCKS = { minGraves: false };
+
 export const DECAY = {
   /** Tomba: giorni da sporca a rotta. */
   graveBreakDays: 10,
   /** Costo in fuochi fatui per riparare una tomba. */
   graveRepairCost: 6,
-  /** Luci e costruzioni: si sporcano ogni N giorni senza cure (Excel). */
-  placeableDirtyDays: 3,
-  /** …e si rompono dopo N giorni senza cure (Excel). */
-  placeableBreakDays: 7,
+  /**
+   * Luci e costruzioni (le tombe no: lì serve una cura costante): dopo l'ultima
+   * cura si sporcano in un giorno a caso di questo intervallo…
+   */
+  placeableDirtyDays: [5, 14] as readonly [number, number],
+  /** …e, se nessuno le pulisce, si rompono dopo altri giorni a caso di questo intervallo. */
+  placeableBreakDays: [8, 20] as readonly [number, number],
   /** Riparare un oggetto costa questa frazione del suo prezzo (min 2). */
   placeableRepairFraction: 0.3,
 } as const;

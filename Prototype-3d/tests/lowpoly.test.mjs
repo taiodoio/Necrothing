@@ -495,3 +495,20 @@ test('rito dell’Albero dei ricordi: il corteo porta la bara all’albero, poi 
   assert.ok(glow(5) > glow(1) && glow(1) > glow(0));
   assert.ok(closedCoffinLP().geometries.solid);
 });
+
+test('sporco e rotto si leggono su tutti gli oggetti; le luci guaste sfarfallano', async () => {
+  const { FireFlicker } = await import('../src/view/FireFlicker.ts');
+  const count = (key) => { const m = resolveLowpoly(key)(); return Object.values(m.geometries).reduce((n, g) => n + (g ? g.attributes.position.count : 0), 0); };
+  for (const id of ['fence_wood', 'shop', 'lamp_post', 'well']) {
+    const k = (st) => placeableKey(vis(id, st));
+    assert.ok(count(k({ dirty: true })) > count(k({})), `${id}: lo sporco aggiunge erbacce, foglie, ragnatele`);
+    assert.ok(count(k({ dirty: true, broken: true })) > count(k({ dirty: true })), `${id}: il rotto aggiunge macerie`);
+  }
+  // il lampione rotto resta acceso (sfarfalla), il falò rotto è spento
+  assert.ok(resolveLowpoly(placeableKey(vis('lamp_post', { dirty: true, broken: true })))().lights.length > 0);
+  assert.equal(resolveLowpoly(placeableKey(vis('bonfire', { dirty: true, broken: true })))().lights.length, 0);
+  const dips = (fault) => { const f = new FireFlicker(1234, 0.2, 1, fault); let n = 0; for (let t = 0; t < 60; t += 0.02) if (f.value(t) < 0.18) n++; return n; };
+  assert.equal(dips(0), 0, 'sana: mai quasi spenta');
+  assert.ok(dips(2) > 200, 'rotta: si spegne e riaccende a raffiche');
+  assert.ok(dips(2) > dips(1));
+});

@@ -8,7 +8,7 @@ import { createRng } from '../src/game/rng.ts';
 import { areaForLevel, buildOccupancy, canPlaceAt, computePrestige, detectDistricts, nearestFreeSpot } from '../src/game/world.ts';
 import { CATALOG_LIST, rotatedFootprint } from '../src/game/catalog.ts';
 import { evaluateAchievements, rankForXp } from '../src/game/progression.ts';
-import { DECAY, EXPANSION, WISPS, XP } from '../src/game/balance.ts';
+import { DECAY, EXPANSION, RELEASE_LOCKS, WISPS, XP } from '../src/game/balance.ts';
 
 const NOW = new Date('2026-10-09T12:00:00Z');
 const later = (days) => new Date(NOW.getTime() + days * 86_400_000);
@@ -78,17 +78,29 @@ test('simulazione: fiori appassiti → sporca → rotta dopo 10 giorni', () => {
   assert.equal(g.broken, true);
 });
 
-test('simulazione: luci e costruzioni si sporcano a 3 giorni e si rompono a 7', () => {
+test('simulazione: luci e costruzioni si sporcano e si rompono con tempi larghi e casuali (le tombe no)', async () => {
+  const { placeableDecayDays } = await import('../src/game/simulation.ts');
   const s = createNewGame(NOW, 4);
   const lamp = s.placeables.find((p) => p.type === 'lamp_post');
   const tree = s.placeables.find((p) => p.type === 'dead_tree');
-  runCatchUp(s, later(3));
+  const d = placeableDecayDays(lamp);
+  assert.ok(d.dirty >= DECAY.placeableDirtyDays[0] && d.dirty <= DECAY.placeableDirtyDays[1]);
+  assert.ok(d.broken - d.dirty >= DECAY.placeableBreakDays[0] && d.broken - d.dirty <= DECAY.placeableBreakDays[1]);
+  assert.deepEqual(placeableDecayDays(lamp), d, 'stabili: riaprendo il gioco non cambiano');
+  runCatchUp(s, later(d.dirty - 1));
+  assert.equal(lamp.dirty, false, 'non ancora');
+  runCatchUp(s, later(d.dirty));
   assert.equal(lamp.dirty, true);
   assert.equal(lamp.broken, false);
   assert.equal(tree.dirty, false, 'l’ambiente non decade');
-  runCatchUp(s, later(7));
+  runCatchUp(s, later(d.broken));
   assert.equal(lamp.broken, true);
   assert.throws(() => R.toggleLight(s, lamp.id), /rotto/);
+  // tempi diversi da oggetto a oggetto e da una cura all'altra (non sempre ogni N giorni)
+  const days = new Set(s.placeables.map((p) => placeableDecayDays(p).dirty));
+  assert.ok(days.size >= 4, `tempi vari: ${[...days]}`);
+  const cycles = new Set([0, 10, 20, 30, 40].map((k) => placeableDecayDays({ id: lamp.id, caredAt: later(k).toISOString() }).dirty));
+  assert.ok(cycles.size >= 2, 'ogni cura ha i suoi tempi');
 });
 
 test('bottega: acquisto, pezzi unici, vendita al 70%', () => {
@@ -235,10 +247,13 @@ test('Albero dei ricordi: si sblocca a 20 tombe, accoglie una tomba (libera lo s
   s.player.wisps = 1000;
   s.player.xp = 99999;
   const base = s.graves.length; // anche le tombe del vecchio custode contano
-  assert.equal(R.shopAvailability(s, 'memory_tree', NOW), 'graves', 'bloccato sotto le 20 tombe');
+  assert.equal(R.shopAvailability(s, 'memory_tree', NOW), 'ok', 'per i test l’albero è subito disponibile');
+  RELEASE_LOCKS.minGraves = true;
+  assert.equal(R.shopAvailability(s, 'memory_tree', NOW), 'graves', 'nella versione finale: bloccato sotto le 20 tombe');
   for (let i = base; i < 20; i++) { const p = spot(s); R.bury(s, draft({ name: `Oggetto ${i}` }), p.x, p.y, NOW); }
   assert.equal(R.graveTotal(s), 20);
   assert.equal(R.shopAvailability(s, 'memory_tree', NOW), 'ok');
+  RELEASE_LOCKS.minGraves = false;
   // senza albero non si affida nulla
   assert.throws(() => R.entrustGrave(s, s.graves[0].id, NOW));
   R.buy(s, 'memory_tree', 1, NOW);

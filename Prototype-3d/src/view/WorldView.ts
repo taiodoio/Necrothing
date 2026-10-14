@@ -50,6 +50,8 @@ export interface EntityView {
   anchors: AnchorHandle[];
   height: number;
   fp: [number, number];
+  /** Guasto delle sue luci: 1 sporco, 2 rotto (sfarfallano). */
+  fault?: number;
   /** Parti animate (stagno, case delle presenze…), solo stile low-poly. */
   anim?: Animated;
 }
@@ -452,7 +454,7 @@ export class WorldView {
   private treeMemories = 0;
 
   pvis(p: Placed): PVis {
-    return { type: p.type, variant: p.type === 'memory_tree' ? this.treeMemories : p.variant, dirty: p.dirty, broken: p.broken, lit: p.lit && !p.broken, seed: placeableSeed(p.type, hashString(p.id)) };
+    return { type: p.type, variant: p.type === 'memory_tree' ? this.treeMemories : p.variant, dirty: p.dirty, broken: p.broken, lit: p.lit, seed: placeableSeed(p.type, hashString(p.id)) };
   }
 
   private syncPlaceable(p: Placed) {
@@ -470,6 +472,7 @@ export class WorldView {
         if (e.anim) e.visual.add(e.anim.root);
       }
     }
+    e.fault = p.broken ? 2 : p.dirty ? 1 : 0;
     e.fp = fp;
     const at = cellCenter(p.x, p.y, fp);
     at.y = this.baseHeight(p.x, p.y);
@@ -506,7 +509,7 @@ export class WorldView {
     const model = e.group.userData.model as CachedModel;
     for (const a of model.lights) {
       const pos = lightWorldPos(a).applyMatrix4(e.group.matrixWorld);
-      e.anchors.push(this.atmosphere.addAnchor(pos, a));
+      e.anchors.push(this.atmosphere.addAnchor(pos, e.fault ? { ...a, fault: e.fault } : a));
     }
   }
 

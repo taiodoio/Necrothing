@@ -210,6 +210,37 @@ button.slot:active, .icon-btn:active, .ctx-actions button:active, .big-btn:activ
 }
 .setting input[type="checkbox"]:checked { background: var(--gold) content-box; padding: 8px; box-shadow: inset 0 0 0 2px #07080b, inset 0 0 0 4px var(--gold-bright); }
 .setting input[type="checkbox"]:disabled { opacity: 0.4; }
+/* Terreno: slider dell'ampiezza del recinto (i livelli non sbloccati sono grigi, col lucchetto) */
+.terrain { padding: 6px 0 10px; border-bottom: 2px solid #22252c; }
+.terrain > b { display: block; font-size: 15px; margin-bottom: 6px; }
+.terrain-slider { -webkit-appearance: none; appearance: none; width: 100%; height: 34px; margin: 0; background: none; cursor: pointer; --open: 0%; }
+.terrain-slider::-webkit-slider-runnable-track {
+  height: 10px; box-shadow: inset 0 0 0 2px #07080b;
+  background: linear-gradient(to right, var(--gold) 0 var(--open), #2a2e36 var(--open) 100%);
+}
+.terrain-slider::-moz-range-track { height: 10px; box-shadow: inset 0 0 0 2px #07080b; background: linear-gradient(to right, var(--gold) 0 var(--open), #2a2e36 var(--open) 100%); }
+.terrain-slider::-webkit-slider-thumb {
+  -webkit-appearance: none; width: 22px; height: 26px; margin-top: -8px;
+  background: var(--gold-bright); box-shadow: inset 0 0 0 2px #07080b, inset 0 -5px 0 #a8813f;
+}
+.terrain-slider::-moz-range-thumb { width: 22px; height: 26px; border: 0; border-radius: 0; background: var(--gold-bright); box-shadow: inset 0 0 0 2px #07080b, inset 0 -5px 0 #a8813f; }
+.terrain-ticks { position: relative; height: 20px; margin: 0 11px; font-size: 12px; color: var(--muted); }
+.terrain-ticks span { position: absolute; transform: translateX(-50%); display: inline-flex; align-items: center; gap: 2px; white-space: nowrap; }
+.terrain-ticks span.current { color: var(--gold-bright); }
+.terrain-ticks span.locked { opacity: 0.55; }
+
+/* Banner della riduzione del recinto */
+.area-banner {
+  position: absolute; z-index: 6; left: 50%; transform: translateX(-50%); top: calc(76px + var(--safe-t));
+  display: flex; flex-direction: column; gap: 6px; padding: 6px 8px; width: min(420px, 94vw);
+  border: var(--bw) solid transparent; border-image: var(--frame-gold) 3 fill / var(--bw) / 0 stretch; filter: var(--drop);
+}
+.area-banner .area-text { display: flex; flex-direction: column; gap: 2px; font-size: 13px; }
+.area-banner .area-text b { font-size: 14px; color: var(--gold-bright); }
+.area-banner .row { display: flex; gap: 6px; }
+.area-banner .row .pill { flex: 1; padding: 4px 6px; font-size: 13px; }
+.area-banner .pill:disabled { opacity: 0.45; }
+
 .seg { display: inline-flex; padding: 0; }
 .seg button { padding: 4px 9px; border: 0; border-left: 2px solid #07080b; font-size: 13px; min-height: 36px; }
 .seg button:first-child { border-left: 0; }

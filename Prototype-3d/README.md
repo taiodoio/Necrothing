@@ -104,8 +104,12 @@ interagisci, `C` cambia vista, `V` cambia stile (low-poly → voxel → miniatur
 - **Simulazione a tempo reale** all'apertura e al ritorno in primo piano (erbacce,
   sporco, rotture, anniversari, meteo giornaliero) + tick "vivo" ogni 40 s mentre si gioca.
 - **Progressione**: 5 ranghi, 27 achievement, prestigio, distretti tematici
-  auto-rilevati e **espansione del recinto** per soglie di prestigio (22→44 celle su una
-  mappa di 48, mai in calo: il recinto e il cancello si ricostruiscono più grandi).
+  auto-rilevati e **espansione del recinto a scelta**: il prestigio sblocca 5 ampiezze
+  (34→58 celle su una mappa di 64; lo sblocco non torna indietro), un avviso propone di
+  ampliare e in *Impostazioni › Terreno* uno slider sceglie l'ampiezza (i livelli non
+  sbloccati sono col lucchetto). Per stringere, se qualcosa resta fuori, un avviso porta
+  sulla mappa con l'area scelta in oro e gli elementi da sistemare in rosso: si spostano
+  in Modifica (o si rimettono in inventario) e poi si salva.
 - **Foto**: rettangolo ridimensionabile dagli angoli + otturatore, scatto in bianco e
   nero della scena, *Salva / Condividi / Elimina*; **Galleria** in IndexedDB.
 - **Impostazioni**: stile, vista, qualità (bassa/media/alta), ora del giorno (reale o

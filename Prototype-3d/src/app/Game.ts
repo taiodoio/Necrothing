@@ -19,7 +19,7 @@ import { setVoxelResolution, voxelResolution, voxelsPerWorldUnit } from '../rend
 import { graveModel } from '../render/models/graves.ts';
 import { placeableKey, placeableModel, type PVis } from '../render/models/registry.ts';
 import { UI } from '../ui/UI.ts';
-import { floater, toast } from '../ui/dom.ts';
+import { drawerOpen, floater, toast } from '../ui/dom.ts';
 import { Actors, graveSpots, type PetMode, type VisitStop } from '../view/Actors.ts';
 import { Atmosphere } from '../view/Atmosphere.ts';
 import { CameraRig } from '../view/CameraRig.ts';
@@ -145,6 +145,8 @@ export class Game {
     if (msg) setTimeout(() => toast(msg), 900);
     this.ui.refreshHud();
     this.ui.maybeTutorial();
+    // un'area sbloccata mentre il gioco era chiuso: lo si dice appena aperto
+    setTimeout(() => this.offerExpansion(), 2500);
   }
 
   start() {
@@ -270,16 +272,97 @@ export class Game {
   /** Dopo ogni cambiamento: espansione/achievement, salvataggio, vista, HUD. */
   afterChange() {
     const now = this.now();
-    const { achievements, expanded } = R.afterAction(this.state, now);
+    const { achievements } = R.afterAction(this.state, now);
     for (const a of achievements) toast(`Traguardo: ${a.name}`, 'ach');
-    if (expanded) toast(`Il recinto si allarga: ${areaForLevel(this.state.world.expansionLevel).w}×${areaForLevel(this.state.world.expansionLevel).h}!`, 'ach');
     scheduleSave(this.state);
+    const area = this.world.area;
     this.world.sync(this.state);
-    if (expanded) this.updateCameraWorld();
+    if (area.w !== this.world.area.w) this.updateCameraWorld();
     this.refreshWalkable();
     this.actors.syncPresences(this.state, now);
     this.ui.refreshHud();
     this.ui.refreshContext();
+    this.refreshShrink();
+    this.offerExpansion();
+  }
+
+  // ── Ampiezza del recinto (a scelta) ──────────────────────────────────
+
+  /** Riduzione in corso: l'area scelta, finché dentro non c'entra tutto. */
+  shrink: { level: number } | null = null;
+
+  /**
+   * Il prestigio ha sbloccato una nuova area: lo si dice una volta sola e il
+   * giocatore sceglie se ampliare ora o più tardi (dalle Impostazioni). Se è
+   * impegnato (una scheda aperta, un posizionamento) si aspetta.
+   */
+  private offerExpansion() {
+    const w = this.state.world;
+    if (w.unlockedLevel <= w.notifiedLevel || !this.ui) return;
+    if (!this.state.settings.shopTutorialDone || drawerOpen() || this.placement || this.shrink || this.actors.funeralActive) return;
+    w.notifiedLevel = w.unlockedLevel;
+    scheduleSave(this.state);
+    if (w.expansionLevel < w.unlockedLevel) this.ui.openExpansionOffer(w.unlockedLevel);
+  }
+
+  /** Allarga o stringe il recinto (stringere solo se dentro c'entra già tutto). */
+  setExpansion(level: number): boolean {
+    if (!this.act((s) => R.setExpansionLevel(s, level))) return false;
+    this.updateCameraWorld();
+    // il Custode non resta fuori dal recinto
+    const a = areaForLevel(level), c = this.actors.avatarCell();
+    if (c.x < a.x || c.y < a.y || c.x >= a.x + a.w || c.y >= a.y + a.h) {
+      const spot = nearestFreeSpot(a.x + a.w / 2, a.y + a.h / 2, [1, 1], buildOccupancy(this.state), a);
+      if (spot) this.actors.teleport(cellCenter(spot.x, spot.y, [1, 1]));
+    }
+    return true;
+  }
+
+  /** Restringere con elementi fuori: si torna sulla mappa con l'area scelta in evidenza. */
+  startShrink(level: number) {
+    this.shrink = { level };
+    this.select(null);
+    this.world.showAreaOutline(areaForLevel(level));
+    this.rig.setView(this.rig.maxView);
+    this.refreshShrink();
+    this.ui.refreshEditBanner();
+    this.showNextOutside();
+  }
+
+  private outsideIdx = 0;
+
+  /** Porta la vista sul prossimo elemento ancora fuori dall'area (a giro). */
+  showNextOutside() {
+    if (!this.shrink) return;
+    const out = R.outsideArea(this.state, this.shrink.level);
+    if (!out.length) { this.rig.follow = null; this.rig.jumpTo(new THREE.Vector3(0, 0, 0)); return; }
+    this.focusEntity(out[this.outsideIdx++ % out.length].id);
+  }
+
+  private refreshShrink() {
+    if (!this.shrink) return;
+    const out = R.outsideArea(this.state, this.shrink.level);
+    this.world.setMarked(out.map((o) => o.id));
+    this.ui.refreshAreaBanner(out.length);
+  }
+
+  cancelShrink() {
+    if (!this.shrink) return;
+    this.shrink = null;
+    this.world.showAreaOutline(null);
+    this.world.setMarked([]);
+    this.setEditMode(false);
+    this.ui.refreshAreaBanner(null);
+  }
+
+  /** Salva: se dentro c'entra tutto, il recinto si stringe all'ampiezza scelta. */
+  finishShrink() {
+    if (!this.shrink) return;
+    const out = R.outsideArea(this.state, this.shrink.level);
+    if (out.length) { toast(`${out.length === 1 ? 'Manca ancora un elemento' : `Mancano ancora ${out.length} elementi`}: quelli in rosso sono fuori dall'area.`); return; }
+    const level = this.shrink.level;
+    this.cancelShrink();
+    this.setExpansion(level);
   }
 
   private refreshWalkable() {

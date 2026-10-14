@@ -29,7 +29,11 @@ export interface PlaceableDef {
   unique?: boolean;
   /** Non eliminabile né vendibile (solo spostabile): la Bottega. */
   permanent?: boolean;
-  /** Senza cure prima o poi si sporca e poi si rompe (tempi casuali, vedi DECAY). */
+  /**
+   * Senza cure prima o poi si sporca e poi si rompe (tempi casuali, vedi DECAY).
+   * Non per i pezzi che si piazzano in serie (sentieri, muretti, staccionate,
+   * inferriate): sarebbero troppi da pulire.
+   */
   decays?: boolean;
   /** Ha una luce accendibile/spegnibile. */
   light?: boolean;
@@ -76,14 +80,14 @@ const defs: PlaceableDef[] = [
   { id: 'shrine', label: 'Santuario', category: 'structure', footprint: [3, 3], cost: 55, minRank: 3, unique: true, decays: true, light: true, description: 'Il prete si ferma volentieri a benedire: compare più spesso.' },
   { id: 'mausoleum', label: 'Mausoleo', category: 'structure', footprint: [3, 3], cost: 80, minRank: 4, unique: true, decays: true, light: true, description: 'Il cuore di pietra del cimitero: +10% di eventi soprannaturali.' },
   { id: 'open_grave', label: 'Tomba dissotterrata', category: 'structure', footprint: [2, 2], cost: 12, minRank: 2, decays: true, description: 'Una buca con la lapide di traverso. Attira gli zombie.' },
-  { id: 'wall_stone', label: 'Muretto in pietra', category: 'structure', footprint: [1, 1], cost: 3, minRank: 1, decays: true, rotatable: true, description: 'Pietre a secco, muschio incluso.' },
-  { id: 'fence_wood', label: 'Staccionata di legno', category: 'structure', footprint: [1, 1], cost: 2, minRank: 1, decays: true, rotatable: true, description: 'Assi storte che non trattengono nessuno.' },
-  { id: 'fence_iron', label: 'Inferriata di ferro', category: 'structure', footprint: [1, 1], cost: 4, minRank: 2, decays: true, rotatable: true, description: 'Punte gotiche e ruggine elegante.' },
+  { id: 'wall_stone', label: 'Muretto in pietra', category: 'structure', footprint: [1, 1], cost: 3, minRank: 1, rotatable: true, description: 'Pietre a secco, muschio incluso.' },
+  { id: 'fence_wood', label: 'Staccionata di legno', category: 'structure', footprint: [1, 1], cost: 2, minRank: 1, rotatable: true, description: 'Assi storte che non trattengono nessuno.' },
+  { id: 'fence_iron', label: 'Inferriata di ferro', category: 'structure', footprint: [1, 1], cost: 4, minRank: 2, rotatable: true, description: 'Punte gotiche e ruggine elegante.' },
   { id: 'arch_stone', label: 'Arco in pietra', category: 'structure', footprint: [3, 1], cost: 20, minRank: 2, decays: true, rotatable: true, walkable: true, description: 'Si passa sotto. Si dice porti fortuna. Si dice.' },
   { id: 'arch_lights', label: 'Arco con luci', category: 'structure', footprint: [3, 1], cost: 28, minRank: 3, decays: true, light: true, rotatable: true, walkable: true, description: 'Un arco con due lanterne che dondolano anche senza vento.' },
   { id: 'arch_gothic', label: 'Arco gotico', category: 'structure', footprint: [3, 1], cost: 32, minRank: 3, decays: true, rotatable: true, walkable: true, description: 'Ogiva acuta e un teschio in chiave di volta.' },
-  { id: 'path_stone', label: 'Sentiero in pietra', category: 'structure', footprint: [1, 1], cost: 1, minRank: 1, decays: true, walkable: true, description: 'Lastre irregolari consumate da passi lenti.' },
-  { id: 'path_dirt', label: 'Sentiero in terra', category: 'structure', footprint: [1, 1], cost: 1, minRank: 1, decays: true, walkable: true, description: 'Terra battuta. Quando piove, terra e basta.' },
+  { id: 'path_stone', label: 'Sentiero in pietra', category: 'structure', footprint: [1, 1], cost: 1, minRank: 1, walkable: true, description: 'Lastre irregolari consumate da passi lenti.' },
+  { id: 'path_dirt', label: 'Sentiero in terra', category: 'structure', footprint: [1, 1], cost: 1, minRank: 1, walkable: true, description: 'Terra battuta. Quando piove, terra e basta.' },
   { id: 'well', label: 'Pozzo', category: 'structure', footprint: [2, 2], cost: 25, minRank: 2, unique: true, decays: true, description: 'Se butti una moneta, qualcuno da sotto la restituisce.' },
   { id: 'fountain', label: 'Fontana', category: 'structure', footprint: [3, 3], cost: 40, minRank: 3, unique: true, decays: true, description: 'L’acqua è torbida e canticchia.' },
   { id: 'hell_hole', label: 'Buco infernale', category: 'structure', footprint: [2, 2], cost: 45, minRank: 4, unique: true, decays: true, light: true, description: 'Un bagliore rosso dal profondo. Aumenta le apparizioni.' },

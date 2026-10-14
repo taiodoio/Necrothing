@@ -298,3 +298,20 @@ test('salvataggio vecchio senza ricordi affidati: lista vuota', async () => {
   delete s.entrusted;
   assert.deepEqual(normalizeSave(JSON.parse(JSON.stringify(s))).entrusted, []);
 });
+
+test('i pezzi in serie (sentieri, muretti, staccionate, inferriate) non si sporcano e non si rompono', async () => {
+  const { normalizeSave } = await import('../src/game/state.ts');
+  const s = createNewGame(NOW, 4);
+  const path = s.placeables.find((p) => p.type === 'path_stone');
+  const lamp = s.placeables.find((p) => p.type === 'lamp_post');
+  runCatchUp(s, later(60));
+  assert.equal(path.dirty, false);
+  assert.equal(path.broken, false);
+  assert.equal(lamp.broken, true, 'le luci sì');
+  // salvataggi vecchi: i sentieri sporchi tornano puliti
+  const old = JSON.parse(JSON.stringify(s));
+  old.placeables.find((p) => p.type === 'path_stone').dirty = true;
+  old.placeables.find((p) => p.type === 'path_stone').broken = true;
+  const fixed = normalizeSave(old).placeables.find((p) => p.type === 'path_stone');
+  assert.equal(fixed.dirty || fixed.broken, false);
+});

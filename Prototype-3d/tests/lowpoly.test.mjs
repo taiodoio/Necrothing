@@ -510,7 +510,7 @@ test('rito dell’Albero dei ricordi: il corteo porta la bara all’albero, poi 
 test('sporco e rotto si leggono su tutti gli oggetti; le luci guaste sfarfallano', async () => {
   const { FireFlicker } = await import('../src/view/FireFlicker.ts');
   const count = (key) => { const m = resolveLowpoly(key)(); return Object.values(m.geometries).reduce((n, g) => n + (g ? g.attributes.position.count : 0), 0); };
-  for (const id of ['fence_wood', 'shop', 'lamp_post', 'well']) {
+  for (const id of ['pet_house', 'shop', 'lamp_post', 'well']) {
     const k = (st) => placeableKey(vis(id, st));
     assert.ok(count(k({ dirty: true })) > count(k({})), `${id}: lo sporco aggiunge erbacce, foglie, ragnatele`);
     assert.ok(count(k({ dirty: true, broken: true })) > count(k({ dirty: true })), `${id}: il rotto aggiunge macerie`);

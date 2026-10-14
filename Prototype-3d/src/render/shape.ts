@@ -52,6 +52,8 @@ export interface LightAnchor {
   flicker: number; // 0 = fissa
   /** Mostra un alone (sprite additivo). */
   halo: number;
+  /** Guasto della luce: 1 = sporca (tremola un po' di più, ogni tanto cala), 2 = rotta (si spegne e riaccende a raffiche). */
+  fault?: number;
 }
 
 export interface Model {

@@ -23,6 +23,8 @@ import {
   sceneryFlowersLP, sceneryLeavesLP, sceneryPebblesLP, sceneryRockLP, sceneryShroomsLP, sceneryTuftLP, sceneryWildGrassLP, tallGrassLP,
 } from './nature.ts';
 import { memoryTreeLP } from './memoryTree.ts';
+import { weathered } from './weathering.ts';
+import { CATALOG } from '../../game/catalog.ts';
 
 type Builder = () => LPModel;
 
@@ -112,7 +114,9 @@ export function resolveLowpoly(key: string): Builder | null {
     const gen = LP_PLACEABLES[m[1]];
     if (!gen) return null;
     const v: PVis = { type: m[1], variant: Number(m[2]), seed: Number(m[3]), dirty: m[4] === '1', broken: m[5] === '1', lit: m[6] === '1' };
-    return () => gen(v);
+    // chi si sporca e si rompe riceve anche il degrado comune (leggibile su tutti gli oggetti)
+    const def = CATALOG[v.type];
+    return def?.decays ? () => weathered(gen(v), v, def.footprint, def.category) : () => gen(v);
   }
   m = key.match(/^char:([A-Za-z]+:[A-Za-z]+)$/);
   if (m) return LP_CHARACTERS[m[1]] ?? null;

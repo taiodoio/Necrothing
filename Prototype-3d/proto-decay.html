@@ -1,0 +1,20 @@
+<!doctype html>
+<html lang="it">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Sporco e rotto (anteprima)</title>
+  <!-- Anteprima per la valutazione: NON fa parte del gioco né della build. -->
+  <style>
+    html, body { margin: 0; background: #1f2925; }
+    .tavola { position: relative; display: inline-block; }
+    canvas { display: block; }
+    .label { position: absolute; z-index: 2; font: 600 15px/1.1 system-ui, sans-serif; letter-spacing: 0.06em; color: #e8cf8c; transform: translate(-50%, 0); white-space: nowrap; }
+    .label.left { transform: none; color: #c9d1cc; font-size: 14px; width: 135px; white-space: normal; }
+  </style>
+</head>
+<body>
+  <div class="tavola"><div id="etichette"></div></div>
+  <script type="module" src="./src/proto/decay.ts"></script>
+</body>
+</html>

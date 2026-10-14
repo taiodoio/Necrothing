@@ -7,12 +7,16 @@ import { CATALOG_LIST } from '../game/catalog.ts';
 import { getModel, instantiate, lightWorldPos } from '../render/modelCache.ts';
 import { placeableKey, placeableModel, type PVis } from '../render/models/registry.ts';
 import '../render/lowpoly/index.ts';
+import { GRAVE_TYPES, GRAVE_TYPE_LABELS } from '../game/graves.ts';
+import { graveModel } from '../render/models/graves.ts';
 
 const params = new URLSearchParams(location.search);
 const page = Number(params.get('page') ?? 0);
 const night = params.get('notte') === '1';
 const PER = 9;
-const items = CATALOG_LIST.filter((d) => d.decays).slice(page * PER, page * PER + PER);
+// ?tombe=1: le lapidi (pulita, trascurata, rotta) invece degli oggetti
+const graves = params.get('tombe') === '1';
+const items = graves ? GRAVE_TYPES.slice(page * 5, page * 5 + 5).map((t) => ({ id: t, label: GRAVE_TYPE_LABELS[t] })) : CATALOG_LIST.filter((d) => d.decays).slice(page * PER, page * PER + PER);
 const ALL: Array<[string, Partial<PVis>]> = [['pulito', {}], ['sporco', { dirty: true }], ['rotto', { dirty: true, broken: true }]];
 // ?solo=1: solo sporco e rotto, più grandi (per controllare i dettagli)
 const solo = params.get('solo') === '1';
@@ -50,7 +54,10 @@ items.forEach((d, row) => {
   label(10, 40 + CH * row + CH / 2 - 8, d.label, 'label left');
   STATES.forEach(([, st], col) => {
     const v: PVis = { type: d.id, variant: 0, dirty: false, broken: false, lit: true, seed: 1, ...st };
-    const model = getModel(placeableKey(v), 'lowpoly', () => placeableModel(v), v.seed);
+    const gs = v.broken ? 'broken' : v.dirty ? 'dirty' : 'clean';
+    const model = graves
+      ? getModel(`g:${d.id}:${gs}:1`, 'lowpoly', () => graveModel(d.id as (typeof GRAVE_TYPES)[number], gs, 1), 1)
+      : getModel(placeableKey(v), 'lowpoly', () => placeableModel(v), v.seed);
     const g = instantiate(model, { castShadow: true });
     const lights: THREE.PointLight[] = [];
     if (night) for (const a of model.lights) { const l = new THREE.PointLight(a.color, a.intensity * 3, a.range * 1.2, 1.6); l.position.copy(lightWorldPos(a)); g.add(l); lights.push(l); }

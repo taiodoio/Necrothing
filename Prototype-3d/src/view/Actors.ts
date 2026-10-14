@@ -122,6 +122,8 @@ interface Rite {
 const RITE_OFFSETS = [2.1, 0.72, -0.72, -1.9, -3.0];
 const RITE_KINDS: CharacterKind[] = ['priest', 'gravedigger', 'mourner', 'mournerB', 'mourner'];
 const RITE_GLOW = '#ffd98a';
+/** Passo del corteo quando arriva e se ne va (portando la bara è più lento). */
+const CORTEGE_SPEED = 2.3;
 
 interface Funeral {
   members: Walker[];
@@ -143,6 +145,8 @@ export class Actors {
   private presenceSig = '';
   private funeral: Funeral | null = null;
   private rite: Rite | null = null;
+  /** Chi ha finito (corteo, rito) e se ne va: cammina fino all'uscita per conto suo, nessun tocco lo fa sparire. */
+  private departing: Walker[] = [];
   private style: ArtStyle;
   private area: Rect = { x: 9, y: 9, w: 14, h: 14 };
   private blocked: (x: number, y: number) => boolean = () => false;
@@ -210,6 +214,7 @@ export class Actors {
     for (const p of this.presences) rebuild(p);
     if (this.funeral) for (const m of this.funeral.members) rebuild(m);
     if (this.rite) for (const m of this.rite.members) rebuild(m);
+    for (const d of this.departing) rebuild(d);
   }
 
   setWorld(area: Rect, blocked: (x: number, y: number) => boolean) {
@@ -866,7 +871,7 @@ export class Actors {
     ];
     const kinds: CharacterKind[] = ['priest', 'mourner', 'mournerB', 'mourner', 'gravedigger'];
     const members = kinds.map((k, i) => {
-      const w = this.makeWalker(k, gate.clone().add(new THREE.Vector3((i - 2) * 0.7, 0, 0.5 + i * 0.45)), 1.4);
+      const w = this.makeWalker(k, gate.clone().add(new THREE.Vector3((i - 2) * 0.7, 0, 0.5 + i * 0.45)), CORTEGE_SPEED);
       const dest = graveCenter.clone().add(spots[i]);
       const path = findPath(worldToCell(w.pos), worldToCell(dest), (x, y) => !this.walkable(x, y), MAP_SIZE);
       w.path = (path ?? []).slice(1).map((c) => cellCenter(c.x, c.y, [1, 1]));
@@ -877,14 +882,27 @@ export class Actors {
   }
 
   skipFuneral() {
-    if (this.rite) { this.skipRite(); return; }
-    if (!this.funeral) return;
+    if (this.rite && this.rite.stage !== 'leave') { this.skipRite(); return; }
+    if (!this.funeral || this.funeral.stage === 'leave') return;
     const done = this.funeral.onDone;
     this.endFuneral();
     done();
   }
 
-  get funeralActive() { return !!this.funeral || !!this.rite; }
+  /** Un corteo occupa la scena finché non se ne va (chi esce non si può più saltare né far sparire). */
+  get funeralActive() { return (!!this.funeral && this.funeral.stage !== 'leave') || (!!this.rite && this.rite.stage !== 'leave'); }
+
+  /** Manda chi ha finito verso l'uscita: da qui in poi cammina da solo. */
+  private depart(members: Walker[], exit: THREE.Vector3) {
+    for (const m of members) {
+      const from = worldToCell(m.pos);
+      const path = findPath(from, worldToCell(exit), (x, y) => !this.walkable(x, y) && !(from.x === x && from.y === y), MAP_SIZE);
+      m.path = (path ?? []).slice(1).map((c) => cellCenter(c.x, c.y, [1, 1]));
+      m.path.push(exit.clone().add(new THREE.Vector3(0, 0, 2)));
+      m.speed = CORTEGE_SPEED;
+      this.departing.push(m);
+    }
+  }
 
   // ── Rito dell'Albero dei ricordi ─────────────────────────────────────
 
@@ -916,7 +934,7 @@ export class Actors {
       onLift: o.onLift, onDone: o.onDone, exit: gate,
     };
     r.members = RITE_KINDS.map((k, i) => {
-      const w = this.makeWalker(k, gate.clone().add(new THREE.Vector3((i - 2) * 0.7, 0, 0.5 + i * 0.45)), 1.6);
+      const w = this.makeWalker(k, gate.clone().add(new THREE.Vector3((i - 2) * 0.7, 0, 0.5 + i * 0.45)), CORTEGE_SPEED);
       const dest = this.routeAt(r, RITE_OFFSETS[i]).p;
       const p = findPath(worldToCell(w.pos), worldToCell(dest), (x, y) => !this.walkable(x, y), MAP_SIZE);
       w.path = (p ?? []).slice(1).map((c) => cellCenter(c.x, c.y, [1, 1]));
@@ -972,9 +990,10 @@ export class Actors {
     if (r.stage === 'arrive') {
       let moving = false;
       for (const m of r.members) { if (this.followPath(m, dt)) { moving = true; m.pose = 'walk'; } else { m.pose = 'idle'; face(m, r.route[0]); } }
-      if (!moving || r.timer > 16) {
+      // se qualcuno resta indietro, l'ultimo tratto lo fa dritto (mai teletrasportato)
+      if (moving && r.timer > 25) r.members.forEach((m, i) => { if (m.path.length > 1) m.path = [this.routeAt(r, RITE_OFFSETS[i]).p]; });
+      if (!moving) {
         r.stage = 'lift'; r.timer = 0;
-        r.members.forEach((m, i) => { m.path = []; m.pos.copy(this.routeAt(r, RITE_OFFSETS[i]).p); });
         r.onLift();
         r.coffin.visible = true;
       }
@@ -988,7 +1007,7 @@ export class Actors {
       r.members.forEach((m, i) => { m.pose = i === 1 || i === 2 ? 'work' : 'pray'; face(m, p); });
       if (r.timer > 1.8) { r.stage = 'carry'; r.timer = 0; }
     } else if (r.stage === 'carry') {
-      const speed = 1.15;
+      const speed = 1.5;
       r.s = Math.min(total, r.s + speed * dt);
       const c = this.routeAt(r, r.s);
       r.coffin.position.set(c.p.x, g(c.p) + 0.55, c.p.z);
@@ -1042,18 +1061,14 @@ export class Actors {
       if (k >= 1) {
         r.stage = 'leave'; r.timer = 0;
         r.coffin.visible = false;
+        this.depart(r.members, r.exit);
+        r.members = [];
         const done = r.onDone; r.onDone = () => undefined; done();
-        for (const m of r.members) {
-          const path = findPath(worldToCell(m.pos), worldToCell(r.exit), (x, y) => !this.walkable(x, y) && !(worldToCell(m.pos).x === x && worldToCell(m.pos).y === y), MAP_SIZE);
-          m.path = (path ?? []).slice(1).map((c) => cellCenter(c.x, c.y, [1, 1]));
-          m.path.push(r.exit.clone().add(new THREE.Vector3(0, 0, 2)));
-        }
       }
     } else if (r.stage === 'leave') {
       (r.ring.material as THREE.MeshBasicMaterial).opacity = Math.max(0, (r.ring.material as THREE.MeshBasicMaterial).opacity - dt);
-      let moving = false;
-      for (const m of r.members) { if (this.followPath(m, dt)) { moving = true; m.pose = 'walk'; } else m.rig.root.visible = false; }
-      if ((!moving && !r.sparks.length) || r.timer > 20) { this.endRite(); return; }
+      // resta solo da far svanire l'anello e le ultime lucciole
+      if (!r.sparks.length || r.timer > 6) { this.endRite(); return; }
     }
     // lucciole: salgono a spirale verso la chioma e svaniscono
     for (const sp of r.sparks) {
@@ -1101,13 +1116,11 @@ export class Actors {
     } else if (f.stage === 'rite') {
       f.members.forEach((m, i) => { m.pose = i === 4 ? 'work' : 'pray'; });
       if (f.timer > 5.5) {
-        f.stage = 'leave'; f.timer = 0;
-        for (const m of f.members) {
-          const path = findPath(worldToCell(m.pos), worldToCell(f.exit), (x, y) => !this.walkable(x, y) && !(worldToCell(m.pos).x === x && worldToCell(m.pos).y === y), MAP_SIZE);
-          m.path = (path ?? []).slice(1).map((c) => cellCenter(c.x, c.y, [1, 1]));
-          m.path.push(f.exit.clone().add(new THREE.Vector3(0, 0, 2)));
-        }
-        const done = f.onDone; f.onDone = () => undefined; done();
+        this.depart(f.members, f.exit);
+        f.members = [];
+        const done = f.onDone; f.onDone = () => undefined;
+        this.funeral = null;
+        done();
       }
     } else {
       let moving = false;
@@ -1136,6 +1149,10 @@ export class Actors {
     for (const p of this.pets.values()) this.stepPet(p, dt);
     if (this.funeral) this.stepFuneral(dt);
     if (this.rite) this.stepRite(dt);
+    for (const d of [...this.departing]) {
+      if (this.followPath(d, dt)) d.pose = 'walk';
+      else { this.disposeWalker(d); this.departing.splice(this.departing.indexOf(d), 1); }
+    }
 
     const apply = (w: Walker) => {
       const y = w.pos.y > 0.5 ? w.pos.y : ground(w.pos);
@@ -1156,6 +1173,7 @@ export class Actors {
     for (const p of this.pets.values()) { if (p.rig.root.visible) apply(p); p.den.group.position.y = ground(p.home); p.den.update(dt, t, this.glyphs); }
     if (this.funeral) for (const m of this.funeral.members) apply(m);
     if (this.rite) for (const m of this.rite.members) apply(m);
+    for (const d of this.departing) apply(d);
     this.updateBone(dt);
     this.glyphs.update(dt);
   }

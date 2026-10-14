@@ -476,14 +476,25 @@ test('rito dell’Albero dei ricordi: il corteo porta la bara all’albero, poi 
   const coffin = new THREE.Group();
   a.startRite({ grave: cellCenter(g.x, g.y, [2, 2]), graveFront: { x: g.x, y: g.y + 2 }, tree, treeFront: { x: 38, y: 43 }, gate: { x: 31, y: 49 }, coffin, onLift: () => { lifted = true; }, onDone: () => { done++; } });
   assert.ok(a.funeralActive);
-  let carried = false;
-  for (let t = 0; t < 90 && !done; t += 0.05) { a.update(0.05, t, [], () => 0); if (coffin.visible && coffin.position.y > 0.4) carried = true; }
+  let carried = false, jump = 0;
+  const last = new Map();
+  for (let t = 0; t < 90 && !done; t += 0.05) {
+    a.update(0.05, t, [], () => 0);
+    if (coffin.visible && coffin.position.y > 0.4) carried = true;
+    for (const m of [...(a.rite?.members ?? []), ...a.departing]) { const p = last.get(m); if (p) jump = Math.max(jump, p.distanceTo(m.pos)); last.set(m, m.pos.clone()); }
+  }
+  assert.ok(jump < 0.3, `nessuno si teletrasporta (salto massimo ${jump.toFixed(2)})`);
   assert.ok(lifted, 'la bara esce dalla tomba');
   assert.ok(carried, 'portata a spalla');
   assert.equal(done, 1, 'il rito si conclude');
   assert.ok(coffin.position.distanceTo(tree.clone().setY(coffin.position.y)) < 2.3, 'davanti all’albero');
-  for (let t = 0; t < 30 && a.funeralActive; t += 0.1) a.update(0.1, t, [], () => 0);
-  assert.ok(!a.funeralActive, 'il corteo se ne va');
+  assert.ok(!a.funeralActive, 'mentre se ne va il corteo non blocca i tocchi');
+  const leaving = a.departing.length;
+  assert.equal(leaving, 5, 'tutti si avviano all’uscita');
+  a.skipFuneral();
+  assert.equal(a.departing.length, leaving, 'toccando non spariscono');
+  for (let t = 0; t < 60 && a.departing.length; t += 0.1) a.update(0.1, t, [], () => 0);
+  assert.equal(a.departing.length, 0, 'arrivati all’uscita escono di scena');
   // si può saltare: la tomba lascia comunque il cimitero
   let skipped = 0;
   a.startRite({ grave: cellCenter(g.x, g.y, [2, 2]), graveFront: { x: g.x, y: g.y + 2 }, tree, treeFront: { x: 38, y: 43 }, gate: { x: 31, y: 49 }, coffin: new THREE.Group(), onLift() {}, onDone: () => { skipped++; } });

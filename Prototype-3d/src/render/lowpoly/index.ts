@@ -25,6 +25,7 @@ import {
 import { memoryTreeLP } from './memoryTree.ts';
 import { weathered } from './weathering.ts';
 import { CATALOG } from '../../game/catalog.ts';
+import { GRAVE_FOOTPRINT } from '../../game/balance.ts';
 
 type Builder = () => LPModel;
 
@@ -107,7 +108,10 @@ export function resolveLowpoly(key: string): Builder | null {
   let m = key.match(/^(?:g|grave):([a-z_]+):([a-z]+):(\d+)$/);
   if (m) {
     const [, type, state, seed] = m;
-    return () => lowpolyGrave(type as GraveType, state as GraveVisualState, Number(seed));
+    // anche le tombe trascurate ricevono il degrado comune (sporco, erba alta; da rotte macerie)
+    const dirty = state === 'dirty' || state === 'broken', broken = state === 'broken';
+    const v: PVis = { type: `grave_${type}`, variant: 0, seed: Number(seed), dirty, broken, lit: false };
+    return () => weathered(lowpolyGrave(type as GraveType, state as GraveVisualState, Number(seed)), v, GRAVE_FOOTPRINT, 'decoration');
   }
   m = key.match(/^p:([a-z_]+):(\d+):(\d+):([01])([01])([01])$/);
   if (m) {

@@ -69,6 +69,8 @@ export class Game {
   selection: Selection = null;
   editMode = false;
   placement: Placement | null = null;
+  /** Tomba affidata e albero mentre il corteo del rito è in scena: non si spostano né si tolgono. */
+  private riteIds: string[] | null = null;
   private drag: { id: string; x: number; y: number; valid: boolean; grab: THREE.Vector3 } | null = null;
   private clock = new THREE.Clock();
   private phase: DayPhase = 'night';
@@ -320,6 +322,8 @@ export class Game {
     if (!cells) return;
     const center = cellCenter(cells.x, cells.y, cells.fp).setY(1.2);
     const grave = this.state.graves.find((g) => g.id === id);
+    // durante il rito la tomba affidata e l'albero restano dove sono finché il corteo non ha finito
+    if (this.riteIds?.includes(id) && !['detail', 'memories', 'shop'].includes(action)) { toast('Aspetta che il corteo finisca il rito.'); return; }
     const instant: EntityAction[] = ['detail', 'shop', 'rotate', 'variant', 'store', 'confirm', 'exhume', 'move', 'entrust', 'memories'];
     const run = () => {
       switch (action) {
@@ -464,7 +468,8 @@ export class Game {
 
   private pick(x: number, y: number): { entityId?: string; wispId?: string; roamerId?: string; petId?: string } | null {
     this.raycaster.setFromCamera(this.ndc(x, y), this.rig.camera);
-    const hits = this.raycaster.intersectObjects([...this.actors.pickables(), ...this.world.hitboxes], false);
+    // la tomba affidata, mentre la sua bara è in viaggio, non c'è più
+    const hits = this.raycaster.intersectObjects([...this.actors.pickables(), ...this.world.hitboxes], false).filter((h) => !h.object.userData.entityId || !this.world.isHidden(h.object.userData.entityId));
     if (!hits.length) return null;
     // priorità: presenze erranti e animali > fuochi fatui > entità
     const order = (o: THREE.Object3D) => (o.userData.roamerId || o.userData.petId ? 0 : o.userData.wispId ? 1 : 2);
@@ -492,7 +497,6 @@ export class Game {
   private onTap(x: number, y: number) {
     this.ui.closeBubble();
     this.ui.closeActorMenu();
-    if (this.actors.funeralActive) { this.actors.skipFuneral(); return; }
     if (this.placement) {
       const g = this.groundCell(x, y);
       if (!g) return;
@@ -650,11 +654,11 @@ export class Game {
   // ── Albero dei ricordi ───────────────────────────────────────────────
 
   /** Centro dell'albero e cella libera davanti al varco (dove arriva il corteo). */
-  private treeSpot(): { center: THREE.Vector3; front: { x: number; y: number } } | null {
+  private treeSpot(): { id: string; center: THREE.Vector3; front: { x: number; y: number } } | null {
     const t = R.memoryTree(this.state);
     if (!t) return null;
     const fp = rotatedFootprint(t.type, t.rot);
-    return { center: cellCenter(t.x, t.y, fp), front: { x: t.x + Math.floor(fp[0] / 2), y: t.y + fp[1] } };
+    return { id: t.id, center: cellCenter(t.x, t.y, fp), front: { x: t.x + Math.floor(fp[0] / 2), y: t.y + fp[1] } };
   }
 
   /** Il fantasma di un ricordo esce dall'albero (uguale agli altri: la sorpresa è toccarlo). */
@@ -683,10 +687,15 @@ export class Game {
     this.rig.jumpTo(grave.clone().lerp(t.center, 0.5));
     this.rig.follow = null;
     toast('Il corteo arriva per accompagnarlo all’albero…');
+    this.riteIds = [graveId, t.id];
     this.actors.startRite({
       grave, graveFront: { x: g.x, y: g.y + 2 }, tree: t.center, treeFront: t.front, gate: { x: gate[0], y: gate[1] }, coffin,
-      onLift: () => { const e = this.world.entities.get(graveId); if (e) e.group.visible = false; this.effects.puff(grave, '#8a7a62'); },
-      onDone: () => { this.act((s, n) => R.entrustGrave(s, graveId, n), t.center.clone().setY(3)); this.ui.refreshHud(); },
+      onLift: () => { this.world.setHidden(graveId, true); if (this.selection?.id === graveId) this.select(null); this.effects.puff(grave, '#8a7a62'); },
+      onDone: () => {
+        this.riteIds = null;
+        if (!this.act((s, n) => R.entrustGrave(s, graveId, n), t.center.clone().setY(3))) this.world.setHidden(graveId, false);
+        this.ui.refreshHud();
+      },
     });
   }
 
@@ -705,6 +714,7 @@ export class Game {
     const hit = this.pick(x, y);
     const id = hit?.entityId;
     if (!id) return false;
+    if (this.riteIds?.includes(id)) { toast('Aspetta che il corteo finisca il rito.'); return false; }
     if (this.selection?.id !== id) this.select({ kind: this.kindOf(id), id });
     const c = this.entityCells(id)!;
     this.drag = { id, x: c.x, y: c.y, valid: true, grab: g.p.clone().sub(cellCenter(c.x, c.y, c.fp)) };

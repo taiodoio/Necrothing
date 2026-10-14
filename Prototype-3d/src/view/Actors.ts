@@ -25,6 +25,8 @@ const SPEED: Record<RoamerKind, number> = { ghost: 0.9, cat: 1.6, crow: 3.2, gra
 const RIG_FOR: Record<RoamerKind, CharacterKind> = { ghost: 'ghost', cat: 'cat', crow: 'crow', gravedigger: 'gravedigger', priest: 'priest', rat: 'rat', zombie: 'zombie' };
 const PET_KINDS: CharacterKind[] = ['petDog', 'petCat', 'petRabbit', 'petDuck', 'petCrow'];
 
+const FADE_OUT = 0.6;
+
 interface Walker {
   rig: Rig;
   pos: THREE.Vector3;
@@ -161,6 +163,8 @@ export class Actors {
   private presenceSig = '';
   private funeral: Funeral | null = null;
   private rite: Rite | null = null;
+  /** Chi è uscito dal cancello e sta svanendo: secondi rimasti. */
+  private fading = new Map<Walker, number>();
   /** Chi ha finito (corteo, rito) e se ne va: cammina fino all'uscita per conto suo, nessun tocco lo fa sparire. */
   private departing: Walker[] = [];
   private style: ArtStyle;
@@ -939,7 +943,14 @@ export class Actors {
   // ── Funerale ─────────────────────────────────────────────────────────
 
   startFuneral(graveCenter: THREE.Vector3, gateCell: Cell, onDone: () => void) {
-    this.endFuneral();
+    // un corteo precedente ancora qui non sparisce: si avvia all'uscita e chiude il suo funerale
+    const prev = this.funeral;
+    if (prev) {
+      this.funeral = null;
+      prev.members.forEach((m) => { m.rig.root.visible = true; });
+      if (prev.stage !== 'leave') this.depart(prev.members, prev.exit); else this.departing.push(...prev.members);
+      prev.onDone();
+    }
     const gate = cellCenter(gateCell.x, gateCell.y, [1, 1]);
     // a semicerchio davanti alla tomba, ben distanziati: teste e cappelli grandi non si toccano
     const spots = [
@@ -957,15 +968,7 @@ export class Actors {
     this.funeral = { members, stage: 'arrive', timer: 0, target: graveCenter.clone(), onDone, exit: gate };
   }
 
-  skipFuneral() {
-    if (this.rite && this.rite.stage !== 'leave') { this.skipRite(); return; }
-    if (!this.funeral || this.funeral.stage === 'leave') return;
-    const done = this.funeral.onDone;
-    this.endFuneral();
-    done();
-  }
-
-  /** Un corteo occupa la scena finché non se ne va (chi esce non si può più saltare né far sparire). */
+  /** Un corteo occupa la scena finché non se ne va: nel frattempo non se ne può avviare un altro rito. */
   get funeralActive() { return (!!this.funeral && this.funeral.stage !== 'leave') || (!!this.rite && this.rite.stage !== 'leave'); }
 
   /** Manda chi ha finito verso l'uscita: da qui in poi cammina da solo. */
@@ -1033,16 +1036,6 @@ export class Actors {
     dir.divideScalar(len);
     const p = a.clone().addScaledVector(dir, s - cum[i - 1]);
     return { p, dir };
-  }
-
-  private skipRite() {
-    const r = this.rite;
-    if (!r) return;
-    const done = r.onDone;
-    r.onDone = () => undefined;
-    if (r.stage === 'arrive') r.onLift();
-    this.endRite();
-    done();
   }
 
   private endRite() {
@@ -1226,8 +1219,13 @@ export class Actors {
     if (this.funeral) this.stepFuneral(dt);
     if (this.rite) this.stepRite(dt);
     for (const d of [...this.departing]) {
-      if (this.followPath(d, dt)) d.pose = 'walk';
-      else { this.disposeWalker(d); this.departing.splice(this.departing.indexOf(d), 1); }
+      if (!this.fading.has(d) && this.followPath(d, dt)) { d.pose = 'walk'; continue; }
+      // arrivati fuori dal cancello svaniscono rimpicciolendo, come le altre presenze (mai di colpo)
+      const f = (this.fading.get(d) ?? FADE_OUT) - dt;
+      if (f > 0) { this.fading.set(d, f); d.pose = 'idle'; d.rig.root.scale.setScalar(Math.max(0.01, f / FADE_OUT)); continue; }
+      this.fading.delete(d);
+      this.disposeWalker(d);
+      this.departing.splice(this.departing.indexOf(d), 1);
     }
 
     const apply = (w: Walker) => {

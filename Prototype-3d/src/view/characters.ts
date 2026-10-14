@@ -470,5 +470,17 @@ export function animateRig(rig: Rig, pose: Pose, t: number, phase: number) {
       torso(Math.sin(t * 1.6) * 0.15);
     }
   }
-  if (rig.kind === 'zombie' && pose === 'walk') { set(p.armL, -1.5 + swing * 0.1); set(p.armR, -1.5 - swing * 0.1); }
+  if (rig.kind === 'zombie') {
+    if (pose === 'walk') {
+      // camminata zoppa: la gamba sinistra fa il passo, la destra rigida viene trascinata;
+      // il busto pende verso la gamba ferma e sobbalza a scatti, la testa ciondola
+      const step = Math.max(0, swing);
+      set(p.legL, swing * 0.75);
+      set(p.legR, 0.12 - step * 0.18, 0.12);
+      set(p.armL, -1.45 + swing * 0.12, -0.08); set(p.armR, -1.25 - swing * 0.08, 0.15);
+      set(p.body, 0.12, 0.1 + step * 0.08);
+      torso(step * 0.9);
+      set(p.head, 0.22 + step * 0.1, 0.28 - step * 0.12);
+    } else set(p.body, 0, 0);
+  }
 }

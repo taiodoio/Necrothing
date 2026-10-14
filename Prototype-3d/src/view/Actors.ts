@@ -21,11 +21,16 @@ import { boneMesh, Den, Glyphs } from './petFx.ts';
 import { cellCenter, HALF, worldToCell } from './WorldView.ts';
 
 const LIFESPAN: Record<RoamerKind, number> = { ghost: 26, cat: 32, crow: 22, gravedigger: 34, priest: 36, rat: 15, zombie: 30 };
-const SPEED: Record<RoamerKind, number> = { ghost: 0.9, cat: 1.6, crow: 3.2, gravedigger: 1.1, priest: 0.9, rat: 2.6, zombie: 0.55 };
+const SPEED: Record<RoamerKind, number> = { ghost: 0.9, cat: 1.6, crow: 3.2, gravedigger: 1.1, priest: 0.9, rat: 2.6, zombie: 0.85 };
 const RIG_FOR: Record<RoamerKind, CharacterKind> = { ghost: 'ghost', cat: 'cat', crow: 'crow', gravedigger: 'gravedigger', priest: 'priest', rat: 'rat', zombie: 'zombie' };
 const PET_KINDS: CharacterKind[] = ['petDog', 'petCat', 'petRabbit', 'petDuck', 'petCrow'];
 
 const FADE_OUT = 0.6;
+
+/** Andatura zoppa dello zombie: avanza quando poggia la gamba buona, quasi si ferma trascinando l'altra (media ≈ 0,6). */
+export function zombieLurch(phase: number): number {
+  return 0.28 + 1.05 * Math.max(0, Math.sin(phase * 2.2));
+}
 
 interface Walker {
   rig: Rig;
@@ -470,31 +475,31 @@ export class Actors {
       return;
     }
     if (r.pause > 0) { r.pause -= dt; r.pose = r.kind === 'priest' ? 'pray' : r.kind === 'gravedigger' ? 'work' : 'idle'; return; }
-    // movimento "a torre": avanza lungo l'asse, cambia direzione su ostacolo
-    const ghost = r.kind === 'ghost';
-    const cell = worldToCell(r.pos);
-    const center = cellCenter(cell.x, cell.y, [1, 1]);
-    const atCenter = Math.hypot(r.pos.x - center.x, r.pos.z - center.z) < r.speed * dt * 1.2;
-    if (atCenter) {
-      r.pos.x = center.x; r.pos.z = center.z;
+    // movimento "a torre": da un centro di cella al successivo; la direzione si
+    // sceglie una volta sola, all'arrivo in ogni cella (prima la scelta si
+    // ripeteva a ogni frame e, con frame regolari, il personaggio veniva
+    // riportato al centro di continuo: restava fermo a girare su se stesso)
+    if (!r.path.length) {
+      const ghost = r.kind === 'ghost';
+      const cell = worldToCell(r.pos);
       const free = (d: Cell) => {
         const nx = cell.x + d.x, ny = cell.y + d.y;
         const inArea = nx >= this.area.x && ny >= this.area.y && nx < this.area.x + this.area.w && ny < this.area.y + this.area.h;
         return inArea && (ghost || !this.blocked(nx, ny));
       };
-      const turnChance = r.kind === 'rat' ? 0.35 : 0.12;
-      if (!free(r.heading) || Math.random() < turnChance * dt * 10) {
+      const turnChance = r.kind === 'rat' ? 0.4 : r.kind === 'zombie' ? 0.3 : 0.2;
+      if (!free(r.heading) || Math.random() < turnChance) {
         const options: Cell[] = [{ x: r.heading.y, y: r.heading.x }, { x: -r.heading.y, y: -r.heading.x }].filter(free);
         if (options.length) r.heading = options[Math.floor(Math.random() * options.length)];
         else if (free({ x: -r.heading.x, y: -r.heading.y })) r.heading = { x: -r.heading.x, y: -r.heading.y };
-        else { r.pause = 0.5; return; }
+        else { r.pause = 0.5; r.pose = 'idle'; return; }
         if ((r.kind === 'cat' || r.kind === 'priest' || r.kind === 'gravedigger') && Math.random() < 0.3) { r.pause = 1.5 + Math.random() * 2.5; return; }
       }
+      // lo zombie ogni tanto si ferma, ciondola e si guarda intorno
+      if (r.kind === 'zombie' && Math.random() < 0.12) { r.pause = 1 + Math.random() * 1.8; r.pose = 'idle'; return; }
+      r.path = [cellCenter(cell.x + r.heading.x, cell.y + r.heading.y, [1, 1])];
     }
-    r.pos.x += r.heading.x * r.speed * dt;
-    r.pos.z += r.heading.y * r.speed * dt;
-    r.facing = Math.atan2(r.heading.x, r.heading.y);
-    r.phase += r.speed * dt * 2.6;
+    this.followPath(r, dt);
     r.pose = 'walk';
     void t;
   }
@@ -505,7 +510,8 @@ export class Actors {
     const target = w.path[0];
     const d = new THREE.Vector3(target.x - w.pos.x, target.y - w.pos.y, target.z - w.pos.z);
     const dist = d.length();
-    const step = w.speed * dt;
+    // lo zombie zoppica: scatta in avanti sulla gamba buona e trascina l'altra
+    const step = w.speed * dt * (w.rig.kind === 'zombie' ? zombieLurch(w.phase) : 1);
     if (dist <= step) { w.pos.copy(target); w.path.shift(); }
     else w.pos.addScaledVector(d, step / dist);
     if (Math.hypot(d.x, d.z) > 0.01) w.facing = Math.atan2(d.x, d.z);

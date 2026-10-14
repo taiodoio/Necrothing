@@ -13,10 +13,13 @@ const page = Number(params.get('page') ?? 0);
 const night = params.get('notte') === '1';
 const PER = 9;
 const items = CATALOG_LIST.filter((d) => d.decays).slice(page * PER, page * PER + PER);
-const STATES: Array<[string, Partial<PVis>]> = [['pulito', {}], ['sporco', { dirty: true }], ['rotto', { dirty: true, broken: true }]];
+const ALL: Array<[string, Partial<PVis>]> = [['pulito', {}], ['sporco', { dirty: true }], ['rotto', { dirty: true, broken: true }]];
+// ?solo=1: solo sporco e rotto, più grandi (per controllare i dettagli)
+const solo = params.get('solo') === '1';
+const STATES = solo ? ALL.slice(1) : ALL;
 
-const CW = 300, CH = 250, LABEL = 150;
-const W = LABEL + CW * 3, H = 40 + CH * items.length;
+const CW = solo ? 520 : 300, CH = solo ? 400 : 250, LABEL = 150;
+const W = LABEL + CW * STATES.length, H = 40 + CH * items.length;
 const renderer = new THREE.WebGLRenderer({ antialias: true, preserveDrawingBuffer: true });
 renderer.setPixelRatio(1);
 renderer.setSize(W, H, false);

@@ -135,24 +135,28 @@ export function weathered(m: LPModel, v: PVis, fp: [number, number], category: P
   };
   const tall = size.y > 0.75 && !path;
   if (tall && size.x > 0.6) {
-    // ragnatela nell'angolo tra il muro e la sporgenza sopra (gronda, tenda), o sullo spigolo del muro
+    // ragnatela: solo dove tutta la sua superficie poggia su una parete piatta (angolo, punte dei fili
+    // e metà dei fili tutti alla stessa profondità); si preferiscono i punti alti vicino agli spigoli
+    const size0 = Math.min(0.22, size.x * 0.2);
+    const flat = (x: number, y: number, z: number, flip: boolean) => {
+      const sx = flip ? -1 : 1;
+      for (const a of [0, Math.PI / 6, Math.PI / 3, Math.PI / 2]) for (const k of [0.5, 1]) {
+        const zz = wallZ(x + Math.sin(a) * size0 * k * sx, y - Math.cos(a) * size0 * k);
+        if (zz === null || Math.abs(zz - z) > 0.03) return false;
+      }
+      return true;
+    };
     let web: { x: number; y: number; z: number; flip: boolean } | null = null;
-    for (let fy = 0.82; fy >= 0.45 && !web; fy -= 0.06) {
-      for (let fx = 0.12; fx <= 0.88 && !web; fx += 0.08) {
+    for (let fy = 0.85; fy >= 0.35 && !web; fy -= 0.05) {
+      for (const fx of [0.08, 0.92, 0.16, 0.84, 0.25, 0.75, 0.35, 0.65]) {
         const x = box.min.x + size.x * fx, y = box.min.y + size.y * fy;
-        const z = wallZ(x, y), above = wallZ(x, y + 0.12);
-        if (z !== null && above !== null && above > z + 0.1) web = { x, y: y + 0.08, z: z + 0.01, flip: fx > 0.5 };
-      }
-    }
-    if (!web) {
-      const sx = r.chance(0.5) ? -1 : 1, y = box.min.y + size.y * 0.7;
-      for (let k = 0; k < 20 && !web; k++) {
-        const x = cx + sx * (size.x / 2) * (1 - k / 20);
         const z = wallZ(x, y);
-        if (z !== null) web = { x, y, z: z + 0.01, flip: sx > 0 };
+        if (z === null) continue;
+        const flip = fx > 0.5; // i fili si aprono verso il centro
+        if (flat(x, y, z, flip)) { web = { x, y, z: z + 0.008, flip }; break; }
       }
     }
-    if (web) cobweb(lp, web.x, web.y, web.z, Math.min(0.26, size.x * 0.22), web.flip);
+    if (web) cobweb(lp, web.x, web.y, web.z, size0, web.flip);
   }
   if (v.broken) {
     // macerie: sassi, schegge e assi spezzate davanti

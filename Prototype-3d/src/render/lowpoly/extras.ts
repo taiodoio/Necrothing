@@ -434,15 +434,65 @@ export function xmasTreeLP(v: PVis): LPModel {
   return lp.build();
 }
 
+/** Contorno morbido di una pozza: ellisse allungata con due lobi e bordo mosso. */
+function poolShape(r: { range(a: number, b: number): number }, rx: number, rz: number, n = 22, k = 1): THREE.Shape {
+  const s = new THREE.Shape();
+  const ph = r.range(0, 6), w = r.range(0.05, 0.09);
+  for (let i = 0; i < n; i++) {
+    const a = (i / n) * Math.PI * 2;
+    // vita stretta al centro: due pozze che si toccano
+    const waist = 1 - 0.22 * Math.cos(a * 2) ** 8 * Math.abs(Math.sin(a));
+    const rr = k * waist * (1 + Math.sin(a * 3 + ph) * w + Math.sin(a * 5 + ph * 2) * w * 0.5);
+    const x = Math.cos(a) * rx * rr, y = Math.sin(a) * rz * rr;
+    if (i === 0) s.moveTo(x, y); else s.lineTo(x, y);
+  }
+  s.closePath();
+  return s;
+}
+
+/**
+ * Pozzanghera avvelenata: fango scuro con il bordo rialzato, liquido a strati
+ * (verde cupo ai bordi, acceso al centro), schiuma giallastra, un teschio
+ * che affiora, ossa, sassi corrosi e canne morte. Le bolle e il vapore sono
+ * animati (animated.ts).
+ */
 export function toxicPuddleLP(v: PVis): LPModel {
   const lp = new LP(`lp:toxic:${v.seed}`);
   const r = lp.rng;
-  for (const [x, rr] of [[-0.35, 0.5], [0.5, 0.3]] as const) {
-    lp.push([x, 0.005, 0], r.range(0, 6), -Math.PI / 2).plate(irregularShape(r, rr + 0.08, 9), 0.01, '#2a3a1c', { ao: 0 }).pop();
-    lp.push([x, 0.018, 0], r.range(0, 6), -Math.PI / 2).plate(irregularShape(r, rr, 9), 0.01, '#9bd34a', { bucket: 'glow', ao: 0 }).pop();
+  const flat = (y: number, shape: THREE.Shape, thick: number, color: string, o: Parameters<LP['plate']>[3] = {}) => lp.push([0, y, 0], 0, -Math.PI / 2).plate(shape, thick, color, { ao: 0, ...o }).pop();
+  // fango bagnato attorno e bordo rialzato a zolle
+  flat(0.004, poolShape(r, 0.9, 0.42), 0.012, '#2b2a1c', { vary: 0.06 });
+  for (let i = 0; i < 18; i++) {
+    const a = (i / 18) * Math.PI * 2 + r.range(-0.1, 0.1);
+    const x = Math.cos(a) * 0.8, z = Math.sin(a) * 0.36;
+    lp.blob(x, 0.02, z, 0.09 + r.next() * 0.05, 0.03 + r.next() * 0.015, 0.07, r.pick(['#3a3424', '#33301f', '#46402b']), { vary: 0.1, jitter: 0.01, topTint: '#5d6a2a', topAmount: 0.3 });
   }
-  for (let i = 0; i < 6; i++) lp.blob(r.range(-0.7, 0.7), 0.04, r.range(-0.3, 0.3), 0.03 + r.next() * 0.03, 0.025, 0.03, '#c8f07c', { bucket: 'glow', jitter: 0 });
-  for (let i = 0; i < 4; i++) weeds(lp, r.range(-0.9, 0.9), r.pick([-0.4, 0.4]), 0.8);
+  // liquido a strati: il colore si accende verso il centro
+  flat(0.016, poolShape(r, 0.76, 0.32), 0.006, '#2f4a18');
+  flat(0.021, poolShape(r, 0.64, 0.25), 0.004, '#6fae2c', { bucket: 'glow' });
+  flat(0.024, poolShape(r, 0.44, 0.15), 0.003, '#b6ec5c', { bucket: 'glow' });
+  // chiazze oleose più cupe e qualche riflesso violaceo sulla superficie
+  for (let i = 0; i < 4; i++) lp.push([r.range(-0.45, 0.45), 0.0255, r.range(-0.14, 0.14)], r.range(0, 6), -Math.PI / 2).plate(irregularShape(r, 0.05 + r.next() * 0.05, 7, 0.6), 0.002, r.pick(['#4f8a22', '#5b8f2a', '#7b6aa0']), { ao: 0 }).pop();
+  // chiazze di schiuma lungo il bordo del liquido
+  for (let i = 0; i < 9; i++) {
+    const a = r.range(0, Math.PI * 2), d = r.range(0.75, 0.95);
+    lp.blob(Math.cos(a) * 0.64 * d, 0.028, Math.sin(a) * 0.27 * d, 0.035 + r.next() * 0.03, 0.008, 0.025 + r.next() * 0.02, r.pick(['#d8e08a', '#c4cf6e', '#e6e2a8']), { jitter: 0.004, ao: 0 });
+  }
+  // teschio che affiora, inclinato, e un femore che spunta dal fango
+  lp.push([0.3, -0.005, 0.0], 0.5, -0.3, 0.15);
+  skull(lp, 0, 0, 0, 0.6, '#d9d2b4');
+  lp.pop();
+  lp.push([-0.36, 0.02, 0.1], -0.4, 0, 1.25);
+  lp.cyl(0, 0, 0, 0.016, 0.014, 0.2, 5, '#d9d2b4', { jitter: 0 });
+  for (const y of [0, 0.2]) for (const s2 of [-1, 1]) lp.blob(s2 * 0.014, y, 0, 0.02, 0.022, 0.02, '#d9d2b4', { jitter: 0 });
+  lp.pop();
+  // sassi corrosi (con la patina verde) e canne morte piegate
+  for (const [x, z] of [[-0.82, -0.3], [0.86, 0.22], [0.62, -0.38]]) lp.blob(x, 0.04, z, 0.07, 0.05, 0.06, r.pick([LPC.stoneDark, LPC.stone]), { vary: 0.1, topTint: '#8fbf3a', topAmount: 0.45 });
+  for (let i = 0; i < 5; i++) {
+    const x = r.range(-0.85, -0.55), z = r.range(-0.4, 0.4) * (i % 2 ? 1 : -1), h = 0.22 + r.next() * 0.2;
+    lp.push([x, 0.02, z], r.range(0, 6), r.range(0.15, 0.45)).cyl(0, 0, 0, 0.008, 0.004, h, 3, '#6b5a3a', { jitter: 0 }).pop();
+  }
+  for (let i = 0; i < 4; i++) grassTuft(lp, r.pick([-0.92, 0.92]) * r.range(0.6, 1), r.range(-0.42, 0.42), 0.7, ['#7a6d3e', '#8a7c48', '#5d5a32']);
   lp.light(0, 0.2, 0, '#9bd34a', 0.45, 3, 0.25, 0.8);
   return lp.build();
 }

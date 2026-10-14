@@ -210,6 +210,32 @@ test('parti animate: stagno, presenze, natura; aggiornabili e deterministiche', 
   const p1 = createAnimated(vis('pond')), p2 = createAnimated(vis('pond'));
   p1.update(2); p2.update(2);
   assert.deepEqual(p1.root.children[0].position.toArray(), p2.root.children[0].position.toArray());
+  // pesci scheletrici: ogni tanto saltano fuori dall'acqua (in aria per meno di un terzo del tempo)
+  let air = 0, steps = 0, top = 0;
+  for (let t = 0; t < 60; t += 0.05, steps++) {
+    p1.update(t);
+    const up = p1.root.children.filter((o) => o.visible && o.position.y > 0.3);
+    if (up.length) air++;
+    for (const o of up) top = Math.max(top, o.position.y);
+  }
+  assert.ok(air > 0 && air < steps / 3, `saltano ogni tanto (${air}/${steps})`);
+  assert.ok(top > 0.4 && top < 0.75, `salto alto il giusto (${top.toFixed(2)})`);
+});
+
+test('stagno: il fondale sta sopra il terreno, mai alla stessa quota (niente sfarfallio muovendo la camera)', async () => {
+  const { pondLP } = await import('../src/render/lowpoly/nature.ts');
+  const m = pondLP(vis('pond'));
+  const minY = (g) => { const p = g.attributes.position; let y = Infinity; for (let i = 0; i < p.count; i++) y = Math.min(y, p.getY(i)); return y; };
+  assert.ok(minY(m.geometries.water) > 0.02, 'acqua sopra il fondale');
+  // nessuna faccia rivolta verso l'alto a quota 0 (dove c'è il terreno spianato)
+  const g = m.geometries.solid, p = g.attributes.position, idx = g.index;
+  const n = idx ? idx.count : p.count;
+  const v = (i) => new THREE.Vector3().fromBufferAttribute(p, idx ? idx.getX(i) : i);
+  for (let i = 0; i < n; i += 3) {
+    const a = v(i), b = v(i + 1), c = v(i + 2);
+    const up = new THREE.Vector3().crossVectors(b.clone().sub(a), c.clone().sub(a)).normalize().y > 0.99;
+    if (up) assert.ok(Math.max(Math.abs(a.y), Math.abs(b.y), Math.abs(c.y)) > 0.002, 'faccia complanare al terreno');
+  }
 });
 
 test('nebbia del bosco: più fitta all\'alba e di notte, col meteo nebbioso entra nel recinto, veli per qualità', async () => {

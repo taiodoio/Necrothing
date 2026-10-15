@@ -319,6 +319,8 @@ export function normalizeSave(raw: unknown): SaveData | null {
   }
   // i pezzi in serie (sentieri, muretti, staccionate…) non si sporcano più: tornano puliti
   for (const p of data.placeables ?? []) if (CATALOG[p.type] && !CATALOG[p.type].decays) { p.dirty = false; p.broken = false; }
+  // tombe trascurate senza l'inizio dell'incuria (salvataggi vecchi, o solo erbacce): il conto parte da ora
+  for (const g of data.graves ?? []) if ((g.dirty || g.weeds) && !g.broken && !g.dirtySince) g.dirtySince = data.world?.lastSimulationAt ?? new Date().toISOString();
   // l'espansione ora è a scelta: chi aveva già un recinto più grande lo tiene, sbloccato e già notificato
   if (data.world) {
     const lvl = data.world.expansionLevel ?? 0;

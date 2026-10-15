@@ -73,7 +73,7 @@ export const SIM = {
 export const RELEASE_LOCKS = { minGraves: false };
 
 export const DECAY = {
-  /** Tomba: giorni da sporca a rotta. */
+  /** Tomba: giorni dal primo segno d'incuria (erbacce o sporco) a rotta. */
   graveBreakDays: 10,
   /** Costo in fuochi fatui per riparare una tomba. */
   graveRepairCost: 6,

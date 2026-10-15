@@ -65,6 +65,9 @@ export function runCatchUp(s: SaveData, now: Date): CatchUpReport {
   const elapsedDays = Math.max(0, daysBetween(last, now));
   const rng = createRng(`${s.seed}:${now.toISOString().slice(0, 13)}`);
   const iso = now.toISOString();
+  // un segno d'incuria comparso mentre eri via è comparso in un momento qualsiasi
+  // dell'assenza, non all'apertura: il conto verso «rotta» parte da lì
+  const onset = () => new Date(last.getTime() + rng.next() * Math.max(0, now.getTime() - last.getTime())).toISOString();
   const r: CatchUpReport = {
     elapsedDays, newDirty: 0, newBroken: 0, witheredFlowers: 0, placeablesDirty: 0,
     placeablesBroken: 0, anniversaries: [], blessing: null, wispsAdded: 0, weatherChanged: false, xpGained: 0,
@@ -85,22 +88,25 @@ export function runCatchUp(s: SaveData, now: Date): CatchUpReport {
     // Ciclo esclusivo: PULITA → (fiori) → appassiti = SPORCA → pulisci → PULITA.
     if (g.hasFlowers && g.flowersAt) {
       if (daysBetween(g.flowersAt, now) >= SIM.flowerWitherDays) {
+        const withered = new Date(new Date(g.flowersAt).getTime() + SIM.flowerWitherDays * 86400000).toISOString();
         g.hasFlowers = false;
         g.flowersAt = null;
-        if (!g.dirty) { g.dirty = true; g.dirtySince = iso; }
+        if (!g.dirty) { g.dirty = true; g.dirtySince ??= withered; }
         r.witheredFlowers++;
       }
     } else if (!g.hasFlowers && elapsedDays > 0 && !g.broken) {
+      // erbacce o sporco: il primo segno d'incuria fa partire il conto verso «rotta»
       if (!g.weeds && rng.chance(Math.min(SIM.weedProbMax, SIM.weedProbPerDay * elapsedDays))) {
-        g.weeds = true;
+        g.weeds = true; g.dirtySince ??= onset();
       }
       if (!g.dirty && rng.chance(Math.min(SIM.dirtProbMax, SIM.dirtProbPerDay * elapsedDays))) {
-        g.dirty = true; g.dirtySince = iso; r.newDirty++;
+        g.dirty = true; g.dirtySince ??= onset(); r.newDirty++;
       }
     }
     if ((g.weeds || g.dirty) && g.hasFlowers) { g.hasFlowers = false; g.flowersAt = null; }
-    if (g.dirty && !g.broken && g.dirtySince && daysBetween(g.dirtySince, now) >= DECAY.graveBreakDays) {
-      g.broken = true; g.hasFlowers = false; r.newBroken++;
+    // trascurata (sporca o con le erbacce) per graveBreakDays giorni: si rompe
+    if ((g.dirty || g.weeds) && !g.broken && g.dirtySince && daysBetween(g.dirtySince, now) >= DECAY.graveBreakDays) {
+      g.broken = true; g.dirty = true; g.hasFlowers = false; r.newBroken++;
     }
   }
 

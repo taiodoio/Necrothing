@@ -366,7 +366,7 @@ test('i pezzi in serie (sentieri, muretti, staccionate, inferriate) non si sporc
 
 test('becchino in visita: sistema metà delle cose sporche; prete: la prima preghiera benedice il cimitero', () => {
   const s = createNewGame(NOW, 7);
-  runCatchUp(s, later(40)); // tante cose sporche (e qualcuna rotta)
+  runCatchUp(s, later(6)); // un po' di cose sporche, non ancora rotte
   const dirty = [...s.graves.filter((g) => !g.broken && (g.dirty || g.weeds)), ...s.placeables.filter((p) => !p.broken && p.dirty)];
   assert.ok(dirty.length >= 2, `cose sporche: ${dirty.length}`);
   const round = R.gravediggerRound(s);
@@ -384,4 +384,59 @@ test('becchino in visita: sistema metà delle cose sporche; prete: la prima preg
   assert.ok(first.wisps > 0 && s.world.blessingUntil);
   assert.equal(R.priestBless(s, s.graves[1].id, later(40), false).wisps, 0);
   assert.ok(s.memories.some((m) => m.graveId === g.id && m.type === 'blessing'));
+});
+
+test('tombe trascurate: dal primo segno d’incuria (anche solo erbacce) si rompono dopo 10 giorni, senza bloccarsi su «sporca»', async () => {
+  const { runCatchUp } = await import('../src/game/simulation.ts');
+  const { DECAY } = await import('../src/game/balance.ts');
+  const start = new Date('2026-10-01T09:00:00Z');
+  const day = (n) => new Date(start.getTime() + n * 86400000);
+  const reset = (s) => s.graves.forEach((g) => { g.dirty = false; g.weeds = false; g.broken = false; g.dirtySince = null; g.hasFlowers = false; g.flowersAt = null; });
+  // giocando ogni giorno senza curarle: prima o poi si rompono tutte
+  for (const seed of [42, 7, 99]) {
+    const s = createNewGame(start, seed);
+    reset(s);
+    for (let d = 1; d <= 45; d++) runCatchUp(s, day(d));
+    assert.ok(s.graves.every((g) => g.broken), `seed ${seed}: tutte rotte dopo 45 giorni di incuria`);
+  }
+  // solo erbacce: il conto parte lo stesso e dopo 10 giorni è rotta
+  const w = createNewGame(start, 3);
+  reset(w);
+  w.world.lastSimulationAt = start.toISOString();
+  const g = w.graves[0];
+  g.weeds = true; g.dirtySince = start.toISOString();
+  runCatchUp(w, day(DECAY.graveBreakDays - 1));
+  assert.equal(g.broken, false);
+  runCatchUp(w, day(DECAY.graveBreakDays));
+  assert.equal(g.broken, true, 'con le sole erbacce si rompe');
+  // lunga assenza: l'incuria è iniziata mentre eri via, non all'apertura → al ritorno alcune sono già rotte
+  const a = createNewGame(start, 7);
+  reset(a);
+  a.world.lastSimulationAt = start.toISOString();
+  runCatchUp(a, day(25));
+  assert.ok(a.graves.some((x) => x.broken), 'dopo 25 giorni via qualcuna è già rotta');
+  for (const x of a.graves) if (x.dirtySince) assert.ok(new Date(x.dirtySince) <= day(25) && new Date(x.dirtySince) >= start, 'incuria datata dentro l’assenza');
+  // fiori appassiti: lo sporco parte da quando sono appassiti
+  const f = createNewGame(start, 5);
+  reset(f);
+  f.world.lastSimulationAt = start.toISOString();
+  f.graves[0].hasFlowers = true; f.graves[0].flowersAt = start.toISOString();
+  runCatchUp(f, day(20));
+  assert.equal(f.graves[0].broken, true, 'fiori appassiti al giorno 3 → rotta al giorno 13');
+  // pulirla ferma il conto
+  const c = createNewGame(start, 8);
+  reset(c);
+  c.world.lastSimulationAt = start.toISOString();
+  c.graves[0].dirty = true; c.graves[0].dirtySince = start.toISOString();
+  R.cleanGrave(c, c.graves[0].id, day(5));
+  runCatchUp(c, day(12));
+  assert.equal(c.graves[0].broken, false, 'pulita: il conto riparte da zero');
+});
+
+test('salvataggi vecchi: tombe trascurate senza data d’inizio ricevono un inizio, così possono rompersi', async () => {
+  const { normalizeSave } = await import('../src/game/state.ts');
+  const old = createNewGame(NOW, 4);
+  old.graves[0].weeds = true; old.graves[0].dirty = false; old.graves[0].broken = false; old.graves[0].dirtySince = null;
+  const s = normalizeSave(JSON.parse(JSON.stringify(old)));
+  assert.ok(s.graves[0].dirtySince);
 });

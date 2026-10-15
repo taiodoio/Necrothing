@@ -6,6 +6,7 @@
 // dallo stato di gioco.
 
 import * as THREE from 'three';
+import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import { GRAVE_FOOTPRINT, MAP_SIZE } from '../game/balance.ts';
 import { CATALOG, rotatedFootprint } from '../game/catalog.ts';
 import { graveVisualState } from '../game/graves.ts';
@@ -27,6 +28,8 @@ import { ChunkBaker } from './baker.ts';
 
 
 export const HALF = MAP_SIZE / 2;
+/** Lato (in celle) delle zone in cui si fondono gli oggetti fermi. */
+const ZONE = 8;
 
 /** Centro mondo di un ingombro posato in cella (x,y). */
 export function cellCenter(x: number, y: number, fp: [number, number]): THREE.Vector3 {
@@ -54,6 +57,8 @@ export interface EntityView {
   fault?: number;
   /** Parti animate (stagno, case delle presenze…), solo stile low-poly. */
   anim?: Animated;
+  /** Zona di fusione (8×8 celle) in cui sta (qualità Auto). */
+  zone?: string;
 }
 
 interface WispView { group: THREE.Group; hitbox: THREE.Mesh; anchor: AnchorHandle; phase: number; base: THREE.Vector3; visual?: WispVisual; born?: number }
@@ -113,7 +118,7 @@ export class WorldView {
     this.atmosphere = atmosphere;
     this.style = style;
     this.root.name = 'cimitero';
-    this.root.add(this.terrain, this.scenery, this.decorLayer);
+    this.root.add(this.terrain, this.scenery, this.decorLayer, this.decorLight, this.mergedLayer);
     const frameGeo = new THREE.EdgesGeometry(new THREE.BoxGeometry(1, 0.02, 1));
     this.selectionFrame = new THREE.LineSegments(frameGeo, new THREE.LineBasicMaterial({ color: '#f2c27a', transparent: true, opacity: 0.95 }));
     this.selectionFrame.visible = false;
@@ -121,6 +126,21 @@ export class WorldView {
     this.ghostFrame.visible = false;
     this.root.add(this.selectionFrame, this.ghostFrame);
     scene.add(this.root);
+  }
+
+  /**
+   * Ombre della scena ridisegnate solo quando cambia qualcosa (qualità Auto):
+   * ciò che si muove da solo (fuochi fatui, parti animate) non proietta ombre,
+   * altrimenti resterebbero ferme dove le ha lasciate l'ultimo aggiornamento.
+   */
+  staticShadows = false;
+  /** Moltiplicatore della densità del bosco attorno al recinto (1 = come il livello di qualità). */
+  forestScale = 1;
+  /** Cresce a ogni cambiamento visibile della scena: chi lo osserva sa quando ridisegnare le ombre. */
+  version = 0;
+
+  private noShadow(o: THREE.Object3D) {
+    if (this.staticShadows) o.traverse((m) => { m.castShadow = false; });
   }
 
   setStyle(style: ArtStyle, state: SaveData, force = false) {
@@ -139,6 +159,7 @@ export class WorldView {
   // ── Sincronizzazione ─────────────────────────────────────────────────
 
   sync(state: SaveData) {
+    this.version++;
     this.area = areaForLevel(state.world.expansionLevel);
     this.treeMemories = Math.min(30, state.entrusted.length);
     this.syncTerrain(state);
@@ -152,6 +173,7 @@ export class WorldView {
     for (const id of [...this.marked]) if (!alive.has(id)) this.marked.delete(id); else if (id !== this.selectedId) this.setHighlight(id, null);
     this.syncWisps(state);
     this.refreshSelection();
+    this.flushZones();
   }
 
   private groundOverrides(state: SaveData): Map<string, Ground> {
@@ -250,7 +272,7 @@ export class WorldView {
 
   /** Recinto + cancello (instancing) e bosco (cotto per chunk). */
   private syncScenery(state: SaveData) {
-    const sig = `${this.style}|${state.world.expansionLevel}|${this.quality}`;
+    const sig = `${this.style}|${state.world.expansionLevel}|${this.quality}|${this.forestScale}`;
     if (sig === this.scenerySig) return;
     this.scenerySig = sig;
     for (const h of this.sceneryAnchors) this.atmosphere.removeAnchor(h);
@@ -287,7 +309,7 @@ export class WorldView {
     // nebbia ne nascondono la semplificazione.
     const rng = createRng(state.seed + 77);
     const input = this.groundInput!;
-    const density = this.quality === 'low' ? 0.22 : this.quality === 'medium' ? 0.32 : 0.42;
+    const density = (this.quality === 'low' ? 0.22 : this.quality === 'medium' ? 0.32 : 0.42) * this.forestScale;
     const baker = new ChunkBaker();
     const nearRes = this.quality === 'high' ? 1.6 : 1.0;
     const farRes = this.quality === 'high' ? 1.0 : 0.7;
@@ -327,15 +349,24 @@ export class WorldView {
    */
   private syncDecor(state: SaveData) {
     const occ = buildOccupancy(state);
-    const input = this.groundInput!;
-    const sig = `${this.style}|${this.quality}|${state.world.expansionLevel}|${[...occ.owner.keys()].sort().join(';')}`;
+    const sig = `${this.style}|${this.quality}|${this.decorLod?.join('/') ?? ''}|${state.world.expansionLevel}|${[...occ.owner.keys()].sort().join(';')}`;
     if (sig === this.decorSig) return;
     this.decorSig = sig;
-    for (const c of [...this.decorLayer.children]) { this.decorLayer.remove(c); (c as THREE.Mesh).geometry.dispose(); }
+    for (const g of [this.decorLayer, this.decorLight]) for (const c of [...g.children]) { g.remove(c); (c as THREE.Mesh).geometry.dispose(); }
+    const per = (q: 'low' | 'medium' | 'high') => (q === 'low' ? 0.45 : q === 'medium' ? 0.85 : 1.25) * 1.15; // +15% di fiori, sassi, ciuffi
+    if (this.decorLod) {
+      // qualità Auto: ricco nella fascia nitida, leggero in quelle sfocate (vedi updateDecorLod)
+      this.bakeDecor(state, occ, per(this.decorLod[0]), this.decorLayer);
+      this.bakeDecor(state, occ, per(this.decorLod[1]), this.decorLight);
+      this.lodSig = '';
+    } else this.bakeDecor(state, occ, per(this.quality), this.decorLayer);
+  }
+
+  private bakeDecor(state: SaveData, occ: ReturnType<typeof buildOccupancy>, per: number, target: THREE.Group) {
+    const input = this.groundInput!;
     // un generatore per cella (dalle sue coordinate): piazzare o togliere un
     // oggetto cambia solo le sue celle, il resto del prato non si sposta
     const cellRng = (x: number, y: number, salt: number) => createRng(Math.floor(hash3(x, y, salt, state.seed) * 4294967296));
-    const per = (this.quality === 'low' ? 0.45 : this.quality === 'medium' ? 0.85 : 1.25) * 1.15; // +15% di fiori, sassi, ciuffi
     const baker = new ChunkBaker();
     const st = this.style;
     const M = {
@@ -382,7 +413,33 @@ export class WorldView {
       }
     }
     if (lowpoly) this.pathEdges(state, occ, baker, M.tuft, M.pebbles, cellRng);
-    for (const mesh of baker.build(false)) this.decorLayer.add(mesh);
+    for (const mesh of baker.build(false)) target.add(mesh);
+  }
+
+  /**
+   * Prato a due versioni (qualità Auto): [ricca, leggera]. La ricca si vede
+   * nella fascia nitida al centro dello schermo, la leggera in quelle
+   * sfocate in alto e in basso, dove la differenza non si nota.
+   */
+  decorLod: ['low' | 'medium' | 'high', 'low' | 'medium' | 'high'] | null = null;
+  private decorLight = new THREE.Group();
+  private lodSig = '';
+
+  /** Sceglie, blocco per blocco, la versione del prato da mostrare (solo se la camera si è mossa). */
+  updateDecorLod(camera: THREE.Camera) {
+    if (!this.decorLod) return;
+    const e = camera.matrixWorld.elements, pr = camera.projectionMatrix.elements;
+    const sig = `${e[12].toFixed(2)},${e[13].toFixed(2)},${e[14].toFixed(2)},${pr[0].toFixed(4)},${pr[5].toFixed(4)}`;
+    if (sig === this.lodSig) return;
+    this.lodSig = sig;
+    const v = new THREE.Vector3();
+    const sharp = (m: THREE.Object3D) => {
+      const [cx, cy] = String(m.userData.chunk).split(',').map(Number);
+      v.set((cx + 0.5) * CHUNK - HALF, 0, (cy + 0.5) * CHUNK - HALF).project(camera);
+      return Math.abs(v.y) < 0.55 && Math.abs(v.x) < 1.4;
+    };
+    for (const m of this.decorLayer.children) m.visible = sharp(m);
+    for (const m of this.decorLight.children) m.visible = !sharp(m);
   }
 
   /**
@@ -441,9 +498,12 @@ export class WorldView {
   private hidden = new Set<string>();
 
   setHidden(id: string, on: boolean) {
+    this.version++;
+    this.markZone(this.entities.get(id));
     if (on) this.hidden.add(id); else this.hidden.delete(id);
     const e = this.entities.get(id);
     if (e) e.group.visible = !on;
+    this.flushZones();
   }
 
   isHidden(id: string) { return this.hidden.has(id); }
@@ -483,7 +543,7 @@ export class WorldView {
       if (p.type === 'sign') this.addSignText(e, p.text ?? '');
       if (this.style === 'lowpoly') {
         e.anim = createAnimated(v) ?? undefined;
-        if (e.anim) e.visual.add(e.anim.root);
+        if (e.anim) { this.noShadow(e.anim.root); e.visual.add(e.anim.root); }
       }
     }
     e.fault = p.broken ? 2 : p.dirty ? 1 : 0;
@@ -498,6 +558,8 @@ export class WorldView {
   private createEntity(id: string, kind: EntityKind, key: string, model: CachedModel, baseFp: [number, number], rot: number): EntityView {
     const group = new THREE.Group();
     group.name = id;
+    // tombe e oggetti stanno fermi: la matrice si ricalcola solo quando si spostano
+    group.matrixAutoUpdate = false;
     const visual = instantiate(model);
     group.add(visual);
     const h = Math.max(0.4, model.height);
@@ -517,7 +579,16 @@ export class WorldView {
   private placeEntity(e: EntityView, center: THREE.Vector3, rot: number) {
     e.group.position.copy(center);
     e.group.rotation.y = -rot * Math.PI / 2;
+    e.group.updateMatrix();
     e.group.updateMatrixWorld(true);
+    // la zona si ricompone solo se l'oggetto si è davvero spostato (la sincronizzazione lo riposa sempre)
+    const placed = `${center.x.toFixed(3)},${center.y.toFixed(3)},${center.z.toFixed(3)},${rot}`;
+    if (e.group.userData.placed !== placed) {
+      e.group.userData.placed = placed;
+      this.markZone(e);
+      e.zone = `${Math.floor((center.x + HALF) / ZONE)},${Math.floor((center.z + HALF) / ZONE)}`;
+      this.markZone(e);
+    }
     const model = e.group.userData.model as CachedModel;
     // stesse sorgenti: si aggiornano sul posto (toglierle e rimetterle faceva spegnere e riaccendere le luci vicine)
     const reuse = e.anchors.length === model.lights.length;
@@ -538,9 +609,93 @@ export class WorldView {
     e.badge.position.set(0, e.height + 0.45, 0);
   }
 
+  // ── Oggetti fermi fusi per zona (qualità Auto) ─────────────────────
+  //
+  // Tombe e oggetti fermi di una zona di 8×8 celle si disegnano in poche
+  // mesh (una per materiale) invece che uno per uno: stesso aspetto, molte
+  // meno draw call. Un oggetto esce dalla fusione quando serve vederlo da
+  // solo (selezionato, segnato in rosso, nascosto, trascinato, animato) e la
+  // sua zona si ricompone; ogni cambiamento della zona la ricompone.
+
+  private mergeOn = false;
+  private mergedLayer = new THREE.Group();
+  private zoneMeshes = new Map<string, THREE.Mesh[]>();
+  private dirtyZones = new Set<string>();
+  /** L'oggetto trascinato in Modifica (fuori dalla fusione finché non si posa). */
+  private dragging: string | null = null;
+
+  get mergeStatic() { return this.mergeOn; }
+
+  setMergeStatic(on: boolean) {
+    if (on === this.mergeOn) return;
+    this.mergeOn = on;
+    for (const z of [...this.zoneMeshes.keys()]) this.clearZone(z);
+    for (const e of this.entities.values()) { e.visual.visible = true; if (on && e.zone) this.dirtyZones.add(e.zone); }
+    this.flushZones();
+  }
+
+  private markZone(e: EntityView | undefined) {
+    if (e?.zone && this.mergeOn) this.dirtyZones.add(e.zone);
+  }
+
+  private mergeable(e: EntityView): boolean {
+    return !e.anim && e.id !== this.selectedId && e.id !== this.dragging && !this.marked.has(e.id) && !this.hidden.has(e.id);
+  }
+
+  private clearZone(z: string) {
+    for (const m of this.zoneMeshes.get(z) ?? []) { this.mergedLayer.remove(m); m.geometry.dispose(); }
+    this.zoneMeshes.delete(z);
+  }
+
+  /** Ricompone le zone cambiate. */
+  flushZones() {
+    if (!this.dirtyZones.size) return;
+    const byZone = new Map<string, EntityView[]>();
+    for (const e of this.entities.values()) if (e.zone && this.dirtyZones.has(e.zone)) (byZone.get(e.zone) ?? byZone.set(e.zone, []).get(e.zone)!).push(e);
+    for (const z of this.dirtyZones) {
+      this.clearZone(z);
+      if (!this.mergeOn) continue;
+      const groups = new Map<string, { mesh: THREE.Mesh; geos: THREE.BufferGeometry[]; owners: Set<EntityView> }>();
+      for (const e of byZone.get(z) ?? []) {
+        if (!this.mergeable(e)) { e.visual.visible = true; continue; }
+        e.group.updateMatrixWorld(true);
+        e.visual.traverse((o) => {
+          const m = o as THREE.Mesh;
+          if (!m.isMesh || !m.visible || Array.isArray(m.material)) return;
+          const g = m.geometry;
+          const key = `${m.material.uuid}|${Object.keys(g.attributes).sort().join(',')}|${g.index ? 1 : 0}|${m.castShadow ? 1 : 0}|${m.receiveShadow ? 1 : 0}|${m.renderOrder}`;
+          let grp = groups.get(key);
+          if (!grp) groups.set(key, (grp = { mesh: m, geos: [], owners: new Set() }));
+          grp.geos.push(g.clone().applyMatrix4(m.matrixWorld));
+          grp.owners.add(e);
+        });
+        e.visual.visible = false;
+      }
+      const out: THREE.Mesh[] = [];
+      for (const { mesh, geos, owners } of groups.values()) {
+        const merged = geos.length === 1 ? geos[0] : mergeGeometries(geos, false);
+        if (geos.length > 1) for (const g of geos) g.dispose();
+        // geometrie incompatibili (non dovrebbe accadere): quegli oggetti restano disegnati da soli
+        if (!merged) { for (const e of owners) e.visual.visible = true; continue; }
+        merged.computeBoundingSphere();
+        const m = new THREE.Mesh(merged, mesh.material);
+        m.castShadow = mesh.castShadow;
+        m.receiveShadow = mesh.receiveShadow;
+        m.renderOrder = mesh.renderOrder;
+        m.matrixAutoUpdate = false;
+        m.userData.zone = z;
+        this.mergedLayer.add(m);
+        out.push(m);
+      }
+      this.zoneMeshes.set(z, out);
+    }
+    this.dirtyZones.clear();
+  }
+
   removeEntity(id: string) {
     const e = this.entities.get(id);
     if (!e) return;
+    this.markZone(e);
     for (const h of e.anchors) this.atmosphere.removeAnchor(h);
     this.root.remove(e.group);
     e.hitbox.geometry.dispose();
@@ -593,7 +748,7 @@ export class WorldView {
       const group = new THREE.Group();
       // low-poly: fiammella a goccia con faccina, scintille e alone; voxel/miniatura: cubetti
       const visual = this.style === 'lowpoly' ? createWispVisual() : undefined;
-      if (visual) group.add(visual.root);
+      if (visual) { this.noShadow(visual.root); group.add(visual.root); }
       else {
         const core = new THREE.Mesh(new THREE.BoxGeometry(0.16, 0.22, 0.16), new THREE.MeshBasicMaterial({ color: '#c9fff0', toneMapped: false }));
         const shell = new THREE.Mesh(new THREE.BoxGeometry(0.28, 0.34, 0.28), new THREE.MeshBasicMaterial({ color: P.spectral, transparent: true, opacity: 0.45, depthWrite: false, blending: THREE.AdditiveBlending }));
@@ -622,9 +777,11 @@ export class WorldView {
   // ── Selezione ed edit ────────────────────────────────────────────────
 
   select(id: string | null) {
-    if (this.selectedId && this.selectedId !== id) this.setHighlight(this.selectedId, null);
+    const prev = this.selectedId;
     this.selectedId = id;
+    if (prev && prev !== id) this.setHighlight(prev, null);
     this.refreshSelection();
+    this.flushZones();
   }
 
   /** Elementi segnati in rosso (fuori dall'area scelta mentre si restringe il recinto). */
@@ -634,6 +791,7 @@ export class WorldView {
     const next = new Set(ids);
     for (const id of this.marked) if (!next.has(id)) { this.marked.delete(id); this.setHighlight(id, id === this.selectedId ? 'selected' : null); }
     for (const id of next) { this.marked.add(id); if (id !== this.selectedId) this.setHighlight(id, null); }
+    this.flushZones();
   }
 
   private areaOutline: THREE.Mesh | null = null;
@@ -683,6 +841,7 @@ export class WorldView {
     if (!which && this.marked.has(id)) which = 'invalid';
     const e = this.entities.get(id);
     if (!e) return;
+    if (e.group.userData.hl !== which) { e.group.userData.hl = which; this.markZone(e); }
     const mats = (e.group.userData.model as CachedModel).mats;
     e.visual.traverse((o) => {
       const mesh = o as THREE.Mesh;
@@ -707,6 +866,9 @@ export class WorldView {
     const c = cellCenter(x, y, e.fp);
     c.y = this.heightAt(c.x, c.z);
     e.group.position.copy(c);
+    e.group.updateMatrix();
+    this.version++;
+    if (this.dragging !== id) { this.dragging = id; this.markZone(e); this.flushZones(); }
     this.ghostFrame.visible = true;
     this.ghostFrame.position.set(c.x, c.y + 0.05, c.z);
     this.ghostFrame.scale.set(e.fp[0], 1, e.fp[1]);
@@ -717,6 +879,7 @@ export class WorldView {
 
   endPreview() {
     this.ghostFrame.visible = false;
+    if (this.dragging) { this.markZone(this.entities.get(this.dragging)); this.dragging = null; this.flushZones(); }
   }
 
   private ghost: THREE.Group | null = null;
@@ -779,6 +942,7 @@ export class WorldView {
       }
       this.atmosphere.moveAnchor(w.anchor, w.group.position);
     }
+    this.flushZones();
     for (const e of this.entities.values()) e.anim?.update(t + e.group.position.x * 0.37);
     if (this.areaOutline) (this.areaOutline.material as THREE.MeshBasicMaterial).opacity = 0.65 + Math.sin(t * 3) * 0.25;
     for (const e of this.entities.values()) if (e.badge) e.badge.position.y = e.height + 0.45 + Math.sin(t * 2.5 + e.group.position.x) * 0.06;

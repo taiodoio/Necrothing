@@ -112,9 +112,25 @@ interagisci, `C` cambia vista, `V` cambia stile (low-poly → voxel → miniatur
   in Modifica (o si rimettono in inventario) e poi si salva.
 - **Foto**: rettangolo ridimensionabile dagli angoli + otturatore, scatto in bianco e
   nero della scena, *Salva / Condividi / Elimina*; **Galleria** in IndexedDB.
-- **Impostazioni**: stile, vista, qualità (bassa/media/alta), ora del giorno (reale o
+- **Impostazioni**: stile, vista, qualità (auto/bassa/media/alta), ora del giorno (reale o
   forzata), sfocatura ai bordi, effetti meteo, statistiche tecniche, backup `.necro3d`,
   nuova partita.
+- **Qualità Auto** (predefinita per le nuove partite; i tre livelli manuali restano
+  invariati), `src/app/AutoQuality.ts`: all'avvio stima la fascia del dispositivo
+  (economico / medio / top, dalla GPU e dalla memoria) che fissa densità di bosco e prato e
+  luci reali nella scena (4/7/10: le altre sorgenti tengono solo l'alone e lo shader non le
+  calcola). Poi un regolatore a finestre di 1 s sceglie il gradino (pixel ratio 1→2, mappa
+  ombre 1024→2048, sfocatura, MSAA): scende se resta sotto 28 FPS per 2 s, risale dopo 8 s
+  sopra 50 FPS, e un gradino che appena salito fa crollare gli FPS non si ritenta (tetto);
+  al gradino più basso ancora lento scende di fascia. Il profilo è ricordato per dispositivo
+  (localStorage). Nelle fasce economica e media le ombre della scena si ridisegnano solo
+  quando cambia qualcosa (camera, sole, scena) e i personaggi hanno un'ombra a disco.
+  In tutte le fasce (fase 2): tombe e oggetti fermi sono fusi per zona di 8×8 celle (una
+  mesh per materiale: stesso disegno, circa metà delle draw call); un oggetto esce dalla
+  fusione quando va visto da solo (selezionato, segnato in rosso, nascosto, trascinato,
+  animato) e la sua zona si ricompone. Il prato ha due versioni, ricca nella fascia nitida
+  e leggera in quelle sfocate; nelle fasce media e top il bosco è due volte più fitto.
+  In *Statistiche tecniche* compaiono fascia e gradino.
 
 ### Mondo, camera e resa
 

@@ -10,7 +10,7 @@ import { CHUNK } from './terrain.ts';
 interface Item { geo: THREE.BufferGeometry; matrix: THREE.Matrix4; tint: number }
 
 export class ChunkBaker {
-  private groups = new Map<string, { bucket: Bucket; mats: MaterialSet; items: Item[] }>();
+  private groups = new Map<string, { chunk: string; bucket: Bucket; mats: MaterialSet; items: Item[] }>();
 
   add(model: CachedModel, matrix: THREE.Matrix4, tint: number, cellX: number, cellY: number) {
     const chunk = `${Math.floor(cellX / CHUNK)},${Math.floor(cellY / CHUNK)}`;
@@ -18,7 +18,7 @@ export class ChunkBaker {
       if (!geo) continue;
       const key = `${chunk}|${bucket}|${model.mats.solid.uuid}`;
       let g = this.groups.get(key);
-      if (!g) this.groups.set(key, (g = { bucket, mats: model.mats, items: [] }));
+      if (!g) this.groups.set(key, (g = { chunk, bucket, mats: model.mats, items: [] }));
       g.items.push({ geo, matrix, tint });
     }
   }
@@ -27,7 +27,7 @@ export class ChunkBaker {
     const out: THREE.Mesh[] = [];
     const v = new THREE.Vector3();
     const nm = new THREE.Matrix3();
-    for (const { bucket, mats, items } of this.groups.values()) {
+    for (const { chunk, bucket, mats, items } of this.groups.values()) {
       let verts = 0, inds = 0;
       for (const it of items) { verts += it.geo.getAttribute('position').count; inds += it.geo.index ? it.geo.index.count : it.geo.getAttribute('position').count; }
       const pos = new Float32Array(verts * 3), nor = new Float32Array(verts * 3), col = new Float32Array(verts * 3);
@@ -56,6 +56,7 @@ export class ChunkBaker {
       g.computeBoundingBox();
       const mesh = new THREE.Mesh(g, mats[bucket]);
       mesh.userData.baked = true;
+      mesh.userData.chunk = chunk;
       mesh.castShadow = castShadow && bucket === 'solid';
       mesh.receiveShadow = bucket === 'solid';
       if (bucket === 'ghost') mesh.renderOrder = 2;

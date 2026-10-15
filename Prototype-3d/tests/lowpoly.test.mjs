@@ -621,3 +621,131 @@ test('presenze erranti: a frame regolari camminano davvero (prima restavano a gi
   assert.ok(lo < 0.35 && hi > 1.2 && sum / 1000 < 0.7, 'zoppica');
   assert.ok(a.avatar.speed > 0.85 * 2, 'il Custode è molto più svelto');
 });
+
+test('qualità Auto: fascia del dispositivo e regolatore con isteresi (scende presto, sale piano, non ritenta ciò che non regge)', async () => {
+  const { detectTier, AutoGovernor, TIERS, AUTO_STEPS } = await import('../src/app/AutoQuality.ts');
+  assert.equal(detectTier({ gpu: 'Apple GPU', cores: 6, mobile: true }), 'high');
+  assert.equal(detectTier({ gpu: 'Adreno (TM) 610', mobile: true }), 'low');
+  assert.equal(detectTier({ gpu: 'Adreno (TM) 619', mobile: true }), 'mid');
+  assert.equal(detectTier({ gpu: 'Adreno (TM) 740', mobile: true }), 'high');
+  assert.equal(detectTier({ gpu: 'Mali-G52 MC2', mobile: true }), 'low');
+  assert.equal(detectTier({ gpu: 'Mali-G78 MP14', mobile: true }), 'mid');
+  assert.equal(detectTier({ gpu: 'Mali-G715-Immortalis MC11', mobile: true }), 'high');
+  assert.equal(detectTier({ gpu: 'Adreno (TM) 740', memory: 2, mobile: true }), 'low', 'poca memoria: economico');
+  assert.equal(detectTier({ gpu: 'ANGLE (NVIDIA GeForce RTX)', mobile: false }), 'high');
+  for (const t of Object.values(TIERS)) assert.ok(t.startStep <= t.maxStep && t.maxStep < AUTO_STEPS.length);
+  // gradini sempre più ricchi
+  for (let i = 1; i < AUTO_STEPS.length; i++) assert.ok(AUTO_STEPS[i].dpr >= AUTO_STEPS[i - 1].dpr && AUTO_STEPS[i].shadow >= AUTO_STEPS[i - 1].shadow);
+
+  const run = (g, fps, seconds) => { const out = []; for (let t = 0; t < seconds; t += 1 / fps) { const d = g.frame(1 / fps); if (d) out.push(d); } return out; };
+  // sotto i 30 FPS si scende subito (dopo l'assestamento), un gradino alla volta
+  const g = new AutoGovernor({ tier: 'mid', step: 3, ceiling: 4 });
+  assert.deepEqual(run(g, 20, 5.5), ['down']);
+  assert.equal(g.step, 2);
+  // con margine si risale solo dopo il periodo di attesa, e piano
+  assert.deepEqual(run(g, 60, 20), [], 'subito dopo una discesa non si risale');
+  let up = null;
+  for (let t = 0; t < 30 && !up; t += 1 / 60) up = g.frame(1 / 60);
+  assert.equal(up, 'up');
+  assert.equal(g.step, 3);
+  // la salita fa crollare gli FPS: si torna giù e quel gradino diventa il tetto
+  assert.deepEqual(run(g, 22, 6), ['down']);
+  assert.equal(g.ceiling, 2);
+  run(g, 60, 120);
+  assert.equal(g.step, 2, 'non ritenta il gradino che non reggeva');
+  // pause lunghe (app in background) non contano
+  const p = new AutoGovernor({ tier: 'low', step: 1, ceiling: 3 });
+  assert.deepEqual(run(p, 2, 20), []);
+  // al gradino più basso e ancora lento: si scende di fascia
+  const f = new AutoGovernor({ tier: 'mid', step: 0, ceiling: 4 });
+  assert.ok(run(f, 15, 12).includes('tierDown'));
+  assert.equal(f.tier, 'low');
+});
+
+test('qualità Auto: le luci in più escono proprio dalla scena (lo shader non le calcola), e tornano per i livelli manuali', async () => {
+  globalThis.document ??= { createElement: () => ({ width: 0, height: 0, getContext: () => ({ createLinearGradient: () => ({ addColorStop() {} }), createRadialGradient: () => ({ addColorStop() {} }), fillRect() {}, fillStyle: '' }) }) };
+  const { Atmosphere } = await import('../src/view/Atmosphere.ts');
+  const scene = new THREE.Scene();
+  const atm = new Atmosphere(scene, 'high');
+  const lights = () => scene.getObjectsByProperty('type', 'PointLight').length;
+  assert.equal(lights(), 10);
+  atm.setLightBudget(4);
+  assert.equal(lights(), 4);
+  atm.focus(new THREE.Vector3(), 10);
+  for (let i = 0; i < 8; i++) atm.addAnchor(new THREE.Vector3(i - 4, 1, 0), { pos: [0, 0, 0], color: '#ffaa55', intensity: 1, range: 4, flicker: 0, halo: 1 });
+  for (let i = 0; i < 20; i++) atm.update(0.05, i * 0.05, new THREE.Camera());
+  assert.equal(scene.getObjectsByProperty('type', 'PointLight').filter((l) => l.intensity > 0).length, 4);
+  atm.setLightBudget(null);
+  assert.equal(lights(), 10);
+  atm.setShadowSize(1024);
+  assert.equal(atm.sun.shadow.mapSize.x, 1024);
+});
+
+test('qualità Auto, fase 2: oggetti fermi fusi per zona (stesso disegno, meno mesh) che si ricompongono quando serve', async () => {
+  const ctx = { createLinearGradient: () => ({ addColorStop() {} }), createRadialGradient: () => ({ addColorStop() {} }), fillRect() {}, fillText() {}, beginPath() {}, arc() {}, fill() {}, stroke() {}, moveTo() {}, lineTo() {}, closePath() {}, save() {}, restore() {}, translate() {}, scale() {}, rotate() {}, measureText: () => ({ width: 10 }), drawImage() {}, getImageData: () => ({ data: new Uint8ClampedArray(4) }), putImageData() {}, createImageData: (w, h) => ({ data: new Uint8ClampedArray(w * h * 4) }), clearRect() {}, strokeRect() {}, setTransform() {}, fillStyle: '' };
+  const prevDoc = globalThis.document;
+  globalThis.document = { createElement: () => ({ width: 0, height: 0, getContext: () => ctx }) };
+  try {
+    const { WorldView } = await import('../src/view/WorldView.ts');
+    const atm = { addAnchor: () => ({}), removeAnchor() {}, moveAnchor() {}, updateAnchor() {}, setAnchorOn() {} };
+    const s = createNewGame(new Date('2026-10-09T12:00:00Z'), 717);
+    const w = new WorldView(new THREE.Scene(), atm, 'lowpoly');
+    w.sync(s);
+    // triangoli e mesh visibili di tombe e oggetti (le entità + le zone fuse)
+    const visible = (o) => { for (let p = o; p; p = p.parent) if (!p.visible) return false; return true; };
+    const count = () => {
+      let tri = 0, meshes = 0;
+      const add = (o) => { if (!o.isMesh || !visible(o) || o.userData.entityId) return; const g = o.geometry; tri += (g.index ? g.index.count : g.attributes.position.count) / 3; meshes++; };
+      for (const e of w.entities.values()) e.visual.traverse(add);
+      w.mergedLayer.traverse(add);
+      return { tri, meshes };
+    };
+    const before = count();
+    w.setMergeStatic(true);
+    const merged = count();
+    assert.equal(merged.tri, before.tri, 'si disegnano esattamente gli stessi triangoli');
+    assert.ok(merged.meshes < before.meshes * 0.6, `molte meno mesh (${before.meshes} → ${merged.meshes})`);
+    const g = s.graves[0];
+    const ge = w.entities.get(g.id);
+    assert.equal(ge.visual.visible, false, 'la tomba è nella sua zona');
+    // selezionata: esce dalla zona (si vede da sola, evidenziata), senza doppioni
+    w.select(g.id);
+    assert.equal(ge.visual.visible, true);
+    assert.equal(count().tri, before.tri, 'nessun doppione');
+    w.select(null);
+    assert.equal(ge.visual.visible, false, 'deselezionata torna nella zona');
+    // nascosta (bara del rito in viaggio): non si vede né da sola né nella zona
+    const own = (() => { let t = 0; ge.visual.traverse((o) => { if (o.isMesh) t += (o.geometry.index ? o.geometry.index.count : o.geometry.attributes.position.count) / 3; }); return t; })();
+    w.setHidden(g.id, true);
+    assert.equal(count().tri, before.tri - own);
+    w.setHidden(g.id, false);
+    assert.equal(count().tri, before.tri);
+    // trascinata in Modifica: fuori dalla zona finché non si posa
+    w.previewMove(g.id, g.x + 1, g.y, true);
+    assert.equal(ge.visual.visible, true);
+    assert.equal(count().tri, before.tri);
+    w.endPreview();
+    w.sync(s);
+    assert.equal(ge.visual.visible, false);
+    // tolta dal cimitero: sparisce anche dalla zona
+    s.graves = s.graves.filter((x) => x.id !== g.id);
+    w.sync(s);
+    assert.equal(count().tri, before.tri - own);
+    // spenta (livelli manuali): tutto torna com'era, oggetto per oggetto
+    w.setMergeStatic(false);
+    assert.equal(w.mergedLayer.children.length, 0);
+    assert.equal(count().tri, before.tri - own);
+    for (const e of w.entities.values()) assert.equal(e.visual.visible, true);
+    // prato a due versioni: per ogni blocco se ne vede una sola
+    w.decorLod = ['high', 'medium'];
+    w.sync(s);
+    assert.ok(w.decorLight.children.length > 0);
+    const cam = new THREE.OrthographicCamera(-12, 12, 12, -12, 0.1, 200);
+    cam.position.set(20, 30, 20); cam.lookAt(0, 0, 0); cam.updateMatrixWorld(); cam.updateProjectionMatrix();
+    w.updateDecorLod(cam);
+    const shown = new Map();
+    for (const m of [...w.decorLayer.children, ...w.decorLight.children]) if (m.visible) shown.set(m.userData.chunk, (shown.get(m.userData.chunk) ?? new Set()).add(m.parent === w.decorLayer ? 'ricco' : 'leggero'));
+    for (const [chunk, kinds] of shown) assert.equal(kinds.size, 1, `blocco ${chunk}: una sola versione`);
+    assert.ok([...shown.values()].some((k) => k.has('ricco')) && [...shown.values()].some((k) => k.has('leggero')));
+  } finally { globalThis.document = prevDoc; }
+});

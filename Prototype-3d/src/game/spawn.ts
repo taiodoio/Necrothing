@@ -28,16 +28,20 @@ export interface BuildingCounts {
   shrine: number;
   openGraves: number;
   hellHole: number;
+  zombieBar: number;
+  brainFarm: number;
 }
 
 export function countBuildings(state: Pick<SaveData, 'placeables'>): BuildingCounts {
-  const c: BuildingCounts = { mausoleum: 0, gravediggerHouse: 0, shrine: 0, openGraves: 0, hellHole: 0 };
+  const c: BuildingCounts = { mausoleum: 0, gravediggerHouse: 0, shrine: 0, openGraves: 0, hellHole: 0, zombieBar: 0, brainFarm: 0 };
   for (const p of state.placeables) {
     if (p.broken) continue; // un edificio rotto non "funziona"
     if (p.type === 'mausoleum') c.mausoleum++;
     else if (p.type === 'gravedigger_house') c.gravediggerHouse++;
     else if (p.type === 'shrine') c.shrine++;
     else if (p.type === 'hell_hole') c.hellHole++;
+    else if (p.type === 'zombie_bar') c.zombieBar++;
+    else if (p.type === 'brain_farm') c.brainFarm++;
     else if (ZOMBIE_ATTRACTORS.has(p.type)) c.openGraves++;
   }
   return c;
@@ -71,10 +75,9 @@ export function computeSpawns(
     out.push({ kind: 'gravedigger' });
   }
   if (isNight && rng.chance(SPAWN_CHANCE.ratNight)) out.push({ kind: 'rat' });
-  if (b.openGraves > 0) {
-    const p = Math.min(SPAWN_MODIFIERS.zombieChanceMax, SPAWN_MODIFIERS.zombiePerOpenGrave * b.openGraves);
-    if (rng.chance(p)) out.push({ kind: 'zombie' });
-  }
+  // tombe aperte, bar e orto chiamano gli zombie
+  const zombie = SPAWN_MODIFIERS.zombiePerOpenGrave * b.openGraves + SPAWN_MODIFIERS.zombieBar * b.zombieBar + SPAWN_MODIFIERS.zombieFarm * b.brainFarm;
+  if (zombie > 0 && rng.chance(Math.min(SPAWN_MODIFIERS.zombieChanceMax, zombie))) out.push({ kind: 'zombie' });
   // l'albero ogni tanto lascia uscire il fantasma di uno dei ricordi affidatigli
   const kept = state.entrusted ?? [];
   if (kept.length > 0 && state.placeables.some((p) => p.type === 'memory_tree')) {

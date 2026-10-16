@@ -749,3 +749,67 @@ test('qualità Auto, fase 2: oggetti fermi fusi per zona (stesso disegno, meno m
     assert.ok([...shown.values()].some((k) => k.has('ricco')) && [...shown.values()].some((k) => k.has('leggero')));
   } finally { globalThis.document = prevDoc; }
 });
+
+test('bar e orto: zombie a seconda della fascia (barista e avventori, contadino e venditore), con boccali e zappa', async () => {
+  const { Actors, BUSINESS_PRESENCES } = await import('../src/view/Actors.ts');
+  const { cellCenter } = await import('../src/view/WorldView.ts');
+  const s = createNewGame(new Date('2026-10-09T12:00:00Z'), 9);
+  const iso = s.createdAt;
+  const base = { rot: 0, variant: 0, lit: true, caredAt: iso, dirty: false, broken: false, createdAt: iso };
+  s.placeables.push({ ...base, id: 'bar1', type: 'zombie_bar', x: 26, y: 26 }, { ...base, id: 'farm1', type: 'brain_farm', x: 30, y: 30 });
+  const atmosphere = { addAnchor: () => ({}), removeAnchor() {}, moveAnchor() {} };
+  const a = new Actors(new THREE.Scene(), atmosphere, 'lowpoly', cellCenter(24, 42, [1, 1]));
+  const count = (id) => a.presences.filter((p) => p.placeId === id);
+  for (const tier of ['low', 'mid', 'high']) {
+    a.setPresenceTier(tier);
+    a.syncPresences(s, new Date());
+    assert.equal(count('bar1').length, BUSINESS_PRESENCES.zombie_bar[tier], `bar ${tier}`);
+    assert.equal(count('farm1').length, BUSINESS_PRESENCES.brain_farm[tier], `orto ${tier}`);
+  }
+  assert.deepEqual([BUSINESS_PRESENCES.zombie_bar.low, BUSINESS_PRESENCES.zombie_bar.high, BUSINESS_PRESENCES.brain_farm.low], [2, 4, 1]);
+  // gli oggetti in mano restano anche quando i rig si ricostruiscono
+  const props = () => a.presences.filter((p) => p.rig.parts.armR?.getObjectByName('prop')).length;
+  assert.equal(props(), 3); // due boccali e la zappa
+  a.setStyle('miniature');
+  a.setStyle('lowpoly');
+  assert.equal(props(), 3);
+  for (let t = 0; t < 2; t += 1 / 30) a.update(1 / 30, t, [], () => 0);
+  // rotto: chiuso, nessuno
+  s.placeables[s.placeables.length - 2].broken = true;
+  a.syncPresences(s, new Date());
+  assert.equal(count('bar1').length, 0);
+});
+
+test('bicicletta: in sella compare sotto il Custode e lo porta al doppio della velocità; scendendo sparisce', async () => {
+  const { Actors } = await import('../src/view/Actors.ts');
+  const { cellCenter } = await import('../src/view/WorldView.ts');
+  const s = createNewGame(new Date('2026-10-09T12:00:00Z'), 717);
+  const occ = buildOccupancy(s);
+  const anchors = new Set();
+  let n = 0;
+  const atmosphere = { addAnchor: () => { const h = { id: ++n }; anchors.add(h.id); return h; }, removeAnchor(h) { if (h) anchors.delete(h.id); }, moveAnchor() {} };
+  const a = new Actors(new THREE.Scene(), atmosphere, 'lowpoly', cellCenter(24, 40, [1, 1]));
+  a.setWorld(areaForLevel(0), (x, y) => occ.blocked.has(`${x},${y}`));
+  const walk = a.avatar.speed;
+  const lamps0 = anchors.size;
+  a.setRiding(true);
+  assert.ok(a.riding);
+  assert.equal(a.avatar.speed, walk * 2);
+  assert.ok(a.avatar.rig.root.getObjectByName('bici'));
+  assert.equal(anchors.size, lamps0 + 1, 'il fanalino');
+  // pedalando le ruote girano e il Custode resta seduto sopra la sella
+  a.walkTo({ x: 24, y: 34 });
+  for (let t = 0; t < 1; t += 1 / 60) a.update(1 / 60, t, [], () => 0);
+  const bike = a.avatar.rig.root.getObjectByName('bici');
+  assert.ok(Math.abs(bike.children[1].rotation.x) > 0.5, 'le ruote girano');
+  assert.ok(a.avatar.rig.root.children[0].position.y > 0.2, 'seduto in sella');
+  // cambiando aspetto la bici resta
+  a.setStyle('miniature');
+  assert.ok(a.avatar.rig.root.getObjectByName('bici'));
+  a.setRiding(false);
+  assert.ok(!a.riding);
+  assert.equal(a.avatar.speed, walk);
+  assert.ok(!a.avatar.rig.root.getObjectByName('bici'));
+  assert.equal(a.avatar.rig.root.children[0].position.y, 0);
+  assert.equal(anchors.size, lamps0);
+});

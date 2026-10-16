@@ -131,10 +131,26 @@ export const SPAWN_MODIFIERS = {
   shrinePriestBonus: 0.06,
   zombiePerOpenGrave: 0.05,
   zombieChanceMax: 0.5,
+  /** Il Bar degli zombie e l'Orto dei cervelli attirano zombie anche senza tombe aperte. */
+  zombieBar: 0.06,
+  zombieFarm: 0.03,
   hellHoleGhostBonus: 0.04,
   /** Fiori portati aumentano gli eventi (Implementation_Note). */
   flowerEventBonus: 0.01,
 } as const;
+
+/**
+ * Attività che incassano fuochi fatui: ogni giorno (di calendario) un importo
+ * casuale ma stabile nel giorno; si accumulano fino a un tetto (qualche giorno)
+ * e si riscuotono toccando l'edificio.
+ */
+export const BUSINESS: Record<string, { perDay: [number, number]; cap: number }> = {
+  zombie_bar: { perDay: [3, 6], cap: 15 },
+  brain_farm: { perDay: [2, 5], cap: 12 },
+};
+
+/** Velocità del Custode a piedi (celle al secondo) e moltiplicatore in bicicletta. */
+export const CUSTODE_SPEED = { walk: 3.1, bike: 2 } as const;
 
 /** Becchino: raggio della vecchia pulizia al tocco; quota delle cose sporche che sistema in ogni giro. */
 export const GRAVEDIGGER = { cleanRadius: 4, roundShare: 0.5 } as const;

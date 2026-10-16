@@ -43,21 +43,40 @@ function wheel(lp: LP, z: number, r: number) {
   lp.pop();
 }
 
+/** Misure della bici (prima della scala): ruote, movimento centrale. */
+export const BIKE = { R: 0.17, rearZ: -0.3, frontZ: 0.32, bb: [0, 0.15, -0.02] as [number, number, number] };
+
 /**
  * Bicicletta (muso verso +z). `parked`: inclinata sul cavalletto. `crank`:
- * angolo dei pedali (per l'anteprima e l'animazione in sella).
+ * angolo dei pedali (per l'anteprima). `part`: solo una parte, per animarla
+ * in gioco: il telaio, una ruota (centrata sul mozzo) o le pedivelle
+ * (centrate sul movimento centrale).
  */
-export function bicycleLP(parked = true, crank = 0): LPModel {
-  const lp = new LP(`lp:bike:${parked}:${crank.toFixed(2)}`);
+export function bicycleLP(parked = true, crank = 0, part: 'all' | 'frame' | 'wheel' | 'crank' = 'all'): LPModel {
+  const lp = new LP(`lp:bike:${parked}:${crank.toFixed(2)}:${part}`);
   // in scala con il Custode (testone kawaii): una bici da adulto un po' tozza
   lp.push([0, 0, 0], 0, 0, 0, BIKE_SCALE);
-  const R = 0.17;
-  const rear: [number, number, number] = [0, R, -0.3], front: [number, number, number] = [0, R, 0.32];
-  const bb: [number, number, number] = [0, 0.15, -0.02], seat: [number, number, number] = [0, 0.4, -0.1];
+  const R = BIKE.R;
+  const rear: [number, number, number] = [0, R, BIKE.rearZ], front: [number, number, number] = [0, R, BIKE.frontZ];
+  const bb = BIKE.bb, seat: [number, number, number] = [0, 0.4, -0.1];
   const head: [number, number, number] = [0, 0.47, 0.21], headLow: [number, number, number] = [0, 0.35, 0.245];
+  const all = part === 'all';
+  if (part === 'wheel') { wheel(lp, 0, R); lp.pop(); return lp.build(); }
+  if (part === 'crank') {
+    for (const s of [-1, 1]) {
+      const a = s > 0 ? 0 : Math.PI;
+      const px = s * 0.075, py = Math.cos(a) * 0.07, pz = Math.sin(a) * 0.07;
+      tube(lp, [s * 0.06, 0, 0], [px, py, pz], 0.008, METAL);
+      lp.box(px + s * 0.02, py - 0.008, pz, 0.05, 0.016, 0.06, TIRE, { jitter: 0 });
+    }
+    lp.pop();
+    return lp.build();
+  }
   if (parked) lp.push([0, 0, 0], 0, 0, 0.12); // appoggiata sul cavalletto
-  wheel(lp, rear[2], R);
-  wheel(lp, front[2], R);
+  if (all) {
+    wheel(lp, rear[2], R);
+    wheel(lp, front[2], R);
+  }
   // telaio a «cuore» basso (da passeggio): sella, tubo obliquo e tubo superiore curvo
   tube(lp, bb, seat, 0.02, FRAME);
   tube(lp, bb, headLow, 0.022, FRAME);
@@ -93,7 +112,7 @@ export function bicycleLP(parked = true, crank = 0): LPModel {
   // movimento centrale: corona color ruggine, pedivelle e pedali
   lp.push([0.05, bb[1], bb[2]], 0, 0, Math.PI / 2).cyl(0, -0.006, 0, 0.065, 0.065, 0.012, 10, LPC.rust, { jitter: 0 }).pop();
   tube(lp, [0.055, bb[1], bb[2]], [0.055, rear[1] + 0.012, rear[2]], 0.006, '#2a2420'); // catena (tratto superiore)
-  for (const s of [-1, 1]) {
+  if (all) for (const s of [-1, 1]) {
     const a = crank + (s > 0 ? 0 : Math.PI);
     const px = s * 0.075, py = bb[1] + Math.cos(a) * 0.07, pz = bb[2] + Math.sin(a) * 0.07;
     tube(lp, [s * 0.06, bb[1], bb[2]], [px, py, pz], 0.008, METAL);

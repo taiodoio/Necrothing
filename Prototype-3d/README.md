@@ -63,12 +63,12 @@ esegue fisicamente (cammina, lavora, poi arriva la ricompensa).
 | In alto a sinistra | Nome, rango con barra di progresso, fuochi fatui → profilo e achievement |
 | In alto a destra | Ora reale, fase del giorno e meteo, impostazioni |
 | In basso a sinistra | Pala → barra a slot (stile hotbar) che si apre in orizzontale: Seppellisci, Modifica, Inventario, Bottega (centra la mappa sulla bottega), Foto, Galleria |
-| In basso a destra | Vista obliqua/dall'alto, ricentra sul Custode |
+| In basso a destra | Bicicletta (se la possiedi: sali/scendi, dorata quando sei in sella), ricentra sul Custode |
 | Drawer dal basso | Tutte le pagine, con ✕ in alto a sinistra; la bolla sparisce mentre sono aperte |
 
 **Controlli** — Touch: tocca per camminare/selezionare, trascina per spostare la mappa,
 pizzica per lo zoom. Desktop: WASD/frecce muovono il Custode, rotella zoom, `E`
-interagisci, `C` cambia vista, `V` cambia stile (low-poly → voxel → miniatura), `Esc` chiude.
+interagisci, `B` sali/scendi dalla bici, `V` cambia stile (low-poly → voxel → miniatura), `Esc` chiude.
 
 ### Dinamiche (portate dalla PWA, regole in `src/game/`)
 
@@ -101,6 +101,21 @@ interagisci, `C` cambia vista, `V` cambia stile (low-poly → voxel → miniatur
   accarezza, lancia l'osso (che riporta). Le voci che in quel momento non servono restano visibili
   ma disattivate; con più casette si gestisce ogni animale per conto suo. Quello che fa (libero, al seguito, a
   cuccia) è salvato nella sua casetta e alla riapertura riprende da lì.
+- **Extra** (nuova categoria della Bottega: oggetti che non si posano ma si usano): la
+  **bicicletta** (rango 2, 50 ✦, pezzo unico) porta il Custode al doppio della velocità.
+  Si sale e si scende con l'icona sopra il mirino (al posto di quella della vista: la vista
+  dall'alto non c'è più, i salvataggi tornano alla vista obliqua); in sella ruote e pedali
+  girano con la strada fatta, i piedi seguono i pedali, il fanalino illumina la notte.
+  Scendendo la bici sparisce.
+- **Bar degli zombie** e **Orto dei cervelli** (Costruzioni, rango 3, 45 e 35 ✦, pezzi
+  unici, 3×2 e 4×3): il bar ha bancone, bara-frigo con le bottiglie, lavagna a lapide e
+  pipistrelli, con barista, avventori che brindano coi boccali e un ballerino; nell'orto uno
+  zombie zappa i cervelli e un altro li vende alla bancarella. Quante presenze li animano
+  dipende dalla fascia del dispositivo (bar 2/3/4, orto 1/2/2). Ogni giorno incassano fuochi
+  fatui casuali ma contenuti (bar 3–6, orto 2–5, stabili nel giorno) che si accumulano fino a
+  15 e 12: un'etichetta con la fiammella e «+N» compare sopra e toccandola si riscuote.
+  Entrambi attirano zombie anche senza tombe aperte (+6% e +3% a ogni giro); rotti non
+  incassano e restano chiusi finché non li ripari.
 - **Simulazione a tempo reale** all'apertura e al ritorno in primo piano (erbacce,
   sporco, rotture, anniversari, meteo giornaliero) + tick "vivo" ogni 40 s mentre si gioca.
 - **Progressione**: 5 ranghi, 27 achievement, prestigio, distretti tematici
@@ -112,7 +127,7 @@ interagisci, `C` cambia vista, `V` cambia stile (low-poly → voxel → miniatur
   in Modifica (o si rimettono in inventario) e poi si salva.
 - **Foto**: rettangolo ridimensionabile dagli angoli + otturatore, scatto in bianco e
   nero della scena, *Salva / Condividi / Elimina*; **Galleria** in IndexedDB.
-- **Impostazioni**: stile, vista, qualità (auto/bassa/media/alta), ora del giorno (reale o
+- **Impostazioni**: stile, qualità (auto/bassa/media/alta), ora del giorno (reale o
   forzata), sfocatura ai bordi, effetti meteo, statistiche tecniche, backup `.necro3d`,
   nuova partita.
 - **Qualità Auto** (predefinita per le nuove partite; i tre livelli manuali restano

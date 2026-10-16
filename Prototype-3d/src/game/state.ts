@@ -62,6 +62,8 @@ export interface Placed {
   createdAt: string;
   /** Casetta per animale: cosa fa il suo animale (libero, segue il Custode, a cuccia). */
   petMode?: 'free' | 'follow' | 'home';
+  /** Bar e orto: ultima riscossione dei fuochi fatui (assente = dalla posa). */
+  collectedAt?: string;
 }
 
 export interface LooseWisp {
@@ -327,6 +329,8 @@ export function normalizeSave(raw: unknown): SaveData | null {
     data.world.unlockedLevel = Math.max(data.world.unlockedLevel ?? lvl, lvl);
     data.world.notifiedLevel = Math.max(data.world.notifiedLevel ?? data.world.unlockedLevel, lvl);
   }
+  // la vista dall'alto è stata tolta (al suo posto c'è la bicicletta)
+  if (data.settings && (data.settings as { camera?: string }).camera !== 'angled') data.settings = { ...data.settings, camera: 'angled' };
   return {
     ...base,
     ...data,

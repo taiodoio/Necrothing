@@ -44,6 +44,8 @@ export type EntityKind = 'grave' | 'placeable';
 
 export interface EntityView {
   badge?: THREE.Sprite;
+  /** Bar e orto: incasso da riscuotere (etichetta con la fiammella e «+N», più una zona toccabile). */
+  earn?: { n: number; sprite: THREE.Sprite; hit: THREE.Mesh; x: number };
   id: string;
   kind: EntityKind;
   key: string;
@@ -91,6 +93,38 @@ function badgeMaterial(icon: string, ring: string): THREE.SpriteMaterial {
   badgeMaterials.set(key, m);
   return m;
 }
+
+const earnMaterials = new Map<number, THREE.SpriteMaterial>();
+/** Etichetta dell'incasso: fiammella del fuoco fatuo e «+N» in una targhetta pixel. */
+function earnMaterial(n: number): THREE.SpriteMaterial {
+  let m = earnMaterials.get(n);
+  if (m) return m;
+  const c = document.createElement('canvas');
+  c.width = 192; c.height = 96;
+  const g = c.getContext('2d')!;
+  const step = 6;
+  const plate = (inset: number, color: string) => {
+    g.fillStyle = color;
+    g.fillRect(inset + step, inset, 192 - 2 * (inset + step), 96 - 2 * inset);
+    g.fillRect(inset, inset + step, 192 - 2 * inset, 96 - 2 * (inset + step));
+  };
+  plate(0, '#07080b');
+  plate(step, '#c9a25c');
+  plate(step * 2, '#161920');
+  drawIcon(g, 'wisp', 20, 20, 56);
+  g.fillStyle = '#f1d39c';
+  g.font = 'bold 46px "Pixelify Sans", system-ui, sans-serif';
+  g.textBaseline = 'middle';
+  g.fillText(`+${n}`, 84, 50);
+  const tex = new THREE.CanvasTexture(c);
+  tex.colorSpace = THREE.SRGBColorSpace;
+  m = new THREE.SpriteMaterial({ map: tex, depthTest: false, transparent: true });
+  earnMaterials.set(n, m);
+  return m;
+}
+
+/** Dove sta l'etichetta dell'incasso (in coordinate dell'oggetto): sopra il bancone o la bancarella. */
+const EARN_AT: Record<string, number> = { zombie_bar: 0, brain_farm: 1.35 };
 
 export class WorldView {
   readonly root = new THREE.Group();
@@ -553,6 +587,49 @@ export class WorldView {
     this.placeEntity(e, at, p.rot);
     const decays = CATALOG[p.type].decays && !['path_stone', 'path_dirt'].includes(p.type);
     this.setBadge(e, decays ? (p.broken ? 'broken' : p.dirty ? 'dirty' : null) : null);
+    if (p.type in EARN_AT) this.applyEarnings(e, p.type);
+  }
+
+  /** Incassi da riscuotere per edificio (si riapplicano se l'edificio si ricostruisce). */
+  private readonly earnings = new Map<string, number>();
+
+  /** Mostra (n > 0) o toglie l'etichetta dell'incasso sopra bar e orto. */
+  setEarnings(id: string, n: number) {
+    if ((this.earnings.get(id) ?? 0) === n) return;
+    if (n > 0) this.earnings.set(id, n); else this.earnings.delete(id);
+    const e = this.entities.get(id);
+    const type = e ? (e.key.split(':')[1] ?? '') : '';
+    if (e) this.applyEarnings(e, type);
+  }
+
+  private applyEarnings(e: EntityView, type: string) {
+    const n = this.earnings.get(e.id) ?? 0;
+    if (!n) {
+      if (e.earn) {
+        e.group.remove(e.earn.sprite, e.earn.hit);
+        const i = this.hitboxes.indexOf(e.earn.hit);
+        if (i >= 0) this.hitboxes.splice(i, 1);
+        e.earn.hit.geometry.dispose();
+        e.earn = undefined;
+      }
+      return;
+    }
+    if (!e.earn) {
+      const sprite = new THREE.Sprite(earnMaterial(n));
+      sprite.scale.set(0.9, 0.45, 1);
+      sprite.renderOrder = 6;
+      // l'etichetta si tocca anche se sporge sopra l'edificio
+      const hit = new THREE.Mesh(new THREE.BoxGeometry(0.9, 0.6, 0.6), hitMaterial);
+      hit.userData.entityId = e.id;
+      e.group.add(sprite, hit);
+      this.hitboxes.push(hit);
+      e.earn = { n, sprite, hit, x: EARN_AT[type] ?? 0 };
+    }
+    e.earn.n = n;
+    e.earn.sprite.material = earnMaterial(n);
+    e.earn.sprite.position.set(e.earn.x, e.height + 0.5, 0);
+    e.earn.hit.position.copy(e.earn.sprite.position);
+    e.group.updateMatrixWorld(true);
   }
 
   private createEntity(id: string, kind: EntityKind, key: string, model: CachedModel, baseFp: [number, number], rot: number): EntityView {
@@ -701,6 +778,7 @@ export class WorldView {
     e.hitbox.geometry.dispose();
     const i = this.hitboxes.indexOf(e.hitbox);
     if (i >= 0) this.hitboxes.splice(i, 1);
+    if (e.earn) { const j = this.hitboxes.indexOf(e.earn.hit); if (j >= 0) this.hitboxes.splice(j, 1); e.earn.hit.geometry.dispose(); }
     this.entities.delete(id);
   }
 
@@ -945,7 +1023,11 @@ export class WorldView {
     this.flushZones();
     for (const e of this.entities.values()) e.anim?.update(t + e.group.position.x * 0.37);
     if (this.areaOutline) (this.areaOutline.material as THREE.MeshBasicMaterial).opacity = 0.65 + Math.sin(t * 3) * 0.25;
-    for (const e of this.entities.values()) if (e.badge) e.badge.position.y = e.height + 0.45 + Math.sin(t * 2.5 + e.group.position.x) * 0.06;
+    for (const e of this.entities.values()) {
+      if (e.badge) e.badge.position.y = e.height + 0.45 + Math.sin(t * 2.5 + e.group.position.x) * 0.06;
+      // l'incasso sta sopra l'eventuale targhetta di sporco/rotto e ondeggia piano
+      if (e.earn) e.earn.sprite.position.y = e.height + (e.badge && !e.earn.x ? 1.05 : 0.5) + Math.sin(t * 2 + e.group.position.z) * 0.05;
+    }
     if (this.selectionFrame.visible) {
       (this.selectionFrame.material as THREE.LineBasicMaterial).opacity = 0.55 + Math.sin(t * 4) * 0.4;
     }

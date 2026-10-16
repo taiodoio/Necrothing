@@ -802,6 +802,16 @@ test('bicicletta: in sella compare sotto il Custode e lo porta al doppio della v
   for (let t = 0; t < 1; t += 1 / 60) a.update(1 / 60, t, [], () => 0);
   const bike = a.avatar.rig.root.getObjectByName('bici');
   assert.ok(Math.abs(bike.children[1].rotation.x) > 0.5, 'le ruote girano');
+  // le ruote girano attorno al mozzo: in qualsiasi posizione poggiano a terra, senza affondare né sollevarsi
+  for (const w of bike.children.slice(1, 3)) {
+    for (const ang of [0, 1, 2, Math.PI, 4, 5]) {
+      w.rotation.x = ang;
+      bike.updateMatrixWorld(true);
+      const b = new THREE.Box3().setFromObject(w, true);
+      const ground = a.avatar.rig.root.position.y;
+      assert.ok(Math.abs(b.min.y - ground) < 0.02, `ruota a terra (${(b.min.y - ground).toFixed(3)} a ${ang.toFixed(1)} rad)`);
+    }
+  }
   assert.ok(a.avatar.rig.root.children[0].position.y > 0.2, 'seduto in sella');
   // cambiando aspetto la bici resta
   a.setStyle('miniature');

@@ -61,7 +61,14 @@ export function bicycleLP(parked = true, crank = 0, part: 'all' | 'frame' | 'whe
   const bb = BIKE.bb, seat: [number, number, number] = [0, 0.4, -0.1];
   const head: [number, number, number] = [0, 0.47, 0.21], headLow: [number, number, number] = [0, 0.35, 0.245];
   const all = part === 'all';
-  if (part === 'wheel') { wheel(lp, 0, R); lp.pop(); return lp.build(); }
+  if (part === 'wheel') {
+    // centrata sul mozzo: è il perno attorno a cui gira (wheel() la mette a terra, un raggio più su)
+    lp.push([0, -R, 0]);
+    wheel(lp, 0, R);
+    lp.pop();
+    lp.pop();
+    return lp.build();
+  }
   if (part === 'crank') {
     for (const s of [-1, 1]) {
       const a = s > 0 ? 0 : Math.PI;

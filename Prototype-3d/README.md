@@ -107,6 +107,8 @@ interagisci, `B` sali/scendi dalla bici, `V` cambia stile (low-poly → voxel �
   dall'alto non c'è più, i salvataggi tornano alla vista obliqua); in sella ruote e pedali
   girano con la strada fatta, i piedi seguono i pedali, il fanalino illumina la notte.
   Scendendo la bici sparisce.
+  *In prova*: bici, bar e orto si comprano già a qualsiasi rango (il prezzo resta); il
+  vincolo di rango torna con `RELEASE_LOCKS.earlyRank` in `src/game/balance.ts`.
 - **Bar degli zombie** e **Orto dei cervelli** (Costruzioni, rango 3, 45 e 35 ✦, pezzi
   unici, 3×2 e 4×3): il bar ha bancone, bara-frigo con le bottiglie, lavagna a lapide e
   pipistrelli, con barista, avventori che brindano coi boccali e un ballerino; nell'orto uno

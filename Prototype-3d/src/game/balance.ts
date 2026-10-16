@@ -68,9 +68,13 @@ export const SIM = {
 /** Decadimento & riparazione. */
 /**
  * Sblocchi da attivare solo nella versione finale: per ora (test) l'Albero
- * dei ricordi si compra subito, senza aspettare le 20 tombe.
+ * dei ricordi si compra subito, senza aspettare le 20 tombe, e bicicletta,
+ * bar e orto senza aspettare il rango (il prezzo resta).
  */
-export const RELEASE_LOCKS = { minGraves: false };
+export const RELEASE_LOCKS = { minGraves: false, earlyRank: false };
+
+/** Oggetti in prova: con `RELEASE_LOCKS.earlyRank` spento si comprano a qualsiasi rango. */
+export const EARLY_ACCESS: ReadonlySet<string> = new Set(['bike', 'zombie_bar', 'brain_farm']);
 
 export const DECAY = {
   /** Tomba: giorni dal primo segno d'incuria (erbacce o sporco) a rotta. */

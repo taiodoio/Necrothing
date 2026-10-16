@@ -458,7 +458,11 @@ function placeBusiness(s, type) {
 
 test('bicicletta: Extra dal rango 2 a 50 fuochi fatui, pezzo unico, non si posa sulla mappa', () => {
   const s = richAt(0);
+  // in prova si compra a qualsiasi rango; nella versione finale serve il rango 2
+  assert.equal(R.shopAvailability(s, 'bike', NOW), 'ok');
+  RELEASE_LOCKS.earlyRank = true;
   assert.equal(R.shopAvailability(s, 'bike', NOW), 'rank');
+  RELEASE_LOCKS.earlyRank = false;
   s.player.xp = 500;
   assert.equal(R.shopAvailability(s, 'bike', NOW), 'ok');
   R.buy(s, 'bike', 1, NOW);
@@ -509,7 +513,10 @@ test('bar e orto: incasso giornaliero casuale ma stabile, entro i limiti, con te
 
 test('bar e orto: rango 3, pezzi unici, attirano zombie anche senza tombe aperte', () => {
   const s = richAt(500);
+  assert.equal(R.shopAvailability(s, 'zombie_bar', NOW), 'ok'); // in prova
+  RELEASE_LOCKS.earlyRank = true;
   assert.equal(R.shopAvailability(s, 'zombie_bar', NOW), 'rank');
+  RELEASE_LOCKS.earlyRank = false;
   s.player.xp = 1500;
   placeBusiness(s, 'zombie_bar');
   placeBusiness(s, 'brain_farm');

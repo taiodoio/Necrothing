@@ -5,7 +5,7 @@
 
 import * as THREE from 'three';
 import { CUSTODE_SPEED, MAP_SIZE } from '../game/balance.ts';
-import { CATALOG, rotatedFootprint } from '../game/catalog.ts';
+import { isPetHouse, rotatedFootprint, visualOf } from '../game/catalog.ts';
 import { createRng, hashString } from '../game/rng.ts';
 import type { RoamerKind, SpawnRequest } from '../game/spawn.ts';
 import type { ArtStyle, Placed, SaveData } from '../game/state.ts';
@@ -27,6 +27,9 @@ const LIFESPAN: Record<RoamerKind, number> = { ghost: 26, cat: 32, crow: 22, gra
 const SPEED: Record<RoamerKind, number> = { ghost: 0.9, cat: 1.6, crow: 3.2, gravedigger: 1.1, priest: 0.9, rat: 2.6, zombie: 0.85 };
 const RIG_FOR: Record<RoamerKind, CharacterKind> = { ghost: 'ghost', cat: 'cat', crow: 'crow', gravedigger: 'gravedigger', priest: 'priest', rat: 'rat', zombie: 'zombie' };
 const PET_KINDS: CharacterKind[] = ['petDog', 'petCat', 'petRabbit', 'petDuck', 'petCrow'];
+const PET_LABELS = ['Cane', 'Gatto', 'Coniglio', 'Papera', 'Corvo'];
+/** Quale animale vive in una casetta (ogni animale ha la sua casetta in Bottega). */
+const petKind = (h: Placed) => visualOf(h.type, h.variant).variant;
 
 const FADE_OUT = 0.6;
 
@@ -851,11 +854,11 @@ export class Actors {
 
   /** Una casetta = un animale: si creano, spostano e tolgono con le casette. */
   private syncPets(state: SaveData) {
-    const houses = state.placeables.filter((p) => p.type === 'pet_house');
+    const houses = state.placeables.filter((p) => isPetHouse(p.type));
     for (const [id, pet] of this.pets) if (!houses.some((h) => h.id === id)) this.removePet(pet);
     for (const h of houses) {
       let pet = this.pets.get(h.id);
-      if (pet && pet.variant !== h.variant) { this.removePet(pet); pet = undefined; }
+      if (pet && pet.variant !== petKind(h)) { this.removePet(pet); pet = undefined; }
       if (!pet) { pet = this.makePet(h); this.pets.set(h.id, pet); }
       const fp = rotatedFootprint(h.type, h.rot);
       const home = cellCenter(h.x, h.y, fp);
@@ -882,7 +885,8 @@ export class Actors {
     const fp = rotatedFootprint(h.type, h.rot);
     const home = cellCenter(h.x, h.y, fp);
     const door = home.clone().add(new THREE.Vector3(0, 0, 0.42));
-    const w = this.makeWalker(PET_KINDS[h.variant % PET_KINDS.length], door, PET_SPEED.roam);
+    const kind = petKind(h);
+    const w = this.makeWalker(PET_KINDS[kind % PET_KINDS.length], door, PET_SPEED.roam);
     const hitbox = new THREE.Mesh(new THREE.BoxGeometry(0.9, 0.8, 0.9), hitMat);
     hitbox.position.y = 0.4;
     hitbox.userData.petId = h.id;
@@ -891,10 +895,9 @@ export class Actors {
     const den = new Den('#8ff0dc');
     den.place(home);
     this.group.add(den.group);
-    const labels = CATALOG.pet_house.variantLabels ?? [];
     // riprende quello che faceva (salvato nella casetta); libero, si sveglia dopo poco
     return {
-      ...w, placeId: h.id, label: labels[h.variant % labels.length] ?? 'Animale', variant: h.variant, home, door, porch: this.porchOf(h),
+      ...w, placeId: h.id, label: PET_LABELS[kind % PET_LABELS.length], variant: kind, home, door, porch: this.porchOf(h),
       mode: h.petMode ?? 'free', act: 'sleep', timer: h.petMode === 'follow' ? 0.3 : 2 + createRng(h.id).next() * 10, repath: 0, roams: 0, chasing: false, broken: h.broken, hitbox, den,
     };
   }

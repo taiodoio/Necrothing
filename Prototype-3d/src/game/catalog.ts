@@ -42,9 +42,12 @@ export interface PlaceableDef {
   rotatable?: boolean;
   /** Il Custode può attraversarlo (sentieri, archi, erba). */
   walkable?: boolean;
-  /** Numero di varianti estetiche (Excel "x 3", "x 2", animali). */
-  variants?: number;
-  variantLabels?: string[];
+  /**
+   * Variante di un altro oggetto (una voce a sé in Bottega, con prezzo e rango
+   * propri): usa il modello di `family` nella variante `look`.
+   */
+  family?: string;
+  look?: number;
   /** Disponibile solo in un mese (0 = gennaio). */
   onlyMonth?: number;
   /** Testo personalizzabile (cartello). */
@@ -57,8 +60,12 @@ export interface PlaceableDef {
 
 const defs: PlaceableDef[] = [
   // ── Luci ──────────────────────────────────────────────────────────────
-  { id: 'lamp_post', label: 'Lampione', category: 'light', footprint: [1, 1], cost: 8, minRank: 1, decays: true, light: true, variants: 3, variantLabels: ['Ferro battuto', 'Doppio braccio', 'Gotico'], description: 'Illumina la strada a chi torna. O a chi non se n’è mai andato.' },
-  { id: 'lantern', label: 'Lanterna', category: 'light', footprint: [1, 1], cost: 5, minRank: 1, decays: true, light: true, variants: 3, variantLabels: ['Da terra', 'Su paletto', 'Su pietra'], description: 'Una fiammella paziente, che non chiede nulla.' },
+  { id: 'lamp_post', label: 'Lampione', category: 'light', footprint: [1, 1], cost: 8, minRank: 1, decays: true, light: true, description: 'Illumina la strada a chi torna. O a chi non se n’è mai andato.' },
+  { id: 'lamp_post_double', label: 'Lampione a doppio braccio', category: 'light', footprint: [1, 1], cost: 12, minRank: 2, decays: true, light: true, family: 'lamp_post', look: 1, description: 'Due lanterne invece di una: per i viali dove si torna in compagnia.' },
+  { id: 'lamp_post_gothic', label: 'Lampione gotico', category: 'light', footprint: [1, 1], cost: 16, minRank: 3, decays: true, light: true, family: 'lamp_post', look: 2, description: 'Guglie e ferro lavorato: fa luce e un po’ di soggezione.' },
+  { id: 'lantern', label: 'Lanterna da terra', category: 'light', footprint: [1, 1], cost: 5, minRank: 1, decays: true, light: true, description: 'Una fiammella paziente, che non chiede nulla.' },
+  { id: 'lantern_pole', label: 'Lanterna su paletto', category: 'light', footprint: [1, 1], cost: 7, minRank: 1, decays: true, light: true, family: 'lantern', look: 1, description: 'Un po’ più in alto, per vedere chi arriva da lontano.' },
+  { id: 'lantern_stone', label: 'Lanterna su pietra', category: 'light', footprint: [1, 1], cost: 9, minRank: 2, decays: true, light: true, family: 'lantern', look: 2, description: 'Appoggiata su un sasso che nessuno ricorda di aver portato.' },
   { id: 'ghost_lantern', label: 'Lanterna fantasma', category: 'light', footprint: [1, 1], cost: 9, minRank: 2, decays: true, light: true, description: 'Brucia di una luce verde che nessuno ha acceso.' },
   { id: 'glow_pumpkin', label: 'Zucca luminosa', category: 'light', footprint: [1, 1], cost: 4, minRank: 1, decays: true, light: true, description: 'Sorride sempre. È questo che inquieta.' },
   { id: 'skull_candle', label: 'Teschio con candela', category: 'light', footprint: [1, 1], cost: 5, minRank: 2, decays: true, light: true, description: 'Un vecchio amico che ha trovato una nuova vocazione.' },
@@ -73,7 +80,8 @@ const defs: PlaceableDef[] = [
   { id: 'votive_statue', label: 'Statua votiva', category: 'decoration', footprint: [2, 2], cost: 18, minRank: 2, description: 'Una santa incappucciata con le mani giunte e le candele ai piedi.' },
   { id: 'open_coffin', label: 'Bara aperta', category: 'decoration', footprint: [1, 2], cost: 10, minRank: 2, rotatable: true, description: 'Vuota. Per ora. Gli zombie la trovano molto accogliente.' },
   { id: 'bones', label: 'Ossa', category: 'decoration', footprint: [1, 1], cost: 3, minRank: 1, walkable: true, description: 'Qualcuno le ha perse. Qualcun altro le cerca.' },
-  { id: 'vase', label: 'Vaso', category: 'decoration', footprint: [1, 1], cost: 3, minRank: 1, variants: 2, variantLabels: ['Anfora', 'Urna'], description: 'Terracotta antica. Dentro, solo polvere. Si spera.' },
+  { id: 'vase', label: 'Anfora', category: 'decoration', footprint: [1, 1], cost: 3, minRank: 1, description: 'Terracotta antica. Dentro, solo polvere. Si spera.' },
+  { id: 'urn', label: 'Urna', category: 'decoration', footprint: [1, 1], cost: 5, minRank: 2, family: 'vase', look: 1, description: 'Col coperchio ben chiuso. Meglio non chiedere.' },
 
   // ── Costruzioni ───────────────────────────────────────────────────────
   { id: 'shop', label: 'Bottega', category: 'structure', footprint: [3, 3], cost: 0, minRank: 1, unique: true, permanent: true, decays: true, light: true, description: 'Qui si compra tutto ciò che serve a un cimitero perbene. Anche ciò che non serve.' },
@@ -95,7 +103,11 @@ const defs: PlaceableDef[] = [
   { id: 'fountain', label: 'Fontana', category: 'structure', footprint: [3, 3], cost: 40, minRank: 3, unique: true, decays: true, description: 'L’acqua è torbida e canticchia.' },
   { id: 'hell_hole', label: 'Buco infernale', category: 'structure', footprint: [2, 2], cost: 45, minRank: 4, unique: true, decays: true, light: true, description: 'Un bagliore rosso dal profondo. Aumenta le apparizioni.' },
   { id: 'memory_tree', label: 'Albero dei ricordi', category: 'structure', footprint: [5, 5], cost: 150, minRank: 1, unique: true, minGraves: 20, description: 'Un albero antico che accoglie ciò che non vuoi più tenere in una tomba. Affidagli una sepoltura: la terra se la prende, lo spazio si libera, il ricordo resta appeso ai suoi rami.' },
-  { id: 'pet_house', label: 'Casetta per animale', category: 'structure', footprint: [2, 2], cost: 20, minRank: 2, decays: true, variants: 5, variantLabels: ['Cane', 'Gatto', 'Coniglio', 'Papera', 'Corvo'], description: 'Ci vive un animaletto scheletro: gira libero per il cimitero e torna a dormire in tana. Toccalo per farti raggiungere, liberarlo, mandarlo a cuccia, accarezzarlo o lanciargli l’osso.' },
+  { id: 'pet_house', label: 'Cuccia del cane', category: 'structure', footprint: [2, 2], cost: 20, minRank: 2, decays: true, description: 'Ci vive un cagnolino scheletro: gira libero per il cimitero e torna a dormire in tana. Toccalo per farti raggiungere, liberarlo, mandarlo a cuccia, accarezzarlo o lanciargli l’osso.' },
+  { id: 'pet_house_cat', label: 'Cuccia del gatto', category: 'structure', footprint: [2, 2], cost: 22, minRank: 2, decays: true, family: 'pet_house', look: 1, description: 'Ci vive un gatto scheletro: fa le fusa, ma solo quando gli pare. Toccalo per farti raggiungere, liberarlo, mandarlo a cuccia, accarezzarlo o lanciargli l’osso.' },
+  { id: 'pet_house_rabbit', label: 'Casetta del coniglio', category: 'structure', footprint: [2, 2], cost: 24, minRank: 3, decays: true, family: 'pet_house', look: 2, description: 'Ci vive un coniglietto scheletro: saltella tra le lapidi. Toccalo per farti raggiungere, liberarlo, mandarlo a cuccia, accarezzarlo o lanciargli l’osso.' },
+  { id: 'pet_house_duck', label: 'Casetta della papera', category: 'structure', footprint: [2, 2], cost: 24, minRank: 3, decays: true, family: 'pet_house', look: 3, description: 'Ci vive una papera scheletro: starnazza, e nessuno sa con cosa. Toccalo per farti raggiungere, liberarlo, mandarlo a cuccia, accarezzarlo o lanciargli l’osso.' },
+  { id: 'pet_house_crow', label: 'Casetta del corvo', category: 'structure', footprint: [2, 2], cost: 28, minRank: 3, decays: true, family: 'pet_house', look: 4, description: 'Ci vive un corvo scheletro: porta notizie dall’aldilà, quasi sempre sbagliate. Toccalo per farti raggiungere, liberarlo, mandarlo a cuccia, accarezzarlo o lanciargli l’osso.' },
 
   // ── Ambiente ──────────────────────────────────────────────────────────
   { id: 'pond', label: 'Lago con pesci morti', category: 'ambient', footprint: [4, 3], cost: 30, minRank: 2, description: 'Ninfee, canne e qualche pesce a pancia in su.' },
@@ -125,6 +137,25 @@ const defs: PlaceableDef[] = [
 
 export const CATALOG: Record<string, PlaceableDef> = Object.fromEntries(defs.map((d) => [d.id, d]));
 export const CATALOG_LIST: readonly PlaceableDef[] = defs;
+
+/** Le varianti (oggetti a sé) di ogni famiglia: indice = vecchio numero di variante. */
+export const FAMILY_MEMBERS: Record<string, string[]> = {};
+for (const d of defs) {
+  if (!d.family) continue;
+  const m = (FAMILY_MEMBERS[d.family] ??= [d.family]);
+  m[d.look ?? 0] = d.id;
+}
+
+/** Il modello da disegnare per un oggetto: le varianti usano quello della loro famiglia. */
+export function visualOf(type: string, variant: number): { type: string; variant: number } {
+  const d = CATALOG[type];
+  return d?.family ? { type: d.family, variant: d.look ?? 0 } : { type, variant };
+}
+
+/** Casette per animale (tutte le varianti). */
+export function isPetHouse(type: string): boolean {
+  return (CATALOG[type]?.family ?? type) === 'pet_house';
+}
 
 export function placeableDef(type: string): PlaceableDef {
   const def = CATALOG[type];

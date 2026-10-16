@@ -6,7 +6,7 @@ import { areaBanner, openExpansionOffer } from './expansion.ts';
 import type * as THREE from 'three';
 import type { EntityAction, Game } from '../app/Game.ts';
 import { DECAY } from '../game/balance.ts';
-import { CATALOG, repairCost } from '../game/catalog.ts';
+import { CATALOG, isPetHouse, repairCost } from '../game/catalog.ts';
 import { GRAVE_STATE_LABELS, GRAVE_TYPE_LABELS, graveVisualState } from '../game/graves.ts';
 import { nextRank, rankForXp, rankProgress } from '../game/progression.ts';
 import type * as R from '../game/rules.ts';
@@ -219,7 +219,6 @@ export class UI {
       sub = p.broken ? 'Rotto' : p.dirty ? 'Sporco' : def.light ? (p.lit ? 'Acceso' : 'Spento') : def.category === 'npc' ? 'Presenza' : 'In ordine';
       if (this.game.editMode) {
         if (def.rotatable) actions.push({ act: 'rotate', label: 'Ruota', icon: 'variant' });
-        if ((def.variants ?? 1) > 1) actions.push({ act: 'variant', label: 'Variante', icon: 'gallery' });
         if (!def.permanent) actions.push({ act: 'store', label: 'Riponi', icon: 'bag', cls: 'danger' });
         actions.push({ act: 'confirm', label: 'Fatto', icon: 'check', cls: 'primary' });
       } else {
@@ -230,7 +229,7 @@ export class UI {
         else if (p.dirty) actions.push({ act: 'clean', label: 'Pulisci', icon: 'broom' });
         if (def.light && !p.broken) actions.push({ act: 'light', label: p.lit ? 'Spegni' : 'Accendi', icon: p.lit ? 'lightOff' : 'lightOn' });
         // la casetta porta anche il menù del suo animale (utile quando dorme in tana)
-        if (p.type === 'pet_house') { petActions = this.game.petMenu(p.id); sub = `${sub} · ${this.game.petStatus(p.id)}`; }
+        if (isPetHouse(p.type)) { petActions = this.game.petMenu(p.id); sub = `${sub} · ${this.game.petStatus(p.id)}`; }
       }
     }
     this.ctxId = sel.id;

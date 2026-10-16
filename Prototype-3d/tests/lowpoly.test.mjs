@@ -53,7 +53,8 @@ test('lo stato della tomba cambia la geometria: fiori e candele accese, sporcizi
 });
 
 test('catalogo completo: ogni oggetto ha un generatore low-poly dedicato', () => {
-  const missing = Object.keys(CATALOG).filter((id) => !LP_PLACEABLES[id]);
+  // le varianti (oggetti a sé) usano il generatore della loro famiglia
+  const missing = Object.values(CATALOG).filter((d) => !LP_PLACEABLES[d.family ?? d.id]).map((d) => d.id);
   assert.deepEqual(missing, []);
 });
 
@@ -822,4 +823,22 @@ test('bicicletta: in sella compare sotto il Custode e lo porta al doppio della v
   assert.ok(!a.avatar.rig.root.getObjectByName('bici'));
   assert.equal(a.avatar.rig.root.children[0].position.y, 0);
   assert.equal(anchors.size, lamps0);
+});
+
+test('varianti: ogni casetta ha il suo animale e ogni variante ha la sua miniatura/modello', async () => {
+  const { Actors } = await import('../src/view/Actors.ts');
+  const { cellCenter } = await import('../src/view/WorldView.ts');
+  const { FAMILY_MEMBERS } = await import('../src/game/catalog.ts');
+  const s = createNewGame(new Date('2026-10-09T12:00:00Z'), 9);
+  const iso = s.createdAt;
+  FAMILY_MEMBERS.pet_house.forEach((type, i) => s.placeables.push({ id: `h${i}`, type, x: 20 + i * 3, y: 30, rot: 0, variant: 0, lit: true, caredAt: iso, dirty: false, broken: false, createdAt: iso }));
+  const atmosphere = { addAnchor: () => ({}), removeAnchor() {}, moveAnchor() {} };
+  const a = new Actors(new THREE.Scene(), atmosphere, 'lowpoly', cellCenter(24, 42, [1, 1]));
+  a.syncPresences(s, new Date());
+  assert.deepEqual(FAMILY_MEMBERS.pet_house.map((_, i) => a.petAt(`h${i}`).label), ['Cane', 'Gatto', 'Coniglio', 'Papera', 'Corvo']);
+  // modelli: la variante e la famiglia nella stessa forma condividono la chiave (stessa cache)
+  const key = (type, variant = 0) => placeableKey({ type, variant, dirty: false, broken: false, lit: true, seed: 1 });
+  assert.equal(key('lamp_post_gothic'), key('lamp_post', 2));
+  assert.notEqual(key('lamp_post_gothic'), key('lamp_post'));
+  for (const fam of Object.values(FAMILY_MEMBERS)) assert.equal(new Set(fam.map((t) => key(t))).size, fam.length);
 });

@@ -5,7 +5,7 @@ import { DEFAULT_LOOK, normalizeLook, type CustodeLook } from './look.ts';
 import type { Category, DeathCause, GraveType } from './graves.ts';
 import type { DayPhase } from './time.ts';
 import { MAP_SIZE, WISPS } from './balance.ts';
-import { CATALOG } from './catalog.ts';
+import { CATALOG, FAMILY_MEMBERS } from './catalog.ts';
 import { createRng, hashString } from './rng.ts';
 import { isoDate } from './time.ts';
 
@@ -216,11 +216,11 @@ export function createNewGame(now: Date, seed = Math.floor(Math.random() * 1e9))
     P('bushes', 26, 17),
     P('bushes', 16, 40),
     P('lamp_post', 30, 26),
-    P('lamp_post', 32, 37, { variant: 2 }),
-    P('lamp_post', 30, 45, { variant: 1 }),
+    P('lamp_post_gothic', 32, 37),
+    P('lamp_post_double', 30, 45),
     P('lantern', 24, 27),
-    P('lantern', 37, 27, { variant: 2 }),
-    P('lantern', 28, 20, { variant: 1 }),
+    P('lantern_stone', 37, 27),
+    P('lantern_pole', 28, 20),
     P('lantern', 42, 31),
     P('tall_grass', 36, 35),
     P('tall_grass', 46, 40),
@@ -318,6 +318,11 @@ export function normalizeSave(raw: unknown): SaveData | null {
     data.placeables = (data.placeables ?? []).filter((p) => p.type !== 'skeleton_pet');
     if (data.inventory) delete (data.inventory as Record<string, number>).skeleton_pet;
     data.player = { ...data.player, wisps: (data.player.wisps ?? 0) + bowls * 18 };
+  }
+  // le varianti sono diventate oggetti a sé (Lampione gotico, Urna, Cuccia del gatto…): chi le aveva le tiene
+  for (const p of data.placeables ?? []) {
+    const id = FAMILY_MEMBERS[p.type]?.[p.variant];
+    if (p.variant > 0 && id) { p.type = id; p.variant = 0; }
   }
   // i pezzi in serie (sentieri, muretti, staccionate…) non si sporcano più: tornano puliti
   for (const p of data.placeables ?? []) if (CATALOG[p.type] && !CATALOG[p.type].decays) { p.dirty = false; p.broken = false; }

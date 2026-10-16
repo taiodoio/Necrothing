@@ -35,7 +35,7 @@ import { closedCoffinLP } from '../render/lowpoly/memoryTree.ts';
 export type Selection = { kind: 'grave' | 'placeable'; id: string } | null;
 
 export type EntityAction =
-  | 'detail' | 'clean' | 'repair' | 'flowers' | 'light' | 'shop' | 'rotate' | 'variant' | 'store' | 'confirm' | 'exhume' | 'move' | 'entrust' | 'memories';
+  | 'detail' | 'clean' | 'repair' | 'flowers' | 'light' | 'shop' | 'rotate' | 'store' | 'confirm' | 'exhume' | 'move' | 'entrust' | 'memories';
 
 const PET_STATUS: Record<PetMode, string> = { free: 'Gira libero', follow: 'Ti segue', home: 'A cuccia' };
 
@@ -417,7 +417,7 @@ export class Game {
     const grave = this.state.graves.find((g) => g.id === id);
     // durante il rito la tomba affidata e l'albero restano dove sono finché il corteo non ha finito
     if (this.riteIds?.includes(id) && !['detail', 'memories', 'shop'].includes(action)) { toast('Aspetta che il corteo finisca il rito.'); return; }
-    const instant: EntityAction[] = ['detail', 'shop', 'rotate', 'variant', 'store', 'confirm', 'exhume', 'move', 'entrust', 'memories'];
+    const instant: EntityAction[] = ['detail', 'shop', 'rotate', 'store', 'confirm', 'exhume', 'move', 'entrust', 'memories'];
     const run = () => {
       switch (action) {
         case 'clean': this.actors.work(); this.act((s, n) => (grave ? R.cleanGrave(s, id, n) : R.cleanPlaceable(s, id, n)), center); break;
@@ -425,7 +425,6 @@ export class Game {
         case 'flowers': this.actors.work(0.8); this.act((s, n) => R.bringFlowers(s, id, n), center); break;
         case 'light': this.act((s) => R.toggleLight(s, id), center); break;
         case 'rotate': this.act((s) => R.rotateEntity(s, id)); break;
-        case 'variant': this.act((s) => R.cycleVariant(s, id)); break;
         case 'store': this.act((s) => R.storePlaceable(s, id)); this.select(null); break;
         case 'exhume': this.act((s) => R.exhumeGrave(s, id)); this.select(null); break;
         case 'confirm': this.select(null); toast('Posizionato. Riposi in pace.'); break;

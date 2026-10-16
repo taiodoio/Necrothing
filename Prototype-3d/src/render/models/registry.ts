@@ -1,7 +1,7 @@
 // Registro dei modelli procedurali: (tipo, stato) → Model. Usato dal mondo
 // di gioco e dalla galleria di sviluppo.
 
-import { CATALOG_LIST, CATEGORY_ORDER, PLACEABLE_CATEGORY_LABELS } from '../../game/catalog.ts';
+import { CATALOG_LIST, CATEGORY_ORDER, PLACEABLE_CATEGORY_LABELS, visualOf } from '../../game/catalog.ts';
 import type { Model } from '../shape.ts';
 import { angelStatue, bones, npcHome, openCoffin, sign, vase, votiveStatue, wreath } from './decor.ts';
 import { bonfire, candleTree, ghostLantern, glowPumpkin, lampPost, lantern, skullCandle, torch } from './lights.ts';
@@ -80,6 +80,7 @@ export function placeableSeed(type: string, idHash: number): number {
 }
 
 export function placeableModel(v: PVis): Model {
+  v = canonical(v);
   const build = BUILDERS[v.type];
   if (!build) throw new Error(`Nessun modello per ${v.type}`);
   return build(v);
@@ -91,7 +92,14 @@ export function placeableVis(key: string): PVis | null {
   return m ? { type: m[1], variant: +m[2], seed: +m[3], dirty: m[4] === '1', broken: m[5] === '1', lit: m[6] === '1' } : null;
 }
 
+/** Le varianti (oggetti a sé) usano il modello della loro famiglia. */
+function canonical(v: PVis): PVis {
+  const vis = visualOf(v.type, v.variant);
+  return vis.type === v.type && vis.variant === v.variant ? v : { ...v, ...vis };
+}
+
 export function placeableKey(v: PVis): string {
+  v = canonical(v);
   return `p:${v.type}:${v.variant}:${v.seed}:${+v.dirty}${+v.broken}${+v.lit}`;
 }
 
@@ -106,11 +114,8 @@ export function gallerySets(): Record<string, GalleryItem[]> {
   for (const cat of CATEGORY_ORDER) {
     const items: GalleryItem[] = [];
     for (const d of CATALOG_LIST.filter((x) => x.category === cat)) {
-      const variants = d.variants ?? 1;
-      for (let variant = 0; variant < Math.min(variants, 3); variant++) {
-        const v: PVis = { type: d.id, variant, dirty: false, broken: false, lit: true, seed: 1 };
-        items.push({ key: placeableKey(v), build: () => placeableModel(v), fp: d.footprint });
-      }
+      const v: PVis = { type: d.id, variant: 0, dirty: false, broken: false, lit: true, seed: 1 };
+      items.push({ key: placeableKey(v), build: () => placeableModel(v), fp: d.footprint });
     }
     out[PLACEABLE_CATEGORY_LABELS[cat]] = items;
     if (cat === 'light' || cat === 'structure') {

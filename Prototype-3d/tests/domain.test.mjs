@@ -542,3 +542,49 @@ test('vista dall’alto tolta: i salvataggi tornano alla vista obliqua', async (
   const s = normalizeSave(JSON.parse(JSON.stringify(old)));
   assert.equal(s.settings.camera, 'angled');
 });
+
+// ── Varianti come oggetti a sé ──────────────────────────────────────────
+
+test('varianti: ogni variante è un oggetto a sé, con prezzo e rango propri, e usa il modello della famiglia', async () => {
+  const { CATALOG, FAMILY_MEMBERS, visualOf, isPetHouse } = await import('../src/game/catalog.ts');
+  assert.deepEqual(FAMILY_MEMBERS.lamp_post, ['lamp_post', 'lamp_post_double', 'lamp_post_gothic']);
+  assert.deepEqual(FAMILY_MEMBERS.lantern, ['lantern', 'lantern_pole', 'lantern_stone']);
+  assert.deepEqual(FAMILY_MEMBERS.vase, ['vase', 'urn']);
+  assert.deepEqual(FAMILY_MEMBERS.pet_house, ['pet_house', 'pet_house_cat', 'pet_house_rabbit', 'pet_house_duck', 'pet_house_crow']);
+  assert.ok(!CATALOG_LIST.some((d) => 'variants' in d || 'variantLabels' in d), 'niente più varianti sbloccate insieme');
+  assert.deepEqual(visualOf('lamp_post_gothic', 0), { type: 'lamp_post', variant: 2 });
+  assert.deepEqual(visualOf('dead_tree', 1), { type: 'dead_tree', variant: 1 });
+  assert.ok(isPetHouse('pet_house_crow') && isPetHouse('pet_house') && !isPetHouse('shop'));
+  // comprare il lampione base non dà il gotico: si sblocca col suo rango e si paga a parte
+  const s = createNewGame(NOW, 3);
+  s.player.wisps = 100; s.player.xp = 0;
+  assert.equal(R.shopAvailability(s, 'lamp_post', NOW), 'ok');
+  assert.equal(R.shopAvailability(s, 'lamp_post_gothic', NOW), 'rank');
+  s.player.xp = 1500;
+  R.buy(s, 'lamp_post_gothic', 1, NOW);
+  assert.equal(s.player.wisps, 100 - CATALOG.lamp_post_gothic.cost);
+  assert.equal(R.ownedCount(s, 'lamp_post_gothic'), 1);
+  assert.equal(R.ownedCount(s, 'lamp_post'), 0);
+  assert.ok(CATALOG.lamp_post_gothic.cost > CATALOG.lamp_post_double.cost && CATALOG.lamp_post_double.cost > CATALOG.lamp_post.cost);
+});
+
+test('varianti: i salvataggi vecchi trasformano le varianti posate negli oggetti nuovi', async () => {
+  const { normalizeSave } = await import('../src/game/state.ts');
+  const old = createNewGame(NOW, 4);
+  const iso = NOW.toISOString();
+  const base = { rot: 0, lit: true, caredAt: iso, dirty: false, broken: false, createdAt: iso };
+  old.placeables.push(
+    { ...base, id: 'a', type: 'lamp_post', x: 1, y: 1, variant: 2 },
+    { ...base, id: 'b', type: 'pet_house', x: 3, y: 3, variant: 4 },
+    { ...base, id: 'c', type: 'vase', x: 6, y: 6, variant: 1 },
+    { ...base, id: 'd', type: 'lantern', x: 8, y: 8, variant: 0 },
+  );
+  const s = normalizeSave(JSON.parse(JSON.stringify(old)));
+  const by = (id) => s.placeables.find((p) => p.id === id);
+  assert.deepEqual([by('a').type, by('a').variant], ['lamp_post_gothic', 0]);
+  assert.deepEqual([by('b').type, by('b').variant], ['pet_house_crow', 0]);
+  assert.equal(by('c').type, 'urn');
+  assert.equal(by('d').type, 'lantern');
+  // la nuova partita usa già gli oggetti nuovi
+  assert.ok(createNewGame(NOW, 4).placeables.some((p) => p.type === 'lamp_post_gothic'));
+});

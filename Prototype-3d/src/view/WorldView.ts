@@ -8,7 +8,7 @@
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import { GRAVE_FOOTPRINT, MAP_SIZE } from '../game/balance.ts';
-import { CATALOG, rotatedFootprint } from '../game/catalog.ts';
+import { CATALOG, rotatedFootprint, visualOf } from '../game/catalog.ts';
 import { graveVisualState } from '../game/graves.ts';
 import { hash3, hashString, createRng } from '../game/rng.ts';
 import type { ArtStyle, Grave, Placed, SaveData } from '../game/state.ts';
@@ -562,7 +562,9 @@ export class WorldView {
   private treeMemories = 0;
 
   pvis(p: Placed): PVis {
-    return { type: p.type, variant: p.type === 'memory_tree' ? this.treeMemories : p.variant, dirty: p.dirty, broken: p.broken, lit: p.lit, seed: placeableSeed(p.type, hashString(p.id)) };
+    // le varianti diventate oggetti a sé si disegnano col modello della loro famiglia
+    const vis = visualOf(p.type, p.type === 'memory_tree' ? this.treeMemories : p.variant);
+    return { type: vis.type, variant: vis.variant, dirty: p.dirty, broken: p.broken, lit: p.lit, seed: placeableSeed(vis.type, hashString(p.id)) };
   }
 
   private syncPlaceable(p: Placed) {

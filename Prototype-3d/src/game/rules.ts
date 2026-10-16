@@ -318,14 +318,6 @@ export function setText(s: SaveData, id: string, text: string): ActionResult {
   return ok('Scritta aggiornata.');
 }
 
-export function cycleVariant(s: SaveData, id: string): ActionResult {
-  const p = placedById(s, id);
-  const def = placeableDef(p.type);
-  if (!def.variants || def.variants < 2) throw new GameError('Nessuna variante.');
-  p.variant = (p.variant + 1) % def.variants;
-  return ok(def.variantLabels?.[p.variant] ?? `Variante ${p.variant + 1}`);
-}
-
 // ── Bottega & inventario ────────────────────────────────────────────────
 
 export function ownedCount(s: SaveData, type: string): number {

@@ -114,7 +114,7 @@ export function openBurial(ui: UI, initial?: R.BurialDraft, startStep = 0) {
 export function openEditIntro(ui: UI) {
   let dontShow = true;
   openDrawer('Modalità Modifica', h('div', {},
-    h('p', { class: 'muted' }, 'In Modifica tocchi un elemento per selezionarlo e lo trascini per spostarlo. Dal menù puoi ruotarlo, cambiarne la variante o riporlo nell’inventario. Fuori da Modifica, il tocco è solo interazione.'),
+    h('p', { class: 'muted' }, 'In Modifica tocchi un elemento per selezionarlo e lo trascini per spostarlo. Dal menù puoi ruotarlo o riporlo nell’inventario. Fuori da Modifica, il tocco è solo interazione.'),
     h('label', { class: 'setting' }, 'Non mostrare più', h('input', { type: 'checkbox', checked: true, onchange: (e: Event) => { dontShow = (e.target as HTMLInputElement).checked; } })),
   ), {
     footer: h('button', { class: 'big-btn', onclick: () => { if (dontShow) ui.game.state.settings.editIntroSeen = true; closeDrawer(); ui.game.setEditMode(true); ui.game.afterChange(); } }, 'Inizia'),
@@ -268,7 +268,6 @@ export function openDetail(ui: UI, id: string) {
     h('div', { class: 'hero' }, h('img', { src: placeableThumb(p.type, style, p.variant), alt: '' }), h('h3', {}, d.label), h('p', { class: 'muted' }, d.description)),
     h('dl', { class: 'kv' },
       h('dt', {}, 'Categoria'), h('dd', {}, PLACEABLE_CATEGORY_LABELS[d.category]),
-      d.variantLabels ? h('dt', {}, 'Variante') : null, d.variantLabels ? h('dd', {}, d.variantLabels[p.variant]) : null,
       d.decays ? h('dt', {}, 'Condizione') : null, d.decays ? h('dd', {}, p.broken ? `Rotto (riparare: ${repairCost(d)} fuochi fatui)` : p.dirty ? 'Sporco: va pulito' : 'In ordine — prima o poi avrà bisogno di una pulita') : null,
       d.light ? h('dt', {}, 'Luce') : null, d.light ? h('dd', {}, p.broken ? 'Guasta' : p.lit ? 'Accesa' : 'Spenta') : null,
       BUSINESS[p.type] ? h('dt', {}, 'Incasso') : null, BUSINESS[p.type] ? h('dd', {}, businessLine(s, p.id, p.type, game.now())) : null,

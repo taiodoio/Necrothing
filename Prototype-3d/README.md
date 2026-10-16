@@ -83,8 +83,15 @@ interagisci, `B` sali/scendi dalla bici, `V` cambia stile (low-poly → voxel �
 - **Bottega** (pre-piazzata, tutorial al primo avvio, non eliminabile ma spostabile):
   acquisto con quantità, pezzi unici, sblocchi per rango, albero di Natale solo a
   dicembre. **Inventario** per categorie con *Inserisci* / *Vendi* (70%).
-- **Modifica**: tocca un elemento, trascinalo (anteprima verde/rossa), ruota, cambia
-  variante, riponi in inventario; popup introduttivo con "non mostrare più".
+- **Varianti come oggetti a sé**: ogni variante si compra per conto suo, con prezzo e
+  rango propri (comprare l'oggetto base non sblocca più le altre forme). Lampione 8 (R1),
+  a doppio braccio 12 (R2), gotico 16 (R3); lanterna da terra 5 (R1), su paletto 7 (R1),
+  su pietra 9 (R2); anfora 3 (R1), urna 5 (R2); cuccia del cane 20 (R2), del gatto 22
+  (R2), casetta del coniglio, della papera 24 (R3) e del corvo 28 (R3). Nel catalogo una
+  variante ha `family`/`look`: usa il modello della famiglia. I salvataggi vecchi
+  trasformano le varianti posate negli oggetti nuovi.
+- **Modifica**: tocca un elemento, trascinalo (anteprima verde/rossa), ruota, riponi in
+  inventario; popup introduttivo con "non mostrare più".
 - **Fuochi fatui**: compaiono sulla mappa in funzione di tombe, cure e fiori (la
   benedizione del prete li aumenta per 24 ore); il Custode li raccoglie passandoci.
 - **Presenze erranti** dalla matrice di spawn (fantasma, fantasma-oggetto raro, gatto,
@@ -252,7 +259,7 @@ dimensioni Procreate*: 8 luci, 7 decorazioni, 17 costruzioni, 13 elementi
 d'ambiente, 6 presenze, più le 10 lapidi della PWA. L'ingombro dell'Excel era quello
 dello sprite 2D top-down; in 3D è stato convertito in **ingombro a terra** (es.
 lampione 2×3 → 1×1 alto, albero con candele 4×4 → 3×3). Le varianti "(x 3)", "(x 2)"
-e gli animali sono varianti selezionabili in Modifica. Stati gestiti: acceso/spento,
+e gli animali sono oggetti a sé in Bottega. Stati gestiti: acceso/spento,
 sporco, rotto, luci notturne; tombe pulite/con fiori/sporche/rotte.
 
 ### Aggiungere un asset

@@ -2,11 +2,11 @@
 // rispetto a three/DOM. Ogni azione muta lo SaveData passato e ritorna un
 // esito (messaggio + ricompense) oppure lancia GameError.
 
-import { DECAY, ECONOMY, RELEASE_LOCKS, EXPANSION, GRAVE_FOOTPRINT, GRAVEDIGGER, WISP_SPAWN, WISPS, XP } from './balance.ts';
+import { BUSINESS, DECAY, EARLY_ACCESS, ECONOMY, RELEASE_LOCKS, EXPANSION, GRAVE_FOOTPRINT, GRAVEDIGGER, WISP_SPAWN, WISPS, XP } from './balance.ts';
 import { CATALOG, isSeasonallyAvailable, placeableDef, repairCost, rotatedFootprint } from './catalog.ts';
 import { CATEGORIES, DEATH_CAUSES, GRAVE_TYPE_MIN_RANK, GRAVE_TYPES, type Category, type DeathCause, type GraveType } from './graves.ts';
 import { evaluateAchievements, rankForXp, type AchievementDef } from './progression.ts';
-import { newId } from './rng.ts';
+import { hashString, newId } from './rng.ts';
 import type { RoamerKind } from './spawn.ts';
 import type { Grave, MemoryType, Placed, SaveData } from './state.ts';
 import { isoDate } from './time.ts';
@@ -346,7 +346,8 @@ export function graveTotal(s: SaveData): number {
 export function shopAvailability(s: SaveData, type: string, now: Date): ShopAvailability {
   const def = placeableDef(type);
   if (!isSeasonallyAvailable(def, now.getMonth())) return 'season';
-  if (def.minRank > rankForXp(s.player.xp).level) return 'rank';
+  const early = !RELEASE_LOCKS.earlyRank && EARLY_ACCESS.has(type);
+  if (!early && def.minRank > rankForXp(s.player.xp).level) return 'rank';
   if (def.unique && ownedCount(s, type) + placedCount(s, type) > 0) return 'owned';
   if (RELEASE_LOCKS.minGraves && def.minGraves && graveTotal(s) < def.minGraves) return 'graves';
   if (s.player.wisps < def.cost) return 'funds';
@@ -393,6 +394,7 @@ export function sell(s: SaveData, type: string, qty = 1): ActionResult {
 
 export function placeFromInventory(s: SaveData, type: string, x: number, y: number, rot: number, now: Date): Placed {
   const def = placeableDef(type);
+  if (def.category === 'extra') throw new GameError('Non si piazza: si usa.');
   if (ownedCount(s, type) < 1) throw new GameError('Non ne hai in inventario.');
   const r = def.rotatable ? ((rot % 4) + 4) % 4 : 0;
   const occ = buildOccupancy(s);
@@ -442,6 +444,44 @@ export function storePlaceable(s: SaveData, id: string): ActionResult {
   s.placeables = s.placeables.filter((x) => x.id !== id);
   s.inventory[p.type] = ownedCount(s, p.type) + 1;
   return ok(`${def.label} riposto nell’inventario.`);
+}
+
+// ── Bar e orto: incassi giornalieri ─────────────────────────────────────
+
+/** Giorno di calendario (locale) come numero progressivo. */
+function dayNumber(d: Date): number {
+  return Math.round(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()) / 86_400_000);
+}
+
+/** Incasso di un giorno: casuale ma sempre lo stesso per quel giorno e quell'edificio. */
+export function businessDayIncome(id: string, type: string, day: number): number {
+  const b = BUSINESS[type];
+  if (!b) return 0;
+  const [lo, hi] = b.perDay;
+  return lo + (hashString(`${id}:${day}`) % (hi - lo + 1));
+}
+
+/**
+ * Fuochi fatui da riscuotere: un incasso per ogni giorno passato dall'ultima
+ * riscossione (o dalla posa), fino al tetto. Un edificio rotto non incassa.
+ */
+export function businessPending(s: SaveData, id: string, now: Date): number {
+  const p = s.placeables.find((x) => x.id === id);
+  const b = p && BUSINESS[p.type];
+  if (!p || !b || p.broken) return 0;
+  const from = dayNumber(new Date(p.collectedAt ?? p.createdAt));
+  const to = dayNumber(now);
+  let sum = 0;
+  for (let d = Math.max(from + 1, to - 30); d <= to && sum < b.cap; d++) sum += businessDayIncome(p.id, p.type, d);
+  return Math.min(b.cap, sum);
+}
+
+export function collectBusiness(s: SaveData, id: string, now: Date): ActionResult {
+  const n = businessPending(s, id, now);
+  if (n < 1) throw new GameError('Oggi non c’è ancora niente da riscuotere.');
+  placedById(s, id).collectedAt = now.toISOString();
+  reward(s, 0, n);
+  return ok(`Incasso: +${n} fuochi fatui.`, 0, n);
 }
 
 // ── Raccolta & presenze ─────────────────────────────────────────────────

@@ -440,3 +440,105 @@ test('salvataggi vecchi: tombe trascurate senza data d’inizio ricevono un iniz
   const s = normalizeSave(JSON.parse(JSON.stringify(old)));
   assert.ok(s.graves[0].dirtySince);
 });
+
+// ── Extra: bicicletta, Bar degli zombie, Orto dei cervelli ──────────────
+
+function richAt(rankXp) {
+  const s = createNewGame(NOW, 21);
+  s.player.xp = rankXp; s.player.wisps = 500;
+  return s;
+}
+
+function placeBusiness(s, type) {
+  R.buy(s, type, 1, NOW);
+  const fp = rotatedFootprint(type, 0);
+  const at = spot(s, fp);
+  return R.placeFromInventory(s, type, at.x, at.y, 0, NOW);
+}
+
+test('bicicletta: Extra dal rango 2 a 50 fuochi fatui, pezzo unico, non si posa sulla mappa', () => {
+  const s = richAt(0);
+  // in prova si compra a qualsiasi rango; nella versione finale serve il rango 2
+  assert.equal(R.shopAvailability(s, 'bike', NOW), 'ok');
+  RELEASE_LOCKS.earlyRank = true;
+  assert.equal(R.shopAvailability(s, 'bike', NOW), 'rank');
+  RELEASE_LOCKS.earlyRank = false;
+  s.player.xp = 500;
+  assert.equal(R.shopAvailability(s, 'bike', NOW), 'ok');
+  R.buy(s, 'bike', 1, NOW);
+  assert.equal(s.player.wisps, 450);
+  assert.equal(R.shopAvailability(s, 'bike', NOW), 'owned');
+  assert.throws(() => R.placeFromInventory(s, 'bike', 30, 30, 0, NOW), /Non si piazza/);
+  assert.equal(R.ownedCount(s, 'bike'), 1);
+});
+
+test('bicicletta: il Custode va al doppio della velocità', async () => {
+  const { CUSTODE_SPEED } = await import('../src/game/balance.ts');
+  assert.equal(CUSTODE_SPEED.walk * CUSTODE_SPEED.bike, CUSTODE_SPEED.walk * 2);
+});
+
+test('bar e orto: incasso giornaliero casuale ma stabile, entro i limiti, con tetto e riscossione', async () => {
+  const { BUSINESS } = await import('../src/game/balance.ts');
+  const s = richAt(1500);
+  const bar = placeBusiness(s, 'zombie_bar');
+  const farm = placeBusiness(s, 'brain_farm');
+  // il giorno della posa non c'è ancora niente
+  assert.equal(R.businessPending(s, bar.id, NOW), 0);
+  assert.throws(() => R.collectBusiness(s, bar.id, NOW), /niente da riscuotere/);
+  // un giorno dopo: un incasso entro [min, max], sempre lo stesso a ogni lettura
+  const d1 = later(1);
+  for (const [p, b] of [[bar, BUSINESS.zombie_bar], [farm, BUSINESS.brain_farm]]) {
+    const n = R.businessPending(s, p.id, d1);
+    assert.ok(n >= b.perDay[0] && n <= b.perDay[1], `${p.type}: ${n}`);
+    assert.equal(R.businessPending(s, p.id, d1), n);
+  }
+  // giorni diversi danno incassi diversi (casuali, non sempre uguali)
+  const days = new Set(Array.from({ length: 20 }, (_, i) => R.businessDayIncome(bar.id, 'zombie_bar', 20000 + i)));
+  assert.ok(days.size > 1);
+  // dopo tanti giorni si ferma al tetto
+  assert.equal(R.businessPending(s, bar.id, later(30)), BUSINESS.zombie_bar.cap);
+  assert.equal(R.businessPending(s, farm.id, later(30)), BUSINESS.brain_farm.cap);
+  // riscossione: i fuochi fatui arrivano e il conto riparte
+  const before = s.player.wisps;
+  const n = R.businessPending(s, bar.id, later(2));
+  const res = R.collectBusiness(s, bar.id, later(2));
+  assert.equal(res.wisps, n);
+  assert.equal(s.player.wisps, before + n);
+  assert.equal(R.businessPending(s, bar.id, later(2)), 0);
+  assert.ok(R.businessPending(s, bar.id, later(3)) > 0);
+  // rotto non incassa
+  bar.broken = true;
+  assert.equal(R.businessPending(s, bar.id, later(5)), 0);
+});
+
+test('bar e orto: rango 3, pezzi unici, attirano zombie anche senza tombe aperte', () => {
+  const s = richAt(500);
+  assert.equal(R.shopAvailability(s, 'zombie_bar', NOW), 'ok'); // in prova
+  RELEASE_LOCKS.earlyRank = true;
+  assert.equal(R.shopAvailability(s, 'zombie_bar', NOW), 'rank');
+  RELEASE_LOCKS.earlyRank = false;
+  s.player.xp = 1500;
+  placeBusiness(s, 'zombie_bar');
+  placeBusiness(s, 'brain_farm');
+  assert.equal(R.shopAvailability(s, 'zombie_bar', NOW), 'owned');
+  const b = countBuildings(s);
+  assert.equal(b.openGraves, 0);
+  assert.equal(b.zombieBar, 1);
+  assert.equal(b.brainFarm, 1);
+  const rng = createRng(3);
+  let zombies = 0;
+  for (let i = 0; i < 4000; i++) if (computeSpawns(s, true, rng).some((x) => x.kind === 'zombie')) zombies++;
+  // ~9% a ogni giro (0,06 + 0,03)
+  assert.ok(zombies > 4000 * 0.07 && zombies < 4000 * 0.11, `zombie ${zombies}`);
+  // senza bar né orto (e senza tombe aperte) niente zombie
+  const empty = createNewGame(NOW, 21);
+  assert.ok(!Array.from({ length: 500 }, () => computeSpawns(empty, true, rng)).flat().some((x) => x.kind === 'zombie'));
+});
+
+test('vista dall’alto tolta: i salvataggi tornano alla vista obliqua', async () => {
+  const { normalizeSave } = await import('../src/game/state.ts');
+  const old = createNewGame(NOW, 4);
+  old.settings.camera = 'top';
+  const s = normalizeSave(JSON.parse(JSON.stringify(old)));
+  assert.equal(s.settings.camera, 'angled');
+});

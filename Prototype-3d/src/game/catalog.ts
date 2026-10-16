@@ -5,9 +5,9 @@
 
 import { DECAY } from './balance.ts';
 
-export type PlaceableCategory = 'light' | 'decoration' | 'structure' | 'ambient' | 'npc';
+export type PlaceableCategory = 'light' | 'decoration' | 'structure' | 'ambient' | 'npc' | 'extra';
 
-export const CATEGORY_ORDER: PlaceableCategory[] = ['light', 'decoration', 'structure', 'ambient', 'npc'];
+export const CATEGORY_ORDER: PlaceableCategory[] = ['light', 'decoration', 'structure', 'ambient', 'npc', 'extra'];
 
 export const PLACEABLE_CATEGORY_LABELS: Record<PlaceableCategory, string> = {
   light: 'Luci',
@@ -15,6 +15,7 @@ export const PLACEABLE_CATEGORY_LABELS: Record<PlaceableCategory, string> = {
   structure: 'Costruzioni',
   ambient: 'Ambiente',
   npc: 'Presenze',
+  extra: 'Extra',
 };
 
 export interface PlaceableDef {
@@ -78,6 +79,8 @@ const defs: PlaceableDef[] = [
   { id: 'shop', label: 'Bottega', category: 'structure', footprint: [3, 3], cost: 0, minRank: 1, unique: true, permanent: true, decays: true, light: true, description: 'Qui si compra tutto ciò che serve a un cimitero perbene. Anche ciò che non serve.' },
   { id: 'gravedigger_house', label: 'Casa del becchino', category: 'structure', footprint: [4, 3], cost: 60, minRank: 3, unique: true, decays: true, light: true, description: 'Con la casa vicina, il becchino passa più spesso. Porta la pala, e il malumore.' },
   { id: 'shrine', label: 'Santuario', category: 'structure', footprint: [3, 3], cost: 55, minRank: 3, unique: true, decays: true, light: true, description: 'Il prete si ferma volentieri a benedire: compare più spesso.' },
+  { id: 'zombie_bar', label: 'Bar degli zombie', category: 'structure', footprint: [3, 2], cost: 45, minRank: 3, unique: true, decays: true, light: true, description: 'Pozioni che fanno la schiuma e una bara per frigo. Attira gli zombie e incassa qualche fuoco fatuo al giorno.' },
+  { id: 'brain_farm', label: 'Orto dei cervelli', category: 'structure', footprint: [4, 3], cost: 35, minRank: 3, unique: true, decays: true, light: true, description: 'Uno zombie coltiva cervelli freschi e li vende al banco. Incassa qualche fuoco fatuo al giorno.' },
   { id: 'mausoleum', label: 'Mausoleo', category: 'structure', footprint: [3, 3], cost: 80, minRank: 4, unique: true, decays: true, light: true, description: 'Il cuore di pietra del cimitero: +10% di eventi soprannaturali.' },
   { id: 'open_grave', label: 'Tomba dissotterrata', category: 'structure', footprint: [2, 2], cost: 12, minRank: 2, decays: true, description: 'Una buca con la lapide di traverso. Attira gli zombie.' },
   { id: 'wall_stone', label: 'Muretto in pietra', category: 'structure', footprint: [1, 1], cost: 3, minRank: 1, rotatable: true, description: 'Pietre a secco, muschio incluso.' },
@@ -115,6 +118,9 @@ const defs: PlaceableDef[] = [
   { id: 'zombie_walker', label: 'Zombie errante', category: 'npc', footprint: [1, 1], cost: 26, minRank: 3, walkable: true, description: 'Passeggia senza meta, come la domenica.' },
   { id: 'ghosts_roam', label: 'Fantasmi erranti', category: 'npc', footprint: [1, 1], cost: 28, minRank: 3, walkable: true, description: 'Girano in tondo attraverso tutto, lapidi comprese.' },
   { id: 'ghosts_ball', label: 'Fantasmi a palla', category: 'npc', footprint: [2, 2], cost: 34, minRank: 4, walkable: true, description: 'Giocano a palla con un teschio. Il teschio si diverte meno.' },
+
+  // ── Extra (non si piazzano: si usano) ─────────────────────────────────
+  { id: 'bike', label: 'Bicicletta', category: 'extra', footprint: [1, 1], cost: 50, minRank: 2, unique: true, description: 'Il Custode pedala al doppio della velocità. Il cestino con la zucca è compreso.' },
 ];
 
 export const CATALOG: Record<string, PlaceableDef> = Object.fromEntries(defs.map((d) => [d.id, d]));

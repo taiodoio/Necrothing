@@ -43,7 +43,7 @@ export class UI {
     $('#scrim').addEventListener('click', () => closeDrawer());
     $('#edit-done').addEventListener('click', () => game.setEditMode(false));
     $('#recenter').addEventListener('click', () => game.recenter());
-    $('#cam-toggle').addEventListener('click', () => game.setCamera(game.state.settings.camera === 'angled' ? 'top' : 'angled'));
+    $('#bike-toggle').addEventListener('click', () => game.toggleBike());
     this.refreshSettingsButtons();
     this.refreshEditBanner();
   }
@@ -87,9 +87,13 @@ export class UI {
   }
 
   refreshSettingsButtons() {
-    const cam = this.game.state.settings.camera;
-    $('#cam-icon').style.backgroundImage = iconUrl(cam === 'angled' ? 'top' : 'angled');
-    $('#cam-toggle').setAttribute('aria-label', cam === 'angled' ? 'Vista dall’alto' : 'Vista obliqua');
+    // bicicletta: l'icona c'è solo se la si possiede; dorata quando il Custode è in sella
+    const bike = $('#bike-toggle') as HTMLButtonElement;
+    const riding = this.game.riding;
+    bike.hidden = !this.game.ownsBike();
+    bike.classList.toggle('active', riding);
+    bike.setAttribute('aria-pressed', String(riding));
+    bike.setAttribute('aria-label', riding ? 'Scendi dalla bici' : 'Sali in bici');
     if (drawerOpen() && document.querySelector('[data-settings]')) S.openSettings(this);
   }
 

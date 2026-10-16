@@ -23,6 +23,7 @@ import {
   sceneryFlowersLP, sceneryLeavesLP, sceneryPebblesLP, sceneryRockLP, sceneryShroomsLP, sceneryTuftLP, sceneryWildGrassLP, tallGrassLP,
 } from './nature.ts';
 import { memoryTreeLP } from './memoryTree.ts';
+import { bicycleLP, brainFarmLP, zombieBarLP } from './extraItems.ts';
 import { weathered } from './weathering.ts';
 import { CATALOG } from '../../game/catalog.ts';
 import { GRAVE_FOOTPRINT } from '../../game/balance.ts';
@@ -83,6 +84,10 @@ export const LP_PLACEABLES: Record<string, (v: PVis) => LPModel> = {
   zombie_walker: npcHomeLP,
   ghosts_roam: npcHomeLP,
   ghosts_ball: npcHomeLP,
+  zombie_bar: zombieBarLP,
+  brain_farm: brainFarmLP,
+  // non si piazza (il Custode la porta con sé): questo è il modello per le miniature
+  bike: () => bicycleLP(true),
 };
 /** Generatori di scenografia (prefisso della chiave → generatore con parametro). */
 export const LP_SCENERY: Record<string, (arg: string) => LPModel> = {

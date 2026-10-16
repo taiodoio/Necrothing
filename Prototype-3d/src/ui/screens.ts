@@ -3,7 +3,7 @@
 
 import { terrainSection } from './expansion.ts';
 import { exportBackup, gallery, importBackup, type PhotoRecord } from '../app/persistence.ts';
-import { DECAY, EXPANSION } from '../game/balance.ts';
+import { BUSINESS, DECAY, EXPANSION } from '../game/balance.ts';
 import { CATALOG, CATALOG_LIST, CATEGORY_ORDER, PLACEABLE_CATEGORY_LABELS, isSeasonallyAvailable, repairCost, type PlaceableCategory } from '../game/catalog.ts';
 import {
   CATEGORIES, CATEGORY_LABELS, DEATH_CAUSE_LABELS, DEATH_CAUSES, GRAVE_STATE_LABELS,
@@ -11,7 +11,7 @@ import {
 } from '../game/graves.ts';
 import { ACHIEVEMENTS, achievementProgress, nextRank, rankForXp, rankProgress } from '../game/progression.ts';
 import * as R from '../game/rules.ts';
-import { createNewGame, type TimeOverride } from '../game/state.ts';
+import { createNewGame, type SaveData, type TimeOverride } from '../game/state.ts';
 import { computePrestige, detectDistricts, DISTRICT_LABELS, expansionStatus } from '../game/world.ts';
 import { newId } from '../game/rng.ts';
 import { $, closeDrawer, fmtDate, h, openDrawer, setDrawerBody, setDrawerFooter, toast } from './dom.ts';
@@ -163,6 +163,15 @@ export function openShop(ui: UI, cat: PlaceableCategory = 'light', selected: str
         class: 'big-btn', disabled: av !== 'ok',
         onclick: () => {
           if (game.act((st, n) => R.buy(st, d.id, qty, n))) {
+            // gli Extra non si posano: si usano (la bici dall'icona accanto al mirino)
+            if (d.category === 'extra') {
+              game.refreshBike();
+              setDrawerFooter(h('div', { class: 'row' },
+                h('button', { class: 'big-btn ghost', onclick: () => render() }, 'Continua'),
+                h('button', { class: 'big-btn', onclick: () => { closeDrawer(); if (!game.riding) game.toggleBike(); } }, 'Sali in sella')));
+              setDrawerBody(h('div', {}, h('div', { class: 'hero' }, h('img', { src: placeableThumb(d.id, s.settings.style), alt: '' }), h('h3', {}, d.label), h('p', { class: 'muted' }, 'È tua! Per salire e scendere tocca l’icona della bici sulla mappa, sopra il mirino.'))));
+              return;
+            }
             setDrawerFooter(h('div', { class: 'row' },
               h('button', { class: 'big-btn ghost', onclick: () => render() }, 'Continua'),
               h('button', { class: 'big-btn', onclick: () => { closeDrawer(); game.startItemPlacement(d.id); } }, 'Inserisci ora')));
@@ -203,8 +212,10 @@ export function openInventory(ui: UI, cat: PlaceableCategory | 'all' = 'all') {
     setDrawerFooter(h('div', { style: 'display:grid;gap:8px' },
       h('div', { class: 'row' }, h('b', {}, d.label), h('span', { class: 'muted', style: 'text-align:right' }, `Ne hai ${s.inventory[d.id] ?? 0}`)),
       h('div', { class: 'row' },
-        h('button', { class: 'big-btn ghost', onclick: () => { game.act((st) => R.sell(st, d.id, 1)); if (!(s.inventory[d.id] ?? 0)) selected = null; render(); } }, `Vendi · +${R.sellPrice(d.id)} fuochi fatui`),
-        h('button', { class: 'big-btn', onclick: () => { closeDrawer(); game.startItemPlacement(d.id); } }, 'Inserisci')),
+        h('button', { class: 'big-btn ghost', onclick: () => { game.act((st) => R.sell(st, d.id, 1)); game.refreshBike(); if (!(s.inventory[d.id] ?? 0)) selected = null; render(); } }, `Vendi · +${R.sellPrice(d.id)} fuochi fatui`),
+        d.category === 'extra'
+          ? h('button', { class: 'big-btn', onclick: () => { closeDrawer(); game.toggleBike(); } }, game.riding ? 'Scendi' : 'Sali in sella')
+          : h('button', { class: 'big-btn', onclick: () => { closeDrawer(); game.startItemPlacement(d.id); } }, 'Inserisci')),
     ));
   };
   openDrawer('Inventario', h('div'));
@@ -214,6 +225,15 @@ export function openInventory(ui: UI, cat: PlaceableCategory | 'all' = 'all') {
 // ── Dettaglio ──────────────────────────────────────────────────────────
 
 export const MEMORY_LABELS = { burial: 'Sepoltura', flower: 'Fiori', cleaned: 'Pulizia', repaired: 'Riparazione', anniversary: 'Anniversario', ghost: 'Apparizione', blessing: 'Benedizione', zombie: 'Zombie', entrusted: 'Affidato all’albero' } as const;
+
+/** Bar e orto: quanto c'è da riscuotere (o quando arriva il prossimo incasso). */
+function businessLine(s: SaveData, id: string, type: string, now: Date): string {
+  const b = BUSINESS[type];
+  const n = R.businessPending(s, id, now);
+  if (s.placeables.find((x) => x.id === id)?.broken) return 'Chiuso finché non lo ripari';
+  const range = `${b.perDay[0]}–${b.perDay[1]} fuochi fatui al giorno, fino a ${b.cap}`;
+  return n > 0 ? `+${n} pronti: tocca l’etichetta per riscuoterli (${range})` : `Il prossimo incasso arriva domani (${range})`;
+}
 
 export function openDetail(ui: UI, id: string) {
   const game = ui.game;
@@ -251,6 +271,7 @@ export function openDetail(ui: UI, id: string) {
       d.variantLabels ? h('dt', {}, 'Variante') : null, d.variantLabels ? h('dd', {}, d.variantLabels[p.variant]) : null,
       d.decays ? h('dt', {}, 'Condizione') : null, d.decays ? h('dd', {}, p.broken ? `Rotto (riparare: ${repairCost(d)} fuochi fatui)` : p.dirty ? 'Sporco: va pulito' : 'In ordine — prima o poi avrà bisogno di una pulita') : null,
       d.light ? h('dt', {}, 'Luce') : null, d.light ? h('dd', {}, p.broken ? 'Guasta' : p.lit ? 'Accesa' : 'Spenta') : null,
+      BUSINESS[p.type] ? h('dt', {}, 'Incasso') : null, BUSINESS[p.type] ? h('dd', {}, businessLine(s, p.id, p.type, game.now())) : null,
     ),
   );
   if (d.editableText) {
@@ -338,7 +359,6 @@ export function openSettings(ui: UI) {
     terrainSection(ui),
     h('div', { class: 'section-title' }, 'Resa grafica'),
     h('div', { class: 'setting' }, 'Stile', seg(s.style, [['lowpoly', 'Low-Poly'], ['voxel', 'Voxel'], ['miniature', 'Miniatura']], (v) => game.setStyle(v))),
-    h('div', { class: 'setting' }, 'Vista', seg(s.camera, [['angled', 'Obliqua'], ['top', 'Dall’alto']], (v) => game.setCamera(v))),
     h('div', { class: 'setting' }, 'Qualità', seg(s.quality, [['auto', 'Auto'], ['low', 'Bassa'], ['medium', 'Media'], ['high', 'Alta']], (v) => game.setQuality(v))),
     s.quality === 'auto' ? h('p', { class: 'muted', style: 'margin:-2px 0 4px;font-size:12px' }, 'Auto si adatta al dispositivo: regola risoluzione, ombre e sfocatura per restare fluido.') : null,
     h('div', { class: 'setting' }, 'Ora del giorno', seg<TimeOverride>(s.timeOverride, [['auto', 'Reale'], ['day', 'Giorno'], ['dusk', 'Sera'], ['night', 'Notte']], (v) => game.setTimeOverride(v))),

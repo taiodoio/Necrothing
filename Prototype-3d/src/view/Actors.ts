@@ -4,7 +4,7 @@
 // incontrano un ostacolo cambiano direzione; i fantasmi attraversano tutto.
 
 import * as THREE from 'three';
-import { MAP_SIZE } from '../game/balance.ts';
+import { CUSTODE_SPEED, MAP_SIZE } from '../game/balance.ts';
 import { CATALOG, rotatedFootprint } from '../game/catalog.ts';
 import { createRng, hashString } from '../game/rng.ts';
 import type { RoamerKind, SpawnRequest } from '../game/spawn.ts';
@@ -15,7 +15,10 @@ import { animateRig, buildRig, rigLightPos, type CharacterKind, type Pose, type 
 import { LP } from '../render/lowpoly/kit.ts';
 import type { CustodeLook } from '../game/look.ts';
 import { skull } from '../render/lowpoly/extras.ts';
-import { instantiate, LOWPOLY_MATERIALS } from '../render/modelCache.ts';
+import { instantiate, lightWorldPos, LOWPOLY_MATERIALS } from '../render/modelCache.ts';
+import { BIKE, BIKE_SCALE, bicycleLP } from '../render/lowpoly/extraItems.ts';
+import type { LPModel } from '../render/lowpoly/kit.ts';
+import type { LightAnchor } from '../render/shape.ts';
 import { findPath, type Cell } from './pathfinding.ts';
 import { boneMesh, Den, Glyphs } from './petFx.ts';
 import { cellCenter, HALF, worldToCell } from './WorldView.ts';
@@ -26,6 +29,9 @@ const RIG_FOR: Record<RoamerKind, CharacterKind> = { ghost: 'ghost', cat: 'cat',
 const PET_KINDS: CharacterKind[] = ['petDog', 'petCat', 'petRabbit', 'petDuck', 'petCrow'];
 
 const FADE_OUT = 0.6;
+
+/** Oggetti che portano con sé presenze animate. */
+const PRESENCE_HOMES = new Set(['zombies_play', 'zombies_dance', 'zombie_walker', 'ghosts_roam', 'ghosts_ball', 'zombie_bar', 'brain_farm']);
 
 /** Andatura zoppa dello zombie: avanza quando poggia la gamba buona, quasi si ferma trascinando l'altra (media ≈ 0,6). */
 export function zombieLurch(phase: number): number {
@@ -43,6 +49,8 @@ interface Walker {
   lightHandles: AnchorHandle[];
   /** Ombra a disco (qualità Auto con ombre ferme). */
   blob?: THREE.Mesh;
+  /** Sollevato da terra (la pedana del bar). */
+  lift?: number;
 }
 
 export interface Roamer extends Walker {
@@ -79,12 +87,70 @@ interface Visit {
 
 interface Presence extends Walker {
   placeId: string;
-  role: 'sit' | 'dance' | 'wander' | 'circle' | 'goalie';
+  role: 'sit' | 'dance' | 'wander' | 'circle' | 'goalie' | 'still';
   home: THREE.Vector3;
   radius: number;
   angle: number;
   hidden: boolean;
   extra?: THREE.Object3D;
+  /** Ruolo 'still': la posa che tiene sul posto (barista, avventori, contadino). */
+  still?: Pose;
+  /** Cosa tiene in mano (si riattacca quando si ricostruisce il rig). */
+  prop?: 'mug' | 'hoe';
+}
+
+/** Quante presenze animano bar e orto: con la fascia del dispositivo (economico, medio, top). */
+export type PresenceTier = 'low' | 'mid' | 'high';
+export const BUSINESS_PRESENCES: Record<'zombie_bar' | 'brain_farm', Record<PresenceTier, number>> = {
+  zombie_bar: { low: 2, mid: 3, high: 4 },
+  brain_farm: { low: 1, mid: 2, high: 2 },
+};
+
+const PROP_MATS = {
+  pewter: new THREE.MeshStandardMaterial({ color: '#9a9488', flatShading: true, roughness: 0.6 }),
+  foam: new THREE.MeshBasicMaterial({ color: '#b6f06a' }),
+  wood: new THREE.MeshStandardMaterial({ color: '#6b4a2e', flatShading: true, roughness: 0.9 }),
+  iron: new THREE.MeshStandardMaterial({ color: '#5f6366', flatShading: true, roughness: 0.6 }),
+};
+
+/** Boccale con la schiuma verde o zappa, nella mano destra. */
+function propMesh(kind: 'mug' | 'hoe'): THREE.Group {
+  const g = new THREE.Group();
+  g.name = 'prop';
+  if (kind === 'mug') {
+    const foam = new THREE.Mesh(new THREE.CylinderGeometry(0.044, 0.044, 0.02, 8), PROP_MATS.foam);
+    foam.position.y = 0.06;
+    g.add(new THREE.Mesh(new THREE.CylinderGeometry(0.045, 0.045, 0.1, 8), PROP_MATS.pewter), foam);
+    g.position.set(0.02, -0.02, 0.4);
+  } else {
+    const blade = new THREE.Mesh(new THREE.BoxGeometry(0.14, 0.05, 0.02), PROP_MATS.iron);
+    blade.position.set(0, -0.38, 0.04);
+    g.add(new THREE.Mesh(new THREE.CylinderGeometry(0.015, 0.015, 0.75, 5), PROP_MATS.wood), blade);
+    g.position.set(0.02, -0.05, 0.38);
+    g.rotation.x = 0.5;
+  }
+  g.traverse((o) => { if ((o as THREE.Mesh).isMesh) o.castShadow = true; });
+  return g;
+}
+
+/** Bicicletta sotto il Custode: telaio, ruote e pedivelle che girano, fanalino. */
+interface Ride {
+  group: THREE.Group;
+  frame: THREE.Group;
+  wheels: THREE.Group[];
+  crank: THREE.Group;
+  lamp: { anchor: LightAnchor; handle: AnchorHandle } | null;
+  /** Strada fatta in sella (fa girare ruote e pedali). */
+  dist: number;
+  last: THREE.Vector3;
+}
+
+const bikeModel = (m: LPModel) => ({ geometries: m.geometries, lights: m.lights, height: 1, mats: LOWPOLY_MATERIALS, dedicated: true });
+let bikeParts: { frame: ReturnType<typeof bikeModel>; wheel: ReturnType<typeof bikeModel>; crank: ReturnType<typeof bikeModel> } | null = null;
+/** I pezzi della bici si costruiscono una volta sola. */
+function getBikeParts() {
+  bikeParts ??= { frame: bikeModel(bicycleLP(false, 0, 'frame')), wheel: bikeModel(bicycleLP(false, 0, 'wheel')), crank: bikeModel(bicycleLP(false, 0, 'crank')) };
+  return bikeParts;
 }
 
 /**
@@ -196,7 +262,7 @@ export class Actors {
     this.look = look;
     this.group.name = 'attori';
     scene.add(this.group);
-    this.avatar = this.makeWalker('custode', start, 3.1);
+    this.avatar = this.makeWalker('custode', start, CUSTODE_SPEED.walk);
     this.group.add(this.glyphs.group, this.bone.obj);
   }
 
@@ -240,6 +306,7 @@ export class Actors {
     w.rig = fresh.rig;
     w.lightHandles = fresh.lightHandles;
     w.rig.root.rotation.y = w.facing;
+    this.remount();
   }
 
   setStyle(style: ArtStyle) {
@@ -253,9 +320,10 @@ export class Actors {
       w.rig.root.rotation.y = w.facing;
     };
     rebuild(this.avatar);
+    this.remount();
     for (const r of this.roamers.values()) { rebuild(r); r.rig.root.add(r.hitbox); }
     for (const p of this.pets.values()) { rebuild(p); p.rig.root.add(p.hitbox); p.rig.root.visible = p.act !== 'sleep'; }
-    for (const p of this.presences) rebuild(p);
+    for (const p of this.presences) { rebuild(p); this.attachProp(p); }
     if (this.funeral) for (const m of this.funeral.members) rebuild(m);
     if (this.rite) for (const m of this.rite.members) rebuild(m);
     for (const d of this.departing) rebuild(d);
@@ -358,6 +426,108 @@ export class Actors {
   cheer(seconds = 1.2) { this.avatar.pose = 'cheer'; this.workTimer = seconds; }
 
   teleport(p: THREE.Vector3) { this.avatar.pos.copy(p); this.avatar.path = []; }
+
+  // ── Bicicletta ───────────────────────────────────────────────────────
+
+  private ride: Ride | null = null;
+  get riding() { return !!this.ride; }
+
+  /** In sella (velocità doppia) o a piedi: la bici compare sotto il Custode e sparisce quando scende. */
+  setRiding(on: boolean) {
+    if (on === this.riding) return;
+    if (on) this.mount();
+    else this.dismount();
+    this.avatar.speed = CUSTODE_SPEED.walk * (on ? CUSTODE_SPEED.bike : 1);
+  }
+
+  private mount() {
+    const parts = getBikeParts();
+    const group = new THREE.Group();
+    group.name = 'bici';
+    const frame = instantiate(parts.frame, { castShadow: true });
+    const S = BIKE_SCALE;
+    const wheels = [BIKE.rearZ, BIKE.frontZ].map((z) => {
+      const g = new THREE.Group();
+      g.position.set(0, BIKE.R * S, z * S);
+      g.add(instantiate(parts.wheel, { castShadow: true }));
+      return g;
+    });
+    const crank = new THREE.Group();
+    crank.position.set(0, BIKE.bb[1] * S, BIKE.bb[2] * S);
+    crank.add(instantiate(parts.crank, { castShadow: true }));
+    group.add(frame, ...wheels, crank);
+    const a = this.avatar;
+    a.rig.root.add(group);
+    // il Custode si siede: l'anca sulla sella, un po' indietro
+    const inner = a.rig.root.children[0];
+    animateRig(a.rig, 'idle', 0, 0);
+    inner.position.set(0, 0, 0);
+    a.rig.root.updateMatrixWorld(true);
+    const hip = a.rig.root.worldToLocal(a.rig.parts.legL!.getWorldPosition(new THREE.Vector3()));
+    inner.position.set(0, 0.47 * S - hip.y + 0.02, -0.12 * S - hip.z);
+    const anchor = parts.frame.lights[0];
+    const lamp = anchor ? { anchor, handle: this.atmosphere.addAnchor(a.pos.clone(), anchor) } : null;
+    const prev = this.ride;
+    this.ride = { group, frame, wheels, crank, lamp, dist: prev?.dist ?? 0, last: a.pos.clone() };
+  }
+
+  private dismount() {
+    const r = this.ride;
+    if (!r) return;
+    r.group.removeFromParent();
+    this.atmosphere.removeAnchor(r.lamp?.handle);
+    const a = this.avatar;
+    a.rig.root.children[0].position.set(0, 0, 0);
+    if (a.rig.parts.body) a.rig.parts.body.rotation.x = 0;
+    this.ride = null;
+  }
+
+  /** Il rig del Custode è stato ricostruito (stile, aspetto): la bici torna sotto di lui. */
+  private remount() {
+    const r = this.ride;
+    if (!r) return;
+    this.atmosphere.removeAnchor(r.lamp?.handle);
+    r.group.removeFromParent();
+    this.ride = null;
+    this.mount();
+    this.ride!.dist = r.dist;
+  }
+
+  /** In sella: piedi sui pedali, mani sulle manopole, busto in avanti; ruote e pedali girano con la strada fatta. */
+  private poseRider(dt: number) {
+    const r = this.ride!;
+    const a = this.avatar;
+    const S = BIKE_SCALE;
+    const moved = Math.hypot(a.pos.x - r.last.x, a.pos.z - r.last.z);
+    r.last.copy(a.pos);
+    if (moved < 1) r.dist += moved; // un teletrasporto non fa girare le ruote
+    const wheel = r.dist / (BIKE.R * S);
+    for (const w of r.wheels) w.rotation.x = wheel;
+    const crank = wheel * 0.5;
+    r.crank.rotation.x = crank;
+    const root = a.rig.root;
+    root.updateMatrixWorld(true);
+    const p = a.rig.parts;
+    const v = new THREE.Vector3();
+    const aim = (part: THREE.Group | undefined, x: number, y: number, z: number) => {
+      if (!part) return;
+      const from = root.worldToLocal(part.getWorldPosition(v));
+      part.rotation.x = -Math.atan2(z - from.z, -(y - from.y));
+      part.rotation.z = 0;
+    };
+    for (const s of [-1, 1]) {
+      const c = crank + (s > 0 ? 0 : Math.PI);
+      aim(s < 0 ? p.legL : p.legR, s * 0.09, (BIKE.bb[1] + Math.cos(c) * 0.07) * S, (BIKE.bb[2] + Math.sin(c) * 0.07) * S);
+      // le mani restano sul manubrio (tranne quando lavora o festeggia)
+      if (a.pose === 'idle' || a.pose === 'walk') aim(s < 0 ? p.armL : p.armR, s * 0.2 * S, 0.56 * S, 0.1 * S);
+    }
+    if (p.body) p.body.rotation.x = 0.1;
+    if (r.lamp) {
+      root.updateMatrixWorld(true);
+      this.atmosphere.moveAnchor(r.lamp.handle, lightWorldPos(r.lamp.anchor, v).applyMatrix4(r.frame.matrixWorld));
+    }
+    void dt;
+  }
 
   // ── Presenze erranti ─────────────────────────────────────────────────
 
@@ -542,14 +712,18 @@ export class Actors {
 
   syncPresences(state: SaveData, now: Date) {
     this.syncPets(state);
-    const homes = state.placeables.filter((p) => ['zombies_play', 'zombies_dance', 'zombie_walker', 'ghosts_roam', 'ghosts_ball'].includes(p.type));
-    const sig = homes.map((p) => `${p.id}:${p.x}:${p.y}:${p.variant}:${p.broken}`).join('|');
+    const homes = state.placeables.filter((p) => PRESENCE_HOMES.has(p.type));
+    const sig = `${this.presenceTier}|` + homes.map((p) => `${p.id}:${p.x}:${p.y}:${p.variant}:${p.broken}`).join('|');
     if (sig === this.presenceSig) return;
     this.presenceSig = sig;
     for (const p of this.presences) { this.disposeWalker(p); if (p.extra) this.group.remove(p.extra); }
     this.presences = [];
     for (const p of homes) this.addPresences(p, now);
   }
+
+  /** Fascia del dispositivo: quante presenze animano bar e orto. */
+  private presenceTier: PresenceTier = 'high';
+  setPresenceTier(t: PresenceTier) { this.presenceTier = t; }
 
   private addPresences(p: Placed, _now: Date) {
     const center = cellCenter(p.x, p.y, rotatedFootprint(p.type, p.rot));
@@ -559,6 +733,31 @@ export class Actors {
       this.presences.push(pr);
       return pr;
     };
+    /** Zombie fermo al suo posto: con una posa, magari sulla pedana e con qualcosa in mano. */
+    const still = (pose: Pose, x: number, z: number, facing: number, lift = 0, prop?: Presence['prop']) => {
+      const pr = add('zombie', 'still', new THREE.Vector3(x, 0, z));
+      pr.still = pose; pr.facing = facing; pr.lift = lift; pr.prop = prop;
+      pr.rig.root.rotation.y = facing;
+      this.attachProp(pr);
+      return pr;
+    };
+    if (p.type === 'zombie_bar' || p.type === 'brain_farm') {
+      if (p.broken) return; // chiuso finché non si ripara
+      const n = BUSINESS_PRESENCES[p.type][this.presenceTier];
+      const crew: (() => void)[] = p.type === 'zombie_bar'
+        ? [
+          () => still('work', 0.1, -0.45, 0, 0.06), // il barista asciuga i boccali
+          () => still('sit', -0.6, 0.66, Math.PI, 0.06, 'mug'),
+          () => still('sit', 0.35, 0.66, Math.PI + 0.3, 0.06, 'mug'),
+          () => still('dance', 0.95, 0.82, -0.6, 0.06),
+        ]
+        : [
+          () => still('work', -0.95, 0.1, 0.7, 0, 'hoe'), // il contadino zappa i cervelli
+          () => still('idle', 0.6, 0.75, 0.35), // il venditore accanto al banco (sotto il tendone non si vedrebbe)
+        ];
+      for (const f of crew.slice(0, n)) f();
+      return;
+    }
     switch (p.type) {
       case 'zombies_play': {
         const a = add('zombie', 'sit', new THREE.Vector3(-0.72, 0, 0)); a.facing = Math.PI / 2;
@@ -590,9 +789,25 @@ export class Actors {
     }
   }
 
+  /** Rimette in mano boccale o zappa (anche dopo che il rig è stato ricostruito). */
+  private attachProp(pr: Presence) {
+    if (!pr.prop || !pr.rig.parts.armR) return;
+    pr.rig.parts.armR.add(propMesh(pr.prop));
+  }
+
+  /** L'avventore alza il boccale: ogni tanto beve un sorso, poi brinda. */
+  private sip(pr: Presence, t: number) {
+    const arm = pr.rig.parts.armR;
+    if (!arm) return;
+    const k = (((t * 0.35 + pr.pos.x * 0.37) % 1) + 1) % 1;
+    arm.rotation.x = k < 0.18 ? -1.35 - Math.sin((k / 0.18) * Math.PI) * 0.4 : -0.75 + Math.sin(t * 2.3) * 0.08;
+    if (k < 0.18 && pr.rig.parts.head) pr.rig.parts.head.rotation.x = -0.3;
+  }
+
   private stepPresence(pr: Presence, dt: number, t: number) {
     if (pr.hidden) return;
     switch (pr.role) {
+      case 'still': pr.pose = pr.still ?? 'idle'; break;
       case 'sit': pr.pose = 'sit'; break;
       case 'dance':
         pr.angle += dt * 0.9;
@@ -1254,13 +1469,17 @@ export class Actors {
     }
 
     const apply = (w: Walker) => {
-      const y = w.pos.y > 0.5 ? w.pos.y : ground(w.pos);
+      const y = (w.pos.y > 0.5 ? w.pos.y : ground(w.pos)) + (w.lift ?? 0);
       w.rig.root.position.set(w.pos.x, y, w.pos.z);
       // rotazione morbida
       let d = w.facing - w.rig.root.rotation.y;
       d = Math.atan2(Math.sin(d), Math.cos(d));
       w.rig.root.rotation.y += d * Math.min(1, dt * 12);
-      animateRig(w.rig, w.pose, t + w.phase, w.phase);
+      // in sella non si cammina: si pedala (gambe e braccia le mette poseRider)
+      const riding = w === a && this.ride;
+      animateRig(w.rig, riding && w.pose === 'walk' ? 'idle' : w.pose, t + w.phase, w.phase);
+      if (riding) this.poseRider(dt);
+      else if ((w as Presence).prop === 'mug') this.sip(w as Presence, t);
       // ombra vera nella mappa delle ombre, oppure disco sotto i piedi
       const cast = !this.blobShadows;
       if (w.rig.root.userData.cast !== cast) {

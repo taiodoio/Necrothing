@@ -66,6 +66,10 @@ const BUILDERS: Record<string, (v: PVis) => Model> = {
   zombie_walker: npcHome,
   ghosts_roam: npcHome,
   ghosts_ball: npcHome,
+  // negli stili a cubetti: una pedana e un'aiuola semplici
+  zombie_bar: npcHome,
+  brain_farm: flowerbed,
+  bike: npcHome,
 };
 
 /** Quanti semi distinti per tipo (oggetti ripetuti come i sentieri variano). */

@@ -3,13 +3,13 @@
 // espansione/achievement → salvataggio → sincronizzazione della vista.
 
 import * as THREE from 'three';
-import { FOREST_MARGIN, GRAVE_FOOTPRINT, LIVE_TICK_MS } from '../game/balance.ts';
+import { BUSINESS, FOREST_MARGIN, GRAVE_FOOTPRINT, LIVE_TICK_MS } from '../game/balance.ts';
 import { CATALOG, rotatedFootprint } from '../game/catalog.ts';
 import type { GraveVisualState } from '../game/graves.ts';
 import { graveVisualState } from '../game/graves.ts';
 import * as R from '../game/rules.ts';
 import { catchUpMessage, liveTick, runCatchUp } from '../game/simulation.ts';
-import { createNewGame, type ArtStyle, type CameraMode, type Quality, type QualitySetting, type SaveData, type TimeOverride } from '../game/state.ts';
+import { createNewGame, type ArtStyle, type Quality, type QualitySetting, type SaveData, type TimeOverride } from '../game/state.ts';
 import { dayPhaseForHour, type DayPhase } from '../game/time.ts';
 import type { CustodeLook } from '../game/look.ts';
 import { areaForLevel, buildOccupancy, canPlaceAt, gateCells, nearestFreeSpot } from '../game/world.ts';
@@ -187,7 +187,7 @@ export class Game {
     this.phaseTimer -= dt;
     if (this.phaseTimer <= 0) { this.phaseTimer = 5; this.updatePhase(false); }
     this.hudTimer -= dt;
-    if (this.hudTimer <= 0) { this.hudTimer = 1; this.ui.refreshClock(); }
+    if (this.hudTimer <= 0) { this.hudTimer = 1; this.ui.refreshClock(); this.refreshBusinesses(); }
 
     if (!this.renderer.shadowMap.autoUpdate) this.refreshStaticShadows();
     this.world.updateDecorLod(this.rig.camera);
@@ -609,6 +609,8 @@ export class Game {
     }
     if (hit?.entityId) {
       const id = hit.entityId;
+      // bar e orto con l'incasso pronto: toccandoli si riscuote
+      if (!this.editMode && R.businessPending(this.state, id, this.now()) > 0) { this.collectBusiness(id); return; }
       this.select({ kind: this.kindOf(id), id });
       if (!this.editMode) {
         const c = this.entityCells(id)!;
@@ -851,7 +853,7 @@ export class Game {
   private onKey(k: string, down: boolean) {
     if (!down) return;
     if (k === 'escape') { this.ui.escape(); return; }
-    if (k === 'c') this.setCamera(this.state.settings.camera === 'angled' ? 'top' : 'angled');
+    if (k === 'b') this.toggleBike();
     else if (k === 'v') this.setStyle(STYLE_CYCLE[(STYLE_CYCLE.indexOf(this.state.settings.style) + 1) % STYLE_CYCLE.length]);
     else if (k === 'e') this.interactNearest();
   }
@@ -907,11 +909,44 @@ export class Game {
     scheduleSave(this.state);
   }
 
-  setCamera(mode: CameraMode) {
-    this.state.settings.camera = mode;
-    this.rig.setMode(mode);
-    scheduleSave(this.state);
+  // ── Bicicletta ───────────────────────────────────────────────────────
+
+  /** La bici si usa da dove si trova il Custode: si sale e si scende con l'icona (o il tasto B). */
+  ownsBike(): boolean { return R.ownedCount(this.state, 'bike') > 0; }
+
+  get riding(): boolean { return this.actors.riding; }
+
+  toggleBike() {
+    if (!this.ownsBike()) { toast('Prima compra la bicicletta in Bottega (Extra).'); return; }
+    this.actors.setRiding(!this.actors.riding);
+    toast(this.actors.riding ? 'In sella: si va al doppio della velocità.' : 'Il Custode scende dalla bici.');
     this.ui.refreshSettingsButtons();
+  }
+
+  /** Comprata o venduta la bici: l'icona compare o sparisce (e se non c'è più, si scende). */
+  private bikeOwned = false;
+  refreshBike() {
+    const own = this.ownsBike();
+    if (!own && this.actors.riding) this.actors.setRiding(false);
+    if (own !== this.bikeOwned) { this.bikeOwned = own; this.ui.refreshSettingsButtons(); }
+  }
+
+  // ── Bar e orto ───────────────────────────────────────────────────────
+
+  /** Etichette degli incassi da riscuotere sopra bar e orto (e l'icona della bici, se è cambiata). */
+  private refreshBusinesses() {
+    const now = this.now();
+    for (const p of this.state.placeables) if (p.type in BUSINESS) this.world.setEarnings(p.id, R.businessPending(this.state, p.id, now));
+    this.refreshBike();
+  }
+
+  private collectBusiness(id: string) {
+    const e = this.world.entities.get(id);
+    const at = e ? e.group.position.clone().setY(e.height + 0.5) : undefined;
+    if (this.act((s, now) => R.collectBusiness(s, id, now), at)) {
+      this.world.setEarnings(id, 0);
+      this.ui.bumpWisps();
+    }
   }
 
   setQuality(q: QualitySetting) {
@@ -954,6 +989,10 @@ export class Game {
     this.world.forestScale = tier?.forest ?? 1;
     this.world.decorLod = tier ? tier.decor : null;
     this.world.setMergeStatic(!!tier);
+    // bar e orto: più zombie dove il dispositivo regge (fascia in Auto, livello scelto altrimenti)
+    const q = this.state.settings.quality;
+    this.actors.setPresenceTier(auto ? auto.tier : q === 'low' ? 'low' : q === 'medium' ? 'mid' : 'high');
+    this.actors.syncPresences(this.state, this.now());
     if (!auto) this.postfx.setSamples(4);
     this.applyQuality(this.baseQuality());
     if (auto) this.applyAutoStep();

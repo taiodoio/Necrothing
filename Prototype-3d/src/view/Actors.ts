@@ -15,7 +15,7 @@ import { animateRig, buildRig, rigLightPos, type CharacterKind, type Pose, type 
 import { DEFAULT_LOOK, lookKey, type CustodeLook } from '../game/look.ts';
 import { handPos, HUMAN_PIVOTS } from '../render/lowpoly/v2/custode.ts';
 import { broom2LP, mysticStaffLP } from '../render/lowpoly/newItems2.ts';
-import { animateNotes, attachProp, lpMesh, presenceLayout, propPose, scenePropObject, type PresenceRole, type PresenceTier, type PropKind } from './presences.ts';
+import { animateNotes, attachProp, dimGhosts, lpMesh, presenceLayout, propPose, scenePropObject, type PresenceRole, type PresenceTier, type PropKind } from './presences.ts';
 export { BUSINESS_PRESENCES, type PresenceTier } from './presences.ts';
 import { instantiate, lightWorldPos, LOWPOLY_MATERIALS } from '../render/modelCache.ts';
 import { BIKE, BIKE_SCALE, bicycleLP } from '../render/lowpoly/extraItems.ts';
@@ -107,6 +107,8 @@ interface Presence extends Walker {
   prop?: PropKind;
   /** Grandezza (fantasmi del picnic e della panchina più piccoli). */
   size?: number;
+  /** Fantasmi più tenui (vedi CastMember.dim). */
+  dim?: number;
 }
 
 /** Bicicletta sotto il Custode: telaio, ruote e pedivelle che girano, fanalino. */
@@ -304,7 +306,7 @@ export class Actors {
     this.remount();
     for (const r of this.roamers.values()) { rebuild(r); r.rig.root.add(r.hitbox); }
     for (const p of this.pets.values()) { rebuild(p); p.rig.root.add(p.hitbox); p.rig.root.visible = p.act !== 'sleep'; }
-    for (const p of this.presences) { rebuild(p); this.attachProp(p); if (p.size) p.rig.root.scale.setScalar(p.size); p.rig.root.visible = !p.hidden; }
+    for (const p of this.presences) { rebuild(p); this.attachProp(p); dimGhosts(p.rig.root, p.dim); if (p.size) p.rig.root.scale.setScalar(p.size); p.rig.root.visible = !p.hidden; }
     if (this.funeral) for (const m of this.funeral.members) rebuild(m);
     if (this.rite) for (const m of this.rite.members) rebuild(m);
     for (const d of this.departing) rebuild(d);
@@ -828,10 +830,11 @@ export class Actors {
       const w = this.makeWalker(c.kind, local(c.x, c.z), c.speed ?? 0.6);
       const home = c.around ? local(c.around[0], c.around[1]) : center.clone();
       const pr: Presence = { ...w, placeId: p.id, role: c.role, home, radius: c.radius ?? 0, angle: (c.angle ?? 0) - turn, hidden: !!c.hidden };
-      pr.still = c.pose; pr.lift = c.lift; pr.prop = c.prop; pr.size = c.size;
+      pr.still = c.pose; pr.lift = c.lift; pr.prop = c.prop; pr.size = c.size; pr.dim = c.dim;
       pr.facing = (c.facing ?? 0) + turn;
       pr.rig.root.rotation.y = pr.facing;
       if (c.size) pr.rig.root.scale.setScalar(c.size);
+      dimGhosts(pr.rig.root, c.dim);
       if (c.hidden) pr.rig.root.visible = false;
       this.attachProp(pr);
       this.presences.push(pr);

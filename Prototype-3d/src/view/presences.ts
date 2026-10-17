@@ -46,6 +46,8 @@ export interface CastMember {
   speed?: number;
   /** Segnaposto invisibile (l'oggetto vero è un oggetto di scena, es. la statua). */
   hidden?: boolean;
+  /** Fantasmi più tenui (0..1): vicini tra loro e a una luce si sommano e diventano bianchi. */
+  dim?: number;
 }
 
 /** Oggetti di scena che accompagnano un personaggio (`owner` = indice nel cast). */
@@ -116,8 +118,8 @@ export function presenceLayout(p: Pick<Placed, 'type' | 'broken'>, opts: { night
       still('idle', 1.0, 0.3, -1.4, 0, undefined, 'ghostRare', 0.75);
       break;
     case 'lovers_bench':
-      still('idle', -0.33, 0.0, 0.35, 0.3, undefined, 'ghost', 0.7);
-      still('idle', 0.33, 0.0, -0.35, 0.3, undefined, 'ghostRare', 0.7);
+      // vicini e davanti al cuore acceso: un po' più tenui, se no si leggono solo come un bagliore
+      for (const [x, f, k] of [[-0.33, 0.35, 'ghost'], [0.33, -0.35, 'ghostRare']] as const) cast[still('idle', x, 0.0, f, 0.3, undefined, k, 0.7)].dim = 0.7;
       break;
     case 'skeleton_band': {
       // il palco sta dietro (3×3): davanti, sul prato, due fantasmini ballano; sopra salgono le note
@@ -247,6 +249,17 @@ function rakePose(rig: Rig, k: number, moving: boolean) {
 export function propPose(rig: Rig, prop: PropKind, k: number, moving = false) {
   if (prop === 'rake') rakePose(rig, k, moving);
   else if (prop !== 'mug' && prop !== 'hoe') playPose(rig, prop, k);
+}
+
+/** Materiale dei fantasmi attenuato (uno per intensità, condiviso). */
+const dimmed = new Map<number, THREE.Material>();
+/** Rende più tenui i fantasmi di un rig: la loro trasparenza additiva scende di `k`. */
+export function dimGhosts(root: THREE.Object3D, k: number | undefined) {
+  if (!k || k >= 1) return;
+  const base = LOWPOLY_MATERIALS.ghost as THREE.MeshBasicMaterial;
+  let m = dimmed.get(k);
+  if (!m) { m = base.clone(); (m as THREE.MeshBasicMaterial).opacity = base.opacity * k; dimmed.set(k, m); }
+  root.traverse((o) => { const mesh = o as THREE.Mesh; if (mesh.isMesh && mesh.material === base) mesh.material = m!; });
 }
 
 /** Mette in mano boccale, zappa, rastrello o strumento (anche dopo che il rig è stato ricostruito). */

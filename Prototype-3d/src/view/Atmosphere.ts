@@ -294,7 +294,7 @@ export class Atmosphere {
     for (const e of this.anchors.values()) {
       const f = e.flicker.value(t);
       (e.sprite.material as THREE.SpriteMaterial).opacity = e.on ? p.halo * Math.min(1, e.anchor.intensity * 1.4) * f : 0;
-      e.sprite.visible = e.on && p.halo > 0.02;
+      e.sprite.visible = e.on && p.halo > 0.02 && e.anchor.halo > 0.05; // alone 0: luce senza bagliore (riverbero diffuso)
     }
     // Il pool di luci reali segue le sorgenti più vicine al centro della vista.
     // Assegnazione stabile (una luce resta sulla sua sorgente finché serve) e

@@ -660,9 +660,10 @@ export function loversBenchLP(lit = true): LPModel {
 
 // ── Oggetti di scena delle presenze ─────────────────────────────────────
 
-/** Palchetto della banda di scheletri (3×2): pedana, leggii e strumenti appoggiati. */
-export function bandStageLP(lit = true): LPModel {
+/** Palchetto della banda di scheletri: pedana, leggii e strumenti appoggiati; `back` lo sposta indietro (davanti si balla). */
+export function bandStageLP(lit = true, back = 0): LPModel {
   const lp = new LP('new:band');
+  lp.push([0, 0, back]);
   for (let i = 0; i < 8; i++) lp.box(-1.25 + i * 0.36, 0, -0.1, 0.34, 0.12, 1.6, i % 2 ? LPC.wood : LPC.woodDark, { bevel: 0.006, vary: 0.1 });
   for (const x of [-0.9, 0.9]) {
     lp.cyl(x, 0.12, -0.25, 0.015, 0.015, 0.75, 4, LPC.iron, { jitter: 0 });
@@ -680,6 +681,7 @@ export function bandStageLP(lit = true): LPModel {
   }
   // una luce piccola per lanterna, così il palco è illuminato dai lati e non da una macchia al centro
   if (lit) for (const s of [-1, 1]) lp.light(s * 1.3, 1.1, 0.6, LPC.lantern, 0.4, 2.6, 0.25, 0.3);
+  lp.pop();
   return lp.build();
 }
 

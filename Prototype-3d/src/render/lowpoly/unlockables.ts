@@ -40,7 +40,7 @@ export const LP_UNLOCKABLES: Record<string, (v: PVis) => LPModel> = {
   cat_shelter: () => M.catShelterLP(),
   ghost_picnic: () => N.picnicLP(),
   witch_corner: (v) => M.witchCornerLP(v.lit),
-  skeleton_band: (v) => N.bandStageLP(v.lit),
+  skeleton_band: (v) => N.bandStageLP(v.lit, -0.5), // palco indietro: davanti ballano i fantasmini (view/presences BAND_BACK)
   vampire_crypt: (v) => M.vampireCryptLP(false, v.lit),
   lovers_bench: (v) => N.loversBenchLP(v.lit),
   // extra (non si posano: modelli per le miniature)

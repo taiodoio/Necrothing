@@ -5,7 +5,7 @@ import { DEFAULT_LOOK, normalizeLook, type CustodeLook } from './look.ts';
 import type { Category, DeathCause, GraveType } from './graves.ts';
 import type { DayPhase } from './time.ts';
 import { MAP_SIZE, WISPS } from './balance.ts';
-import { CATALOG, FAMILY_MEMBERS } from './catalog.ts';
+import { CATALOG, FAMILY_MEMBERS, rotatedFootprint } from './catalog.ts';
 import { createRng, hashString } from './rng.ts';
 import { isoDate } from './time.ts';
 
@@ -349,6 +349,17 @@ export function normalizeSave(raw: unknown): SaveData | null {
     const lvl = data.world.expansionLevel ?? 0;
     data.world.unlockedLevel = Math.max(data.world.unlockedLevel ?? lvl, lvl);
     data.world.notifiedLevel = Math.max(data.world.notifiedLevel ?? data.world.unlockedLevel, lvl);
+  }
+  // la banda di scheletri ora è 3×3 (davanti al palco ballano due fantasmini): se la fila in più è occupata torna in inventario
+  for (const b of [...(data.placeables ?? [])].filter((p) => p.type === 'skeleton_band')) {
+    const [w, d] = rotatedFootprint(b.type, b.rot);
+    const inside = (x: number, y: number, fw: number, fd: number) => x < b.x + w && x + fw > b.x && y < b.y + d && y + fd > b.y;
+    const clash = (data.graves ?? []).some((g) => inside(g.x, g.y, 2, 2))
+      || (data.placeables ?? []).some((p) => p !== b && CATALOG[p.type] && inside(p.x, p.y, ...rotatedFootprint(p.type, p.rot)));
+    if (clash) {
+      data.placeables = (data.placeables ?? []).filter((p) => p !== b);
+      data.inventory = { ...(data.inventory ?? {}), skeleton_band: ((data.inventory as Record<string, number> | undefined)?.skeleton_band ?? 0) + 1 };
+    }
   }
   // la vista dall'alto è stata tolta (al suo posto c'è la bicicletta)
   if (data.settings && (data.settings as { camera?: string }).camera !== 'angled') data.settings = { ...data.settings, camera: 'angled' };

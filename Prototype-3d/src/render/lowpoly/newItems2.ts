@@ -264,7 +264,8 @@ export function swamp2LP(lit = true): LPModel {
   const shape = new THREE.Shape(); pts.forEach(([x, y], i) => (i ? shape.lineTo(x, y) : shape.moveTo(x, y))); shape.closePath();
   // fango attorno (più largo), fondale scuro, acqua torbida verde
   lp.push([0, 0.004, 0], 0, -Math.PI / 2, 0, [1.12, 1.15, 1]).plate(shape, 0.012, '#3b3026', { ao: 0, vary: 0.06 }).pop();
-  lp.push([0, 0.012, 0], 0, -Math.PI / 2).plate(shape, 0.012, '#141a16', { ao: 0 }).pop();
+  // di notte il fondale emana un verde fioco che si vede attraverso l'acqua torbida
+  lp.push([0, 0.012, 0], 0, -Math.PI / 2).plate(shape, 0.012, lit ? '#1a3f26' : '#141a16', lit ? { ao: 0, bucket: 'glow' } : { ao: 0 }).pop();
   lp.push([0, 0.035, 0], 0, -Math.PI / 2).plate(shape, 0.01, '#2c4a38', { bucket: 'water', vary: 0.05, ao: 0 }).pop();
   // sponda: sassi, muschio, ciuffi
   for (const [x, y] of pts) {
@@ -300,10 +301,17 @@ export function swamp2LP(lit = true): LPModel {
   emergingHand(lp, 0.1, 0.55, 0.2, 0.9, false);
   // bolle e fuochi fatui verdi che galleggiano
   for (let i = 0; i < 8; i++) lp.blob(r.range(-1, 1), 0.06, r.range(-0.55, 0.55), 0.025, 0.02, 0.025, '#8aa87a', { jitter: 0 });
-  // l'acqua emana un verde tenue dal basso (niente palle luminose sospese); qualche lucciola di palude
+  // palude bioluminescente: alghe che brillano a chiazze sull'acqua, funghi luminosi sul ceppo,
+  // qualche lucciola; una sola luce tenue e larga tinge tutto lo specchio (niente faretti sulle mani)
   if (lit) {
-    for (const [x, z] of [[-0.6, 0.15], [0.7, -0.1]]) lp.light(x, 0.15, z, '#9ad860', 0.5, 2.8, 0.35, 0.18);
-    for (let i = 0; i < 5; i++) lp.blob(r.range(-1.2, 1.2), r.range(0.25, 0.6), r.range(-0.6, 0.6), 0.012, 0.012, 0.012, '#d8ff7a', { bucket: 'glow', jitter: 0 });
+    for (let i = 0; i < 16; i++) {
+      const cx = r.range(-1.25, 1.25), cz = r.range(-0.7, 0.7);
+      if ((cx / 1.5) ** 2 + (cz / 0.95) ** 2 > 1) continue;
+      lp.cyl(cx, 0.047, cz, r.range(0.025, 0.05), r.range(0.02, 0.045), 0.004, 6, r.pick(['#a8f070', '#8ae0a0', '#c8ff8a']), { bucket: 'glow', jitter: 0 });
+    }
+    for (const [y, a] of [[0.12, 0.4], [0.24, 1.9], [0.33, 3.4]] as const) lp.blob(1.05 + Math.cos(a) * 0.19, y, -0.45 + Math.sin(a) * 0.19, 0.035, 0.016, 0.035, '#9af0d0', { bucket: 'glow', jitter: 0 });
+    for (let i = 0; i < 5; i++) lp.blob(r.range(-1.2, 1.2), r.range(0.3, 0.7), r.range(-0.6, 0.6), 0.012, 0.012, 0.012, '#d8ff7a', { bucket: 'glow', jitter: 0 });
+    lp.light(0, 0.7, 0, '#8ad870', 0.85, 3.8, 0.25, 0);
   }
   return lp.build();
 }

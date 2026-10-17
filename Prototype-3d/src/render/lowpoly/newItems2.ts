@@ -354,127 +354,218 @@ export function swingTree2LP(lit = true): LPModel {
 }
 
 /**
- * Cerchio di pietre nella nebbia (3×3): menhir storti con il muschio e le
- * rune che brillano piano, lastra d'altare al centro con mozziconi di
- * candela; in gioco la nebbia bassa si muove nel cerchio.
+ * Cerchio di pietre nella nebbia (3×3): menhir di altezze diverse (alti,
+ * medi, massi bassi e tondi), uno inclinato, uno caduto e spezzato in due,
+ * rune che brillano piano, altare al centro; in gioco la nebbia si muove.
  */
 export function stoneCircleLP(lit = true): LPModel {
   const lp = new LP('new2:stones');
   const r = lp.rng;
   lp.blob(0, 0.0, 0, 1.3, 0.03, 1.3, '#3e4a34', { vary: 0.06 });
   deadLeaves(lp, -1.1, -1.1, 1.1, 1.1, 10);
-  const N = 7;
-  for (let i = 0; i < N; i++) {
-    const a = (i / N) * Math.PI * 2 + 0.2, d = 1.05;
-    const h = r.range(0.75, 1.25), w = r.range(0.24, 0.32);
-    const fallen = i === 4;
-    lp.push([Math.sin(a) * d, fallen ? 0.12 : 0, Math.cos(a) * d], a + Math.PI, fallen ? 0 : r.range(-0.12, 0.12), fallen ? Math.PI / 2 - 0.1 : r.range(-0.1, 0.1));
-    lp.cyl(0, 0, 0, w, w * 0.7, h, 5, r.pick([LPC.stone, LPC.stoneWarm, '#6a6e66']), { vary: 0.1, ao: 0.35, jitter: 0.03, topTint: LPC.moss, topAmount: 0.5 });
-    moss(lp, 0, h * 0.3, w * 0.8, 0.07);
-    // runa incisa che brilla di verde acqua
+  const stoneCol = () => r.pick([LPC.stone, LPC.stoneWarm, '#6a6e66', '#5d625c']);
+  const rune = (h: number, w: number) => {
     const g = glowIf(lit, '#7af0d0', '#3a4a44');
-    lp.box(0, h * 0.5, w * 0.78, 0.03, 0.22, 0.01, g.color, { bucket: g.bucket, jitter: 0 });
-    lp.push([0, h * 0.58, w * 0.78], 0, 0, 0.7).box(0, 0, 0, 0.025, 0.1, 0.01, g.color, { bucket: g.bucket, jitter: 0 }).pop();
+    lp.box(0, h * 0.45, w * 0.8, 0.03, Math.min(0.22, h * 0.3), 0.01, g.color, { bucket: g.bucket, jitter: 0 });
+    lp.push([0, h * 0.52, w * 0.8], 0, 0, 0.7).box(0, 0, 0, 0.025, Math.min(0.1, h * 0.14), 0.01, g.color, { bucket: g.bucket, jitter: 0 }).pop();
+  };
+  // [altezza, larghezza, tipo]: menhir alti e medi, massi bassi tondeggianti, uno inclinato, uno spezzato
+  const ring: Array<[number, number, 'tall' | 'low' | 'lean' | 'broken']> = [
+    [1.3, 0.3, 'tall'], [0.35, 0.3, 'low'], [0.85, 0.26, 'tall'], [1.05, 0.28, 'lean'], [0.3, 0.26, 'low'],
+    [1.2, 0.32, 'tall'], [0.6, 0.28, 'broken'], [0.45, 0.24, 'low'], [0.95, 0.26, 'tall'],
+  ];
+  ring.forEach(([h, w, kind], i) => {
+    const a = (i / ring.length) * Math.PI * 2 + 0.15 + r.range(-0.08, 0.08), d = 1.05 + r.range(-0.08, 0.1);
+    const x = Math.sin(a) * d, z = Math.cos(a) * d;
+    if (kind === 'low') {
+      lp.blob(x, h * 0.45, z, w * 1.3, h * 0.6, w * 1.1, stoneCol(), { detail: 1, vary: 0.1, jitter: 0.04, topTint: LPC.moss, topAmount: 0.55 });
+      if (r.chance(0.6)) lp.blob(x + w, 0.08, z, w * 0.5, 0.1, w * 0.45, stoneCol(), { vary: 0.1, jitter: 0.03, topTint: LPC.moss, topAmount: 0.4 });
+      return;
+    }
+    if (kind === 'broken') {
+      // base spezzata in piedi e la cima caduta lì accanto
+      lp.push([x, 0, z], a + Math.PI, 0, 0.05).cyl(0, 0, 0, w, w * 0.85, h, 5, stoneCol(), { vary: 0.1, ao: 0.35, jitter: 0.03, topTint: LPC.moss, topAmount: 0.4 }).pop();
+      lp.push([x + Math.cos(a) * 0.45, w * 0.7, z - Math.sin(a) * 0.45], a + 0.6, 0, Math.PI / 2 - 0.08).cyl(0, -0.4, 0, w * 0.85, w * 0.6, 0.75, 5, stoneCol(), { vary: 0.1, ao: 0.25, jitter: 0.03, topTint: LPC.moss, topAmount: 0.5 }).pop();
+      return;
+    }
+    lp.push([x, 0, z], a + Math.PI, kind === 'lean' ? 0.28 : r.range(-0.08, 0.08), r.range(-0.08, 0.08));
+    lp.cyl(0, 0, 0, w, w * 0.65, h, r.pick([5, 6]), stoneCol(), { vary: 0.1, ao: 0.35, jitter: 0.035, topTint: LPC.moss, topAmount: 0.5 });
+    lp.blob(0, h, 0, w * 0.65, 0.06, w * 0.6, LPC.moss, { jitter: 0.01 }); // cappello di muschio
+    moss(lp, 0, h * 0.25, w * 0.75, 0.06);
+    rune(h, w);
     lp.pop();
-    if (r.chance(0.6)) grassTuft(lp, Math.sin(a) * (d + 0.25), Math.cos(a) * (d + 0.25), 1, ['#6b6242', '#55603a']);
-  }
+    if (r.chance(0.6)) grassTuft(lp, x * 1.2, z * 1.2, 1, ['#6b6242', '#55603a']);
+  });
+  // sassi sparsi dentro il cerchio
+  for (let i = 0; i < 6; i++) { const a = r.range(0, 6.28), d = r.range(0.45, 0.8); lp.blob(Math.sin(a) * d, 0.04, Math.cos(a) * d, r.range(0.05, 0.1), 0.05, r.range(0.05, 0.09), stoneCol(), { vary: 0.1 }); }
   // altare piatto con le candele consumate e un teschio di corvo
   lp.blob(0, 0.08, 0, 0.42, 0.1, 0.32, LPC.stoneLight, { vary: 0.08, jitter: 0.02 });
   lp.box(0, 0.16, 0, 0.62, 0.06, 0.44, LPC.stone, { bevel: 0.02, vary: 0.08 });
-  for (const [x, z] of [[-0.2, 0.1], [0.18, -0.08], [0.05, 0.14]]) candle(lp, x, 0.22, z, lit, 0.05);
+  for (const [x, z] of [[-0.2, 0.1], [0.18, -0.08]]) candle(lp, x, 0.22, z, lit, 0.05);
   lp.blob(-0.05, 0.25, -0.1, 0.04, 0.035, 0.05, LPC.bone, { jitter: 0 });
   lp.push([-0.05, 0.25, -0.04], 0, Math.PI / 2).cyl(0, 0, 0, 0.012, 0, 0.07, 4, LPC.bone, { jitter: 0 }).pop();
-  // nebbia bassa (additiva: tinta scura e piatta)
   for (let i = 0; i < 7; i++) { const a = r.range(0, 6.28), d = r.range(0, 0.8); lp.blob(Math.cos(a) * d, 0.1 + r.next() * 0.05, Math.sin(a) * d, r.range(0.35, 0.55), 0.05, r.range(0.3, 0.45), '#1f2a28', { bucket: 'ghost', jitter: 0.02 }); }
-  if (lit) lp.light(0, 0.4, 0, '#7af0d0', 0.4, 3.5, 0.3, 0.7);
+  if (lit) lp.light(0, 0.4, 0, '#7af0d0', 0.3, 3, 0.3, 0.6);
+  return lp.build();
+}
+
+/** Cipresso (1×1): il classico dei cimiteri, stretto e altissimo, verde scuro, con qualche bacca e lettiera. */
+export function cypressLP(): LPModel {
+  const lp = new LP('new2:cypress');
+  const r = lp.rng;
+  deadLeaves(lp, -0.45, -0.45, 0.45, 0.45, 6);
+  lp.cyl(0, 0, 0, 0.08, 0.06, 0.45, 6, '#4a3a2e', { vary: 0.1 });
+  for (let i = 0; i < 3; i++) { const a = (i / 3) * Math.PI * 2; path(lp, [[0, 0.1, 0], [Math.cos(a) * 0.18, 0.02, Math.sin(a) * 0.18]], 0.05, 0.015, '#3a2c22', 5); }
+  // chioma a fuso: tanti ciuffi sovrapposti, più larghi a un terzo dell'altezza
+  const H = 2.8, cols = ['#2f4433', '#37503a', '#2a3d2f', '#3d5a40'];
+  for (let i = 0; i < 26; i++) {
+    const t = i / 26, y = 0.3 + t * (H - 0.4);
+    const w = 0.34 * Math.sin(Math.min(1, (t + 0.08) * 1.3) * Math.PI) * (1 - t * 0.35) + 0.04;
+    const a = i * 2.4;
+    lp.blob(Math.cos(a) * w * 0.3, y, Math.sin(a) * w * 0.3, w, 0.2, w, r.pick(cols), { detail: 1, vary: 0.1, jitter: w * 0.25, ao: 0.15 });
+  }
+  lp.cyl(0, H - 0.1, 0, 0.05, 0.0, 0.25, 5, '#37503a', { jitter: 0.01 });
+  for (let i = 0; i < 8; i++) { const t = r.range(0.15, 0.7), a = r.range(0, 6.28); lp.blob(Math.cos(a) * 0.3 * (1 - t * 0.5), 0.3 + t * H, Math.sin(a) * 0.3 * (1 - t * 0.5), 0.025, 0.025, 0.025, '#6b6a52', { jitter: 0 }); } // galbule
   return lp.build();
 }
 
 /**
- * Salice piangente (3×3): tronco nodoso che si divide in tre, rami che si
- * aprono e ricadono in tende di fogliette (verdi e qualcuna gialla), radici,
- * lettiera e una vecchia lapide sotto la chioma.
+ * Melo stregato (2×2): alberello storto e basso con poche foglie rosse, le
+ * mele a forma di teschietto (una morsicata), un'altalena di corda col
+ * secchio, la lanterna appesa e i frutti caduti nell'erba.
  */
-export function willow2LP(): LPModel {
-  const lp = new LP('new2:willow');
+export function witchAppleLP(lit = true): LPModel {
+  const lp = new LP('new2:apple');
   const r = lp.rng;
-  const T = '#4a3e34', T2 = '#3a2f27';
-  deadLeaves(lp, -1.2, -1.2, 1.2, 1.2, 14);
-  for (let i = 0; i < 6; i++) { const a = (i / 6) * Math.PI * 2 + r.range(-0.2, 0.2); path(lp, [[0, 0.2, 0], [Math.cos(a) * 0.3, 0.07, Math.sin(a) * 0.3], [Math.cos(a) * 0.6, 0, Math.sin(a) * 0.6]], 0.1, 0.02, T2, 5); }
-  path(lp, [[0, 0, 0], [0.05, 0.6, 0.02], [-0.02, 1.1, 0]], 0.22, 0.17, T, 8);
-  for (let k = 0; k < 7; k++) { const a = (k / 7) * Math.PI * 2; lp.push([Math.cos(a) * 0.2, 0.1, Math.sin(a) * 0.2], -a).box(0, 0, 0, 0.03, 0.85, 0.02, T2, { jitter: 0.006, ao: 0 }).pop(); }
-  bracketFungus(lp, 0, 0.5, 0.18, 0, 1);
-  const leaf = ['#4f6340', '#5a6e44', '#47593a', '#62744a', '#7a7a42'];
-  // tre bracci principali, poi rami che si aprono e ricadono
-  const limbs: V3[] = [[-0.55, 2.0, 0.15], [0.5, 2.05, -0.25], [0.1, 2.3, 0.45]];
-  for (const lt of limbs) path(lp, [[0, 1.05, 0], [lt[0] * 0.5, 1.55, lt[2] * 0.5], lt], 0.13, 0.06, T, 6);
-  const N = 16;
-  for (let i = 0; i < N; i++) {
-    const a = (i / N) * Math.PI * 2 + r.range(-0.1, 0.1);
-    const src = limbs[i % 3];
-    const top: V3 = [Math.cos(a) * r.range(0.55, 0.8), src[1] + r.range(0.1, 0.35), Math.sin(a) * r.range(0.55, 0.8)];
-    const out: V3 = [Math.cos(a) * r.range(1.05, 1.3), top[1] - 0.15, Math.sin(a) * r.range(1.05, 1.3)];
-    path(lp, [src, top, out], 0.04, 0.015, T, 4);
-    // tende: 4 rametti che ricadono da ogni ramo, con le foglioline in fila
-    for (let k = 0; k < 5; k++) {
-      const t = 0.2 + k * 0.18;
-      const sx = top[0] + (out[0] - top[0]) * t, sy = top[1] + (out[1] - top[1]) * t, sz = top[2] + (out[2] - top[2]) * t;
-      const len = r.range(0.9, 1.7), sway = r.range(-0.08, 0.08);
-      const strand: V3[] = [[sx, sy, sz], [sx * 1.05 + sway, sy - len * 0.5, sz * 1.05], [sx * 1.08 + sway * 2, sy - len, sz * 1.08]];
-      path(lp, strand, 0.008, 0.005, '#4a5a34', 3);
-      for (let j = 0; j < 8; j++) {
-        const u = j / 8, py = sy - len * u;
-        lp.push([sx * (1 + 0.08 * u) + sway * 2 * u, py, sz * (1 + 0.08 * u)], r.range(0, 6), 0.2, 0.4).blob(0.012, 0, 0, 0.045, 0.012, 0.016, r.pick(leaf), { jitter: 0, vary: 0.1, ao: 0 }).pop();
-      }
-    }
-    leafCluster(lp, top[0], top[1] + 0.02, top[2], 0.15, leaf);
+  const T = '#4a362a';
+  deadLeaves(lp, -0.8, -0.8, 0.8, 0.8, 12);
+  for (let i = 0; i < 4; i++) { const a = (i / 4) * Math.PI * 2 + 0.3; path(lp, [[0, 0.15, 0], [Math.cos(a) * 0.25, 0.04, Math.sin(a) * 0.25], [Math.cos(a) * 0.42, 0, Math.sin(a) * 0.42]], 0.07, 0.015, T, 5); }
+  path(lp, [[0, 0, 0], [0.1, 0.45, 0.05], [-0.05, 0.85, 0], [0.05, 1.05, -0.05]], 0.15, 0.09, T, 7);
+  bracketFungus(lp, 0.05, 0.35, 0.12, 0, 0.9);
+  const tips: V3[] = [];
+  for (const [dx, dy, dz] of [[0.7, 0.45, 0.1], [-0.65, 0.5, 0.25], [0.15, 0.65, -0.6], [-0.2, 0.75, 0.55], [0.45, 0.7, -0.3]] as const) {
+    const s: V3 = [0.02, 1.0, -0.02], m: V3 = [dx * 0.5, 1.0 + dy * 0.6, dz * 0.5], e: V3 = [dx, 1.0 + dy, dz];
+    path(lp, [s, m, e], 0.06, 0.02, T, 5);
+    tips.push(e, m);
   }
-  leafCluster(lp, 0, 2.4, 0, 0.22, leaf);
-  // lapide vecchia sotto la chioma, con un mazzetto
-  lp.push([0.55, 0, 0.55], -0.7, 0.08);
-  lp.extrude(roundTopShape(0.34, 0.55, 7), 0.09, LPC.stoneWarm, { bevel: 0.012, vary: 0.08, topTint: LPC.moss, topAmount: 0.5 });
-  lp.box(0, 0.32, 0.05, 0.18, 0.02, 0.005, LPC.engrave, { jitter: 0 });
-  lp.box(0, 0.26, 0.05, 0.12, 0.02, 0.005, LPC.engrave, { jitter: 0 });
-  lp.pop();
-  for (let i = 0; i < 3; i++) flower(lp, 0.4 + i * 0.05, 0.68, LPC.flowers[i], 0.1);
+  // chioma rada di foglie rosse e ruggine
+  for (const t of tips) leafCluster(lp, t[0], t[1] + 0.05, t[2], 0.2, ['#7a2a2a', '#8e3a2a', '#6b2f35', '#9a5a2e']);
+  // mele: lucide, rosso scuro, alcune con la faccina da teschio
+  const apple = (x: number, y: number, z: number, skullish: boolean) => {
+    lp.blob(x, y, z, 0.06, 0.055, 0.06, '#8e1f24', { detail: 1, jitter: 0.004, vary: 0.06 });
+    lp.box(x, y + 0.05, z, 0.008, 0.04, 0.008, '#3a2a1e', { jitter: 0 });
+    if (skullish) {
+      for (const s of [-1, 1]) lp.blob(x + s * 0.02, y + 0.008, z + 0.052, 0.012, 0.014, 0.006, lit ? '#ffd36a' : '#2a1010', lit ? { bucket: 'glow', jitter: 0 } : { jitter: 0 });
+      lp.box(x, y - 0.025, z + 0.05, 0.03, 0.006, 0.006, '#2a1010', { jitter: 0 });
+    }
+  };
+  tips.forEach((t, i) => apple(t[0] + 0.05, t[1] - 0.12, t[2] + 0.08, i % 2 === 0));
+  for (let i = 0; i < 5; i++) apple(r.range(-0.6, 0.6), 0.05, r.range(-0.2, 0.7), false);
+  // secchio di mele e lanterna appesa al ramo
+  lp.cyl(-0.55, 0, 0.55, 0.13, 0.11, 0.18, 9, '#6b5a4a', { jitter: 0 });
+  for (let i = 0; i < 4; i++) apple(-0.55 + r.range(-0.06, 0.06), 0.2, 0.55 + r.range(-0.06, 0.06), i === 0);
+  const [lx, ly, lz] = tips[2];
+  tube(lp, [lx, ly, lz], [lx, ly - 0.25, lz], 0.004, LPC.iron, 3);
+  const g = glowIf(lit, LPC.lantern);
+  lp.box(lx, ly - 0.42, lz, 0.09, 0.14, 0.09, g.color, { bucket: g.bucket, jitter: 0 });
+  lp.box(lx, ly - 0.28, lz, 0.11, 0.025, 0.11, LPC.iron, { jitter: 0 });
+  if (lit) lp.light(lx, ly - 0.35, lz, LPC.lantern, 0.6, 3.5, 0.2, 0.7);
+  for (let i = 0; i < 4; i++) grassTuft(lp, r.range(-0.8, 0.8), r.range(-0.8, 0.8), 0.9);
   return lp.build();
 }
 
-/** Funghi luminosi su un tronco caduto (2×1): luce fredda, senza intrappolare nessuno. */
+/**
+ * Masso spaventoso (2×2): un unico grande masso muschioso con la fronte
+ * aggrottata e la bocca a crepa piena di denti di pietra; di giorno dorme
+ * (palpebre chiuse), di notte apre due occhi ambra che brillano.
+ */
+export function scaryBoulderLP(night: boolean): LPModel {
+  const lp = new LP(`new2:boulder:${night}`);
+  const r = lp.rng;
+  const S = '#5d6068', S2 = '#4a4c54';
+  lp.blob(0, 0.5, -0.05, 0.75, 0.55, 0.62, S, { detail: 1, vary: 0.08, jitter: 0.06, topTint: LPC.moss, topAmount: 0.6, ao: 0.35 });
+  lp.blob(-0.55, 0.22, 0.25, 0.32, 0.25, 0.3, S2, { detail: 1, vary: 0.1, jitter: 0.05, topTint: LPC.moss, topAmount: 0.5 });
+  lp.blob(0.6, 0.15, 0.35, 0.25, 0.17, 0.22, S2, { vary: 0.1, jitter: 0.04, topTint: LPC.moss, topAmount: 0.4 });
+  // arcate sopraccigliari aggrottate
+  for (const s of [-1, 1]) lp.push([s * 0.22, 0.78, 0.48], s * -0.25, 0, s * 0.35).blob(0, 0, 0, 0.18, 0.06, 0.08, S2, { jitter: 0.01, vary: 0.08 }).pop();
+  // occhi: incavi scuri; di notte iridi ambra che brillano, di giorno palpebre chiuse
+  for (const s of [-1, 1]) {
+    lp.blob(s * 0.22, 0.66, 0.5, 0.11, 0.07, 0.04, '#1a1a1e', { jitter: 0 });
+    if (night) {
+      lp.blob(s * 0.22, 0.66, 0.53, 0.075, 0.05, 0.02, '#ffb02a', { bucket: 'glow', jitter: 0 });
+      lp.blob(s * 0.2, 0.66, 0.545, 0.022, 0.04, 0.01, '#3a1a0a', { jitter: 0 }); // pupilla a fessura
+    } else {
+      lp.push([s * 0.22, 0.66, 0.53], 0, 0.2).blob(0, 0, 0, 0.11, 0.035, 0.04, S, { jitter: 0 }).pop();
+      lp.box(s * 0.22, 0.645, 0.565, 0.14, 0.008, 0.006, '#2a2a30', { jitter: 0 });
+    }
+  }
+  // naso a sperone e bocca a crepa con i denti di pietra
+  lp.push([0, 0.52, 0.56], 0, 0.3).cyl(0, 0, 0, 0.08, 0.02, 0.14, 4, S2, { jitter: 0.01 }).pop();
+  const mouth = new THREE.Shape(); mouth.moveTo(-0.3, 0); mouth.lineTo(-0.15, -0.05); mouth.lineTo(0, -0.02); mouth.lineTo(0.14, -0.06); mouth.lineTo(0.3, 0.01); mouth.lineTo(0.15, -0.11); mouth.lineTo(-0.15, -0.1); mouth.closePath();
+  lp.push([0, 0.4, 0.57], 0, -0.2).plate(mouth, 0.02, '#141418', { ao: 0 }).pop();
+  for (let i = 0; i < 6; i++) lp.push([-0.22 + i * 0.09, 0.39, 0.585], 0, 0, i % 2 ? Math.PI : 0).cyl(0, -0.03, 0, 0.025, 0, 0.05, 3, '#8a8a80', { jitter: 0 }).pop();
+  // muschio, licheni gialli, ciuffi alla base, qualche ossicino
+  for (let i = 0; i < 6; i++) moss(lp, r.range(-0.6, 0.6), r.range(0.3, 0.9), r.range(-0.3, 0.4), 0.08);
+  for (let i = 0; i < 5; i++) lp.blob(r.range(-0.5, 0.5), r.range(0.25, 0.85), 0.5 + r.range(-0.05, 0.05), 0.03, 0.03, 0.01, '#b8a84a', { jitter: 0 });
+  for (let i = 0; i < 7; i++) { const a = r.range(0, 6.28); grassTuft(lp, Math.cos(a) * 0.85, Math.sin(a) * 0.75, 1.1, ['#55603a', '#6b6242', '#4a5a36']); }
+  for (let i = 0; i < 3; i++) boneStick(lp, [r.range(-0.4, 0.4), 0.02, 0.7], [r.range(-0.4, 0.4), 0.02, 0.8], 0.012, LPC.bone);
+  if (night) lp.light(0, 0.66, 0.8, '#ffb02a', 0.35, 2.6, 0.15, 0.5);
+  return lp.build();
+}
+
+/**
+ * Funghi luminosi su un tronco caduto (2×1): tronco cavo con la corteccia
+ * a placche, l'estremità spezzata a schegge e l'altra tagliata con gli
+ * anelli, un ramo mozzo, muschio, felci e funghi che fanno luce fredda.
+ */
 export function glowShroomsLP(lit = true): LPModel {
   const lp = new LP('new2:shrooms');
   const r = lp.rng;
   moss(lp, 0, 0.005, 0, 0.45);
-  // tronco caduto, cavo, coperto di muschio
-  lp.push([0, 0.16, -0.05], 0.15, 0, Math.PI / 2);
-  lp.cyl(0, -0.75, 0, 0.17, 0.15, 1.5, 8, '#4a3a2e', { vary: 0.12, topTint: LPC.moss, topAmount: 0.5 });
-  lp.cyl(0, -0.76, 0, 0.12, 0.12, 0.02, 8, '#1a1410', { jitter: 0 });
+  const L = 1.5, R0 = 0.18, ax = 0.15;
+  lp.push([0, R0 - 0.02, -0.05], ax, 0, Math.PI / 2);
+  // tronco a tre segmenti appena piegati, corteccia a placche
+  for (let k = 0; k < 3; k++) {
+    lp.push([0, -L / 2 + k * (L / 3), 0], 0, 0, (k - 1) * 0.04).cyl(0, 0, 0, R0 - k * 0.012, R0 - (k + 1) * 0.012, L / 3 + 0.02, 9, k % 2 ? '#4a3a2e' : '#54412f', { vary: 0.14, topTint: LPC.moss, topAmount: 0.45, ao: 0.2 }).pop();
+  }
+  for (let i = 0; i < 26; i++) {
+    const a = r.range(0, 6.28), y = r.range(-L / 2 + 0.05, L / 2 - 0.05);
+    lp.push([Math.cos(a) * (R0 - 0.005), y, Math.sin(a) * (R0 - 0.005)], -a + Math.PI / 2).box(0, 0, 0, 0.06, r.range(0.06, 0.14), 0.02, r.pick(['#3a2c22', '#5a4636', '#2f251e']), { jitter: 0.006, ao: 0 }).pop();
+  }
+  // estremità tagliata: anelli d'accrescimento e cavità scura
+  lp.push([0, -L / 2 - 0.005, 0]);
+  lp.cyl(0, -0.01, 0, R0 - 0.01, R0 - 0.01, 0.012, 10, '#c9a77a', { jitter: 0 });
+  for (const rr of [0.13, 0.09]) lp.add(new THREE.TorusGeometry(rr, 0.006, 3, 14).rotateX(Math.PI / 2).translate(0, -0.012, 0), '#8a6a4a', { jitter: 0 });
+  lp.cyl(0, -0.016, 0, 0.06, 0.06, 0.008, 8, '#1a1410', { jitter: 0 });
   lp.pop();
-  for (let i = 0; i < 4; i++) moss(lp, r.range(-0.6, 0.6), 0.3, -0.05 + r.range(-0.05, 0.05), 0.08);
-  // funghi: alti e sottili color acquamarina, ombrelli viola, e qualche piccolino
+  // estremità spezzata: schegge
+  for (let i = 0; i < 7; i++) { const a = (i / 7) * Math.PI * 2; lp.push([Math.cos(a) * R0 * 0.75, L / 2, Math.sin(a) * R0 * 0.75], 0, r.range(-0.2, 0.2), r.range(-0.2, 0.2)).cyl(0, 0, 0, 0.04, 0.0, r.range(0.08, 0.2), 3, '#5a4636', { jitter: 0 }).pop(); }
+  lp.cyl(0, L / 2 - 0.05, 0, 0.1, 0.08, 0.06, 7, '#1a1410', { jitter: 0 });
+  // ramo mozzo con un fungo a mensola
+  lp.push([R0 * 0.9, 0.2, 0], 0, 0, -1.1).cyl(0, 0, 0, 0.05, 0.035, 0.26, 6, '#4a3a2e', { vary: 0.1 }).pop();
+  lp.pop();
+  bracketFungus(lp, -0.3, 0.2, 0.15, 0.1, 1.0); bracketFungus(lp, 0.4, 0.26, 0.13, -0.1, 0.8);
+  for (let i = 0; i < 5; i++) moss(lp, r.range(-0.6, 0.6), 0.32, -0.05 + r.range(-0.06, 0.06), 0.07);
+  // felci ai lati
+  for (const [fx, fz] of [[-0.75, 0.25], [0.75, -0.3]]) for (let k = 0; k < 5; k++) { const a = (k / 5) * Math.PI * 2; lp.push([fx, 0.02, fz], a, 0.9).blob(0, 0.12, 0, 0.035, 0.13, 0.01, k % 2 ? '#4d6640' : '#5a7a48', { jitter: 0 }).pop(); }
+  // funghi: alti e sottili color acquamarina, ombrelli viola, mensole luminose
   const cols = ['#7af0d0', '#b07ae0', '#9fe0f0'];
-  for (let i = 0; i < 9; i++) {
-    const x = r.range(-0.65, 0.65), z = r.chance(0.5) ? r.range(0.12, 0.3) : r.range(-0.3, -0.18), y = 0;
+  for (let i = 0; i < 11; i++) {
+    const onLog = i < 5;
+    const x = r.range(-0.6, 0.6), z = onLog ? -0.05 + r.range(-0.08, 0.08) : (r.chance(0.5) ? r.range(0.15, 0.32) : r.range(-0.32, -0.2));
+    const y = onLog ? 0.34 : 0;
     const tall = r.chance(0.5);
-    const h = tall ? r.range(0.18, 0.32) : r.range(0.06, 0.12), w = tall ? 0.03 : 0.05;
+    const h = tall ? r.range(0.15, 0.28) : r.range(0.05, 0.1), w = tall ? 0.03 : 0.05;
     const c = r.pick(cols);
     lp.cyl(x, y, z, 0.012, 0.009, h, 4, '#d8e0d0', { jitter: 0 });
     lp.lathe(x, y + h - 0.005, z, [[0, 0], [w, 0], [w * 0.9, w * 0.4], [0, w * 0.6]], 7, lit ? c : '#4a5a58', lit ? { bucket: 'glow', jitter: 0 } : { jitter: 0 });
   }
-  for (let i = 0; i < 3; i++) mushroom(lp, r.range(-0.6, 0.6), r.range(0.3, 0.42), 0.05 + r.next() * 0.03, '#6f3f86', false, 0.035);
-  // mensole luminose sul tronco
-  for (let i = 0; i < 4; i++) {
-    const x = -0.5 + i * 0.3;
-    lp.push([x, 0.2 + (i % 2) * 0.06, 0.12], 0);
-    lp.add(new THREE.CylinderGeometry(0.06, 0.065, 0.02, 8, 1, false, -Math.PI / 2, Math.PI), lit ? '#7af0d0' : '#4a5a58', lit ? { bucket: 'glow', jitter: 0 } : { jitter: 0 });
-    lp.pop();
-  }
   if (lit) {
-    for (let i = 0; i < 10; i++) lp.blob(r.range(-0.7, 0.7), r.range(0.3, 0.8), r.range(-0.3, 0.3), 0.01, 0.01, 0.01, '#c8fff0', { bucket: 'glow', jitter: 0 }); // spore
-    lp.light(-0.3, 0.35, 0.15, '#7af0d0', 0.45, 2.6, 0.2, 0.7);
-    lp.light(0.35, 0.35, -0.15, '#b07ae0', 0.35, 2.2, 0.2, 0.6);
+    for (let i = 0; i < 10; i++) lp.blob(r.range(-0.7, 0.7), r.range(0.35, 0.8), r.range(-0.3, 0.3), 0.01, 0.01, 0.01, '#c8fff0', { bucket: 'glow', jitter: 0 });
+    lp.light(-0.3, 0.55, 0.3, '#7af0d0', 0.2, 2.2, 0.2, 0.7);
+    lp.light(0.35, 0.55, -0.3, '#b07ae0', 0.15, 2.0, 0.2, 0.6);
   }
-  for (let i = 0; i < 5; i++) grassTuft(lp, r.range(-0.8, 0.8), r.range(-0.4, 0.4), 0.8);
+  for (let i = 0; i < 4; i++) grassTuft(lp, r.range(-0.8, 0.8), r.range(-0.4, 0.4), 0.8);
   return lp.build();
 }
 
@@ -572,13 +663,28 @@ export function witchCornerLP(lit = true): LPModel {
   skull(lp, 0.15, 1.18, 0.0, 0.6);
   lp.pop();
   // rastrelliera di erbe e un serpente secco appesi
-  for (const s of [-1, 1]) lp.cyl(-0.05 + s * 0.3, 0, 0.75, 0.02, 0.02, 1.1, 4, LPC.woodDark, { jitter: 0 });
-  lp.box(-0.05, 1.08, 0.75, 0.7, 0.03, 0.03, LPC.woodDark, { jitter: 0 });
+  for (const s of [-1, 1]) lp.cyl(0.2 + s * 0.3, 0, -0.9, 0.02, 0.02, 1.1, 4, LPC.woodDark, { jitter: 0 });
+  lp.box(0.2, 1.08, -0.9, 0.7, 0.03, 0.03, LPC.woodDark, { jitter: 0 });
   for (let k = 0; k < 5; k++) {
-    const x = -0.3 + k * 0.12;
-    tube(lp, [x, 1.08, 0.75], [x, 0.98, 0.75], 0.004, '#8a7a5a', 3);
-    lp.push([x, 0.98, 0.75], 0, Math.PI).cyl(0, 0, 0, 0.012, 0.05, 0.18, 5, r.pick(['#6a7a3a', '#8a6a4a', '#7a5a7a', '#5a7a5a']), { jitter: 0.01 }).pop();
+    const x = -0.05 + k * 0.12;
+    tube(lp, [x, 1.08, -0.9], [x, 0.98, -0.9], 0.004, '#8a7a5a', 3);
+    lp.push([x, 0.98, -0.9], 0, Math.PI).cyl(0, 0, 0, 0.012, 0.05, 0.18, 5, r.pick(['#6a7a3a', '#8a6a4a', '#7a5a7a', '#5a7a5a']), { jitter: 0.01 }).pop();
   }
+  // bancarella delle pozioni in vendita: banchetto, boccette in fila con i cartellini, insegna
+  lp.push([-0.35, 0, 0.8]);
+  lp.box(0, 0, 0, 0.8, 0.42, 0.3, LPC.wood, { bevel: 0.01, vary: 0.1 });
+  lp.box(0, 0.42, 0, 0.86, 0.035, 0.34, LPC.woodLight, { bevel: 0.006 });
+  for (let j = 0; j < 5; j++) {
+    const c = ['#8a5ad0', '#e04a7a', '#9af06a', '#4ab0d0', '#f0c02a'][j];
+    lp.lathe(-0.32 + j * 0.16, 0.455, 0.02, [[0.0, 0], [0.045, 0], [0.05, 0.05], [0.02, 0.1], [0.02, 0.13], [0, 0.13]], 7, c, lit ? { bucket: 'glow', jitter: 0 } : { jitter: 0 });
+    lp.cyl(-0.32 + j * 0.16, 0.585, 0.02, 0.015, 0.015, 0.03, 5, '#6b4a3a', { jitter: 0 });
+    lp.box(-0.32 + j * 0.16, 0.43, 0.175, 0.06, 0.04, 0.005, '#e2d6bb', { jitter: 0 }); // cartellino del prezzo
+  }
+  for (const s of [-1, 1]) lp.cyl(s * 0.4, 0.42, -0.12, 0.018, 0.018, 0.45, 4, LPC.woodDark, { jitter: 0 });
+  lp.box(0, 0.86, -0.12, 0.6, 0.16, 0.025, '#2a2235', { bevel: 0.006 });
+  lp.box(-0.18, 0.88, -0.105, 0.07, 0.11, 0.01, '#9af06a', { jitter: 0 });
+  for (const w of [0.28, 0.2]) lp.box(0.08, 0.92 - (0.28 - w) * 0.6, -0.105, w, 0.018, 0.006, '#c9a227', { jitter: 0 });
+  lp.pop();
   // leggio col libro aperto, scopa appoggiata, gatto nero acciambellato
   lp.push([0.75, 0, -0.45], -0.6);
   lp.cyl(0, 0, 0, 0.12, 0.06, 0.04, 6, LPC.woodDark, { jitter: 0 });

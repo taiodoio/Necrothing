@@ -10,6 +10,7 @@ import * as N from '../render/lowpoly/newItems.ts';
 import * as M from '../render/lowpoly/newItems2.ts';
 import { LP_SCENERY } from '../render/lowpoly/index.ts';
 import { lowpolyGrave } from '../render/lowpoly/graves.ts';
+import { monsterRocksLP } from '../render/lowpoly/extras.ts';
 import { drawIcon, iconUrl } from '../ui/icons.ts';
 import { animateRig, buildRig, rigLightPos, type CharacterKind, type Pose } from '../view/characters.ts';
 import { assemble, handPos, headAt, headCenter, headFront, humanSpec, onSkin, HUMAN_PIVOTS, DEG, O } from '../render/lowpoly/v2/custode.ts';
@@ -75,8 +76,8 @@ function vampire(): THREE.Group {
   );
 }
 
-function witch(): THREE.Group {
-  const hat = (lp: LP) => {
+/** Cappello da strega (spazio della testa): tesa larga, cono piegato, nastro verde e fibbia. */
+function witchHat(lp: LP) {
     const c = headCenter();
     const y = headAt(0, 50 * DEG).p.y;
     lp.cyl(c.x, y - 0.01, c.z + 0.01, 0.44, 0.43, 0.03, 20, '#2a2235', O);
@@ -86,7 +87,10 @@ function witch(): THREE.Group {
     lp.cyl(0, 0.02, 0, 0.245, 0.24, 0.05, 14, '#5f8a4a', O);
     lp.add(new THREE.BoxGeometry(0.06, 0.06, 0.01).translate(0, 0.045, 0.24), '#c9a227', O);
     lp.pop();
-  };
+}
+
+function witch(): THREE.Group {
+  const hat = witchHat;
   return figure(
     { skin: '#b6d29a', sparkle: false, hair: 'long', hairColor: '#4a2a5a', eyes: '#2f5a32', hat: 'none', outfit: 'cloak', outfitColor: '#4a3a5a', accentColor: '#5f8a4a', beard: 'none', mustache: 'none', freckles: true },
     {
@@ -239,24 +243,39 @@ function vampire2(): THREE.Group {
   return group(inst(M.vampireCryptLP(true)), v, lawn(1.2, 1.9, 14, 8));
 }
 
-/** Etichetta «incantesimo pronto» sopra la strega: la scopa che pulisce e le scintille (come gli incassi di bar e orto). */
-function spellBadge(y: number): THREE.Sprite {
-  const c = document.createElement('canvas'); c.width = 96; c.height = 96;
+/** Etichetta dell'incasso (fiammella del fuoco fatuo e «+N»), come sopra bar e orto. */
+function wispBadge(n: number, y: number): THREE.Sprite {
+  const c = document.createElement('canvas'); c.width = 192; c.height = 96;
   const g = c.getContext('2d')!;
-  const plate = (inset: number, color: string) => { g.fillStyle = color; g.fillRect(inset + 6, inset, 96 - 2 * (inset + 6), 96 - 2 * inset); g.fillRect(inset, inset + 6, 96 - 2 * inset, 96 - 2 * (inset + 6)); };
-  plate(0, '#07080b'); plate(6, '#9a6ad0'); plate(12, '#161920');
-  drawIcon(g, 'broom', 18, 18, 60);
-  g.fillStyle = '#f1d39c';
-  for (const [x, y2] of [[70, 22], [24, 70], [76, 62]]) { g.fillRect(x - 2, y2 - 7, 4, 14); g.fillRect(x - 7, y2 - 2, 14, 4); }
-  const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; t.magFilter = THREE.NearestFilter;
+  const plate = (inset: number, color: string) => { g.fillStyle = color; g.fillRect(inset + 6, inset, 192 - 2 * (inset + 6), 96 - 2 * inset); g.fillRect(inset, inset + 6, 192 - 2 * inset, 96 - 2 * (inset + 6)); };
+  plate(0, '#07080b'); plate(6, '#c9a25c'); plate(12, '#161920');
+  drawIcon(g, 'wisp', 20, 20, 56);
+  g.fillStyle = '#f1d39c'; g.font = 'bold 46px system-ui, sans-serif'; g.textBaseline = 'middle'; g.fillText(`+${n}`, 84, 50);
+  const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace;
   const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: t, depthTest: false, toneMapped: false }));
-  sp.scale.set(0.5, 0.5, 1); sp.position.y = y; sp.renderOrder = 10;
+  sp.scale.set(0.9, 0.45, 1); sp.position.y = y; sp.renderOrder = 10;
   return sp;
 }
 
+/** Il Custode col cappello da strega (nuovo cappello della personalizzazione). */
+function custodeWitchHat(look: Partial<typeof DEFAULT_LOOK>, name: string, x: number, yaw: number): THREE.Group {
+  const c = figure({ ...DEFAULT_LOOK, ...look, hat: 'none' }, { name, hat: witchHat, hatPh: 50 }, name);
+  c.position.set(x, 0, 0); c.rotation.y = yaw;
+  return c;
+}
+
+function bellRung(): THREE.Group {
+  const c = char('custode', 'cheer', [0.62, 0.22, 0.62], -2.3, 0.3);
+  const g = group(inst(M.soulBellLP()), c, lawn(1.1, 2.0, 16, 5));
+  for (const [x, z, f, k] of [[-1.2, 0.6, 1.2, 'ghost'], [1.3, -0.4, -1.4, 'ghostRare'], [-0.6, -1.2, 0.4, 'ghost']] as const) { const gh = char(k, 'cheer', [x, 0, z], f, x); gh.scale.setScalar(0.8); g.add(gh); }
+  return g;
+}
+
+function boulder(night: boolean): THREE.Group { return group(inst(M.scaryBoulderLP(night)), lawn(1.1, 1.8, 14, 21)); }
+
 function witch2(): THREE.Group {
   const w = witch(); w.position.set(0.85, 0, 0.0); w.rotation.y = -0.65;
-  const b = spellBadge(2.0); b.position.x = 0.25;
+  const b = wispBadge(5, 2.0); b.position.x = -0.35;
   return group(inst(M.witchCornerLP()), w, b, lawn(1.1, 1.8, 12, 4));
 }
 
@@ -385,17 +404,22 @@ const SETS: Record<string, Panel[]> = {
   '5': [
     { title: 'Gazebo delle anime · giorno', yaw: 0.6, zoom: 2.7, center: [0, 1.25, 0], build: () => gazebo2(false) },
     { title: 'Gazebo delle anime · di notte i fantasmi ballano', night: true, dusk: true, yaw: 0.6, zoom: 2.5, center: [0, 1.25, 0], build: () => gazebo2(true) },
-    { title: 'Campana delle anime (al posto del campanile)', yaw: 0.5, zoom: 1.75, center: [0, 1.25, 0], build: bellScene },
+    { title: 'Campana delle anime · suonata, arrivano i fantasmi', night: true, dusk: true, yaw: 0.5, zoom: 2.0, center: [0, 1.1, 0], build: bellRung },
+    { title: 'Masso spaventoso · di giorno dorme', yaw: 0.45, zoom: 1.15, center: [0, 0.5, 0], build: () => boulder(false) },
+    { title: 'Masso spaventoso · di notte apre gli occhi', night: true, dusk: true, yaw: 0.45, zoom: 1.15, center: [0, 0.5, 0], build: () => boulder(true) },
+    { title: 'Per confronto: le Rocce mostruose di oggi', night: true, dusk: true, yaw: 0.45, zoom: 1.15, center: [0, 0.45, 0], build: () => group(inst(monsterRocksLP({ type: 'monster_rocks', variant: 0, seed: 1, dirty: false, broken: false, lit: true })), lawn(1.1, 1.8, 14, 22)) },
+    { title: 'Cerchio di pietre nella nebbia', night: true, dusk: true, yaw: 0.5, pitch: 0.6, zoom: 1.75, center: [0, 0.4, 0], build: () => group(inst(M.stoneCircleLP()), lawn(1.5, 2.3, 18, 14)) },
+    { title: 'Cipresso (al posto del salice)', yaw: 0.55, zoom: 1.8, center: [0, 1.4, 0], build: () => group(inst(M.cypressLP()), lawn(0.6, 1.6, 14, 15), char('custode', 'idle', [0.95, 0, -0.2], -0.9)) },
+    { title: 'Melo stregato (altra idea)', night: true, dusk: true, yaw: 0.55, zoom: 1.35, center: [0, 0.9, 0], build: () => group(inst(M.witchAppleLP()), lawn(1.0, 1.8, 14, 17)) },
+    { title: 'Funghi luminosi sul tronco caduto', night: true, yaw: 0.45, zoom: 0.95, center: [0, 0.3, 0], build: () => group(inst(M.glowShroomsLP()), lawn(0.9, 1.5, 12, 16)) },
     { title: 'Palude con le mani', yaw: 0.5, pitch: 0.62, zoom: 1.95, center: [0, 0.25, 0], build: () => group(inst(M.swamp2LP()), lawn(2.0, 2.8, 20, 12)) },
     { title: 'Albero dell’altalena', yaw: 0.55, zoom: 1.6, center: [0, 1.25, 0], build: () => group(inst(M.swingTree2LP()), lawn(1.0, 1.8, 14, 13)) },
-    { title: 'Cerchio di pietre nella nebbia', night: true, dusk: true, yaw: 0.5, pitch: 0.6, zoom: 1.7, center: [0, 0.4, 0], build: () => group(inst(M.stoneCircleLP()), lawn(1.5, 2.3, 18, 14)) },
-    { title: 'Salice piangente', yaw: 0.55, zoom: 2.0, center: [0, 1.4, 0], build: () => group(inst(M.willow2LP()), lawn(1.5, 2.3, 18, 15)) },
-    { title: 'Funghi luminosi (al posto delle lucciole)', night: true, yaw: 0.45, zoom: 0.95, center: [0, 0.3, 0], build: () => group(inst(M.glowShroomsLP()), lawn(0.9, 1.5, 12, 16)) },
   ],
   '6': [
     { title: 'Vampiro · di giorno dorme nella bara', yaw: 0.5, zoom: 1.55, center: [0, 0.9, 0], build: vampireDay },
     { title: 'Vampiro · di notte esce a passeggiare', night: true, dusk: true, yaw: 0.5, zoom: 1.6, center: [0, 0.95, 0.2], build: vampire2 },
-    { title: 'Strega · l’incantesimo del giorno è pronto', night: true, dusk: true, yaw: 0.5, zoom: 1.45, center: [0, 0.9, 0.1], build: witch2 },
+    { title: 'Strega · vende pozioni: incasso da riscuotere', night: true, dusk: true, yaw: 0.5, zoom: 1.5, center: [0, 0.9, 0.1], build: witch2 },
+    { title: 'Nuovo cappello del Custode: da strega', yaw: 0.35, zoom: 0.95, center: [0, 0.7, 0], build: () => group(custodeWitchHat({}, 'cs1', -0.45, 0.3), custodeWitchHat({ hair: 'long', hairColor: '#b0774a', skin: '#e0b48f', outfitColor: '#4a3a5a' }, 'cs2', 0.45, -0.3), lawn(0.9, 1.5, 12, 3)) },
     { title: 'Rifugio dei gatti neri', yaw: 0.55, zoom: 1.3, center: [0, 0.55, 0], build: cats2 },
     { title: 'Scopa volante · a cavalcioni', yaw: 1.15, pitch: 0.42, zoom: 1.15, center: [0, 0.85, -0.1], build: broomScene },
     { title: 'Bastone mistico · attira i fuochi fatui da lontano', night: true, dusk: true, yaw: 0.5, pitch: 0.62, zoom: 1.75, center: [0, 0.5, 0], build: staffScene },

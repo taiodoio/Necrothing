@@ -105,15 +105,19 @@ const btn = (label: string, ghost = false, ic?: string) => h('button', { class: 
 
 async function screens() {
   const tav = document.getElementById('tavola')!;
-  // 1 · passo «Foto» della sepoltura: senza foto i filtri restano spenti; scattata, mostrano la foto
-  const pick = (taken: boolean) => h('div', { class: 'photo-pick' },
-    h('p', { class: 'muted', style: 'margin:0' }, 'Una foto dell’oggetto, per ricordarlo com’era. È facoltativa.'),
-    portrait(taken ? url(filtered.none) : null, false),
-    h('div', { class: 'filters' }, ...FILTERS.map((f) => h('button', { class: `card${taken && f === 'none' ? ' selected' : ''}`, disabled: !taken },
-      taken ? h('img', { src: url(filtered[f]), alt: '' }) : h('div', { style: 'width:100%;aspect-ratio:1;background:#1a1e26;box-shadow:inset 0 0 0 2px #07080b' }),
-      h('b', {}, PHOTO_FILTER_LABELS[f])))),
-    row(btn(taken ? 'Rifai' : 'Scatta', true, 'photo'), btn('Dalla galleria', true)),
-  );
+  // 1 · passo «Foto» della sepoltura: senza foto solo la cornice vuota; con la foto si scorre per cambiare filtro
+  const pick = (f: PhotoFilter | null) => {
+    const i = f ? FILTERS.indexOf(f) : -1;
+    return h('div', { class: 'photo-pick' },
+      h('p', { class: 'muted', style: 'margin:0' }, f ? 'Scorri sulla foto per cambiare filtro.' : 'Una foto dell’oggetto, per ricordarlo com’era. È facoltativa.'),
+      portrait(f ? url(filtered[f]) : null, false),
+      f ? h('div', { class: 'filter-switch' },
+        h('button', { class: 'icon-btn small', 'aria-label': 'Filtro precedente', disabled: i === 0 }, '‹'),
+        h('div', {}, h('b', {}, PHOTO_FILTER_LABELS[f]), h('div', { class: 'swipe-dots' }, ...FILTERS.map((_, k) => h('i', { class: k === i ? 'on' : '' })))),
+        h('button', { class: 'icon-btn small', 'aria-label': 'Filtro successivo', disabled: i === FILTERS.length - 1 }, '›')) : null,
+      row(btn(f ? 'Rifai' : 'Scatta', true, 'photo'), btn(f ? 'Altra foto' : 'Dalla galleria', true)),
+    );
+  };
   // 2 · riepilogo prima di scegliere il posto
   const kv = (extra: Array<[string, string]> = []) => h('dl', { class: 'kv' }, ...[['Categoria', GRAVE.category], ['Vissuto', GRAVE.dates], ['Causa', GRAVE.cause], ['Lapide', GRAVE.lapide], ...extra].flatMap(([k, v]) => [h('dt', {}, k), h('dd', {}, v)]));
   const hero = () => h('div', { class: 'hero', style: 'padding-top:2px' }, portrait(url(filtered[chosen])), h('h3', {}, GRAVE.name), h('div', { class: 'epitaph' }, `“${GRAVE.epitaph}”`));
@@ -126,8 +130,9 @@ async function screens() {
     h('div', { class: 'section-title' }, 'Ricordi'),
     h('ul', { class: 'timeline' }, h('li', {}, h('time', {}, '3 ott 2026'), 'Sepoltura'), h('li', {}, h('time', {}, '5 ott 2026'), 'Fiori freschi')));
   tav.append(
-    phone('1a · Foto (passo 2 di 6): ancora da scattare', 'Seppellisci', pick(false), row(btn('Indietro', true), btn('Salta')), [1, 6]),
-    phone('1b · Scattata: i filtri mostrano la tua foto', 'Seppellisci', pick(true), row(btn('Indietro', true), btn('Avanti')), [1, 6]),
+    phone('1a · Foto (passo 2 di 6): ancora da scattare', 'Seppellisci', pick(null), row(btn('Indietro', true), btn('Salta')), [1, 6]),
+    phone('1b · Scattata: si parte da «Originale»', 'Seppellisci', pick('none'), row(btn('Indietro', true), btn('Avanti')), [1, 6]),
+    phone('1c · Scorrendo: «Rovinata»', 'Seppellisci', pick('worn'), row(btn('Indietro', true), btn('Avanti')), [1, 6]),
     phone('2 · Riepilogo (scelto «Rovinata»)', 'Seppellisci', s2, row(btn('Cartolina', true), btn('Scegli il posto')), [5, 6]),
     phone('3 · Cartolina funebre', 'Cartolina funebre', s3, row(btn('Salva immagine', true), btn('Condividi'))),
     phone('4 · Dettaglio (lente): prima l’azione da fare', 'Memoria', s4, h('div', { style: 'display:grid;gap:6px' }, row(btn('Cartolina', true), btn('Affida all’albero', true)), btn('Rinnova fiori', false, 'flower'))),
@@ -165,6 +170,7 @@ document.head.append(style);
 
 await document.fonts.ready;
 if (mode === 'postcard') await postcardFull();
+else if (mode === 'photo') { await screens(); const t = document.getElementById('tavola')!; [...t.children].slice(3).forEach((c) => c.remove()); }
 else if (mode === 'filters') filtersBoard();
 else await screens();
 (window as unknown as { ready: boolean }).ready = true;

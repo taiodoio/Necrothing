@@ -28,6 +28,8 @@
   -webkit-tap-highlight-color: transparent;
 }
 * { box-sizing: border-box; }
+/* il font pixel ha la legatura «fi» con un glifo che si legge come una «A»: niente legature */
+html { font-variant-ligatures: none; font-feature-settings: "liga" 0, "clig" 0; }
 [hidden] { display: none !important; }
 html, body, #game { margin: 0; width: 100%; height: 100%; overflow: hidden; background: var(--ink); overscroll-behavior: none; }
 button { font: inherit; color: inherit; cursor: pointer; background: none; }
@@ -202,12 +204,15 @@ button.slot:active, .icon-btn:active, .ctx-actions button:active, .big-btn:activ
 .portrait > .pic { display: block; width: 100%; height: auto; aspect-ratio: 1; object-fit: cover; box-sizing: border-box; padding: 4px; border: 10px solid transparent; border-image: var(--frame-gold) 3 fill / 10px / 0 stretch; filter: var(--drop); }
 .portrait > img.stone { position: absolute; right: -22px; bottom: -16px; width: 64px; height: 64px; border: 0; border-image: none; filter: drop-shadow(0 4px 3px rgba(0, 0, 0, 0.75)); }
 .photo-pick { display: grid; gap: 10px; }
-.filters { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
-.filters .card { min-height: 0; padding: 4px 3px 2px; }
-.filters .card img { width: 100%; height: auto; aspect-ratio: 1; object-fit: cover; }
-.filters .card b { font-size: 12px; }
+.portrait > img.pic { touch-action: pan-y; } /* lo scorrimento orizzontale cambia filtro */
+.filter-switch { display: flex; align-items: center; justify-content: center; gap: 14px; text-align: center; }
+.filter-switch .icon-btn { font: 700 22px/1 var(--pixel); color: var(--gold-bright); }
+.filter-switch .icon-btn:disabled { opacity: 0.35; }
+.filter-switch b { display: block; min-width: 110px; font: 400 26px/1 var(--gothic); color: var(--gold-bright); text-shadow: 0 2px 0 #000; }
+.swipe-dots { display: flex; gap: 6px; justify-content: center; margin-top: 6px; }
+.swipe-dots i { width: 8px; height: 8px; background: #2a2e36; box-shadow: 0 0 0 2px #07080b; }
+.swipe-dots i.on { background: var(--gold); }
 .portrait.empty > .pic { display: grid; place-items: center; align-content: center; gap: 6px; color: var(--muted); font-size: 13px; text-align: center; }
-.filters .card:disabled { opacity: 0.45; }
 .postcard-view { display: block; width: 100%; max-width: 360px; margin: 0 auto; box-shadow: 0 0 0 2px #07080b, 0 8px 18px rgba(0, 0, 0, 0.6); }
 
 /* ── Dialogo di conferma (al posto di confirm() del browser) ───── */

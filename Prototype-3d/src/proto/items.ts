@@ -13,7 +13,7 @@ import { lowpolyGrave } from '../render/lowpoly/graves.ts';
 import { lampPost } from '../render/lowpoly/lights.ts';
 import { drawIcon, iconUrl } from '../ui/icons.ts';
 import { animateRig, buildRig, rigLightPos, type CharacterKind, type Pose } from '../view/characters.ts';
-import { assemble, handPos, headAt, headCenter, headFront, humanSpec, onSkin, HUMAN_PIVOTS, DEG, O } from '../render/lowpoly/v2/custode.ts';
+import { assemble, handPos, headAt, headCenter, headFront, humanSpec, onSkin, witchHat as witchHatGame, HUMAN_PIVOTS, DEG, O } from '../render/lowpoly/v2/custode.ts';
 import type { LP } from '../render/lowpoly/kit.ts';
 import { DEFAULT_LOOK } from '../game/look.ts';
 
@@ -76,25 +76,15 @@ function vampire(): THREE.Group {
   );
 }
 
-/** Cappello da strega (spazio della testa): tesa larga, cono piegato, nastro verde e fibbia. */
-function witchHat(lp: LP) {
-    const c = headCenter();
-    const y = headAt(0, 50 * DEG).p.y;
-    lp.cyl(c.x, y - 0.01, c.z + 0.01, 0.44, 0.43, 0.03, 20, '#2a2235', O);
-    lp.push([c.x, y + 0.02, c.z], 0, -0.12, 0.08);
-    lp.cyl(0, 0, 0, 0.24, 0.12, 0.28, 14, '#2a2235', O);
-    lp.push([0, 0.28, -0.02], 0, -0.35, 0.15).cyl(0, 0, 0, 0.12, 0.0, 0.26, 12, '#2a2235', O).pop();
-    lp.cyl(0, 0.02, 0, 0.245, 0.24, 0.05, 14, '#5f8a4a', O);
-    lp.add(new THREE.BoxGeometry(0.06, 0.06, 0.01).translate(0, 0.045, 0.24), '#c9a227', O);
-    lp.pop();
-}
+/** Cappello da strega: lo stesso del gioco (strega e Custode). */
+const witchHat = (lp: LP) => witchHatGame(lp, undefined, undefined, 42, 0.09);
 
 function witch(): THREE.Group {
   const hat = witchHat;
   return figure(
     { skin: '#b6d29a', sparkle: false, hair: 'long', hairColor: '#4a2a5a', eyes: '#2f5a32', hat: 'none', outfit: 'cloak', outfitColor: '#4a3a5a', accentColor: '#5f8a4a', beard: 'none', mustache: 'none', freckles: true },
     {
-      name: 'strega', mouth: 'smile', blush: '#d99a9a', hat, hatPh: 50,
+      name: 'strega', mouth: 'smile', blush: '#d99a9a', hat, hatPh: 42,
       // mestolo per girare la pozione
       held: [{ side: 1, build: (lp: LP) => { lp.cyl(0, -0.05, 0.03, 0.012, 0.012, 0.5, 5, '#6b4a2e', O); lp.blob(0, -0.07, 0.03, 0.045, 0.02, 0.045, '#5a5650', O); } }], head: (lp: LP) => onSkin(lp, headFront(0, 0.68), 0.03, 0, (q) => q.blob(0, 0, 0.02, 0.035, 0.03, 0.05, '#a6c48a', O)) },
     'strega',
@@ -268,7 +258,7 @@ function wispBadge(n: number, y: number): THREE.Sprite {
 
 /** Il Custode col cappello da strega (nuovo cappello della personalizzazione). */
 function custodeWitchHat(look: Partial<typeof DEFAULT_LOOK>, name: string, x: number, yaw: number): THREE.Group {
-  const c = figure({ ...DEFAULT_LOOK, ...look, hat: 'none' }, { name, hat: witchHat, hatPh: 50 }, name);
+  const c = figure({ ...DEFAULT_LOOK, ...look, hat: 'none' }, { name, hat: witchHat, hatPh: 42 }, name);
   c.position.set(x, 0, 0); c.rotation.y = yaw;
   return c;
 }
@@ -461,6 +451,11 @@ const SETS: Record<string, Panel[]> = {
     { title: `Gazebo · leggero (${lpStats(M.gazeboSpookyLP(true, true))})`, night: true, dusk: true, yaw: 0.6, zoom: 2.5, center: [0, 1.3, 0], build: () => group(inst(M.gazeboSpookyLP(true, true)), lawn(2.0, 2.9, 22, 3)) },
     { title: `Campo di zucche · prima (${lpStats(M.pumpkinPatch2LP(true, false))})`, night: true, dusk: true, yaw: 0.55, pitch: 0.6, zoom: 1.85, center: [0, 0.5, 0], build: () => group(inst(M.pumpkinPatch2LP(true, false)), lawn(1.55, 2.3, 20, 7)) },
     { title: `Campo di zucche · leggero (${lpStats(M.pumpkinPatch2LP(true, true))})`, night: true, dusk: true, yaw: 0.55, pitch: 0.6, zoom: 1.85, center: [0, 0.5, 0], build: () => group(inst(M.pumpkinPatch2LP(true, true)), lawn(1.55, 2.3, 20, 7)) },
+  ],
+  '11': [
+    { title: 'Strega del gioco · di fronte', yaw: 0, pitch: 0.25, zoom: 1.0, center: [0, 0.75, 0], build: () => group(char('witch', 'idle', [0, 0, 0], 0, 0.3), lawn(0.6, 1.2, 10, 3)) },
+    { title: 'Strega del gioco · tre quarti', yaw: 0.7, pitch: 0.35, zoom: 1.0, center: [0, 0.75, 0], build: () => group(char('witch', 'idle', [0, 0, 0], 0, 0.3), lawn(0.6, 1.2, 10, 3)) },
+    { title: 'Strega al calderone · come in gioco', yaw: Math.PI / 4, pitch: 0.75, zoom: 1.35, center: [0.3, 0.6, 0], build: () => group(inst(M.witchCornerLP()), char('witch', 'work', [0.55, 0, -0.15], 0.1, 0.3), lawn(1.1, 1.8, 12, 4)) },
   ],
 };
 

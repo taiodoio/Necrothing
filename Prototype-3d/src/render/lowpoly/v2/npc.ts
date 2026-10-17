@@ -546,7 +546,7 @@ function witch(): KawaiiSpec {
   return humanSpec(
     { skin: '#b6d29a', sparkle: false, hair: 'long', hairColor: '#4a2a5a', eyes: '#2f5a32', hat: 'none', outfit: 'cloak', outfitColor: '#4a3a5a', accentColor: '#5f8a4a', beard: 'none', mustache: 'none', freckles: true },
     {
-      name: 'strega', mouth: 'smile', blush: '#d99a9a', hat: (lp) => witchHat(lp), hatPh: 50,
+      name: 'strega', mouth: 'smile', blush: '#d99a9a', hat: (lp) => witchHat(lp, undefined, undefined, 42, 0.09), hatPh: 42,
       held: [{ side: 1, build: (lp: LP) => { lp.cyl(0, -0.05, 0.03, 0.012, 0.012, 0.5, 5, '#6b4a2e', O); lp.blob(0, -0.07, 0.03, 0.045, 0.02, 0.045, '#5a5650', O); } }],
       head: (lp: LP) => onSkin(lp, headFront(0, 0.68), 0.03, 0, (q) => q.blob(0, 0, 0.02, 0.035, 0.03, 0.05, '#a6c48a', O)),
     },

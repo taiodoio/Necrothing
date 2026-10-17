@@ -865,12 +865,12 @@ function hatGeo(lp: LP) {
 }
 
 /** Cappello da strega (spazio della testa): tesa larga, cono piegato, nastro e fibbia. */
-export function witchHat(lp: LP, color = '#2a2235', band = '#5f8a4a', ph = 50) {
+export function witchHat(lp: LP, color = '#2a2235', band = '#5f8a4a', ph = 50, brim = 0.16) {
   // come gli altri cappelli: la tesa poggia dove finiscono i capelli e il cono li copre tutti
   const at = (th: number) => shellAt(th, (ph - 4) * DEG).p;
   const y = at(0).y - 0.005;
   const headR = Math.max(...[0, 90, 180, -90].map((t) => Math.hypot(at(t * DEG).x - C.x, at(t * DEG).z - C.z)));
-  const cr = headR + 0.06, R = cr + 0.16;
+  const cr = headR + 0.06, R = cr + brim;
   // tesa larga e morbida che spiove appena verso il bordo
   lp.lathe(C.x, y - 0.02, C.z, [[cr - 0.04, 0.03], [cr + 0.07, 0.018], [R - 0.02, -0.01], [R, -0.026], [R - 0.003, -0.01], [cr + 0.07, 0.038], [cr - 0.04, 0.05]], 22, color, O);
   // cono in un pezzo solo: un tubo che si stringe e si piega all'indietro e di lato, con la punta floscia

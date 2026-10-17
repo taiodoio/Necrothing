@@ -93,7 +93,7 @@ export function presenceLayout(p: Pick<Placed, 'type' | 'broken'>, opts: { night
       props.push({ kind: 'skullBall', x: 0, y: 0.5, z: 0, yaw: 0, owner: 0 }); // la "palla" è un teschio
       break;
     case 'witch_corner':
-      if (!p.broken) still('work', 0.85, 0.0, -0.65, 0, undefined, 'witch'); // gira la pozione nel calderone
+      if (!p.broken) still('work', 0.55, -0.15, 0.1, 0, undefined, 'witch'); // accanto al calderone, verso chi guarda: gira la pozione
       break;
     case 'vampire_crypt':
       // di giorno dorme nella bara; di notte passeggia attorno alla cripta

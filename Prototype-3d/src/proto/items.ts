@@ -10,6 +10,7 @@ import * as N from '../render/lowpoly/newItems.ts';
 import * as M from '../render/lowpoly/newItems2.ts';
 import { LP_SCENERY } from '../render/lowpoly/index.ts';
 import { lowpolyGrave } from '../render/lowpoly/graves.ts';
+import { lampPost } from '../render/lowpoly/lights.ts';
 import { drawIcon, iconUrl } from '../ui/icons.ts';
 import { animateRig, buildRig, rigLightPos, type CharacterKind, type Pose } from '../view/characters.ts';
 import { assemble, handPos, headAt, headCenter, headFront, humanSpec, onSkin, HUMAN_PIVOTS, DEG, O } from '../render/lowpoly/v2/custode.ts';
@@ -192,6 +193,9 @@ function gazeboWithCustode(): THREE.Group {
 // ── Seconda passata: contesto (prato, lapidi, Custode), pose e funzioni ──
 
 /** Prato attorno all'oggetto: ciuffi, sassolini, fiorellini fuori dal raggio `r0`. */
+/** Lampione del gioco (per il confronto). */
+const normalLamp = (variant = 0, broken = false) => lampPost({ type: 'lamp_post', variant, dirty: broken, broken, lit: true, seed: 1 });
+
 function lawn(r0: number, r1: number, n: number, seed: number): THREE.Group {
   const g = new THREE.Group();
   const kinds = ['tuft', 'tuft', 'wgrass', 'pebbles', 'flowers', 'leaves', 'shroom'];
@@ -437,6 +441,12 @@ const SETS: Record<string, Panel[]> = {
     { title: 'Tomba sporcata da uno zombie: impronte di fango', yaw: 0.5, pitch: 0.6, zoom: 1.2, center: [0, 0.35, 0], build: () => group(grave('gothic', [0, 0, 0], 0, 'dirty'), inst(M.mudTracksLP(1)), lawn(1.3, 2.0, 14, 32)) },
     { title: 'Altra tomba, stesse impronte', yaw: 0.5, pitch: 0.6, zoom: 1.2, center: [0, 0.35, 0], build: () => group(grave('celtic_cross', [0, 0, 0], 0, 'dirty'), inst(M.mudTracksLP(2), [0, 0, 0], 1.2), lawn(1.3, 2.0, 14, 33)) },
     { title: 'Lo zombie se ne va lasciando la scia', yaw: Math.PI / 4, pitch: 0.7, zoom: 1.6, center: [0.3, 0.4, -0.2], build: () => group(grave('rectangular', [0, 0, 0], 0, 'dirty'), inst(M.mudTracksLP(3)), char('zombie', 'walk', [1.0, 0, -0.9], 2.4, 0.4), lawn(1.6, 2.4, 16, 34)) },
+  ],
+  '9': [
+    { title: 'Lampione del Custode · giorno', yaw: 0.5, zoom: 1.5, center: [0.1, 1.3, 0], build: () => group(inst(M.custodeLamp2LP(false)), lawn(0.7, 1.4, 12, 41)) },
+    { title: 'Lampione del Custode · notte', night: true, dusk: true, yaw: 0.5, zoom: 1.5, center: [0.1, 1.3, 0], build: () => group(inst(M.custodeLamp2LP(true)), lawn(0.7, 1.4, 12, 41)) },
+    { title: 'Accanto a un lampione normale', night: true, dusk: true, yaw: 0.35, zoom: 1.7, center: [0.3, 1.3, 0], build: () => group(inst(M.custodeLamp2LP(true), [-0.5, 0, 0]), inst(normalLamp(), [1.1, 0, 0]), lawn(1.4, 2.0, 14, 42)) },
+    { title: 'Dentro il raggio non si rompono, fuori sì', night: true, dusk: true, yaw: Math.PI / 4, pitch: 0.85, zoom: 3.9, center: [0.6, 0.5, 0.6], build: () => group(inst(M.custodeLamp2LP(true)), inst(M.keeperRadiusLP(2.5)), inst(normalLamp(), [1.6, 0, -1.0]), inst(normalLamp(1), [-1.3, 0, 1.5]), inst(normalLamp(2, true), [3.3, 0, 3.0]), char('custode', 'idle', [0.9, 0, -0.9], -0.6), lawn(1.0, 3.4, 26, 43)) },
   ],
 };
 

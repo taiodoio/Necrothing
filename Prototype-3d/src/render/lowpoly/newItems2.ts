@@ -1060,3 +1060,69 @@ export function mudTracksLP(seed = 1): LPModel {
   }
   return lp.build();
 }
+
+// ── Lampione del Custode ───────────────────────────────────────────────
+
+/**
+ * Lampione del Custode (1×1): non è in ghisa come gli altri ma è il suo
+ * bastone piantato a terra — legno storto col ricciolo in cima — da cui
+ * pende la sua lanterna a petrolio. Il cappello appeso al piolo, la
+ * sciarpa rossa annodata, il mazzo di chiavi e la latta dell'olio ai
+ * piedi: si capisce di chi è. Tiene accese le luci vicine (non si rompono).
+ */
+export function custodeLamp2LP(lit: boolean): LPModel {
+  const lp = new LP(`new2:custodelamp:${lit}`);
+  const r = lp.rng;
+  const W = LPC.woodDark, RED = '#a4473b', HAT = '#4a3326', BRASS = '#9a7a44';
+  // piede: zolla di terra con i sassi che tengono su il palo
+  lp.blob(0, 0, 0, 0.3, 0.07, 0.28, LPC.soilDark, { jitter: 0.02, vary: 0.1, ao: 0 });
+  for (let i = 0; i < 6; i++) { const a = (i / 6) * Math.PI * 2 + r.range(-0.2, 0.2); lp.blob(Math.sin(a) * 0.17, 0.04, Math.cos(a) * 0.15, r.range(0.05, 0.08), r.range(0.04, 0.06), r.range(0.05, 0.07), r.pick([LPC.stone, LPC.stoneDark]), { jitter: 0.012, topTint: LPC.moss, topAmount: 0.3 }); }
+  // palo storto che finisce nel ricciolo del bastone (alto come un lampione)
+  lp.push([0, 0, 0], 0, 0, 0, 1.3);
+  const pole: V3[] = [[0, 0.02, 0], [0.025, 0.6, 0.01], [-0.02, 1.2, -0.01], [0.01, 1.75, 0]];
+  const C = [0.2, 1.82], R = 0.2;
+  for (let k = 1; k <= 7; k++) { const t = Math.PI - (k / 7) * (Math.PI + 0.5); pole.push([C[0] + Math.cos(t) * R, C[1] + Math.sin(t) * R * 1.05, 0]); }
+  path(lp, pole, 0.055, 0.03, W, 6);
+  lp.blob(-0.035, 0.95, 0.02, 0.03, 0.05, 0.03, W, { jitter: 0.005 }); // nodo del legno
+  // lanterna a petrolio appesa alla punta: catenella, cappello, globo, serbatoio
+  const tip = pole[pole.length - 1], LX = tip[0], LY = tip[1] - 0.24;
+  tube(lp, tip, [LX, LY + 0.17, 0], 0.008, LPC.iron, 4);
+  lp.push([LX, LY + 0.2, 0], 0, 0, Math.PI / 2).add(new THREE.TorusGeometry(0.03, 0.008, 3, 8), LPC.iron, { jitter: 0 }).pop();
+  lp.lathe(LX, LY + 0.07, 0, [[0.1, 0], [0.09, 0.03], [0.04, 0.09], [0, 0.1]], 8, LPC.iron, { jitter: 0 });
+  lp.lathe(LX, LY - 0.17, 0, [[0.05, 0], [0.095, 0.06], [0.1, 0.13], [0.075, 0.21], [0.05, 0.24], [0, 0.24]], 9, lit ? LPC.lantern : '#3c3a35', lit ? { bucket: 'glow', jitter: 0 } : { jitter: 0 });
+  for (let k = 0; k < 4; k++) { const a = (k / 4) * Math.PI * 2 + Math.PI / 4; tube(lp, [LX + Math.cos(a) * 0.08, LY - 0.18, Math.sin(a) * 0.08], [LX + Math.cos(a) * 0.115, LY - 0.05, Math.sin(a) * 0.115], 0.007, LPC.iron, 3); tube(lp, [LX + Math.cos(a) * 0.115, LY - 0.05, Math.sin(a) * 0.115], [LX + Math.cos(a) * 0.08, LY + 0.07, Math.sin(a) * 0.08], 0.007, LPC.iron, 3); }
+  lp.cyl(LX, LY - 0.25, 0, 0.1, 0.11, 0.08, 9, BRASS, { jitter: 0, vary: 0.05 });
+  if (lit) lp.cyl(LX, LY - 0.13, 0, 0.025, 0, 0.09, 4, LPC.flameCore, { bucket: 'glow', jitter: 0 });
+  // cappello del Custode appeso al piolo, un po' storto
+  tube(lp, [0, 1.36, 0.03], [0, 1.39, 0.13], 0.014, LPC.woodLight, 4);
+  lp.push([0.01, 1.3, 0.1], 0.15, Math.PI / 2 - 0.25, 0.12);
+  lp.cyl(0, 0, 0, 0.21, 0.2, 0.025, 12, HAT, { jitter: 0, vary: 0.06 });
+  lp.lathe(0, 0.025, 0, [[0.1, 0], [0.1, 0.1], [0.085, 0.14], [0, 0.145]], 10, HAT, { jitter: 0 });
+  lp.cyl(0, 0.028, 0, 0.104, 0.104, 0.03, 10, RED, { jitter: 0 });
+  lp.pop();
+  // sciarpa rossa annodata con le due code
+  lp.cyl(-0.012, 1.03, 0, 0.07, 0.07, 0.07, 8, RED, { jitter: 0.004, vary: 0.06 });
+  lp.blob(0.06, 1.06, 0.03, 0.035, 0.03, 0.03, RED, { jitter: 0.004 });
+  for (const [dx, a] of [[0.07, -0.25], [0.1, -0.5]] as const) lp.push([dx, 1.04, 0.035], 0, 0, a).box(0, -0.2, 0, 0.05, 0.2, 0.012, RED, { jitter: 0.004, vary: 0.08 }).box(0, -0.215, 0, 0.05, 0.015, 0.014, '#e8d9b0', { jitter: 0 }).pop();
+  // mazzo di chiavi a un chiodo
+  lp.push([-0.06, 0.72, 0.045]).add(new THREE.TorusGeometry(0.035, 0.007, 3, 10), BRASS, { jitter: 0 });
+  for (let k = 0; k < 3; k++) lp.push([(k - 1) * 0.02, -0.035, 0.005], 0, 0, (k - 1) * 0.35).box(0, -0.07, 0, 0.012, 0.07, 0.006, k === 1 ? LPC.gold : BRASS, { jitter: 0 }).box(0.01, -0.07, 0, 0.012, 0.012, 0.006, BRASS, { jitter: 0 }).pop();
+  lp.pop();
+  lp.pop();
+  // latta dell'olio e uno straccio ai piedi
+  lp.cyl(0.28, 0, 0.22, 0.07, 0.07, 0.15, 8, '#5d6b4e', { jitter: 0, vary: 0.06 });
+  lp.cyl(0.28, 0.15, 0.22, 0.035, 0.02, 0.04, 6, LPC.iron, { jitter: 0 });
+  tube(lp, [0.3, 0.1, 0.27], [0.36, 0.17, 0.33], 0.01, LPC.iron, 4);
+  lp.blob(-0.25, 0.03, 0.2, 0.09, 0.025, 0.06, '#b9a98a', { jitter: 0.015 });
+  grassTuft(lp, -0.3, -0.15, 0.8); grassTuft(lp, 0.15, -0.3, 0.7);
+  if (lit) lp.light(LX * 1.3, (LY - 0.08) * 1.3, 0, LPC.lantern, 1, 5.5, 0.15, 1.1);
+  return lp.build();
+}
+
+/** Raggio del Lampione del Custode (solo in modifica): anello tratteggiato a terra. */
+export function keeperRadiusLP(radius: number): LPModel {
+  const lp = new LP(`new2:keeperradius:${radius}`);
+  const n = Math.round(radius * 9);
+  for (let i = 0; i < n; i++) { const a = (i / n) * Math.PI * 2; lp.push([Math.sin(a) * radius, 0.02, Math.cos(a) * radius], a).box(0, 0, 0, 0.22, 0.012, 0.05, '#ffcf7a', { bucket: 'glow', jitter: 0 }).pop(); }
+  return lp.build();
+}

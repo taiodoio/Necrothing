@@ -365,15 +365,35 @@ function scarecrow(lit: boolean, headYaw = 0, crow = false): THREE.Group {
   return group(s, lawn(0.7, 1.5, 12, 51));
 }
 
-/** Scheletro giardiniere in posa da rastrello (braccia avanti, busto chino). */
+/** Il braccio (perno `pv`, mano a riposo in `rest`) ruota per portare la mano sul segmento G→T del manico. */
+function reach(arm: THREE.Object3D, pv: THREE.Vector3, rest: THREE.Vector3, G: THREE.Vector3, T: THREE.Vector3, far: boolean) {
+  const len = rest.distanceTo(pv), d = T.clone().sub(G), f = G.clone().sub(pv);
+  const A = d.dot(d), B = 2 * f.dot(d), C = f.dot(f) - len * len, disc = B * B - 4 * A * C;
+  const sRoot = disc >= 0 ? (-B + (far ? 1 : -1) * Math.sqrt(disc)) / (2 * A) : -B / (2 * A);
+  const target = G.clone().addScaledVector(d, THREE.MathUtils.clamp(sRoot, 0, 1));
+  arm.quaternion.setFromUnitVectors(rest.clone().sub(pv).normalize(), target.sub(pv).normalize());
+}
+
+/**
+ * Scheletro giardiniere che rastrella: il pettine a terra davanti e di lato,
+ * il manico sale verso il fianco; la destra lo tiene in basso, la sinistra in alto.
+ * `t` è la fase del gesto (il pettine va avanti e torna).
+ */
 function gardener(t = 0): THREE.Group {
   const a = assemble(gardenerSpec(), 'giardiniere');
   const inner = a.root.children[0];
   const parts: Record<string, THREE.Object3D> = {};
   Object.keys(HUMAN_PIVOTS).forEach((k, i) => { parts[k] = inner.children[i]; });
-  const sw = Math.sin(t) * 0.25;
-  parts.armR.rotation.x = -0.3 + sw; parts.armL.rotation.x = -0.45 + sw; parts.armL.rotation.z = -0.3;
-  parts.head.rotation.x = 0.15; parts.body.rotation.x = 0.08;
+  const sw = Math.sin(t) * 0.09;
+  const G = new THREE.Vector3(0.3, 0.075, 0.62 + sw), T = new THREE.Vector3(-0.02, 0.4, 0.04 + sw * 0.4);
+  const y = T.clone().sub(G).normalize(), x = new THREE.Vector3().crossVectors(y, new THREE.Vector3(0, 1, 0)).normalize(), z = new THREE.Vector3().crossVectors(x, y);
+  const rake = inst(S.rakeLP(G.distanceTo(T) + 0.14));
+  rake.position.copy(G); rake.quaternion.setFromRotationMatrix(new THREE.Matrix4().makeBasis(x, y, z));
+  inner.add(rake);
+  const pv = (k: 'armL' | 'armR') => new THREE.Vector3(...HUMAN_PIVOTS[k]);
+  reach(parts.armR, pv('armR'), handPos(1), G, T, false);
+  reach(parts.armL, pv('armL'), handPos(-1), G, T, true);
+  parts.head.rotation.x = 0.2; parts.head.rotation.y = 0.25;
   return a.root;
 }
 

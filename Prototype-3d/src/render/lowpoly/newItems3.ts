@@ -115,3 +115,19 @@ export function gardenerCornerLP(): LPModel {
   grassTuft(lp, -0.38, 0.32, 0.8); weeds(lp, 0.38, 0.36, 0.6);
   return lp.build();
 }
+
+/**
+ * Rastrello (origine al centro del pettine, manico lungo +y fino a `len`):
+ * pettine orizzontale lungo x, denti verso -z (verso terra quando il manico è inclinato).
+ */
+export function rakeLP(len = 0.9): LPModel {
+  const lp = new LP('new:rake');
+  lp.cyl(0, 0, 0, 0.012, 0.011, len, 5, '#8a6a48', { jitter: 0, vary: 0.08 });
+  lp.box(0, -0.015, 0, 0.28, 0.03, 0.03, '#4a535c', { bevel: 0.006, jitter: 0 });
+  for (let i = -4; i <= 4; i++) {
+    lp.push([i * 0.032, 0, 0], 0, -Math.PI / 2);
+    lp.cyl(0, 0, 0, 0.007, 0.004, 0.08, 4, '#4a535c', { jitter: 0 });
+    lp.pop();
+  }
+  return lp.build();
+}

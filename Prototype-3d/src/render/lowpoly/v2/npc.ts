@@ -248,20 +248,11 @@ const skeleton = (look: Partial<CustodeLook> = {}, extra: V2Extra = {}) => human
   },
 );
 
-/** Rastrello in mano (spazio della mano): manico lungo verso il basso, pettine di denti a terra. */
-function rake(lp: LP) {
-  lp.push([0, 0, 0.02], 0, -0.4);
-  lp.cyl(0, -0.3, 0, 0.012, 0.012, 0.72, 5, '#8a6a48', O);
-  lp.add(rbox(0.26, 0.03, 0.035, 0.008, 1).translate(0, -0.3, 0), '#4a535c', O);
-  for (let i = -4; i <= 4; i++) lp.add(new THREE.CylinderGeometry(0.007, 0.005, 0.09, 4).translate(i * 0.03, -0.34, 0.02), '#4a535c', O);
-  lp.pop();
-}
-
-/** Scheletro giardiniere: cappello di paglia, fazzoletto al collo, rastrello. */
+/** Scheletro giardiniere: cappello di paglia e papillon. */
 export function gardenerSpec(): KawaiiSpec {
   return skeleton(
     {},
-    { name: 'giardiniere', hat: (lp) => strawHat(lp), hatPh: 40, held: [{ side: 1, build: rake }] },
+    { name: 'giardiniere', hat: (lp) => strawHat(lp), hatPh: 40, held: [] }, // il rastrello è un oggetto a parte, impugnato a due mani
   );
 }
 

@@ -7,12 +7,13 @@ import { GRAVE_FOOTPRINT } from '../game/balance.ts';
 import { CATALOG, PRESENCE_TYPES } from '../game/catalog.ts';
 import { DEFAULT_LOOK } from '../game/look.ts';
 import { animateRig, buildRig } from '../view/characters.ts';
-import { attachProp, castPose, playPose, presenceLayout, scenePropObject, type Instrument } from '../view/presences.ts';
+import { attachProp, castPose, presenceLayout, propPose, scenePropObject } from '../view/presences.ts';
 import type { GraveType, GraveVisualState } from '../game/graves.ts';
 import type { ArtStyle } from '../game/state.ts';
 import { getModel, instantiate, type CachedModel } from '../render/modelCache.ts';
 import { graveModel } from '../render/models/graves.ts';
 import { placeableKey, placeableModel, type PVis } from '../render/models/registry.ts';
+import { createAnimated } from '../render/lowpoly/animated.ts';
 
 const SIZE = 160;
 let renderer: THREE.WebGLRenderer | null = null;
@@ -66,6 +67,8 @@ export function placeableThumb(type: string, style: ArtStyle, variant = 0): stri
   if (cache.has(key)) return cache.get(key)!;
   const g = instantiate(getModel(placeableKey(v), style, () => placeableModel(v), 1));
   if (PRESENCE_TYPES.has(type)) addCast(g, type, style);
+  // la testa dello spaventapasseri è una parte animata: in miniatura c'è lo stesso
+  if (type === 'scarecrow' && style === 'lowpoly') { const anim = createAnimated(v); if (anim) { anim.update(30); g.add(anim.root); } }
   return snapshot(key, g, CATALOG[type].footprint);
 }
 
@@ -81,7 +84,7 @@ function addCast(g: THREE.Group, type: string, style: ArtStyle) {
     const rig = buildRig(c.kind, style);
     animateRig(rig, castPose(c), 0.6, 0.7);
     attachProp(rig, c.prop);
-    if (c.prop && c.prop !== 'mug' && c.prop !== 'hoe') playPose(rig, c.prop as Instrument, 0.4);
+    if (c.prop) propPose(rig, c.prop, 0.4);
     rig.root.position.set(c.x, c.lift ?? 0, c.z);
     rig.root.rotation.y = c.facing ?? 0;
     if (c.size) rig.root.scale.setScalar(c.size);

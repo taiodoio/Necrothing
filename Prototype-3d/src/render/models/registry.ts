@@ -63,8 +63,8 @@ const BUILDERS: Record<string, (v: PVis) => Model> = {
   mud,
   zombies_play: npcHome,
   zombies_dance: npcHome,
-  zombie_walker: npcHome,
-  ghosts_roam: npcHome,
+  scarecrow: npcHome,
+  gardener_corner: npcHome,
   ghosts_ball: npcHome,
   // negli stili a cubetti: una pedana e un'aiuola semplici
   zombie_bar: npcHome,

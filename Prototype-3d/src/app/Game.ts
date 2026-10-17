@@ -177,6 +177,7 @@ export class Game {
     if (this.spotsVersion !== this.world.version) { this.spots = graveSpots(this.state); this.spotsVersion = this.world.version; }
     this.actors.update(dt, t, this.spots, (p) => this.groundAt(p));
     this.collectNearbyWisps();
+    this.world.watch(this.actors.avatar.pos);
     this.world.update(dt, t);
     this.mist?.update(dt, (this.scene.fog as THREE.Fog).color);
     this.rig.update(dt);

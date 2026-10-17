@@ -3,8 +3,9 @@
 // Lo stagno ha pesci morti a pancia in su che galleggiano alla deriva e
 // pesci scheletrici che ogni tanto saltano,
 // ninfee, canne che ondeggiano, cerchi nell'acqua e una rana; le "case"
-// delle presenze hanno carte che volano, un disco che gira con le note, una
-// mano che saluta dalla tomba, fuochi fatui; pozze e buchi fanno bolle e
+// delle presenze hanno carte che volano, un disco che gira con le note; lo
+// spaventapasseri gira la testa verso il Custode e ospita un corvo di
+// passaggio; pozze e buchi fanno bolle e
 // scintille. Le geometrie si costruiscono una volta sola e si condividono.
 
 import * as THREE from 'three';
@@ -13,10 +14,13 @@ import { LPC } from './palette.ts';
 import { instantiate, LOWPOLY_MATERIALS, type CachedModel } from '../modelCache.ts';
 import { createRng } from '../../game/rng.ts';
 import type { PVis } from '../models/types.ts';
+import { SCARECROW_NECK, SCARECROW_PERCH, scarecrowHead } from './newItems3.ts';
 
 export interface Animated {
   root: THREE.Group;
   update(t: number): void;
+  /** Chi guardare (il Custode, in coordinate del mondo): lo usa lo spaventapasseri. */
+  watch?(target: THREE.Vector3 | null): void;
 }
 
 const models = new Map<string, CachedModel>();
@@ -122,14 +126,6 @@ const note = (double: boolean) => (lp: LP) => {
     lp.box(0.12, 0.02, 0, 0.012, 0.13, 0.012, c, { jitter: 0, ao: 0, bucket: 'glow' });
     lp.box(0.075, 0.13, 0, 0.1, 0.022, 0.012, c, { jitter: 0, ao: 0, bucket: 'glow' });
   } else lp.push([0.035, 0.13, 0], 0, 0, -0.9).box(0.025, -0.01, 0, 0.05, 0.016, 0.012, c, { jitter: 0, ao: 0, bucket: 'glow' }).pop();
-};
-
-const zombieHand = (lp: LP) => {
-  const g = '#a4c487';
-  lp.cyl(0, -0.1, 0, 0.045, 0.04, 0.24, 6, '#5d6449', { jitter: 0 }); // manica
-  ball(lp, 0, 0.17, 0, 0.055, 0.05, 0.035, g);
-  for (let i = 0; i < 4; i++) lp.push([-0.036 + i * 0.024, 0.2, 0], 0, 0, -0.25 + i * 0.16).cyl(0, 0, 0, 0.012, 0.01, 0.075, 5, g, { jitter: 0 }).pop();
-  lp.push([0.05, 0.16, 0], 0, 0, -1.0).cyl(0, 0, 0, 0.012, 0.01, 0.05, 5, g, { jitter: 0 }).pop();
 };
 
 const orb = (c: string) => (lp: LP) => { ball(lp, 0, 0, 0, 0.045, 0.06, 0.045, c, { bucket: 'glow' }); ball(lp, 0, -0.05, 0, 0.025, 0.04, 0.025, c, { bucket: 'glow' }); };
@@ -288,15 +284,6 @@ function zombiesDance(): Animated {
   };
 }
 
-function zombieWalker(): Animated {
-  const root = new THREE.Group();
-  const h = piece('zhand', zombieHand);
-  h.position.set(0.05, 0.08, 0.1);
-  h.scale.setScalar(1.5);
-  root.add(h);
-  return { root, update: (t) => { h.rotation.z = Math.sin(t * 3) * 0.35; h.rotation.x = -0.2 + Math.sin(t * 1.3) * 0.1; h.position.y = 0.06 + Math.max(0, Math.sin(t * 0.7)) * 0.05; } };
-}
-
 function wisps(color: string, n: number, radius: number, y: number): Animated {
   const root = new THREE.Group();
   const os = Array.from({ length: n }, (_, i) => { const o = piece(`orb:${color}`, orb(color)); root.add(o); return { o, ph: (i / n) * Math.PI * 2 }; });
@@ -421,14 +408,81 @@ function flyers(make: (i: number) => THREE.Group, n: number, spread: number, y: 
   };
 }
 
+// ── Spaventapasseri ─────────────────────────────────────────────────────
+
+/** Corvo (verso +z): corpo, testa, becco, occhi rossi accesi, coda e zampette. Le ali sono a parte. */
+const crowBody = (lp: LP) => {
+  const ink = '#24242c';
+  ball(lp, 0, 0.065, 0, 0.06, 0.055, 0.09, ink);
+  ball(lp, 0, 0.13, 0.07, 0.045, 0.043, 0.045, ink);
+  lp.push([0, 0.122, 0.11], 0, Math.PI / 2).cyl(0, 0, 0, 0.015, 0.002, 0.05, 4, '#4a4a52', { jitter: 0, ao: 0 }).pop();
+  for (const s of [-1, 1]) ball(lp, s * 0.026, 0.14, 0.1, 0.009, 0.009, 0.006, '#e0573a', { bucket: 'glow' });
+  lp.push([0, 0.07, -0.085], 0, -0.35).box(0, 0, 0, 0.05, 0.012, 0.09, ink, { jitter: 0, ao: 0 }).pop();
+  for (const s of [-1, 1]) lp.cyl(s * 0.02, 0, 0.01, 0.005, 0.005, 0.03, 3, '#4a4a52', { jitter: 0, ao: 0 });
+};
+const crowWing = (lp: LP) => ball(lp, 0, 0, -0.02, 0.012, 0.045, 0.075, '#2c2c36');
+
+/**
+ * Testa che segue il Custode (si gira piano, anche del tutto: è un palo) e un
+ * corvo che ogni tanto arriva in volo, si posa sulla manica, si guarda attorno e riparte.
+ */
+function scarecrow(lit: boolean): Animated {
+  const root = new THREE.Group();
+  const head = piece(`scarecrowHead:${lit ? 1 : 0}`, (lp) => scarecrowHead(lp, lit));
+  head.position.y = SCARECROW_NECK;
+  const crow = new THREE.Group();
+  crow.add(piece('crow', crowBody));
+  const wings = [-1, 1].map((s) => { const w = new THREE.Group(); w.add(piece('crowWing', crowWing)); w.position.set(s * 0.055, 0.09, 0.0); crow.add(w); return w; });
+  root.add(head, crow);
+  const from = SCARECROW_PERCH.clone().add(new THREE.Vector3(1.8, 1.7, -1.2)), to = SCARECROW_PERCH.clone().add(new THREE.Vector3(-1.9, 1.9, -1.0));
+  const local = new THREE.Vector3(), at = new THREE.Vector3();
+  let target: THREE.Vector3 | null = null, yaw = 0, last = -1;
+  const PERIOD = 46, IN = 3, OUT = 24, GONE = 27;
+  const fly = (a: THREE.Vector3, b: THREE.Vector3, k: number, t: number) => {
+    const e = k * k * (3 - 2 * k);
+    at.lerpVectors(a, b, e); at.y += Math.sin(k * Math.PI) * 0.35;
+    crow.position.copy(at);
+    crow.rotation.set(0, Math.atan2(b.x - a.x, b.z - a.z), 0);
+    for (const [i, w] of wings.entries()) w.rotation.z = (i ? -1 : 1) * (0.2 + Math.sin(t * 22) * 0.9);
+  };
+  return {
+    root,
+    watch: (p) => { target = p; },
+    update: (t) => {
+      const dt = last < 0 ? 0 : THREE.MathUtils.clamp(t - last, 0, 0.1);
+      last = t;
+      // la testa: verso il Custode se è vicino, altrimenti si guarda attorno piano
+      let want = Math.sin(t * 0.21) * 0.7;
+      if (target) {
+        local.copy(target);
+        root.worldToLocal(local);
+        if (Math.hypot(local.x, local.z) < 9) want = Math.atan2(local.x, local.z);
+      }
+      let d = want - yaw;
+      d = Math.atan2(Math.sin(d), Math.cos(d));
+      yaw += d * Math.min(1, dt * 2.2);
+      head.rotation.set(0, yaw, Math.sin(t * 0.6) * 0.05);
+      // il corvo
+      const c = ((t % PERIOD) + PERIOD) % PERIOD;
+      crow.visible = c < GONE;
+      if (c < IN) fly(from, SCARECROW_PERCH, c / IN, t);
+      else if (c < OUT) {
+        crow.position.copy(SCARECROW_PERCH);
+        crow.position.y += Math.abs(Math.sin(t * 1.3)) * 0.01;
+        crow.rotation.set(0, -0.6 + Math.round(Math.sin(t * 0.4) * 1.5) * 0.6, 0); // si gira a scatti
+        for (const [i, w] of wings.entries()) w.rotation.z = (i ? -1 : 1) * 0.1;
+      } else if (c < GONE) fly(SCARECROW_PERCH, to, (c - OUT) / (GONE - OUT), t);
+    },
+  };
+}
+
 /** Parti animate per un oggetto del catalogo (solo stile low-poly). */
 export function createAnimated(v: PVis): Animated | null {
   switch (v.type) {
     case 'pond': return pond(v);
     case 'zombies_play': return zombiesPlay();
     case 'zombies_dance': return zombiesDance();
-    case 'zombie_walker': return zombieWalker();
-    case 'ghosts_roam': return wisps(LPC.spectral, 3, 0.38, 0.55);
+    case 'scarecrow': return scarecrow(v.lit);
     case 'toxic_puddle': return toxic(v.seed);
     case 'mud': return rising('bubble', '#5a4a3a', 2, [0.2, 0.2], 0.06, v.seed, false);
     case 'dead_tree': return fallingLeaves(v.seed, 4, 1.9, 0.6);

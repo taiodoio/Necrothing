@@ -350,6 +350,14 @@ export function normalizeSave(raw: unknown): SaveData | null {
     data.world.unlockedLevel = Math.max(data.world.unlockedLevel ?? lvl, lvl);
     data.world.notifiedLevel = Math.max(data.world.notifiedLevel ?? data.world.unlockedLevel, lvl);
   }
+  // zombie e fantasmi arrivano già da soli: lo zombie errante diventa lo spaventapasseri, i fantasmi erranti il giardiniere
+  const RENAMED: Record<string, string> = { zombie_walker: 'scarecrow', ghosts_roam: 'gardener_corner' };
+  for (const p of data.placeables ?? []) if (RENAMED[p.type]) { p.type = RENAMED[p.type]; p.lit = true; }
+  if (data.inventory) {
+    const inv = { ...(data.inventory as Record<string, number>) };
+    for (const [from, to] of Object.entries(RENAMED)) if (inv[from]) { inv[to] = (inv[to] ?? 0) + inv[from]; delete inv[from]; }
+    data.inventory = inv;
+  }
   // la banda di scheletri ora è 3×3 (davanti al palco ballano due fantasmini): se la fila in più è occupata torna in inventario
   for (const b of [...(data.placeables ?? [])].filter((p) => p.type === 'skeleton_band')) {
     const [w, d] = rotatedFootprint(b.type, b.rot);

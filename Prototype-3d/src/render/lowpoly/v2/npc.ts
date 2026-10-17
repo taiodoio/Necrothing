@@ -7,9 +7,10 @@
 import * as THREE from 'three';
 import { LP as LPClass, type LP, type LPOpts } from '../kit.ts';
 import { DEFAULT_LOOK } from '../../../game/look.ts';
+import type { CustodeLook } from '../../../game/look.ts';
 import {
   humanSpec, atPivot, type KawaiiSpec, type KPart, V2_SCALE, beginCreature, eyesLP, hairLayer, headAt, headFront, headGeo, surfaceAlong, headCenter, headRadii, onSkin, sheet, taperTube, rbox, shade,
-  smooth, lerp, DEG, O, footGeo, witchHat,
+  smooth, lerp, DEG, O, footGeo, witchHat, strawHat, type V2Extra,
 } from './custode.ts';
 
 const v = (x: number, y: number, z: number) => new THREE.Vector3(x, y, z);
@@ -201,10 +202,10 @@ const zombie = () => humanSpec(
 );
 
 /** Scheletro: stessa testa (un teschio), corpo di ossa. */
-const skeleton = () => humanSpec(
-  { skin: BONE, sparkle: false, hair: 'none', eyes: '#8ff0dc', beard: 'none', mustache: 'none' },
+const skeleton = (look: Partial<CustodeLook> = {}, extra: V2Extra = {}) => humanSpec(
+  { skin: BONE, sparkle: false, hair: 'none', eyes: '#8ff0dc', beard: 'none', mustache: 'none', ...look },
   {
-    name: 'scheletro', eyes: 'sockets', mouth: 'none', ears: false, held: [],
+    name: 'scheletro', eyes: 'sockets', mouth: 'none', ears: false, held: [], ...extra,
     head: (lp) => {
       onSkin(lp, headFront(0, 0.645), 0.002, 0, (q) => q.add(new THREE.CircleGeometry(0.03, 3).rotateZ(-Math.PI / 2).scale(1, 1.2, 1), '#1e1b22', O)); // naso
       onSkin(lp, headFront(0, 0.612), 0.002, 0, (q) => q.add(rbox(0.17, 0.008, 0.006, 0.003, 1).translate(0, 0.022, 0), '#8e8676', O));
@@ -246,6 +247,14 @@ const skeleton = () => humanSpec(
     },
   },
 );
+
+/** Scheletro giardiniere: cappello di paglia e papillon. */
+export function gardenerSpec(): KawaiiSpec {
+  return skeleton(
+    {},
+    { name: 'giardiniere', hat: (lp) => strawHat(lp), hatPh: 40, held: [] }, // il rastrello è un oggetto a parte, impugnato a due mani
+  );
+}
 
 // ── Fantasmi ────────────────────────────────────────────────────────────
 
@@ -546,7 +555,7 @@ function witch(): KawaiiSpec {
   return humanSpec(
     { skin: '#b6d29a', sparkle: false, hair: 'long', hairColor: '#4a2a5a', eyes: '#2f5a32', hat: 'none', outfit: 'cloak', outfitColor: '#4a3a5a', accentColor: '#5f8a4a', beard: 'none', mustache: 'none', freckles: true },
     {
-      name: 'strega', mouth: 'smile', blush: '#d99a9a', hat: (lp) => witchHat(lp), hatPh: 50,
+      name: 'strega', mouth: 'smile', blush: '#d99a9a', hat: (lp) => witchHat(lp, undefined, undefined, 42, 0.09), hatPh: 42,
       held: [{ side: 1, build: (lp: LP) => { lp.cyl(0, -0.05, 0.03, 0.012, 0.012, 0.5, 5, '#6b4a2e', O); lp.blob(0, -0.07, 0.03, 0.045, 0.02, 0.045, '#5a5650', O); } }],
       head: (lp: LP) => onSkin(lp, headFront(0, 0.68), 0.03, 0, (q) => q.blob(0, 0, 0.02, 0.035, 0.03, 0.05, '#a6c48a', O)),
     },
@@ -580,6 +589,7 @@ export const V2_SPECS: Record<string, KawaiiSpec> = {
   mournerB: mournerB(),
   zombie: zombie(),
   skeleton: skeleton(),
+  gardener: gardenerSpec(),
   ghost: ghostSpec(false),
   ghostRare: ghostSpec(true),
   cat: quadSpec(CAT),

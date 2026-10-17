@@ -193,20 +193,27 @@ test('rig low-poly: personaggi v2 in gioco, con luci portate dai modelli e occhi
   assert.ok(custom.parts.head.getObjectByName('scintille'), 'scintille sui brillantini');
   assert.equal(buildRig('ghost', 'lowpoly').lights.length, 1, 'bagliore del fantasma');
   assert.equal(buildRig('ghost', 'lowpoly').spec.bucket, 'ghost');
-  for (const kind of ['mourner', 'mournerB', 'priest', 'gravedigger', 'zombie', 'skeleton', 'cat', 'crow', 'petDuck']) {
+  for (const kind of ['mourner', 'mournerB', 'priest', 'gravedigger', 'zombie', 'skeleton', 'gardener', 'cat', 'crow', 'petDuck']) {
     for (const style of ['lowpoly', 'voxel']) assert.ok(Object.keys(buildRig(kind, style).parts).length >= 4, `${kind} ${style}`);
   }
 });
 
 test('parti animate: stagno, presenze, natura; aggiornabili e deterministiche', async () => {
   const { createAnimated } = await import('../src/render/lowpoly/animated.ts');
-  const types = ['pond', 'zombies_play', 'zombies_dance', 'zombie_walker', 'ghosts_roam', 'toxic_puddle', 'mud', 'hell_hole', 'dead_tree', 'spectral_tree', 'bushes', 'tall_grass', 'flowerbed'];
+  const types = ['pond', 'zombies_play', 'zombies_dance', 'scarecrow', 'toxic_puddle', 'mud', 'hell_hole', 'dead_tree', 'spectral_tree', 'bushes', 'tall_grass', 'flowerbed'];
   for (const type of types) {
     const a = createAnimated(vis(type));
     assert.ok(a && a.root.children.length > 0, type);
     a.update(0); a.update(3.7);
   }
   assert.equal(createAnimated(vis('lamp_post')), null);
+  // lo spaventapasseri gira la testa verso chi guarda (qui: il Custode a destra, in +x)
+  const THREE = await import('three');
+  const sc = createAnimated(vis('scarecrow'));
+  sc.root.updateMatrixWorld(true);
+  sc.watch(new THREE.Vector3(3, 0, 0));
+  for (let t = 0; t < 6; t += 0.05) sc.update(t);
+  assert.ok(Math.abs(sc.root.children[0].rotation.y - Math.PI / 2) < 0.05, 'guarda il Custode');
   assert.equal(createAnimated(vis('hell_hole', { broken: true, lit: false })), null, 'buco spento: niente scintille');
   const p1 = createAnimated(vis('pond')), p2 = createAnimated(vis('pond'));
   p1.update(2); p2.update(2);

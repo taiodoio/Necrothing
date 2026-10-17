@@ -8,12 +8,15 @@ import { instantiate, lightWorldPos, LOWPOLY_MATERIALS } from '../render/modelCa
 import type { LPModel } from '../render/lowpoly/kit.ts';
 import * as N from '../render/lowpoly/newItems.ts';
 import * as M from '../render/lowpoly/newItems2.ts';
+import * as S from '../render/lowpoly/newItems3.ts';
+import { gardenerSpec } from '../render/lowpoly/v2/npc.ts';
+import { rakeGrip, rakeMesh } from '../view/presences.ts';
 import { LP_SCENERY } from '../render/lowpoly/index.ts';
 import { lowpolyGrave } from '../render/lowpoly/graves.ts';
 import { lampPost } from '../render/lowpoly/lights.ts';
 import { drawIcon, iconUrl } from '../ui/icons.ts';
 import { animateRig, buildRig, rigLightPos, type CharacterKind, type Pose } from '../view/characters.ts';
-import { assemble, handPos, headAt, headCenter, headFront, humanSpec, onSkin, HUMAN_PIVOTS, DEG, O } from '../render/lowpoly/v2/custode.ts';
+import { assemble, handPos, headAt, headCenter, headFront, humanSpec, onSkin, witchHat as witchHatGame, HUMAN_PIVOTS, DEG, O } from '../render/lowpoly/v2/custode.ts';
 import type { LP } from '../render/lowpoly/kit.ts';
 import { DEFAULT_LOOK } from '../game/look.ts';
 
@@ -76,25 +79,15 @@ function vampire(): THREE.Group {
   );
 }
 
-/** Cappello da strega (spazio della testa): tesa larga, cono piegato, nastro verde e fibbia. */
-function witchHat(lp: LP) {
-    const c = headCenter();
-    const y = headAt(0, 50 * DEG).p.y;
-    lp.cyl(c.x, y - 0.01, c.z + 0.01, 0.44, 0.43, 0.03, 20, '#2a2235', O);
-    lp.push([c.x, y + 0.02, c.z], 0, -0.12, 0.08);
-    lp.cyl(0, 0, 0, 0.24, 0.12, 0.28, 14, '#2a2235', O);
-    lp.push([0, 0.28, -0.02], 0, -0.35, 0.15).cyl(0, 0, 0, 0.12, 0.0, 0.26, 12, '#2a2235', O).pop();
-    lp.cyl(0, 0.02, 0, 0.245, 0.24, 0.05, 14, '#5f8a4a', O);
-    lp.add(new THREE.BoxGeometry(0.06, 0.06, 0.01).translate(0, 0.045, 0.24), '#c9a227', O);
-    lp.pop();
-}
+/** Cappello da strega: lo stesso del gioco (strega e Custode). */
+const witchHat = (lp: LP) => witchHatGame(lp, undefined, undefined, 42, 0.09);
 
 function witch(): THREE.Group {
   const hat = witchHat;
   return figure(
     { skin: '#b6d29a', sparkle: false, hair: 'long', hairColor: '#4a2a5a', eyes: '#2f5a32', hat: 'none', outfit: 'cloak', outfitColor: '#4a3a5a', accentColor: '#5f8a4a', beard: 'none', mustache: 'none', freckles: true },
     {
-      name: 'strega', mouth: 'smile', blush: '#d99a9a', hat, hatPh: 50,
+      name: 'strega', mouth: 'smile', blush: '#d99a9a', hat, hatPh: 42,
       // mestolo per girare la pozione
       held: [{ side: 1, build: (lp: LP) => { lp.cyl(0, -0.05, 0.03, 0.012, 0.012, 0.5, 5, '#6b4a2e', O); lp.blob(0, -0.07, 0.03, 0.045, 0.02, 0.045, '#5a5650', O); } }], head: (lp: LP) => onSkin(lp, headFront(0, 0.68), 0.03, 0, (q) => q.blob(0, 0, 0.02, 0.035, 0.03, 0.05, '#a6c48a', O)) },
     'strega',
@@ -268,7 +261,7 @@ function wispBadge(n: number, y: number): THREE.Sprite {
 
 /** Il Custode col cappello da strega (nuovo cappello della personalizzazione). */
 function custodeWitchHat(look: Partial<typeof DEFAULT_LOOK>, name: string, x: number, yaw: number): THREE.Group {
-  const c = figure({ ...DEFAULT_LOOK, ...look, hat: 'none' }, { name, hat: witchHat, hatPh: 50 }, name);
+  const c = figure({ ...DEFAULT_LOOK, ...look, hat: 'none' }, { name, hat: witchHat, hatPh: 42 }, name);
   c.position.set(x, 0, 0); c.rotation.y = yaw;
   return c;
 }
@@ -363,6 +356,29 @@ function snowman2(): THREE.Group {
   const snow = new THREE.Mesh(new THREE.CircleGeometry(1.2, 24).rotateX(-Math.PI / 2), new THREE.MeshStandardMaterial({ color: '#dfe8ec', roughness: 1 }));
   snow.position.y = 0.004; snow.receiveShadow = true; g.add(snow);
   return g;
+}
+
+/** Spaventapasseri: la testa ruota a parte (verso il Custode), il corvo si posa sul braccio. */
+function scarecrow(lit: boolean, headYaw = 0, crow = false): THREE.Group {
+  const s = group(inst(S.scarecrowBodyLP(lit)), inst(S.scarecrowHeadLP(lit), [0, S.SCARECROW_NECK, 0], headYaw));
+  if (crow) { const c = char('crow', 'idle', [0.33 * S.SCARECROW_SCALE, 1.03 * S.SCARECROW_SCALE, -0.02], 0.9, 0.4); c.scale.setScalar(0.55 * S.SCARECROW_SCALE); s.add(c); }
+  return group(s, lawn(0.7, 1.5, 12, 51));
+}
+
+/**
+ * Scheletro giardiniere che rastrella (lo stesso gesto del gioco): il pettine a
+ * terra davanti e di lato, la destra in basso sul manico, la sinistra in alto.
+ */
+function gardener(t = 0): THREE.Group {
+  const a = assemble(gardenerSpec(), 'giardiniere');
+  const inner = a.root.children[0];
+  const parts: Record<string, THREE.Object3D> = {};
+  Object.keys(HUMAN_PIVOTS).forEach((k, i) => { parts[k] = inner.children[i]; });
+  const rake = rakeMesh();
+  inner.add(rake);
+  rakeGrip(parts.armL, parts.armR, rake, Math.sin(t) * 0.09);
+  parts.head.rotation.x = 0.2; parts.head.rotation.y = 0.25;
+  return a.root;
 }
 
 interface Panel { title: string; night?: boolean; dusk?: boolean; yaw: number; pitch?: number; zoom: number; center?: [number, number, number]; build: () => THREE.Group }
@@ -461,6 +477,19 @@ const SETS: Record<string, Panel[]> = {
     { title: `Gazebo · leggero (${lpStats(M.gazeboSpookyLP(true, true))})`, night: true, dusk: true, yaw: 0.6, zoom: 2.5, center: [0, 1.3, 0], build: () => group(inst(M.gazeboSpookyLP(true, true)), lawn(2.0, 2.9, 22, 3)) },
     { title: `Campo di zucche · prima (${lpStats(M.pumpkinPatch2LP(true, false))})`, night: true, dusk: true, yaw: 0.55, pitch: 0.6, zoom: 1.85, center: [0, 0.5, 0], build: () => group(inst(M.pumpkinPatch2LP(true, false)), lawn(1.55, 2.3, 20, 7)) },
     { title: `Campo di zucche · leggero (${lpStats(M.pumpkinPatch2LP(true, true))})`, night: true, dusk: true, yaw: 0.55, pitch: 0.6, zoom: 1.85, center: [0, 0.5, 0], build: () => group(inst(M.pumpkinPatch2LP(true, true)), lawn(1.55, 2.3, 20, 7)) },
+  ],
+  '11': [
+    { title: 'Strega del gioco · di fronte', yaw: 0, pitch: 0.25, zoom: 1.0, center: [0, 0.75, 0], build: () => group(char('witch', 'idle', [0, 0, 0], 0, 0.3), lawn(0.6, 1.2, 10, 3)) },
+    { title: 'Strega del gioco · tre quarti', yaw: 0.7, pitch: 0.35, zoom: 1.0, center: [0, 0.75, 0], build: () => group(char('witch', 'idle', [0, 0, 0], 0, 0.3), lawn(0.6, 1.2, 10, 3)) },
+    { title: 'Strega al calderone · come in gioco', yaw: Math.PI / 4, pitch: 0.75, zoom: 1.35, center: [0.3, 0.6, 0], build: () => group(inst(M.witchCornerLP()), char('witch', 'work', [0.55, 0, -0.15], 0.1, 0.3), lawn(1.1, 1.8, 12, 4)) },
+  ],
+  '12': [
+    { title: 'Spaventapasseri · giorno', yaw: 0.5, pitch: 0.3, zoom: 1.2, center: [0, 0.95, 0], build: () => scarecrow(false) },
+    { title: 'Spaventapasseri · notte (zucca accesa)', night: true, dusk: true, yaw: 0.5, pitch: 0.3, zoom: 1.2, center: [0, 0.95, 0], build: () => scarecrow(true) },
+    { title: 'Ti segue con lo sguardo (e il corvo)', yaw: Math.PI / 4, pitch: 0.7, zoom: 1.6, center: [-0.2, 0.7, 0.4], build: () => group(scarecrow(false, 0.21, true), char('custode', 'walk', [0.3, 0, 1.45], 1.6, 0.4)) },
+    { title: 'Scheletro giardiniere · di fronte', yaw: 0.15, pitch: 0.25, zoom: 0.95, center: [0, 0.6, 0], build: () => group(gardener(), lawn(0.6, 1.2, 10, 52)) },
+    { title: 'Giardiniere · rastrella le foglie', yaw: 0.9, pitch: 0.4, zoom: 0.95, center: [0, 0.45, 0], build: () => group(gardener(1.2), inst(S.gardenerCornerLP(), [0.55, 0, -0.35]), lawn(0.9, 1.6, 12, 53)) },
+    { title: 'Giardiniere · come in gioco', yaw: Math.PI / 4, pitch: 0.75, zoom: 1.3, center: [0.2, 0.4, 0], build: () => { const gd = gardener(0.4); gd.position.set(-0.15, 0, -0.5); gd.rotation.y = 0.6; return group(inst(S.gardenerCornerLP()), gd, grave('stone_simple', [-1.3, 0, 0.3], 0.2), lawn(1.2, 2.0, 16, 54)); } },
   ],
 };
 

@@ -8,6 +8,8 @@ import { instantiate, lightWorldPos, LOWPOLY_MATERIALS } from '../render/modelCa
 import type { LPModel } from '../render/lowpoly/kit.ts';
 import * as N from '../render/lowpoly/newItems.ts';
 import * as M from '../render/lowpoly/newItems2.ts';
+import * as S from '../render/lowpoly/newItems3.ts';
+import { gardenerSpec } from '../render/lowpoly/v2/npc.ts';
 import { LP_SCENERY } from '../render/lowpoly/index.ts';
 import { lowpolyGrave } from '../render/lowpoly/graves.ts';
 import { lampPost } from '../render/lowpoly/lights.ts';
@@ -355,6 +357,26 @@ function snowman2(): THREE.Group {
   return g;
 }
 
+/** Spaventapasseri: la testa ruota a parte (verso il Custode), il corvo si posa sul braccio. */
+function scarecrow(lit: boolean, headYaw = 0, crow = false): THREE.Group {
+  const s = group(inst(S.scarecrowBodyLP()), inst(S.scarecrowHeadLP(lit), [0, S.SCARECROW_NECK, 0], headYaw));
+  if (crow) { const c = char('crow', 'idle', [0.33, 1.03, -0.02], 0.9, 0.4); c.scale.setScalar(0.55); s.add(c); }
+  s.scale.setScalar(S.SCARECROW_SCALE);
+  return group(s, lawn(0.7, 1.5, 12, 51));
+}
+
+/** Scheletro giardiniere in posa da rastrello (braccia avanti, busto chino). */
+function gardener(t = 0): THREE.Group {
+  const a = assemble(gardenerSpec(), 'giardiniere');
+  const inner = a.root.children[0];
+  const parts: Record<string, THREE.Object3D> = {};
+  Object.keys(HUMAN_PIVOTS).forEach((k, i) => { parts[k] = inner.children[i]; });
+  const sw = Math.sin(t) * 0.25;
+  parts.armR.rotation.x = -0.3 + sw; parts.armL.rotation.x = -0.45 + sw; parts.armL.rotation.z = -0.3;
+  parts.head.rotation.x = 0.15; parts.body.rotation.x = 0.08;
+  return a.root;
+}
+
 interface Panel { title: string; night?: boolean; dusk?: boolean; yaw: number; pitch?: number; zoom: number; center?: [number, number, number]; build: () => THREE.Group }
 
 const SETS: Record<string, Panel[]> = {
@@ -456,6 +478,14 @@ const SETS: Record<string, Panel[]> = {
     { title: 'Strega del gioco · di fronte', yaw: 0, pitch: 0.25, zoom: 1.0, center: [0, 0.75, 0], build: () => group(char('witch', 'idle', [0, 0, 0], 0, 0.3), lawn(0.6, 1.2, 10, 3)) },
     { title: 'Strega del gioco · tre quarti', yaw: 0.7, pitch: 0.35, zoom: 1.0, center: [0, 0.75, 0], build: () => group(char('witch', 'idle', [0, 0, 0], 0, 0.3), lawn(0.6, 1.2, 10, 3)) },
     { title: 'Strega al calderone · come in gioco', yaw: Math.PI / 4, pitch: 0.75, zoom: 1.35, center: [0.3, 0.6, 0], build: () => group(inst(M.witchCornerLP()), char('witch', 'work', [0.55, 0, -0.15], 0.1, 0.3), lawn(1.1, 1.8, 12, 4)) },
+  ],
+  '12': [
+    { title: 'Spaventapasseri · giorno', yaw: 0.5, pitch: 0.3, zoom: 1.2, center: [0, 0.95, 0], build: () => scarecrow(false) },
+    { title: 'Spaventapasseri · notte (zucca accesa)', night: true, dusk: true, yaw: 0.5, pitch: 0.3, zoom: 1.2, center: [0, 0.95, 0], build: () => scarecrow(true) },
+    { title: 'Ti segue con lo sguardo (e il corvo)', yaw: Math.PI / 4, pitch: 0.7, zoom: 1.6, center: [-0.2, 0.7, 0.4], build: () => group(scarecrow(false, 0.21, true), char('custode', 'walk', [0.3, 0, 1.45], 1.6, 0.4)) },
+    { title: 'Scheletro giardiniere · di fronte', yaw: 0.15, pitch: 0.25, zoom: 0.95, center: [0, 0.6, 0], build: () => group(gardener(), lawn(0.6, 1.2, 10, 52)) },
+    { title: 'Giardiniere · rastrella le foglie', yaw: 0.9, pitch: 0.4, zoom: 0.95, center: [0, 0.45, 0], build: () => group(gardener(1.2), inst(S.gardenerCornerLP(), [0.55, 0, -0.35]), lawn(0.9, 1.6, 12, 53)) },
+    { title: 'Giardiniere · come in gioco', yaw: Math.PI / 4, pitch: 0.75, zoom: 1.3, center: [0.2, 0.4, 0], build: () => { const gd = gardener(0.4); gd.position.set(-0.15, 0, -0.5); gd.rotation.y = 0.6; return group(inst(S.gardenerCornerLP()), gd, grave('stone_simple', [-1.3, 0, 0.3], 0.2), lawn(1.2, 2.0, 16, 54)); } },
   ],
 };
 

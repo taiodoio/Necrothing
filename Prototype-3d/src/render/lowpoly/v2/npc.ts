@@ -7,9 +7,10 @@
 import * as THREE from 'three';
 import { LP as LPClass, type LP, type LPOpts } from '../kit.ts';
 import { DEFAULT_LOOK } from '../../../game/look.ts';
+import type { CustodeLook } from '../../../game/look.ts';
 import {
   humanSpec, atPivot, type KawaiiSpec, type KPart, V2_SCALE, beginCreature, eyesLP, hairLayer, headAt, headFront, headGeo, surfaceAlong, headCenter, headRadii, onSkin, sheet, taperTube, rbox, shade,
-  smooth, lerp, DEG, O, footGeo, witchHat,
+  smooth, lerp, DEG, O, footGeo, witchHat, strawHat, type V2Extra,
 } from './custode.ts';
 
 const v = (x: number, y: number, z: number) => new THREE.Vector3(x, y, z);
@@ -201,10 +202,10 @@ const zombie = () => humanSpec(
 );
 
 /** Scheletro: stessa testa (un teschio), corpo di ossa. */
-const skeleton = () => humanSpec(
-  { skin: BONE, sparkle: false, hair: 'none', eyes: '#8ff0dc', beard: 'none', mustache: 'none' },
+const skeleton = (look: Partial<CustodeLook> = {}, extra: V2Extra = {}) => humanSpec(
+  { skin: BONE, sparkle: false, hair: 'none', eyes: '#8ff0dc', beard: 'none', mustache: 'none', ...look },
   {
-    name: 'scheletro', eyes: 'sockets', mouth: 'none', ears: false, held: [],
+    name: 'scheletro', eyes: 'sockets', mouth: 'none', ears: false, held: [], ...extra,
     head: (lp) => {
       onSkin(lp, headFront(0, 0.645), 0.002, 0, (q) => q.add(new THREE.CircleGeometry(0.03, 3).rotateZ(-Math.PI / 2).scale(1, 1.2, 1), '#1e1b22', O)); // naso
       onSkin(lp, headFront(0, 0.612), 0.002, 0, (q) => q.add(rbox(0.17, 0.008, 0.006, 0.003, 1).translate(0, 0.022, 0), '#8e8676', O));
@@ -246,6 +247,23 @@ const skeleton = () => humanSpec(
     },
   },
 );
+
+/** Rastrello in mano (spazio della mano): manico lungo verso il basso, pettine di denti a terra. */
+function rake(lp: LP) {
+  lp.push([0, 0, 0.02], 0, -0.4);
+  lp.cyl(0, -0.3, 0, 0.012, 0.012, 0.72, 5, '#8a6a48', O);
+  lp.add(rbox(0.26, 0.03, 0.035, 0.008, 1).translate(0, -0.3, 0), '#4a535c', O);
+  for (let i = -4; i <= 4; i++) lp.add(new THREE.CylinderGeometry(0.007, 0.005, 0.09, 4).translate(i * 0.03, -0.34, 0.02), '#4a535c', O);
+  lp.pop();
+}
+
+/** Scheletro giardiniere: cappello di paglia, fazzoletto al collo, rastrello. */
+export function gardenerSpec(): KawaiiSpec {
+  return skeleton(
+    {},
+    { name: 'giardiniere', hat: (lp) => strawHat(lp), hatPh: 40, held: [{ side: 1, build: rake }] },
+  );
+}
 
 // ── Fantasmi ────────────────────────────────────────────────────────────
 

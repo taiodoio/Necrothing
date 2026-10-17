@@ -864,6 +864,20 @@ function hatGeo(lp: LP) {
   lp.pop();
 }
 
+/** Cappello di paglia (spazio della testa): tesa piatta media, cupola bassa e nastro. */
+export function strawHat(lp: LP, color = '#c9a35a', band = '#8e2f2a', ph = 40, brim = 0.12) {
+  const at = (th: number) => shellAt(th, (ph - 4) * DEG).p;
+  const y = at(0).y - 0.005;
+  const headR = Math.max(...[0, 90, 180, -90].map((t) => Math.hypot(at(t * DEG).x - C.x, at(t * DEG).z - C.z)));
+  const cr = headR + 0.045, R = cr + brim;
+  lp.push([C.x, y, C.z - 0.01], 0, -0.06, 0.05);
+  lp.lathe(0, -0.01, 0, [[cr - 0.03, 0.035], [R - 0.02, 0.012], [R, -0.004], [R - 0.004, 0.012], [cr - 0.03, 0.05]], 20, color, O);
+  lp.cyl(0, 0.02, 0, cr, cr * 0.9, 0.17, 16, color, { ...O, ao: 0.05 });
+  lp.blob(0, 0.19, 0, cr * 0.9, 0.04, cr * 0.9, color, { ...O, detail: 1 } as LPOpts);
+  lp.cyl(0, 0.03, 0, cr + 0.004, cr * 0.97, 0.05, 16, band, O); // nastro
+  lp.pop();
+}
+
 /** Cappello da strega (spazio della testa): tesa larga, cono piegato, nastro e fibbia. */
 export function witchHat(lp: LP, color = '#2a2235', band = '#5f8a4a', ph = 50, brim = 0.16) {
   // come gli altri cappelli: la tesa poggia dove finiscono i capelli e il cono li copre tutti

@@ -24,6 +24,7 @@ import {
 } from './nature.ts';
 import { memoryTreeLP } from './memoryTree.ts';
 import { bicycleLP, brainFarmLP, zombieBarLP } from './extraItems.ts';
+import { LP_UNLOCKABLES } from './unlockables.ts';
 import { weathered } from './weathering.ts';
 import { CATALOG } from '../../game/catalog.ts';
 import { GRAVE_FOOTPRINT } from '../../game/balance.ts';
@@ -88,6 +89,7 @@ export const LP_PLACEABLES: Record<string, (v: PVis) => LPModel> = {
   brain_farm: brainFarmLP,
   // non si piazza (il Custode la porta con sé): questo è il modello per le miniature
   bike: () => bicycleLP(true),
+  ...LP_UNLOCKABLES,
 };
 /** Generatori di scenografia (prefisso della chiave → generatore con parametro). */
 export const LP_SCENERY: Record<string, (arg: string) => LPModel> = {

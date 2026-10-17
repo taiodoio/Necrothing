@@ -63,12 +63,12 @@ esegue fisicamente (cammina, lavora, poi arriva la ricompensa).
 | In alto a sinistra | Nome, rango con barra di progresso, fuochi fatui → profilo e achievement |
 | In alto a destra | Ora reale, fase del giorno e meteo, impostazioni |
 | In basso a sinistra | Pala → barra a slot (stile hotbar) che si apre in orizzontale: Seppellisci, Modifica, Inventario, Bottega (centra la mappa sulla bottega), Foto, Galleria |
-| In basso a destra | Bicicletta (se la possiedi: sali/scendi, dorata quando sei in sella), ricentra sul Custode |
+| In basso a destra | Bastone mistico, scopa volante e bicicletta (ognuno solo se lo possiedi; dorato quando è in uso), ricentra sul Custode |
 | Drawer dal basso | Tutte le pagine, con ✕ in alto a sinistra; la bolla sparisce mentre sono aperte |
 
 **Controlli** — Touch: tocca per camminare/selezionare, trascina per spostare la mappa,
 pizzica per lo zoom. Desktop: WASD/frecce muovono il Custode, rotella zoom, `E`
-interagisci, `B` sali/scendi dalla bici, `V` cambia stile (low-poly → voxel → miniatura), `Esc` chiude.
+interagisci, `B` sali/scendi dalla bici, `F` sali/scendi dalla scopa, `V` cambia stile (low-poly → voxel → miniatura), `Esc` chiude.
 
 ### Dinamiche (portate dalla PWA, regole in `src/game/`)
 
@@ -125,6 +125,33 @@ interagisci, `B` sali/scendi dalla bici, `V` cambia stile (low-poly → voxel �
   15 e 12: un'etichetta con la fiammella e «+N» compare sopra e toccandola si riscuote.
   Entrambi attirano zombie anche senza tombe aperte (+6% e +3% a ogni giro); rotti non
   incassano e restano chiusi finché non li ripari.
+- **Nuovi sbloccabili** (rango, prezzo e modo di sblocco in `src/game/catalog.ts`):
+  - *Luci*: candelabro gotico, lanterna degli spiriti, ghirlanda di teschi (3×1, si passa sotto)
+    e il **Lampione del Custode** (pezzo unico, si sblocca riparando 25 luci): il suo bastone
+    col ricciolo, la lanterna a petrolio, il cappello appeso. Le luci nel suo raggio (4 celle)
+    si sporcano ma non si rompono mai; in Modifica e mentre lo si posa si vede l'area.
+  - *Decorazioni*: pila di libri, corvo impagliato, gargoyle, **Mietitore di pietra**
+    (occhi accesi sotto il cappuccio) e la **Statua del Custode** (rango 5, col suo aspetto
+    in pietra: se il Custode cambia aspetto, la statua cambia con lui).
+  - *Costruzioni*: **Campana delle anime** (si suona una volta al giorno dal menù: accorrono
+    tre fantasmi da toccare) e **Gazebo delle anime** (di notte ci ballano i fantasmi).
+  - *Ambiente*: cipresso, melo stregato, funghi luminosi sul tronco, albero dell'altalena,
+    cerchio di pietre, palude con le mani, crepa infernale (come il buco infernale, chiama fantasmi).
+  - *Presenze*: rifugio dei gatti, picnic dei fantasmi, banda di scheletri che suona,
+    **Angolo della strega** (vende pozioni: incassa 3–6 ✦ al giorno fino a 15, come bar e orto)
+    e **Cripta del vampiro** (di giorno dorme, di notte passeggia).
+  - *Stagionali* (si comprano solo nel loro periodo, poi restano): campo di zucche e ragnatela
+    gigante a ottobre, altare dei morti dal 31 ottobre al 2 novembre, pupazzo scheletrico e luci
+    di Natale sul recinto a dicembre e gennaio, panchina dei fantasmi innamorati a febbraio.
+  - *Extra*: **Scopa volante** (rango 5, 120 ✦: si vola sopra tombe e oggetti, più veloci della
+    bici) e **Bastone mistico** (gratis, si sblocca guadagnando 500 ✦: impugnato, i fuochi fatui
+    accorrono da 3,5 celle). Il **cappello da strega** del Custode si sblocca quando la strega ha
+    venduto 30 pozioni.
+  - *In prova* sono tutti già comprabili (rango, stagione e traguardo saltati, il prezzo resta).
+- **Zombie e fango**: uno zombie che passa accanto a una tomba (solo mentre si gioca) con
+  una certa probabilità la sporca, al massimo una per zombie, e ci lascia le impronte di fango;
+  se era già sporca la rottura si avvicina di un giorno (ma non la rompe mai). Le tombe appena
+  pulite o coi fiori freschi sono al riparo per 6 ore; pulendo spariscono anche le impronte.
 - **Simulazione a tempo reale** all'apertura e al ritorno in primo piano (erbacce,
   sporco, rotture, anniversari, meteo giornaliero) + tick "vivo" ogni 40 s mentre si gioca.
 - **Progressione**: 5 ranghi, 27 achievement, prestigio, distretti tematici

@@ -7,6 +7,8 @@
 
 import * as THREE from 'three';
 import { DEFAULT_LOOK, LOOK_COLORS, LOOK_STYLES, lookKey, lookUnused, type CustodeLook } from '../game/look.ts';
+import { HAT_FEATS } from '../game/balance.ts';
+import * as R from '../game/rules.ts';
 import { lookThumb } from './lookThumbs.ts';
 import { animateRig, buildRig, type Rig } from '../view/characters.ts';
 import { LP } from '../render/lowpoly/kit.ts';
@@ -154,7 +156,10 @@ export function openCustomize(ui: UI) {
     const disabled = off(key);
     for (const [v, label] of LOOK_STYLES[key] as Array<[CustodeLook[K], string]>) {
       const img = h('img', { alt: '', width: 72, height: 72, draggable: false }) as HTMLImageElement;
-      const b = h('button', { class: `look-tile${look[key] === v ? ' active' : ''}`, 'aria-pressed': String(look[key] === v), disabled, onclick: () => {
+      // il cappello da strega si sblocca con le pozioni della strega
+      const locked = key === 'hat' && !R.hatUnlocked(game.state, String(v)) && look.hat !== v;
+      const feat = locked ? HAT_FEATS[v as keyof typeof HAT_FEATS] : null;
+      const b = h('button', { class: `look-tile${look[key] === v ? ' active' : ''}${locked ? ' locked' : ''}`, 'aria-pressed': String(look[key] === v), disabled: disabled || locked, title: feat ? `${feat.label} (${Math.min(feat.goal, game.state.player.counters[feat.counter])}/${feat.goal})` : undefined, onclick: () => {
         for (const x of Array.from(box.children)) { x.classList.toggle('active', x === b); x.setAttribute('aria-pressed', String(x === b)); }
         apply({ [key]: v } as Partial<CustodeLook>);
       } }, h('span', { class: 'look-thumb' }, img), h('span', { class: 'look-tile-label' }, label));

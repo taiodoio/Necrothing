@@ -4,7 +4,7 @@
 import { terrainSection } from './expansion.ts';
 import { exportBackup, gallery, importBackup, type PhotoRecord } from '../app/persistence.ts';
 import { BUSINESS, DECAY, EXPANSION } from '../game/balance.ts';
-import { CATALOG, CATALOG_LIST, CATEGORY_ORDER, PLACEABLE_CATEGORY_LABELS, isSeasonallyAvailable, repairCost, type PlaceableCategory } from '../game/catalog.ts';
+import { CATALOG, CATALOG_LIST, CATEGORY_ORDER, PLACEABLE_CATEGORY_LABELS, repairCost, seasonLabel, type PlaceableCategory, type PlaceableDef } from '../game/catalog.ts';
 import {
   CATEGORIES, CATEGORY_LABELS, DEATH_CAUSE_LABELS, DEATH_CAUSES, GRAVE_STATE_LABELS,
   GRAVE_TYPE_LABELS, GRAVE_TYPE_MIN_RANK, GRAVE_TYPES, graveVisualState,
@@ -123,7 +123,29 @@ export function openEditIntro(ui: UI) {
 
 // ── Bottega ────────────────────────────────────────────────────────────
 
-const LOCK_LABEL: Record<R.ShopAvailability, string> = { ok: '', rank: 'rango', season: 'dicembre', owned: 'posseduto', graves: 'tombe', funds: '' };
+const LOCK_LABEL: Record<R.ShopAvailability, string> = { ok: '', rank: 'rango', season: 'stagione', feat: 'traguardo', owned: 'posseduto', graves: 'tombe', funds: '' };
+
+/** Etichetta del lucchetto sulla carta della Bottega. */
+function lockText(s: SaveData, d: PlaceableDef, av: R.ShopAvailability): string {
+  if (av === 'rank') return `R${d.minRank}`;
+  if (av === 'graves') return `${d.minGraves} tombe`;
+  if (av === 'season') return seasonLabel(d) || LOCK_LABEL.season;
+  if (av === 'feat') { const [n, goal] = R.featProgress(s, d.feat!); return `${n}/${goal}`; }
+  return LOCK_LABEL[av];
+}
+
+/** Testo del pulsante d'acquisto (o del perché non si può). */
+function buyText(s: SaveData, d: PlaceableDef, av: R.ShopAvailability, qty: number): string {
+  switch (av) {
+    case 'ok': return d.cost ? `Acquista · ${d.cost * qty} fuochi fatui` : 'Prendilo: è tuo';
+    case 'funds': return 'Fuochi fatui insufficienti';
+    case 'rank': return `Serve il rango ${d.minRank}`;
+    case 'graves': return `Servono ${d.minGraves} tombe (ne hai ${R.graveTotal(s)})`;
+    case 'owned': return 'Già posseduto';
+    case 'feat': { const [n, goal] = R.featProgress(s, d.feat!); return `${d.feat!.label} (${n}/${goal})`; }
+    case 'season': return `Solo ${seasonLabel(d)}`;
+  }
+}
 
 export function openShop(ui: UI, cat: PlaceableCategory = 'light', selected: string | null = null) {
   const game = ui.game;
@@ -132,7 +154,7 @@ export function openShop(ui: UI, cat: PlaceableCategory = 'light', selected: str
   let qty = 1;
   const render = () => {
     const tabs = h('div', { class: 'tabs' }, ...CATEGORY_ORDER.map((c) => h('button', { class: `tab ${c === cat ? 'active' : ''}`, onclick: () => { cat = c; selected = null; render(); } }, PLACEABLE_CATEGORY_LABELS[c])));
-    const items = CATALOG_LIST.filter((d) => d.category === cat && !d.permanent && (isSeasonallyAvailable(d, now.getMonth()) || d.onlyMonth !== undefined));
+    const items = CATALOG_LIST.filter((d) => d.category === cat && !d.permanent);
     const grid = h('div', { class: 'grid' }, ...items.map((d) => {
       const av = R.shopAvailability(s, d.id, now);
       return h('button', {
@@ -142,7 +164,7 @@ export function openShop(ui: UI, cat: PlaceableCategory = 'light', selected: str
       h('img', { src: placeableThumb(d.id, s.settings.style), alt: '' }),
       h('b', {}, d.label),
       h('span', { class: 'price' }, String(d.cost), icon('wisp', 12)),
-      LOCK_LABEL[av] ? h('span', { class: 'lock' }, av === 'rank' || av === 'graves' ? icon('lock', 12) : null, av === 'rank' ? `R${d.minRank}` : av === 'graves' ? `${d.minGraves} tombe` : LOCK_LABEL[av]) : null,
+      LOCK_LABEL[av] ? h('span', { class: 'lock' }, av === 'rank' || av === 'graves' || av === 'feat' ? icon('lock', 12) : null, lockText(s, d, av)) : null,
       (s.inventory[d.id] ?? 0) > 0 ? h('span', { class: 'badge' }, String(s.inventory[d.id])) : null);
     }));
     setDrawerBody(h('div', {}, h('p', { class: 'muted' }, `Hai ${s.player.wisps} fuochi fatui. Gli oggetti grigi richiedono rango, stagione o più fuochi fatui.`), tabs, grid));
@@ -155,6 +177,8 @@ export function openShop(ui: UI, cat: PlaceableCategory = 'light', selected: str
       h('div', { class: 'row' }, h('b', {}, d.label), h('span', { class: 'muted', style: 'text-align:right' }, d.unique ? 'Pezzo unico' : `Max ${R.maxBuyable(s, d.id)}`)),
       h('p', { class: 'muted', style: 'margin:0' }, d.description),
       av === 'graves' ? h('div', { class: 'xp-bar', style: 'height:6px' }, h('i', { style: `width:${Math.round((R.graveTotal(s) / d.minGraves!) * 100)}%` })) : null,
+      av === 'feat' ? h('div', { class: 'xp-bar', style: 'height:6px' }, h('i', { style: `width:${Math.round((R.featProgress(s, d.feat!)[0] / d.feat!.goal) * 100)}%` })) : null,
+      d.season || d.feat ? h('p', { class: 'muted', style: 'margin:0;font-size:12px' }, [d.season ? `Stagionale: si compra solo ${d.season.label}, poi resta tuo per sempre.` : '', d.feat ? `Traguardo: ${d.feat.label.toLowerCase()}.` : ''].filter(Boolean).join(' ')) : null,
       !d.unique && av === 'ok' ? h('div', { class: 'qty' },
         h('button', { onclick: () => { qty = Math.max(1, qty - 1); render(); } }, '−'),
         h('b', {}, String(qty)),
@@ -163,13 +187,18 @@ export function openShop(ui: UI, cat: PlaceableCategory = 'light', selected: str
         class: 'big-btn', disabled: av !== 'ok',
         onclick: () => {
           if (game.act((st, n) => R.buy(st, d.id, qty, n))) {
-            // gli Extra non si posano: si usano (la bici dall'icona accanto al mirino)
+            // gli Extra non si posano: si usano (dalle icone accanto al mirino)
             if (d.category === 'extra') {
               game.refreshBike();
+              const how: Record<string, string> = {
+                bike: 'È tua! Per salire e scendere tocca l’icona della bici sulla mappa, sopra il mirino.',
+                broom: 'È tua! Per salire e scendere tocca l’icona della scopa sulla mappa, sopra la bici.',
+                mystic_staff: 'È tuo! Per impugnarlo o posarlo tocca l’icona del bastone sulla mappa, in cima alle altre.',
+              };
               setDrawerFooter(h('div', { class: 'row' },
                 h('button', { class: 'big-btn ghost', onclick: () => render() }, 'Continua'),
-                h('button', { class: 'big-btn', onclick: () => { closeDrawer(); if (!game.riding) game.toggleBike(); } }, 'Sali in sella')));
-              setDrawerBody(h('div', {}, h('div', { class: 'hero' }, h('img', { src: placeableThumb(d.id, s.settings.style), alt: '' }), h('h3', {}, d.label), h('p', { class: 'muted' }, 'È tua! Per salire e scendere tocca l’icona della bici sulla mappa, sopra il mirino.'))));
+                h('button', { class: 'big-btn', onclick: () => { closeDrawer(); game.useExtra(d.id); } }, game.extraLabel(d.id))));
+              setDrawerBody(h('div', {}, h('div', { class: 'hero' }, h('img', { src: placeableThumb(d.id, s.settings.style), alt: '' }), h('h3', {}, d.label), h('p', { class: 'muted' }, how[d.id] ?? how.bike))));
               return;
             }
             setDrawerFooter(h('div', { class: 'row' },
@@ -178,7 +207,7 @@ export function openShop(ui: UI, cat: PlaceableCategory = 'light', selected: str
             setDrawerBody(h('div', {}, h('div', { class: 'hero' }, h('img', { src: placeableThumb(d.id, s.settings.style), alt: '' }), h('h3', {}, d.label), h('p', { class: 'muted' }, 'Acquistato: è nell’inventario.'))));
           }
         },
-      }, av === 'ok' ? `Acquista · ${d.cost * qty} fuochi fatui` : av === 'funds' ? 'Fuochi fatui insufficienti' : av === 'rank' ? `Serve il rango ${d.minRank}` : av === 'graves' ? `Servono ${d.minGraves} tombe (ne hai ${R.graveTotal(s)})` : av === 'owned' ? 'Già posseduto' : 'Solo a dicembre'),
+      }, buyText(s, d, av, qty)),
       h('button', { class: 'big-btn ghost', onclick: () => { selected = null; render(); } }, 'Annulla'),
     ));
   };
@@ -214,7 +243,7 @@ export function openInventory(ui: UI, cat: PlaceableCategory | 'all' = 'all') {
       h('div', { class: 'row' },
         h('button', { class: 'big-btn ghost', onclick: () => { game.act((st) => R.sell(st, d.id, 1)); game.refreshBike(); if (!(s.inventory[d.id] ?? 0)) selected = null; render(); } }, `Vendi · +${R.sellPrice(d.id)} fuochi fatui`),
         d.category === 'extra'
-          ? h('button', { class: 'big-btn', onclick: () => { closeDrawer(); game.toggleBike(); } }, game.riding ? 'Scendi' : 'Sali in sella')
+          ? h('button', { class: 'big-btn', onclick: () => { closeDrawer(); game.useExtra(d.id); } }, game.extraLabel(d.id))
           : h('button', { class: 'big-btn', onclick: () => { closeDrawer(); game.startItemPlacement(d.id); } }, 'Inserisci')),
     ));
   };

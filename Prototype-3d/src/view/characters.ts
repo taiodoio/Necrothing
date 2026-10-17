@@ -16,7 +16,7 @@ import { DEFAULT_LOOK, lookKey, type CustodeLook } from '../game/look.ts';
 
 export type CharacterKind =
   | 'custode' | 'priest' | 'gravedigger' | 'mourner' | 'mournerB' | 'ghost' | 'ghostRare'
-  | 'zombie' | 'skeleton' | 'cat' | 'crow' | 'rat'
+  | 'zombie' | 'skeleton' | 'cat' | 'crow' | 'rat' | 'witch' | 'vampire'
   | 'petDog' | 'petCat' | 'petRabbit' | 'petDuck' | 'petCrow';
 
 type PartName = 'body' | 'head' | 'armL' | 'armR' | 'legL' | 'legR' | 'extra';
@@ -144,6 +144,23 @@ function spec(kind: CharacterKind): Spec {
           hat: (b) => { b.box(-3, 3.6, -3, 3, 4.1, 3, '#141418'); b.box(-2, 4.1, -2, 2, 7.4, 2, '#141418'); b.box(-2.1, 4.1, -2.1, 2.1, 4.7, 2.1, '#5a2a30'); },
           face: (b) => { b.box(-1.3, 2, 1.9, -0.5, 2.6, 2.2, P.ink); b.box(0.5, 2, 1.9, 1.3, 2.6, 2.2, P.ink); b.box(-1.4, 0.9, 1.9, 1.4, 1.4, 2.3, '#5b5550'); },
           heldR: (b) => { b.box(-0.3, -13, 0.6, 0.3, -1, 1.2, '#1f2026'); },
+        }),
+      };
+    case 'witch':
+      return {
+        parts: humanoid({
+          coat: '#4a3a5a', coat2: '#3a2c48', skin: '#a8c88a', legs: '#2a2235', robe: true,
+          hat: (b) => { b.box(-4, 3.4, -4, 4, 4.1, 4, '#2a2235'); b.box(-2.2, 4.1, -2.2, 2.2, 6.5, 2.2, '#2a2235'); b.box(-1.2, 6.5, -1.2, 1.2, 9, 1.2, '#2a2235'); b.box(-2.3, 4.1, -2.3, 2.3, 4.7, 2.3, '#5f8a4a'); },
+          heldR: (b) => { b.box(-0.3, -12, 0.6, 0.3, -2, 1.2, P.wood); b.box(-1, -13, 0.2, 1, -12, 1.6, '#5a5650'); },
+        }),
+      };
+    case 'vampire':
+      return {
+        parts: humanoid({
+          coat: '#17161b', coat2: '#8e1f2a', skin: '#e4e0ee', legs: '#141418', boots: '#0d0d10',
+          face: (b) => { b.box(-1.3, 2, 1.9, -0.5, 2.6, 2.2, '#8a2a2a'); b.box(0.5, 2, 1.9, 1.3, 2.6, 2.2, '#8a2a2a'); b.box(-0.6, 0.6, 1.9, -0.3, 1.1, 2.2, '#fbf7ef'); b.box(0.3, 0.6, 1.9, 0.6, 1.1, 2.2, '#fbf7ef'); },
+          hat: (b) => { b.box(-2.1, 3.4, -2.1, 2.1, 4.4, 2.1, '#1b1a20'); },
+          back: (b) => { b.box(-3, -4, -2.2, 3, 5.8, -1.7, '#17161b'); b.box(-2.8, -3.8, -1.75, 2.8, 5.6, -1.6, '#8e1f2a'); },
         }),
       };
     case 'zombie':

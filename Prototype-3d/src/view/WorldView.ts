@@ -13,7 +13,8 @@ import { graveVisualState } from '../game/graves.ts';
 import { hash3, hashString, createRng } from '../game/rng.ts';
 import type { ArtStyle, Grave, Placed, SaveData } from '../game/state.ts';
 import { areaForLevel, buildOccupancy, gateCells, type Rect } from '../game/world.ts';
-import { getModel, instantiate, LOWPOLY_TERRAIN, lightWorldPos, type CachedModel } from '../render/modelCache.ts';
+import { getModel, instantiate, LOWPOLY_MATERIALS, LOWPOLY_TERRAIN, lightWorldPos, type CachedModel } from '../render/modelCache.ts';
+import { keeperAreaLP, mudTracksLP } from '../render/lowpoly/newItems2.ts';
 import { fencePillar, fenceSegment, gate } from '../render/models/fence.ts';
 import { graveModel } from '../render/models/graves.ts';
 import { deadTree, pine, sceneryBush, sceneryFern, sceneryFlowers, sceneryLeaves, sceneryPebbles, sceneryRock, sceneryShrooms, sceneryTuft, sceneryWildGrass } from '../render/models/nature.ts';
@@ -61,6 +62,16 @@ export interface EntityView {
   anim?: Animated;
   /** Zona di fusione (8×8 celle) in cui sta (qualità Auto). */
   zone?: string;
+  /** Tomba sporcata da uno zombie: le impronte di fango sopra lo sporco. */
+  mud?: THREE.Object3D;
+}
+
+/** Impronte di fango (tre scie diverse, una per tomba a seconda del seme). */
+const mudModels = new Map<number, CachedModel>();
+function mudModel(seed: number): CachedModel {
+  let m = mudModels.get(seed);
+  if (!m) { const lp = mudTracksLP(seed + 1); m = { geometries: lp.geometries, lights: [], height: 0.1, mats: LOWPOLY_MATERIALS, dedicated: true }; mudModels.set(seed, m); }
+  return m;
 }
 
 interface WispView { group: THREE.Group; hitbox: THREE.Mesh; anchor: AnchorHandle; phase: number; base: THREE.Vector3; visual?: WispVisual; born?: number }
@@ -124,7 +135,7 @@ function earnMaterial(n: number): THREE.SpriteMaterial {
 }
 
 /** Dove sta l'etichetta dell'incasso (in coordinate dell'oggetto): sopra il bancone o la bancarella. */
-const EARN_AT: Record<string, number> = { zombie_bar: 0, brain_farm: 1.35 };
+const EARN_AT: Record<string, number> = { zombie_bar: 0, brain_farm: 1.35, witch_corner: -0.35 };
 
 export class WorldView {
   readonly root = new THREE.Group();
@@ -556,6 +567,13 @@ export class WorldView {
     e.group.visible = !this.hidden.has(g.id);
     this.placeEntity(e, center, 0);
     this.setBadge(e, g.broken ? 'broken' : g.dirty || g.weeds ? 'dirty' : null);
+    // impronte dello zombie: solo sopra lo sporco, vanno via con la pulizia
+    const muddy = !!g.muddy && (g.dirty || g.weeds || g.broken);
+    if (muddy && !e.mud) {
+      e.mud = instantiate(mudModel(g.seed % 3), { castShadow: false });
+      e.mud.traverse((o) => { o.receiveShadow = true; });
+      e.group.add(e.mud);
+    } else if (!muddy && e.mud) { e.group.remove(e.mud); e.mud = undefined; }
   }
 
   /** Ricordi affidati all'albero: un frutto acceso per ciascuno (fino a 30). */
@@ -596,6 +614,18 @@ export class WorldView {
   private readonly earnings = new Map<string, number>();
 
   /** Mostra (n > 0) o toglie l'etichetta dell'incasso sopra bar e orto. */
+  /** Area protetta dal Lampione del Custode (in modifica e mentre lo si posa): null la toglie. */
+  private keeperArea: THREE.Object3D | null = null;
+  showKeeperArea(center: THREE.Vector3 | null, half: number) {
+    if (!center) { if (this.keeperArea) { this.root.remove(this.keeperArea); this.keeperArea = null; } return; }
+    if (!this.keeperArea) {
+      const m = keeperAreaLP(half);
+      this.keeperArea = instantiate({ geometries: m.geometries, lights: [], height: 0.05, mats: LOWPOLY_MATERIALS, dedicated: true }, { castShadow: false });
+      this.root.add(this.keeperArea);
+    }
+    this.keeperArea.position.set(center.x, this.heightAt(center.x, center.z), center.z);
+  }
+
   setEarnings(id: string, n: number) {
     if ((this.earnings.get(id) ?? 0) === n) return;
     if (n > 0) this.earnings.set(id, n); else this.earnings.delete(id);

@@ -55,7 +55,7 @@ export function pathDirt(v: PVis): LPModel {
 // ── Dettagli della natura ────────────────────────────────────────────────
 
 /** Chioma a ciuffi: 3 blob in due toni più qualche foglia che sporge. */
-function leafCluster(lp: LP, x: number, y: number, z: number, size: number, palette: readonly string[]) {
+export function leafCluster(lp: LP, x: number, y: number, z: number, size: number, palette: readonly string[]) {
   const r = lp.rng;
   const base = r.pick(palette);
   lp.blob(x, y, z, size, size * 0.75, size, base, { vary: 0.14, ao: 0.25, jitter: size * 0.25 });
@@ -71,7 +71,7 @@ function leafCluster(lp: LP, x: number, y: number, z: number, size: number, pale
 }
 
 /** Fungo a mensola sul tronco (lato +z locale). */
-function bracketFungus(lp: LP, x: number, y: number, z: number, yaw: number, s = 1) {
+export function bracketFungus(lp: LP, x: number, y: number, z: number, yaw: number, s = 1) {
   lp.push([x, y, z], yaw);
   for (let i = 0; i < 2; i++) {
     lp.push([0, -i * 0.07 * s, 0.01], 0, 0, 0, [1, 1, 1]);
@@ -82,7 +82,7 @@ function bracketFungus(lp: LP, x: number, y: number, z: number, yaw: number, s =
 }
 
 /** Lettiera alla base: foglie secche, muschio, sassolini, funghetti. */
-function treeBase(lp: LP, radius: number, needles = false) {
+export function treeBase(lp: LP, radius: number, needles = false) {
   const r = lp.rng;
   // aghi caduti: poche chiazze basse, di un bruno-verde vicino al prato (un disco unico sembrava un vaso)
   if (needles) for (let i = 0; i < 4; i++) { const a = r.range(0, 6.28), d = r.range(0.1, radius * 0.7); lp.push([Math.cos(a) * d, 0.003, Math.sin(a) * d], r.range(0, 6), -Math.PI / 2).plate(irregularShape(r, 0.16 + r.next() * 0.1, 7), 0.004, r.pick(['#4b4a30', '#55503a']), { ao: 0, vary: 0.1 }).pop(); }

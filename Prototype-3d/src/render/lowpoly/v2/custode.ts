@@ -730,7 +730,7 @@ export function hairLayer(lp: LP, o: { locks: number; hem: (thDeg: number) => nu
 }
 
 /** Fin dove arrivano i capelli sotto ciascun cappello (φ, gradi). */
-const HAT_PH: Record<HatStyle, number> = { none: 89, wide: 40, top: 42, beanie: 30 };
+const HAT_PH: Record<HatStyle, number> = { none: 89, wide: 40, top: 42, beanie: 30, witch: 50 };
 const hatPh = () => X.hatPh ?? HAT_PH[L.hat];
 
 /** Riccioli: palline schiacciate distribuite a file regolari sulla superficie dei capelli. */
@@ -842,6 +842,7 @@ function tufts(lp: LP, tone: (k: number) => string) {
 function hatGeo(lp: LP) {
   if (X.hat) { X.hat(lp); return; }
   if (L.hat === 'none') return;
+  if (L.hat === 'witch') { witchHat(lp, L.hatColor, L.accentColor); return; }
   const c = L.hatColor, d = shade(c, -0.08);
   if (L.hat === 'beanie') {
     sheet(lp, 30, 6, (u, v) => [Math.PI + u * Math.PI, lerp(26, 89, v) * DEG], (_u, v) => 0.06 + 0.03 * smooth(0.3, 1, v), c);
@@ -860,6 +861,18 @@ function hatGeo(lp: LP) {
   lp.cyl(0, 0.02, 0, cr, cr * (wide ? 0.88 : 1.02), ch, 16, c, { ...O, ao: 0.05 });
   lp.cyl(0, 0.03, 0, cr + 0.004, cr * 0.99, 0.05, 16, wide ? d : shade(L.accentColor, -0.1), O); // nastro
   if (wide) lp.blob(0, ch + 0.02, 0, cr * 0.85, 0.045, cr * 0.85, c, { ...O, detail: 1 } as LPOpts);
+  lp.pop();
+}
+
+/** Cappello da strega (spazio della testa): tesa larga, cono piegato, nastro e fibbia. */
+export function witchHat(lp: LP, color = '#2a2235', band = '#5f8a4a') {
+  const y = headAt(0, 50 * DEG).p.y;
+  lp.cyl(C.x, y - 0.01, C.z + 0.01, 0.44, 0.43, 0.03, 20, color, O);
+  lp.push([C.x, y + 0.02, C.z], 0, -0.12, 0.08);
+  lp.cyl(0, 0, 0, 0.24, 0.12, 0.28, 14, color, O);
+  lp.push([0, 0.28, -0.02], 0, -0.35, 0.15).cyl(0, 0, 0, 0.12, 0.0, 0.26, 12, color, O).pop();
+  lp.cyl(0, 0.02, 0, 0.245, 0.24, 0.05, 14, band, O);
+  lp.add(new THREE.BoxGeometry(0.06, 0.06, 0.01).translate(0, 0.045, 0.24), '#c9a227', O);
   lp.pop();
 }
 

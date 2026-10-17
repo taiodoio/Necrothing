@@ -10,7 +10,7 @@ import * as N from '../render/lowpoly/newItems.ts';
 import * as M from '../render/lowpoly/newItems2.ts';
 import { LP_SCENERY } from '../render/lowpoly/index.ts';
 import { lowpolyGrave } from '../render/lowpoly/graves.ts';
-import { iconUrl } from '../ui/icons.ts';
+import { drawIcon, iconUrl } from '../ui/icons.ts';
 import { animateRig, buildRig, rigLightPos, type CharacterKind, type Pose } from '../view/characters.ts';
 import { assemble, handPos, headAt, headCenter, headFront, humanSpec, onSkin, HUMAN_PIVOTS, DEG, O } from '../render/lowpoly/v2/custode.ts';
 import type { LP } from '../render/lowpoly/kit.ts';
@@ -204,7 +204,7 @@ function lawn(r0: number, r1: number, n: number, seed: number): THREE.Group {
 const grave = (type: Parameters<typeof lowpolyGrave>[0], at: [number, number, number], yaw = 0, state: Parameters<typeof lowpolyGrave>[1] = 'clean') => inst(lowpolyGrave(type, state, 3), at, yaw);
 
 function gazebo2(night: boolean): THREE.Group {
-  const g = group(inst(M.gazeboSpookyLP()), lawn(2.0, 2.9, 22, 3), grave('gothic', [-2.2, 0, 1.2], 0.4), grave('celtic_cross', [2.3, 0, -0.6], -0.5));
+  const g = group(inst(M.gazeboSpookyLP()), lawn(2.0, 2.9, 22, 3));
   if (night) {
     for (const [x, z, f, pose] of [[0.35, 0.2, -2.0, 'cheer'], [-0.25, 0.45, 1.1, 'idle']] as const) { const gh = char('ghost', pose, [x, 0.3, z], f, 1.3); gh.scale.setScalar(0.8); g.add(gh); }
   } else g.add(char('custode', 'idle', [0.6, 0.29, 0.75], 0.4));
@@ -213,7 +213,7 @@ function gazebo2(night: boolean): THREE.Group {
 
 function bellScene(): THREE.Group {
   const c = char('custode', 'idle', [0.62, 0.22, 0.62], -2.3, 0.3, (p) => { p.armL.rotation.x = -2.3; p.armL.rotation.z = -0.2; });
-  return group(inst(M.soulBellLP()), c, lawn(1.1, 2.0, 16, 5), grave('stone_simple', [-1.5, 0, 0.7], 0.3, 'flowers'));
+  return group(inst(M.soulBellLP()), c, lawn(1.1, 2.0, 16, 5));
 }
 
 function vampireDay(): THREE.Group { return group(inst(M.vampireCryptLP(false)), lawn(1.1, 1.9, 14, 8)); }
@@ -239,25 +239,24 @@ function vampire2(): THREE.Group {
   return group(inst(M.vampireCryptLP(true)), v, lawn(1.2, 1.9, 14, 8));
 }
 
-/** Etichetta «pozione pronta» sopra la strega (come gli incassi di bar e orto). */
-function potionBadge(y: number): THREE.Sprite {
-  const c = document.createElement('canvas'); c.width = 192; c.height = 96;
+/** Etichetta «incantesimo pronto» sopra la strega: la scopa che pulisce e le scintille (come gli incassi di bar e orto). */
+function spellBadge(y: number): THREE.Sprite {
+  const c = document.createElement('canvas'); c.width = 96; c.height = 96;
   const g = c.getContext('2d')!;
-  const plate = (inset: number, color: string) => { g.fillStyle = color; g.fillRect(inset + 6, inset, 192 - 2 * (inset + 6), 96 - 2 * inset); g.fillRect(inset, inset + 6, 192 - 2 * inset, 96 - 2 * (inset + 6)); };
-  plate(0, '#07080b'); plate(6, '#c9a25c'); plate(12, '#161920');
-  g.fillStyle = '#6b4a3a'; g.fillRect(70, 22, 22, 12);
-  g.fillStyle = '#9af06a'; g.beginPath(); g.moveTo(66, 36); g.lineTo(96, 36); g.lineTo(108, 72); g.lineTo(54, 72); g.closePath(); g.fill();
-  g.fillStyle = '#e8ffd0'; g.fillRect(64, 54, 8, 8);
-  g.fillStyle = '#f1d39c'; g.font = 'bold 34px system-ui, sans-serif'; g.textBaseline = 'middle'; g.fillText('×2', 116, 50);
-  const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace;
+  const plate = (inset: number, color: string) => { g.fillStyle = color; g.fillRect(inset + 6, inset, 96 - 2 * (inset + 6), 96 - 2 * inset); g.fillRect(inset, inset + 6, 96 - 2 * inset, 96 - 2 * (inset + 6)); };
+  plate(0, '#07080b'); plate(6, '#9a6ad0'); plate(12, '#161920');
+  drawIcon(g, 'broom', 18, 18, 60);
+  g.fillStyle = '#f1d39c';
+  for (const [x, y2] of [[70, 22], [24, 70], [76, 62]]) { g.fillRect(x - 2, y2 - 7, 4, 14); g.fillRect(x - 7, y2 - 2, 14, 4); }
+  const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; t.magFilter = THREE.NearestFilter;
   const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: t, depthTest: false, toneMapped: false }));
-  sp.scale.set(0.8, 0.4, 1); sp.position.y = y; sp.renderOrder = 10;
+  sp.scale.set(0.5, 0.5, 1); sp.position.y = y; sp.renderOrder = 10;
   return sp;
 }
 
 function witch2(): THREE.Group {
   const w = witch(); w.position.set(0.85, 0, 0.0); w.rotation.y = -0.65;
-  const b = potionBadge(2.0); b.position.x = 0.25;
+  const b = spellBadge(2.0); b.position.x = 0.25;
   return group(inst(M.witchCornerLP()), w, b, lawn(1.1, 1.8, 12, 4));
 }
 
@@ -387,7 +386,6 @@ const SETS: Record<string, Panel[]> = {
     { title: 'Gazebo delle anime · giorno', yaw: 0.6, zoom: 2.7, center: [0, 1.25, 0], build: () => gazebo2(false) },
     { title: 'Gazebo delle anime · di notte i fantasmi ballano', night: true, dusk: true, yaw: 0.6, zoom: 2.5, center: [0, 1.25, 0], build: () => gazebo2(true) },
     { title: 'Campana delle anime (al posto del campanile)', yaw: 0.5, zoom: 1.75, center: [0, 1.25, 0], build: bellScene },
-    { title: 'Ossario (altra idea)', night: true, dusk: true, yaw: 0.45, zoom: 1.55, center: [0, 0.75, 0], build: () => group(inst(M.ossuaryLP()), lawn(1.6, 2.4, 16, 4)) },
     { title: 'Palude con le mani', yaw: 0.5, pitch: 0.62, zoom: 1.95, center: [0, 0.25, 0], build: () => group(inst(M.swamp2LP()), lawn(2.0, 2.8, 20, 12)) },
     { title: 'Albero dell’altalena', yaw: 0.55, zoom: 1.6, center: [0, 1.25, 0], build: () => group(inst(M.swingTree2LP()), lawn(1.0, 1.8, 14, 13)) },
     { title: 'Cerchio di pietre nella nebbia', night: true, dusk: true, yaw: 0.5, pitch: 0.6, zoom: 1.7, center: [0, 0.4, 0], build: () => group(inst(M.stoneCircleLP()), lawn(1.5, 2.3, 18, 14)) },
@@ -397,7 +395,7 @@ const SETS: Record<string, Panel[]> = {
   '6': [
     { title: 'Vampiro · di giorno dorme nella bara', yaw: 0.5, zoom: 1.55, center: [0, 0.9, 0], build: vampireDay },
     { title: 'Vampiro · di notte esce a passeggiare', night: true, dusk: true, yaw: 0.5, zoom: 1.6, center: [0, 0.95, 0.2], build: vampire2 },
-    { title: 'Strega · la pozione del giorno è pronta', night: true, dusk: true, yaw: 0.5, zoom: 1.45, center: [0, 0.9, 0.1], build: witch2 },
+    { title: 'Strega · l’incantesimo del giorno è pronto', night: true, dusk: true, yaw: 0.5, zoom: 1.45, center: [0, 0.9, 0.1], build: witch2 },
     { title: 'Rifugio dei gatti neri', yaw: 0.55, zoom: 1.3, center: [0, 0.55, 0], build: cats2 },
     { title: 'Scopa volante · a cavalcioni', yaw: 1.15, pitch: 0.42, zoom: 1.15, center: [0, 0.85, -0.1], build: broomScene },
     { title: 'Bastone mistico · attira i fuochi fatui da lontano', night: true, dusk: true, yaw: 0.5, pitch: 0.62, zoom: 1.75, center: [0, 0.5, 0], build: staffScene },
@@ -407,8 +405,7 @@ const SETS: Record<string, Panel[]> = {
     { title: 'Campo di zucche · notte', night: true, dusk: true, yaw: 0.55, pitch: 0.6, zoom: 1.85, center: [0, 0.5, 0], build: patch2 },
     { title: 'Altare dei morti con l’arco · notte', night: true, dusk: true, yaw: 0.4, zoom: 1.85, center: [0, 0.95, 0.2], build: () => ofrenda2(true) },
     { title: 'Altare dei morti · da vicino', night: true, dusk: true, yaw: 0.25, pitch: 0.3, zoom: 0.95, center: [0, 0.85, 0], build: () => ofrenda2(false) },
-    { title: 'Pupazzo di neve scheletro', yaw: 0.5, zoom: 1.0, center: [0, 0.7, 0], build: snowman2 },
-    { title: 'Pupazzo · da vicino', yaw: 0.15, pitch: 0.25, zoom: 0.6, center: [0, 0.85, 0], build: snowman2 },
+    { title: 'Pupazzo di neve scheletro', yaw: 0.45, pitch: 0.35, zoom: 0.8, center: [0, 0.7, 0], build: snowman2 },
   ],
 };
 

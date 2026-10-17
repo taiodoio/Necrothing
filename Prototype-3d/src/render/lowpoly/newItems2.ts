@@ -223,66 +223,6 @@ export function soulBellLP(lit = true): LPModel {
   return lp.build();
 }
 
-/**
- * Ossario (3×2): ingresso di una cappella mezza interrata in una collinetta
- * erbosa, con la facciata di teschi e ossa impilati nelle nicchie, arco con
- * il teschio in chiave, scala che scende a un cancello di ferro, due torce.
- */
-export function ossuaryLP(lit = true): LPModel {
-  const lp = new LP('new2:ossuary');
-  const r = lp.rng;
-  // collinetta erbosa dietro e ai lati
-  lp.blob(0, 0.0, -0.35, 1.5, 0.75, 0.75, LPC.grass, { detail: 1, vary: 0.08, jitter: 0.04 });
-  for (let i = 0; i < 8; i++) grassTuft(lp, r.range(-1.3, 1.3), r.range(-0.8, -0.1), 1.1);
-  // facciata di pietra con il frontone a punta
-  const F = new THREE.Shape();
-  F.moveTo(-0.95, 0); F.lineTo(0.95, 0); F.lineTo(0.95, 1.05); F.lineTo(0, 1.55); F.lineTo(-0.95, 1.05); F.closePath();
-  const door = new THREE.Path(); door.moveTo(-0.32, 0.0); door.lineTo(-0.32, 0.62); door.absarc(0, 0.62, 0.32, Math.PI, 0, true); door.lineTo(0.32, 0.0); door.lineTo(-0.32, 0.0);
-  F.holes.push(door);
-  lp.push([0, 0, 0.1]).extrude(F, 0.22, LPC.stoneWarm, { bevel: 0.015, vary: 0.07, curve: 10 }).pop();
-  // cornice dell'arco e teschio in chiave
-  lp.push([0, 0.62, 0.22]).add(new THREE.TorusGeometry(0.36, 0.05, 5, 14, Math.PI), LPC.stoneLight, { jitter: 0.003 }).pop();
-  skull(lp, 0, 0.92, 0.2, 0.9);
-  // nicchie ai lati: teschi impilati e ossa incrociate
-  for (const s of [-1, 1]) {
-    lp.box(s * 0.62, 0.1, 0.22, 0.42, 0.85, 0.04, '#2a2624', { jitter: 0 });
-    for (let row = 0; row < 3; row++) for (let k = 0; k < 2; k++) skull(lp, s * 0.62 + (k - 0.5) * 0.17, 0.14 + row * 0.27, 0.2, 0.7, r.pick([LPC.bone, '#d9cfb5', '#bfb59e']));
-    for (const a of [-0.6, 0.6]) lp.push([s * 0.62, 1.12, 0.24], 0, 0, a).box(0, -0.16, 0, 0.035, 0.32, 0.035, LPC.bone, { jitter: 0 }).pop();
-  }
-  // iscrizione MEMENTO MORI (righe incise) e cornicione
-  lp.box(0, 1.2, 0.215, 0.6, 0.12, 0.02, LPC.stoneLight, { jitter: 0 });
-  lp.box(0, 1.25, 0.23, 0.48, 0.02, 0.004, LPC.engrave, { jitter: 0 });
-  // scala che scende e cancello di ferro socchiuso, buio dentro con due occhi
-  lp.box(0, 0, -0.1, 0.62, 0.02, 0.4, '#141416', { jitter: 0 });
-  for (let k = 0; k < 3; k++) lp.box(0, -0.02 - k * 0.08, 0.32 - k * 0.12, 0.6, 0.04, 0.14, LPC.stone, { bevel: 0.008 });
-  for (const s of [-1, 1]) lp.blob(s * 0.04, 0.42, -0.2, 0.018, 0.012, 0.006, lit ? '#ffd36a' : '#2a2420', lit ? { bucket: 'glow', jitter: 0 } : { jitter: 0 });
-  lp.push([0.0, 0.0, 0.2], -0.5);
-  for (let k = 0; k < 5; k++) lp.box(0.03 + k * 0.06, 0, 0, 0.018, 0.86, 0.018, LPC.iron, { jitter: 0 });
-  for (const y of [0.15, 0.7]) lp.box(0.15, y, 0, 0.3, 0.03, 0.02, LPC.iron, { jitter: 0 });
-  lp.pop();
-  // torce ai lati e candele sui gradini
-  for (const s of [-1, 1]) {
-    lp.box(s * 1.08, 0, 0.35, 0.16, 0.08, 0.16, LPC.stoneDark, { bevel: 0.01 });
-    lp.cyl(s * 1.08, 0.08, 0.35, 0.03, 0.025, 0.85, 5, LPC.woodDark, { jitter: 0 });
-    lp.cyl(s * 1.08, 0.93, 0.35, 0.06, 0.04, 0.08, 6, LPC.iron, { jitter: 0 });
-    if (lit) { lp.cyl(s * 1.08, 1.01, 0.35, 0.05, 0.0, 0.16, 5, LPC.flame, { bucket: 'glow', jitter: 0.01 }); lp.light(s * 1.08, 1.1, 0.4, LPC.flame, 0.7, 3.5, 0.45, 0.8); }
-  }
-  ivyCurtain(lp, -0.95, 1.05, 0.33);
-  moss(lp, 0.5, 1.3, 0.23, 0.08);
-  for (let i = 0; i < 4; i++) candle(lp, r.range(-0.25, 0.25), 0.0, 0.5 + r.next() * 0.15, lit, 0.06 + r.next() * 0.06);
-  return lp.build();
-}
-
-/** Edera che scende da un bordo (x0 → verso il centro). */
-function ivyCurtain(lp: LP, x0: number, y0: number, z: number) {
-  const r = lp.rng;
-  for (let k = 0; k < 4; k++) {
-    const x = x0 + 0.12 + k * 0.1, len = 0.3 + r.next() * 0.5;
-    tube(lp, [x, y0, z], [x + r.range(-0.05, 0.05), y0 - len, z], 0.008, '#3e4a2c', 3);
-    for (let j = 0; j < 5; j++) lp.push([x, y0 - (j / 5) * len, z + 0.01], r.range(0, 6), 0, 0).blob(0.02, 0, 0, 0.03, 0.03, 0.008, j % 2 ? LPC.leaf : '#56703d', { jitter: 0.004 }).pop();
-  }
-}
-
 // ── Ambiente ────────────────────────────────────────────────────────────
 
 /** Mano di zombie con la manica strappata (verde) o di scheletro (ossa), che emerge dall'acqua. */
@@ -944,53 +884,22 @@ export function ofrenda2LP(lit = true): LPModel {
 }
 
 /**
- * Pupazzo di neve scheletro (1×1, dicembre): la testa è un teschio con il
- * cilindro e la carota infilata nel naso; dalla palla di mezzo spunta la
- * gabbia toracica, sotto il bacino; braccia d'ossa con le mani a cinque dita.
+ * Pupazzo di neve scheletro (1×1, dicembre): due palle di neve e sopra un
+ * teschio col cilindro, sciarpa, braccia d'osso e carota nel naso. Pochi pezzi.
  */
 export function skeletonSnowman2LP(): LPModel {
   const lp = new LP('new2:snowman');
-  const SN = '#e8eef0', BONE = '#cdbb94';
-  lp.blob(0, 0.03, 0, 0.45, 0.05, 0.42, '#dfe8ec', { jitter: 0.02 });
-  for (let i = 0; i < 4; i++) lp.blob(lp.rng.range(-0.4, 0.4), 0.06, lp.rng.range(-0.3, 0.4), 0.06, 0.04, 0.05, SN, { jitter: 0.01 }); // grumi di neve
-  // palla bassa con il bacino che sporge
-  lp.blob(0, 0.24, 0, 0.29, 0.24, 0.28, SN, { detail: 1, jitter: 0.012 });
-  lp.push([0, 0.38, 0.2], 0, -0.2);
-  lp.blob(0, 0, 0, 0.16, 0.06, 0.05, BONE, { detail: 1, jitter: 0.004 });
-  for (const s of [-1, 1]) lp.blob(s * 0.07, -0.02, 0.02, 0.035, 0.035, 0.035, '#2a2a30', { jitter: 0 });
-  lp.pop();
-  // palla di mezzo, con la colonna e la gabbia toracica che escono dalla neve
-  lp.blob(0, 0.62, 0, 0.22, 0.2, 0.21, SN, { detail: 1, jitter: 0.01 });
-  for (let k = 0; k < 6; k++) lp.blob(0, 0.46 + k * 0.06, 0.16 + Math.sin(k * 0.5) * 0.02, 0.028, 0.022, 0.026, BONE, { jitter: 0 });
-  for (let k = 0; k < 4; k++) {
-    lp.push([0, 0.52 + k * 0.065, 0.13], 0, 0, 0, [1, 1, 0.7]);
-    lp.add(new THREE.TorusGeometry(0.15 - Math.abs(k - 1.5) * 0.015, 0.014, 4, 14, Math.PI * 0.95).rotateX(Math.PI / 2).rotateY(-Math.PI / 2 - Math.PI * 0.475 + Math.PI / 2), BONE, { jitter: 0 });
-    lp.pop();
-  }
-  // braccia d'osso con le mani scheletriche
-  for (const s of [-1, 1]) {
-    boneStick(lp, [s * 0.2, 0.68, 0.02], [s * 0.36, 0.84, 0.06], 0.018, BONE);
-    boneStick(lp, [s * 0.36, 0.84, 0.06], [s * 0.48, 1.0, 0.1], 0.015, BONE);
-    for (let f = 0; f < 4; f++) tube(lp, [s * 0.48, 1.0, 0.1], [s * (0.5 + f * 0.012), 1.08 + (f % 2) * 0.01, 0.1 + (f - 1.5) * 0.025], 0.006, BONE, 3);
-    tube(lp, [s * 0.48, 1.0, 0.1], [s * 0.43, 1.06, 0.13], 0.007, BONE, 3);
-  }
-  // testa: grande teschio con il cilindro, la sciarpa e la carota nel naso
-  skull(lp, 0, 0.84, 0.0, 1.55, BONE);
-  lp.blob(0, 1.1, -0.01, 0.13, 0.03, 0.12, SN, { jitter: 0.01 }); // neve sul cranio
-  lp.push([0, 0.95, 0.17], 0, Math.PI / 2 - 0.1).cyl(0, 0, 0, 0.025, 0.0, 0.16, 6, '#e07a1a', { jitter: 0 }).pop();
-  lp.cyl(0, 0.8, 0, 0.17, 0.17, 0.07, 12, '#8e2f2a', { jitter: 0 });
-  for (let k = 0; k < 6; k++) lp.cyl(0, 0.8 + k * 0.012, 0, 0.172, 0.172, 0.005, 12, k % 2 ? '#e8dcc0' : '#8e2f2a', { jitter: 0 });
-  lp.push([0.12, 0.78, 0.13], 0, 0, 0.25).box(0, -0.2, 0, 0.08, 0.22, 0.02, '#8e2f2a', { jitter: 0 }).pop();
-  lp.push([0.03, 1.12, -0.02], 0, 0, -0.2);
-  lp.cyl(0, 0, 0, 0.18, 0.18, 0.02, 12, '#141418', { jitter: 0 });
-  lp.cyl(0, 0.02, 0, 0.11, 0.11, 0.24, 12, '#141418', { jitter: 0 });
-  lp.cyl(0, 0.04, 0, 0.112, 0.112, 0.035, 12, '#5a2a30', { jitter: 0 });
-  lp.blob(0.08, 0.06, 0.07, 0.03, 0.03, 0.02, '#2a5a2a', { jitter: 0 }); // rametto di agrifoglio
-  for (const dx of [-0.01, 0.015]) lp.blob(0.08 + dx, 0.07, 0.09, 0.012, 0.012, 0.012, '#c02a2a', { jitter: 0 });
-  lp.pop();
-  // ossicini sparsi e una pala piantata nella neve
-  for (let i = 0; i < 3; i++) boneStick(lp, [-0.3 + i * 0.25, 0.04, 0.3], [-0.2 + i * 0.25, 0.04, 0.38], 0.01, BONE);
-  tube(lp, [0.35, 0, -0.25], [0.4, 0.75, -0.3], 0.018, LPC.wood, 5);
-  lp.push([0.35, 0.02, -0.25], 0.5, 0.05).box(0, 0, 0, 0.13, 0.17, 0.02, '#8d9196', { jitter: 0 }).pop();
+  const SN = '#e8eef0', BONE = '#d2c3a0';
+  lp.blob(0, 0.26, 0, 0.3, 0.26, 0.3, SN, { detail: 1, jitter: 0.006, vary: 0.03 });
+  lp.blob(0, 0.66, 0, 0.21, 0.19, 0.21, SN, { detail: 1, jitter: 0.005, vary: 0.03 });
+  for (const y of [0.56, 0.68]) lp.blob(0, y, 0.205, 0.022, 0.022, 0.012, '#2a2a30', { jitter: 0 }); // bottoni di carbone
+  for (const s of [-1, 1]) boneStick(lp, [s * 0.18, 0.7, 0], [s * 0.46, 0.92, 0.04], 0.018, BONE); // braccia d'osso
+  lp.cyl(0, 0.82, 0, 0.16, 0.16, 0.06, 12, '#8e2f2a', { jitter: 0 }); // sciarpa
+  lp.push([0.11, 0.84, 0.12], 0, 0, 0.2).box(0, -0.18, 0, 0.08, 0.2, 0.02, '#8e2f2a', { jitter: 0 }).pop();
+  skull(lp, 0, 0.86, 0, 1.6, BONE);
+  lp.push([0, 0.98, 0.18], 0, Math.PI / 2 - 0.1).cyl(0, 0, 0, 0.022, 0.0, 0.13, 6, '#e07a1a', { jitter: 0 }).pop(); // carota
+  lp.cyl(0.02, 1.16, 0, 0.17, 0.17, 0.02, 12, '#141418', { jitter: 0 }); // cilindro
+  lp.cyl(0.02, 1.18, 0, 0.1, 0.1, 0.22, 12, '#141418', { jitter: 0 });
+  lp.cyl(0.02, 1.2, 0, 0.102, 0.102, 0.035, 12, '#5a2a30', { jitter: 0 });
   return lp.build();
 }

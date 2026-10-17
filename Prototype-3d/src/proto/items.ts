@@ -270,7 +270,7 @@ function bellRung(): THREE.Group {
   return g;
 }
 
-function boulder(night: boolean): THREE.Group { return group(inst(M.fangRockLP(night)), lawn(1.7, 2.4, 16, 21)); }
+function boulder(night: boolean): THREE.Group { return group(inst(M.fangRockLP(night)), lawn(1.65, 2.4, 16, 21)); }
 
 function witch2(): THREE.Group {
   const w = witch(); w.position.set(0.85, 0, 0.0); w.rotation.y = -0.65;
@@ -404,8 +404,8 @@ const SETS: Record<string, Panel[]> = {
     { title: 'Gazebo delle anime · giorno', yaw: 0.6, zoom: 2.7, center: [0, 1.25, 0], build: () => gazebo2(false) },
     { title: 'Gazebo delle anime · di notte i fantasmi ballano', night: true, dusk: true, yaw: 0.6, zoom: 2.5, center: [0, 1.25, 0], build: () => gazebo2(true) },
     { title: 'Campana delle anime · suonata, arrivano i fantasmi', night: true, dusk: true, yaw: 0.5, zoom: 2.0, center: [0, 1.1, 0], build: bellRung },
-    { title: 'Roccia mostruosa · giorno', yaw: 0.35, pitch: 0.32, zoom: 1.45, center: [0, 0.85, 0], build: () => boulder(false) },
-    { title: 'Roccia mostruosa · notte', night: true, dusk: true, yaw: 0.35, pitch: 0.32, zoom: 1.45, center: [0, 0.85, 0], build: () => boulder(true) },
+    { title: 'Roccia mostruosa · giorno', yaw: 0.35, pitch: 0.4, zoom: 1.5, center: [0, 0.7, 0], build: () => boulder(false) },
+    { title: 'Roccia mostruosa · notte', night: true, dusk: true, yaw: 0.35, pitch: 0.4, zoom: 1.5, center: [0, 0.7, 0], build: () => boulder(true) },
     { title: 'Roccia mostruosa · come in gioco, col Custode', yaw: Math.PI / 4, pitch: 0.7, zoom: 1.9, center: [0, 0.7, 0.2], build: () => group(boulder(false), char('custode', 'idle', [1.0, 0, 1.25], -0.7)) },
     { title: 'Cerchio di pietre nella nebbia', night: true, dusk: true, yaw: 0.5, pitch: 0.6, zoom: 1.75, center: [0, 0.4, 0], build: () => group(inst(M.stoneCircleLP()), lawn(1.5, 2.3, 18, 14)) },
     { title: 'Cipresso (al posto del salice)', yaw: 0.55, zoom: 1.8, center: [0, 1.4, 0], build: () => group(inst(M.cypressLP()), lawn(0.6, 1.6, 14, 15), char('custode', 'idle', [0.95, 0, -0.2], -0.9)) },
@@ -431,8 +431,8 @@ const SETS: Record<string, Panel[]> = {
     { title: 'Pupazzo di neve scheletro', yaw: 0.45, pitch: 0.35, zoom: 0.8, center: [0, 0.7, 0], build: snowman2 },
   ],
   '8': [
-    { title: 'Roccia mostruosa · giorno', yaw: 0.35, pitch: 0.32, zoom: 1.45, center: [0, 0.85, 0], build: () => boulder(false) },
-    { title: 'Roccia mostruosa · notte', night: true, dusk: true, yaw: 0.35, pitch: 0.32, zoom: 1.45, center: [0, 0.85, 0], build: () => boulder(true) },
+    { title: 'Roccia mostruosa · giorno', yaw: 0.35, pitch: 0.4, zoom: 1.5, center: [0, 0.7, 0], build: () => boulder(false) },
+    { title: 'Roccia mostruosa · notte', night: true, dusk: true, yaw: 0.35, pitch: 0.4, zoom: 1.5, center: [0, 0.7, 0], build: () => boulder(true) },
     { title: 'Roccia mostruosa · come in gioco, col Custode', yaw: Math.PI / 4, pitch: 0.7, zoom: 1.9, center: [0, 0.7, 0.2], build: () => group(boulder(false), char('custode', 'idle', [1.75, 0, 0.85], -0.8)) },
   ],
 };

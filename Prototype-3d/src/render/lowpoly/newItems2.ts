@@ -475,62 +475,42 @@ export function witchAppleLP(lit = true): LPModel {
 }
 
 /**
- * Roccia mostruosa (3×2), versione semplice: una cupola di pochi grossi
- * blocchi, due orbite scavate e una bocca-caverna con poche zanne grandi;
- * tre massi davanti. Di notte occhi e gola si accendono.
+ * Roccia mostruosa (3×3): una montagnola tonda di roccia a facce basse, col
+ * muschio in cima; alla base, davanti, una piccola caverna a forma di bocca
+ * con qualche zanna. Di notte la bocca si accende da dentro.
  */
 export function fangRockLP(night: boolean): LPModel {
   const lp = new LP(`new2:fang:${night}`);
   const r = lp.rng;
-  const ROCK = '#8a8682', ROCK2 = '#7a7672';
-  const mossy = { topTint: '#73843c', topAmount: 0.45 };
-  const chunk = (x: number, y: number, z: number, sx: number, sy: number, sz: number, col = ROCK) =>
-    lp.blob(x, y, z, sx, sy, sz, col, { detail: 0, vary: 0.06, jitter: Math.min(sx, sy, sz) * 0.2, ao: 0.25, ...mossy });
-  const FZ = 0.3;
-  // grotta dietro la bocca (calda) — la facciata occupa z da -0,2 a 0,3
-  const CAVE = night ? '#5a2e18' : '#6a3c26', FLOOR = night ? '#6e3a1c' : '#80492a';
-  lp.box(0, 0, -0.1, 1.2, 0.03, 0.75, FLOOR, { jitter: 0 });
-  lp.box(0, 0, -0.8, 1.45, 1.05, 0.1, CAVE, { jitter: 0 });
-  for (const sx of [-1, 1]) lp.box(sx * 0.72, 0, -0.5, 0.1, 1.05, 0.6, CAVE, { jitter: 0 });
-  lp.box(0, 0.98, -0.5, 1.5, 0.1, 0.62, CAVE, { jitter: 0 });
-  // facciata: profilo a cupola con la bocca e le due orbite
-  const F = new THREE.Shape();
-  F.moveTo(-1.2, 0); F.lineTo(-1.1, 0.7); F.lineTo(-0.75, 1.35); F.lineTo(-0.2, 1.75); F.lineTo(0.4, 1.65); F.lineTo(0.95, 1.2); F.lineTo(1.2, 0.6); F.lineTo(1.2, 0); F.closePath();
-  const mouth = new THREE.Path();
-  mouth.moveTo(-0.6, 0.03); mouth.lineTo(-0.62, 0.45); mouth.lineTo(-0.35, 0.82); mouth.lineTo(0.15, 0.88); mouth.lineTo(0.55, 0.62); mouth.lineTo(0.6, 0.03); mouth.lineTo(-0.6, 0.03);
-  F.holes.push(mouth);
-  const EYES: Array<[number, number, number, number]> = [[-0.4, 1.25, 0.22, 0.19], [0.45, 1.07, 0.2, 0.17]];
-  for (const [cx, cy, rx, ry] of EYES) {
-    const p = new THREE.Path();
-    for (let k = 0; k <= 5; k++) { const a = -(k / 5) * Math.PI * 2 + 0.3; const x = cx + Math.cos(a) * rx, y = cy + Math.sin(a) * ry; if (k) p.lineTo(x, y); else p.moveTo(x, y); }
-    F.holes.push(p);
-  }
-  lp.push([0, 0, FZ - 0.25]).extrude(F, 0.5, ROCK, { vary: 0.06, jitter: 0.03, ao: 0.3, curve: 2, ...mossy }).pop();
-  // orbite: incavo caldo dietro (di notte brilla)
-  for (const [cx, cy, rx, ry] of EYES) {
-    lp.box(cx, cy - ry * 1.2, -0.4, rx * 2.4, ry * 2.4, 0.06, night ? '#ff8a3a' : '#4a2a1c', night ? { bucket: 'glow', jitter: 0 } : { jitter: 0 });
-    for (const sx of [-1, 1]) lp.box(cx + sx * rx * 1.15, cy - ry * 1.2, -0.3, 0.06, ry * 2.4, 0.2, CAVE, { jitter: 0 });
-    lp.box(cx, cy - ry * 1.2, -0.3, rx * 2.4, 0.05, 0.2, CAVE, { jitter: 0 });
-    lp.box(cx, cy + ry * 1.2 - 0.05, -0.3, rx * 2.4, 0.05, 0.2, CAVE, { jitter: 0 });
-    chunk(cx, cy + ry + 0.08, FZ + 0.05, rx * 1.2, 0.09, 0.14, ROCK2); // arcata
-  }
-  // volume dietro: quattro grossi blocchi
-  chunk(0.0, 1.35, -0.95, 0.95, 0.55, 0.55);
-  chunk(0.0, 0.55, -1.3, 1.2, 0.6, 0.4, ROCK2);
-  for (const sx of [-1, 1]) chunk(sx * 1.0, 0.6, -0.55, 0.45, 0.65, 0.6);
-  // zanne grandi: cinque dall'arco, quattro dal pavimento
-  const TOOTH = '#d8cdb4';
-  for (const [x, y, h] of [[-0.45, 0.6, 0.32], [-0.22, 0.8, 0.45], [0.02, 0.86, 0.38], [0.25, 0.78, 0.46], [0.45, 0.6, 0.3]] as const)
-    lp.push([x, y + 0.03, FZ - 0.02], 0, Math.PI).cyl(0, 0, 0, 0.085, 0.0, h, 5, TOOTH, { jitter: 0, vary: 0.05 }).pop();
-  for (const [x, z, h] of [[-0.35, 0.15, 0.36], [-0.08, 0.2, 0.28], [0.18, 0.15, 0.4], [0.42, 0.12, 0.3]] as const)
-    lp.cyl(x, 0.02, z, 0.08, 0.0, h, 5, TOOTH, { jitter: 0, vary: 0.05 });
-  // tre massi davanti e un po' d'erba
-  chunk(-1.1, 0.22, 0.6, 0.32, 0.25, 0.28);
-  chunk(1.0, 0.18, 0.62, 0.28, 0.2, 0.25, ROCK2);
-  chunk(-0.7, 0.1, 0.85, 0.18, 0.12, 0.15, ROCK2);
-  for (let i = 0; i < 6; i++) { const a = r.range(0, 6.28); grassTuft(lp, Math.cos(a) * 1.35, Math.sin(a) * 0.85 + 0.1, 1.1, ['#6a7a34', '#55603a']); }
-  lp.light(0, 0.35, -0.45, '#ff9a4a', night ? 0.9 : 0.6, 3, 0.35, night ? 0.8 : 0.3);
-  if (night) for (const [cx, cy] of EYES) lp.light(cx, cy, FZ - 0.2, '#ff8a3a', 0.35, 2, 0.3, 0.5);
+  const ROCK = '#86827d';
+  const o = { vary: 0.08, jitter: 0.14, ao: 0.3, topTint: '#73843c', topAmount: 0.5 };
+  const v = (pts: Array<[number, number]>) => pts.map(([x, y]) => new THREE.Vector2(x, y));
+  const SEG = 9, GAP = (40 * Math.PI) / 180; // la bocca occupa uno spicchio di 40° davanti, in basso
+  // anello basso con l'apertura davanti, cupola sopra intera (stessi vertici sul bordo)
+  lp.push([0, 0, 0], 0, 0, 0, [1.0, 1.0, 0.92]);
+  lp.add(new THREE.LatheGeometry(v([[1.32, 0], [1.29, 0.26], [1.22, 0.52]]), SEG - 1, GAP / 2, Math.PI * 2 - GAP), ROCK, o);
+  lp.pop();
+  lp.push([0, 0, 0], 0, 0, 0, [1.0, 1.0, 0.92]);
+  lp.add(new THREE.LatheGeometry(v([[1.22, 0.52], [1.0, 0.95], [0.66, 1.35], [0.3, 1.68], [0.06, 1.84], [0, 1.86]]), SEG, GAP / 2, Math.PI * 2), ROCK, o);
+  lp.pop();
+  // dentro la bocca: una piccola grotta calda (pavimento, pareti, volta, fondo)
+  const IN = night ? '#5a2e18' : '#5e3624', FLOOR = night ? '#7a401e' : '#73422a';
+  const zf = 1.0, zb = 0.45;
+  lp.box(0, 0, (zf + zb) / 2, 0.86, 0.03, zf - zb, FLOOR, { jitter: 0 });
+  lp.box(0, 0, zb, 0.9, 0.55, 0.06, night ? '#c8641e' : IN, night ? { bucket: 'glow', jitter: 0 } : { jitter: 0 });
+  for (const sx of [-1, 1]) lp.box(sx * 0.43, 0, (zf + zb) / 2, 0.06, 0.55, zf - zb, IN, { jitter: 0 });
+  lp.box(0, 0.5, (zf + zb) / 2, 0.9, 0.06, zf - zb, IN, { jitter: 0 });
+  // zanne: quattro che scendono dal bordo di sopra, tre che salgono dal pavimento
+  const TOOTH = '#ddd3bc';
+  // labbra di roccia agli angoli: la bocca si arrotonda
+  for (const [x, y] of [[-0.4, 0.45], [0.4, 0.45], [-0.42, 0.05], [0.42, 0.05]] as const) lp.blob(x, y, 1.1, 0.13, 0.12, 0.1, ROCK, { vary: 0.06, jitter: 0.03 });
+  for (const [x, h] of [[-0.24, 0.2], [-0.08, 0.26], [0.08, 0.24], [0.24, 0.19]] as const) lp.push([x, 0.5, 1.08], 0, Math.PI).cyl(0, 0, 0, 0.06, 0, h, 5, TOOTH, { jitter: 0 }).pop();
+  for (const [x, h] of [[-0.18, 0.18], [0.02, 0.14], [0.2, 0.19]] as const) lp.cyl(x, 0.02, 1.08, 0.055, 0, h, 5, TOOTH, { jitter: 0 });
+  // due sassi alla base e un po' d'erba
+  lp.blob(-1.05, 0.15, 0.85, 0.24, 0.18, 0.22, '#7a7672', { vary: 0.06, jitter: 0.04, topTint: '#73843c', topAmount: 0.4 });
+  lp.blob(0.95, 0.1, 0.95, 0.16, 0.12, 0.15, '#7a7672', { vary: 0.06, jitter: 0.03 });
+  for (let i = 0; i < 7; i++) { const a = r.range(0, 6.28); grassTuft(lp, Math.sin(a) * 1.4, Math.cos(a) * 1.4, 1.1, ['#6a7a34', '#55603a']); }
+  lp.light(0, 0.3, 0.85, '#ff9a4a', night ? 0.8 : 0.4, 2.6, 0.35, night ? 0.7 : 0.3);
   return lp.build();
 }
 

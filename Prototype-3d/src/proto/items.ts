@@ -7,11 +7,14 @@ import * as THREE from 'three';
 import { instantiate, lightWorldPos, LOWPOLY_MATERIALS } from '../render/modelCache.ts';
 import type { LPModel } from '../render/lowpoly/kit.ts';
 import * as N from '../render/lowpoly/newItems.ts';
+import * as M from '../render/lowpoly/newItems2.ts';
+import { LP_SCENERY } from '../render/lowpoly/index.ts';
+import { lowpolyGrave } from '../render/lowpoly/graves.ts';
+import { iconUrl } from '../ui/icons.ts';
 import { animateRig, buildRig, rigLightPos, type CharacterKind, type Pose } from '../view/characters.ts';
 import { assemble, handPos, headAt, headCenter, headFront, humanSpec, onSkin, HUMAN_PIVOTS, DEG, O } from '../render/lowpoly/v2/custode.ts';
 import type { LP } from '../render/lowpoly/kit.ts';
 import { DEFAULT_LOOK } from '../game/look.ts';
-import '../render/lowpoly/index.ts';
 
 const asModel = (m: LPModel) => ({ geometries: m.geometries, lights: m.lights, height: 1, mats: LOWPOLY_MATERIALS, dedicated: true });
 /** Istanza che ricorda il modello (per accendere le sue luci di notte). */
@@ -85,7 +88,7 @@ function witch(): THREE.Group {
     lp.pop();
   };
   return figure(
-    { skin: '#b6d29a', hair: 'longcurly', hairColor: '#8a5ab0', eyes: '#2f5a32', hat: 'none', outfit: 'cloak', outfitColor: '#4a3a5a', accentColor: '#5f8a4a', beard: 'none', mustache: 'none', freckles: true },
+    { skin: '#b6d29a', sparkle: false, hair: 'long', hairColor: '#4a2a5a', eyes: '#2f5a32', hat: 'none', outfit: 'cloak', outfitColor: '#4a3a5a', accentColor: '#5f8a4a', beard: 'none', mustache: 'none', freckles: true },
     {
       name: 'strega', mouth: 'smile', blush: '#d99a9a', hat, hatPh: 50,
       // mestolo per girare la pozione
@@ -182,6 +185,159 @@ function gazeboWithCustode(): THREE.Group {
   return group(inst(N.gazeboLP()), char('custode', 'idle', [0.5, 0.28, 0.6], 0.5), char('ghost', 'idle', [-0.4, 0.4, -0.6], 0.3, 1.2));
 }
 
+
+// ── Seconda passata: contesto (prato, lapidi, Custode), pose e funzioni ──
+
+/** Prato attorno all'oggetto: ciuffi, sassolini, fiorellini fuori dal raggio `r0`. */
+function lawn(r0: number, r1: number, n: number, seed: number): THREE.Group {
+  const g = new THREE.Group();
+  const kinds = ['tuft', 'tuft', 'wgrass', 'pebbles', 'flowers', 'leaves', 'shroom'];
+  for (let i = 0; i < n; i++) {
+    const a = (i / n) * Math.PI * 2 + Math.sin(i * 12.9898 + seed) * 0.4, d = r0 + ((Math.sin(i * 78.233 + seed) + 1) / 2) * (r1 - r0);
+    const k = kinds[i % kinds.length];
+    g.add(inst(LP_SCENERY[k](String((i * 7 + seed) % 9)), [Math.sin(a) * d, 0, Math.cos(a) * d], a));
+  }
+  return g;
+}
+
+/** Una lapide del gioco accanto all'oggetto, per il contesto. */
+const grave = (type: Parameters<typeof lowpolyGrave>[0], at: [number, number, number], yaw = 0, state: Parameters<typeof lowpolyGrave>[1] = 'clean') => inst(lowpolyGrave(type, state, 3), at, yaw);
+
+function gazebo2(night: boolean): THREE.Group {
+  const g = group(inst(M.gazeboSpookyLP()), lawn(2.0, 2.9, 22, 3), grave('gothic', [-2.2, 0, 1.2], 0.4), grave('celtic_cross', [2.3, 0, -0.6], -0.5));
+  if (night) {
+    for (const [x, z, f, pose] of [[0.35, 0.2, -2.0, 'cheer'], [-0.25, 0.45, 1.1, 'idle']] as const) { const gh = char('ghost', pose, [x, 0.3, z], f, 1.3); gh.scale.setScalar(0.8); g.add(gh); }
+  } else g.add(char('custode', 'idle', [0.6, 0.29, 0.75], 0.4));
+  return g;
+}
+
+function bellScene(): THREE.Group {
+  const c = char('custode', 'idle', [0.62, 0.22, 0.62], -2.3, 0.3, (p) => { p.armL.rotation.x = -2.3; p.armL.rotation.z = -0.2; });
+  return group(inst(M.soulBellLP()), c, lawn(1.1, 2.0, 16, 5), grave('stone_simple', [-1.5, 0, 0.7], 0.3, 'flowers'));
+}
+
+function vampireDay(): THREE.Group { return group(inst(M.vampireCryptLP(false)), lawn(1.1, 1.9, 14, 8)); }
+
+function vampire2(): THREE.Group {
+  const v = figure(
+    { skin: '#e4e0ee', sparkle: false, hair: 'side', hairColor: '#1b1a20', eyes: '#8a2a2a', hat: 'none', outfit: 'coat', outfitColor: '#1b1a20', accentColor: '#8e1f2a', beard: 'none', mustache: 'none' },
+    {
+      name: 'vampiro2', mouth: 'smile', blush: '#d8a8c8', held: [], plainCoat: true,
+      head: (lp: LP) => { for (const s of [-1, 1]) onSkin(lp, headFront(s * 0.035, 0.6), 0.006, 0, (q) => q.add(new THREE.ConeGeometry(0.012, 0.035, 4).rotateX(Math.PI), '#fbf7ef', O)); },
+      chest: (lp: LP) => {
+        // mantello lungo con la fodera rossa e il colletto alto
+        lp.add(new THREE.CylinderGeometry(0.2, 0.34, 0.5, 12, 1, true, Math.PI / 2 + 0.25, Math.PI - 0.5).translate(0, 0.26, -0.02), '#141418', O);
+        lp.add(new THREE.CylinderGeometry(0.19, 0.33, 0.49, 12, 1, true, Math.PI / 2 + 0.25, Math.PI - 0.5).scale(-1, 1, 1).translate(0, 0.26, -0.02), '#8e1f2a', O);
+        for (const sd of [-1, 1]) { lp.push([sd * 0.14, 0.5, 0.0], sd * -0.5, -0.3); lp.add(new THREE.BoxGeometry(0.16, 0.2, 0.015).translate(0, 0.08, 0), '#141418', O); lp.add(new THREE.BoxGeometry(0.15, 0.19, 0.01).translate(0, 0.08, 0.009), '#8e1f2a', O); lp.pop(); }
+        lp.blob(0, 0.44, 0.2, 0.03, 0.03, 0.012, '#c9a227', O);
+      },
+    },
+    'vampiro2',
+    (p) => { p.armR.rotation.z = 1.1; p.armR.rotation.x = -0.6; p.armL.rotation.x = -0.3; },
+  );
+  v.position.set(0.25, 0.1, 0.95); v.rotation.y = -0.3;
+  return group(inst(M.vampireCryptLP(true)), v, lawn(1.2, 1.9, 14, 8));
+}
+
+/** Etichetta «pozione pronta» sopra la strega (come gli incassi di bar e orto). */
+function potionBadge(y: number): THREE.Sprite {
+  const c = document.createElement('canvas'); c.width = 192; c.height = 96;
+  const g = c.getContext('2d')!;
+  const plate = (inset: number, color: string) => { g.fillStyle = color; g.fillRect(inset + 6, inset, 192 - 2 * (inset + 6), 96 - 2 * inset); g.fillRect(inset, inset + 6, 192 - 2 * inset, 96 - 2 * (inset + 6)); };
+  plate(0, '#07080b'); plate(6, '#c9a25c'); plate(12, '#161920');
+  g.fillStyle = '#6b4a3a'; g.fillRect(70, 22, 22, 12);
+  g.fillStyle = '#9af06a'; g.beginPath(); g.moveTo(66, 36); g.lineTo(96, 36); g.lineTo(108, 72); g.lineTo(54, 72); g.closePath(); g.fill();
+  g.fillStyle = '#e8ffd0'; g.fillRect(64, 54, 8, 8);
+  g.fillStyle = '#f1d39c'; g.font = 'bold 34px system-ui, sans-serif'; g.textBaseline = 'middle'; g.fillText('×2', 116, 50);
+  const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace;
+  const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: t, depthTest: false, toneMapped: false }));
+  sp.scale.set(0.8, 0.4, 1); sp.position.y = y; sp.renderOrder = 10;
+  return sp;
+}
+
+function witch2(): THREE.Group {
+  const w = witch(); w.position.set(0.85, 0, 0.0); w.rotation.y = -0.65;
+  const b = potionBadge(2.0); b.position.x = 0.25;
+  return group(inst(M.witchCornerLP()), w, b, lawn(1.1, 1.8, 12, 4));
+}
+
+function cats2(): THREE.Group {
+  const sleeper = inst(M.sleepingCatLP(), [-0.45, 0.29, -0.28], 0.8);
+  return group(inst(M.catShelterLP()), sleeper, char('cat', 'idle', [0.55, 1.04, -0.55], 0.5, 0.8), char('cat', 'cheer', [-0.12, 0, 0.5], -0.9, 0.4), lawn(1.1, 1.8, 12, 9));
+}
+
+/** Custode a cavalcioni della scopa: anca sul manico, piedi ai lati, mani avanti sul manico. */
+function broomRider(): THREE.Group {
+  const H = 0.75;
+  const g = new THREE.Group();
+  const rig = buildRig('custode', 'lowpoly', DEFAULT_LOOK);
+  animateRig(rig, 'idle', 0, 0);
+  g.add(rig.root);
+  rig.root.updateMatrixWorld(true);
+  const p = rig.parts as Record<string, THREE.Group>;
+  const hip = p.legL.getWorldPosition(new THREE.Vector3());
+  const broomY = H, lift = broomY - hip.y + 0.03;
+  rig.root.position.set(0, lift, 0.05);
+  rig.root.updateMatrixWorld(true);
+  const aim = (part: THREE.Group, target: THREE.Vector3) => {
+    const from = part.getWorldPosition(new THREE.Vector3());
+    const d = target.clone().sub(from);
+    part.rotation.x = -Math.atan2(d.z, -d.y);
+    part.rotation.z = Math.atan2(d.x, -d.y) * 0.9;
+  };
+  for (const s of [-1, 1]) {
+    aim(s < 0 ? p.legL : p.legR, new THREE.Vector3(s * 0.2, broomY - 0.2, 0.18));
+    aim(s < 0 ? p.armL : p.armR, new THREE.Vector3(s * 0.07, broomY + 0.02, 0.45));
+  }
+  p.body.rotation.x = 0.18;
+  p.head.rotation.x = -0.1;
+  const broom = inst(M.broom2LP(), [0, broomY - 0.02, 0.05], 0, 1.25);
+  broom.rotation.x = -0.08;
+  g.add(broom);
+  // stelline della scia e ombra a terra (si capisce che vola)
+  for (let i = 0; i < 7; i++) { const s = new THREE.Mesh(new THREE.OctahedronGeometry(0.03 - i * 0.003), new THREE.MeshBasicMaterial({ color: '#fff0a0' })); s.position.set(Math.sin(i * 2.1) * 0.12, broomY + Math.cos(i * 1.7) * 0.08, -1.1 - i * 0.18); g.add(s); }
+  const shadow = new THREE.Mesh(new THREE.CircleGeometry(0.45, 20).rotateX(-Math.PI / 2), new THREE.MeshBasicMaterial({ color: '#000', transparent: true, opacity: 0.3, depthWrite: false }));
+  shadow.position.y = 0.01; shadow.scale.set(0.7, 1, 1.6); g.add(shadow);
+  g.userData.rig = rig;
+  return g;
+}
+
+function broomScene(): THREE.Group { return group(broomRider(), lawn(0.9, 2.2, 18, 2)); }
+
+function staffScene(): THREE.Group {
+  const c = char('custode', 'idle', [0, 0, 0], 0.5, 0.3, (p) => { p.armR.rotation.x = -0.5; holdIn(p.armR, M.mysticStaffLP(), 1, [0, -0.42, 0.02], [0, 0, 0]); });
+  const g = group(c, lawn(1.9, 2.4, 22, 6));
+  // fuochi fatui che arrivano da lontano verso il cristallo
+  const target = new THREE.Vector3(0.18, 1.1, 0.12);
+  for (let i = 0; i < 6; i++) {
+    const a = i * 1.05 + 0.3, d = 0.9 + (i % 3) * 0.35;
+    const w = inst(M.wispTrailLP(0.5 + d * 0.2), [Math.sin(a) * d, 0.5 + (i % 2) * 0.35, Math.cos(a) * d]);
+    w.lookAt(target); g.add(w);
+  }
+  // raggio d'attrazione: anello tratteggiato a terra
+  for (let i = 0; i < 40; i += 2) {
+    const a0 = (i / 40) * Math.PI * 2;
+    const seg = new THREE.Mesh(new THREE.TorusGeometry(1.7, 0.02, 3, 6, (Math.PI * 2) / 40), new THREE.MeshBasicMaterial({ color: '#8ff0dc', transparent: true, opacity: 0.8 }));
+    seg.rotation.set(-Math.PI / 2, 0, a0); seg.position.y = 0.02; g.add(seg);
+  }
+  return g;
+}
+
+function patch2(): THREE.Group { return group(inst(M.pumpkinPatch2LP()), lawn(1.55, 2.3, 20, 7)); }
+
+function ofrenda2(withCustode: boolean): THREE.Group {
+  const g = group(inst(M.ofrenda2LP()), lawn(1.4, 2.3, 18, 11));
+  if (withCustode) g.add(char('custode', 'pray', [1.3, 0, 0.9], -2.2, 0.3));
+  return g;
+}
+
+function snowman2(): THREE.Group {
+  const g = group(inst(M.skeletonSnowman2LP()));
+  const snow = new THREE.Mesh(new THREE.CircleGeometry(1.2, 24).rotateX(-Math.PI / 2), new THREE.MeshStandardMaterial({ color: '#dfe8ec', roughness: 1 }));
+  snow.position.y = 0.004; snow.receiveShadow = true; g.add(snow);
+  return g;
+}
+
 interface Panel { title: string; night?: boolean; dusk?: boolean; yaw: number; pitch?: number; zoom: number; center?: [number, number, number]; build: () => THREE.Group }
 
 const SETS: Record<string, Panel[]> = {
@@ -227,6 +383,33 @@ const SETS: Record<string, Panel[]> = {
     { title: 'Dicembre · Luci di Natale sul recinto', night: true, yaw: 0.4, zoom: 0.75, center: [0, 0.55, 0], build: () => group(inst(N.fenceLightsLP())) },
     { title: 'Febbraio · Fantasmi innamorati', night: true, dusk: true, yaw: 0.4, zoom: 1.05, center: [0, 0.6, 0], build: lovers },
   ],
+  '5': [
+    { title: 'Gazebo delle anime · giorno', yaw: 0.6, zoom: 2.7, center: [0, 1.25, 0], build: () => gazebo2(false) },
+    { title: 'Gazebo delle anime · di notte i fantasmi ballano', night: true, dusk: true, yaw: 0.6, zoom: 2.5, center: [0, 1.25, 0], build: () => gazebo2(true) },
+    { title: 'Campana delle anime (al posto del campanile)', yaw: 0.5, zoom: 1.75, center: [0, 1.25, 0], build: bellScene },
+    { title: 'Ossario (altra idea)', night: true, dusk: true, yaw: 0.45, zoom: 1.55, center: [0, 0.75, 0], build: () => group(inst(M.ossuaryLP()), lawn(1.6, 2.4, 16, 4)) },
+    { title: 'Palude con le mani', yaw: 0.5, pitch: 0.62, zoom: 1.95, center: [0, 0.25, 0], build: () => group(inst(M.swamp2LP()), lawn(2.0, 2.8, 20, 12)) },
+    { title: 'Albero dell’altalena', yaw: 0.55, zoom: 1.6, center: [0, 1.25, 0], build: () => group(inst(M.swingTree2LP()), lawn(1.0, 1.8, 14, 13)) },
+    { title: 'Cerchio di pietre nella nebbia', night: true, dusk: true, yaw: 0.5, pitch: 0.6, zoom: 1.7, center: [0, 0.4, 0], build: () => group(inst(M.stoneCircleLP()), lawn(1.5, 2.3, 18, 14)) },
+    { title: 'Salice piangente', yaw: 0.55, zoom: 2.0, center: [0, 1.4, 0], build: () => group(inst(M.willow2LP()), lawn(1.5, 2.3, 18, 15)) },
+    { title: 'Funghi luminosi (al posto delle lucciole)', night: true, yaw: 0.45, zoom: 0.95, center: [0, 0.3, 0], build: () => group(inst(M.glowShroomsLP()), lawn(0.9, 1.5, 12, 16)) },
+  ],
+  '6': [
+    { title: 'Vampiro · di giorno dorme nella bara', yaw: 0.5, zoom: 1.55, center: [0, 0.9, 0], build: vampireDay },
+    { title: 'Vampiro · di notte esce a passeggiare', night: true, dusk: true, yaw: 0.5, zoom: 1.6, center: [0, 0.95, 0.2], build: vampire2 },
+    { title: 'Strega · la pozione del giorno è pronta', night: true, dusk: true, yaw: 0.5, zoom: 1.45, center: [0, 0.9, 0.1], build: witch2 },
+    { title: 'Rifugio dei gatti neri', yaw: 0.55, zoom: 1.3, center: [0, 0.55, 0], build: cats2 },
+    { title: 'Scopa volante · a cavalcioni', yaw: 1.15, pitch: 0.42, zoom: 1.15, center: [0, 0.85, -0.1], build: broomScene },
+    { title: 'Bastone mistico · attira i fuochi fatui da lontano', night: true, dusk: true, yaw: 0.5, pitch: 0.62, zoom: 1.75, center: [0, 0.5, 0], build: staffScene },
+  ],
+  '7': [
+    { title: 'Campo di zucche · giorno', yaw: 0.55, pitch: 0.6, zoom: 1.85, center: [0, 0.5, 0], build: patch2 },
+    { title: 'Campo di zucche · notte', night: true, dusk: true, yaw: 0.55, pitch: 0.6, zoom: 1.85, center: [0, 0.5, 0], build: patch2 },
+    { title: 'Altare dei morti con l’arco · notte', night: true, dusk: true, yaw: 0.4, zoom: 1.85, center: [0, 0.95, 0.2], build: () => ofrenda2(true) },
+    { title: 'Altare dei morti · da vicino', night: true, dusk: true, yaw: 0.25, pitch: 0.3, zoom: 0.95, center: [0, 0.85, 0], build: () => ofrenda2(false) },
+    { title: 'Pupazzo di neve scheletro', yaw: 0.5, zoom: 1.0, center: [0, 0.7, 0], build: snowman2 },
+    { title: 'Pupazzo · da vicino', yaw: 0.15, pitch: 0.25, zoom: 0.6, center: [0, 0.85, 0], build: snowman2 },
+  ],
 };
 
 const set = new URLSearchParams(location.search).get('set') ?? '1';
@@ -252,6 +435,18 @@ panels.forEach((pn, i) => {
   const col = i % COLS, row = Math.floor(i / COLS);
   const x = col * CW, yTop = TOP + row * (CH + TOP);
   label(x + CW / 2, yTop - 26, pn.title);
+  // pannello del bastone: i due pulsanti sulla mappa (bastone sopra la bici)
+  if (pn.title.startsWith('Bastone')) {
+    const box = document.createElement('div');
+    box.style.cssText = `position:absolute;z-index:3;left:${x + CW - 84}px;top:${yTop + CH - 150}px;display:grid;gap:8px`;
+    for (const [ic, on] of [['staff', true], ['bike', false]] as const) {
+      const b = document.createElement('div'); b.className = `btn${on ? ' on' : ''}`;
+      b.style.cssText = `width:58px;height:58px;display:grid;place-items:center;background:#161920;box-shadow:inset 0 0 0 3px #07080b, inset 0 0 0 6px ${on ? '#c9a25c' : '#3a3f49'}`;
+      const i2 = document.createElement('i'); i2.style.cssText = `width:40px;height:40px;background-size:contain;image-rendering:pixelated;background-image:${iconUrl(ic)}`;
+      b.append(i2); box.append(b);
+    }
+    document.querySelector('.tavola')!.append(box);
+  }
   const scene = new THREE.Scene();
   scene.background = new THREE.Color(pn.night ? '#141a24' : '#2a3530');
   renderer.toneMappingExposure = pn.night ? 1.25 : 1.1;

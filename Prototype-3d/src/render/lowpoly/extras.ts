@@ -586,4 +586,4 @@ export function npcHomeLP(v: PVis): LPModel {
   return lp.build();
 }
 
-export { skull };
+export { skull, gnarledTree };

@@ -12,12 +12,11 @@ import type { ArtStyle, Placed, SaveData } from '../game/state.ts';
 import type { Rect } from '../game/world.ts';
 import type { Atmosphere, AnchorHandle } from './Atmosphere.ts';
 import { animateRig, buildRig, rigLightPos, type CharacterKind, type Pose, type Rig } from './characters.ts';
-import { LP } from '../render/lowpoly/kit.ts';
 import { DEFAULT_LOOK, lookKey, type CustodeLook } from '../game/look.ts';
-import { assemble, handPos, HUMAN_PIVOTS, humanSpec } from '../render/lowpoly/v2/custode.ts';
-import { instrumentLP } from '../render/lowpoly/newItems.ts';
-import { broom2LP, mysticStaffLP, sleepingCatLP } from '../render/lowpoly/newItems2.ts';
-import { skull } from '../render/lowpoly/extras.ts';
+import { handPos, HUMAN_PIVOTS } from '../render/lowpoly/v2/custode.ts';
+import { broom2LP, mysticStaffLP } from '../render/lowpoly/newItems2.ts';
+import { animateNotes, attachProp, lpMesh, playPose, presenceLayout, scenePropObject, type Instrument, type PresenceRole, type PresenceTier, type PropKind } from './presences.ts';
+export { BUSINESS_PRESENCES, type PresenceTier } from './presences.ts';
 import { instantiate, lightWorldPos, LOWPOLY_MATERIALS } from '../render/modelCache.ts';
 import { BIKE, BIKE_SCALE, bicycleLP } from '../render/lowpoly/extraItems.ts';
 import type { LPModel } from '../render/lowpoly/kit.ts';
@@ -96,7 +95,7 @@ interface Visit {
 
 interface Presence extends Walker {
   placeId: string;
-  role: 'sit' | 'dance' | 'wander' | 'circle' | 'goalie' | 'still';
+  role: PresenceRole;
   home: THREE.Vector3;
   radius: number;
   angle: number;
@@ -108,62 +107,6 @@ interface Presence extends Walker {
   prop?: PropKind;
   /** Grandezza (fantasmi del picnic e della panchina più piccoli). */
   size?: number;
-}
-
-type Instrument = 'violin' | 'sticks' | 'trumpet';
-type PropKind = 'mug' | 'hoe' | Instrument;
-
-/** Quante presenze animano bar e orto: con la fascia del dispositivo (economico, medio, top). */
-export type PresenceTier = 'low' | 'mid' | 'high';
-export const BUSINESS_PRESENCES: Record<'zombie_bar' | 'brain_farm', Record<PresenceTier, number>> = {
-  zombie_bar: { low: 2, mid: 3, high: 4 },
-  brain_farm: { low: 1, mid: 2, high: 2 },
-};
-
-const PROP_MATS = {
-  pewter: new THREE.MeshStandardMaterial({ color: '#9a9488', flatShading: true, roughness: 0.6 }),
-  foam: new THREE.MeshBasicMaterial({ color: '#b6f06a' }),
-  wood: new THREE.MeshStandardMaterial({ color: '#6b4a2e', flatShading: true, roughness: 0.9 }),
-  iron: new THREE.MeshStandardMaterial({ color: '#5f6366', flatShading: true, roughness: 0.6 }),
-};
-
-const lpMesh = (m: LPModel) => instantiate({ geometries: m.geometries, lights: [], height: 1, mats: LOWPOLY_MATERIALS, dedicated: true }, { castShadow: true });
-
-/**
- * Strumento della banda nella mano (spazio del braccio del rig v2): violino a
- * sinistra, bacchette in tutte e due le mani, tromba a destra.
- */
-function instrumentMeshes(kind: Instrument): Array<{ side: number; mesh: THREE.Object3D }> {
-  const at = (side: number, mesh: THREE.Object3D, off: [number, number, number], rot: [number, number, number]) => {
-    const h = handPos(side), pv = side > 0 ? HUMAN_PIVOTS.armR : HUMAN_PIVOTS.armL;
-    mesh.position.set(h.x - pv[0] + off[0], h.y - pv[1] + off[1], h.z - pv[2] + off[2]);
-    mesh.rotation.set(...rot);
-    mesh.name = 'prop';
-    return { side, mesh };
-  };
-  if (kind === 'violin') return [at(-1, lpMesh(instrumentLP('violin')), [0, 0.05, 0.05], [0.4, 0, 1.2])];
-  if (kind === 'trumpet') return [at(1, lpMesh(instrumentLP('trumpet')), [-0.06, 0.05, 0.05], [0, 0, 0])];
-  return [at(1, lpMesh(instrumentLP('sticks')), [0, 0, 0], [-0.6, 0, 0]), at(-1, lpMesh(instrumentLP('sticks')), [0, 0, 0], [-0.3, 0, 0])];
-}
-
-/** Boccale con la schiuma verde o zappa, nella mano destra. */
-function propMesh(kind: 'mug' | 'hoe'): THREE.Group {
-  const g = new THREE.Group();
-  g.name = 'prop';
-  if (kind === 'mug') {
-    const foam = new THREE.Mesh(new THREE.CylinderGeometry(0.044, 0.044, 0.02, 8), PROP_MATS.foam);
-    foam.position.y = 0.06;
-    g.add(new THREE.Mesh(new THREE.CylinderGeometry(0.045, 0.045, 0.1, 8), PROP_MATS.pewter), foam);
-    g.position.set(0.02, -0.02, 0.4);
-  } else {
-    const blade = new THREE.Mesh(new THREE.BoxGeometry(0.14, 0.05, 0.02), PROP_MATS.iron);
-    blade.position.set(0, -0.38, 0.04);
-    g.add(new THREE.Mesh(new THREE.CylinderGeometry(0.015, 0.015, 0.75, 5), PROP_MATS.wood), blade);
-    g.position.set(0.02, -0.05, 0.38);
-    g.rotation.x = 0.5;
-  }
-  g.traverse((o) => { if ((o as THREE.Mesh).isMesh) o.castShadow = true; });
-  return g;
 }
 
 /** Bicicletta sotto il Custode: telaio, ruote e pedivelle che girano, fanalino. */
@@ -264,25 +207,6 @@ const UP = new THREE.Vector3(0, 1, 0);
 const BROOM_Y = 0.75;
 const SPARK_MAT = new THREE.MeshBasicMaterial({ color: '#fff0a0' });
 
-/** Statua del Custode: il suo aspetto, tutto in pietra (colori in scala di grigi tinti di pietra). */
-function keeperStatue(look: CustodeLook): THREE.Group {
-  const S = '#a8a49c', S2 = '#8f8a83', S3 = '#7d7872';
-  const a = assemble(humanSpec({ ...look, sparkle: false, skin: S, hairColor: S2, beardColor: S2, eyes: S3, hatColor: S3, outfitColor: S2, accentColor: S3 }, { name: 'statua', eyes: 'closed', blush: S, mouth: 'flat' }), `statua:${lookKey(look)}`);
-  const inner = a.root.children[0];
-  const parts = Object.keys(HUMAN_PIVOTS);
-  const armR = inner.children[parts.indexOf('armR')];
-  if (armR) { armR.rotation.x = -2.6; armR.rotation.z = 0.15; } // il braccio alzato a salutare
-  const stone = new THREE.Color('#b4aea4'), c = new THREE.Color();
-  a.root.traverse((o) => {
-    const m = o as THREE.Mesh;
-    if (!m.isMesh) return;
-    const col = m.geometry.getAttribute('color') as THREE.BufferAttribute | undefined;
-    if (col) { for (let i = 0; i < col.count; i++) { c.fromBufferAttribute(col, i); const l = 0.35 + 0.65 * (0.3 * c.r + 0.59 * c.g + 0.11 * c.b); col.setXYZ(i, stone.r * l, stone.g * l, stone.b * l); } col.needsUpdate = true; }
-    if (m.material !== LOWPOLY_MATERIALS.solid) m.material = LOWPOLY_MATERIALS.solid;
-    m.castShadow = true;
-  });
-  return a.root;
-}
 let roamerSeq = 0;
 
 export class Actors {
@@ -587,11 +511,16 @@ export class Actors {
     const arm = this.avatar.rig.parts.armR;
     if (!arm) return;
     const h = handPos(1), pv = HUMAN_PIVOTS.armR;
+    // impugnato nella mano e inclinato di ~25° in fuori (e appena in avanti), non dritto lungo il corpo
+    const grip = new THREE.Group();
+    grip.name = 'bastone';
+    grip.position.set(h.x - pv[0], h.y - pv[1], h.z - pv[2] + 0.02);
+    grip.rotation.set(0.12, 0, -0.42);
     const staff = lpMesh(mysticStaffLP(true));
-    staff.position.set(h.x - pv[0], h.y - pv[1] - 0.42, h.z - pv[2] + 0.02);
-    staff.name = 'bastone';
-    arm.add(staff);
-    this.staff = staff;
+    staff.position.set(0, -0.42, 0);
+    grip.add(staff);
+    arm.add(grip);
+    this.staff = grip;
   }
 
   private mount() {
@@ -893,140 +822,38 @@ export class Actors {
     const center = cellCenter(p.x, p.y, rotatedFootprint(p.type, p.rot));
     // gli oggetti ruotati portano con sé chi li abita (posizioni nello spazio dell'oggetto)
     const turn = -p.rot * Math.PI / 2;
-    const add = (kind: CharacterKind, role: Presence['role'], offset: THREE.Vector3, radius = 0, angle = 0, speed = 0.6) => {
-      const w = this.makeWalker(kind, center.clone().add(offset.clone().applyAxisAngle(UP, turn)), speed);
-      const pr: Presence = { ...w, placeId: p.id, role, home: center.clone(), radius, angle, hidden: false };
+    const local = (x: number, z: number) => new THREE.Vector3(x, 0, z).applyAxisAngle(UP, turn).add(center);
+    const { cast, props } = presenceLayout(p, { night: this.night, tier: this.presenceTier });
+    const made = cast.map((c) => {
+      const w = this.makeWalker(c.kind, local(c.x, c.z), c.speed ?? 0.6);
+      const home = c.around ? local(c.around[0], c.around[1]) : center.clone();
+      const pr: Presence = { ...w, placeId: p.id, role: c.role, home, radius: c.radius ?? 0, angle: (c.angle ?? 0) - turn, hidden: !!c.hidden };
+      pr.still = c.pose; pr.lift = c.lift; pr.prop = c.prop; pr.size = c.size;
+      pr.facing = (c.facing ?? 0) + turn;
+      pr.rig.root.rotation.y = pr.facing;
+      if (c.size) pr.rig.root.scale.setScalar(c.size);
+      if (c.hidden) pr.rig.root.visible = false;
+      this.attachProp(pr);
       this.presences.push(pr);
       return pr;
-    };
-    /** Chi resta al suo posto (di solito uno zombie): con una posa, magari su una pedana, grande o piccolo e con qualcosa in mano. */
-    const still = (pose: Pose, x: number, z: number, facing: number, lift = 0, prop?: Presence['prop'], kind: CharacterKind = 'zombie', size = 1) => {
-      const pr = add(kind, 'still', new THREE.Vector3(x, 0, z));
-      pr.still = pose; pr.facing = facing + turn; pr.lift = lift; pr.prop = prop; pr.size = size;
-      pr.rig.root.rotation.y = pr.facing;
-      pr.rig.root.scale.setScalar(size);
-      this.attachProp(pr);
-      return pr;
-    };
-    /** Un oggetto fermo che fa parte della scena (il gatto che dorme, la statua del Custode). */
-    const prop = (obj: THREE.Object3D, x: number, y: number, z: number, yaw: number, owner: Presence) => {
-      const at = new THREE.Vector3(x, 0, z).applyAxisAngle(UP, turn).add(center);
-      obj.position.set(at.x, this.ground(at) + y, at.z);
-      obj.userData.lift = y; // la quota del terreno si riprende a ogni frame
-      obj.rotation.y = yaw + turn;
+    });
+    for (const sp of props) {
+      const obj = scenePropObject(sp.kind, this.look ?? DEFAULT_LOOK);
+      const at = local(sp.x, sp.z);
+      obj.position.set(at.x, this.ground(at) + sp.y, at.z);
+      obj.rotation.y = sp.yaw + turn;
+      // la quota del terreno si riprende a ogni frame (la palla-teschio la muovono i fantasmi)
+      if (sp.kind !== 'skullBall') obj.userData.lift = sp.y;
       this.group.add(obj);
-      owner.extra = obj;
-    };
-    switch (p.type) {
-      case 'witch_corner':
-        if (!p.broken) still('work', 0.85, 0.0, -0.65, 0, undefined, 'witch'); // gira la pozione nel calderone
-        return;
-      case 'vampire_crypt':
-        // di giorno dorme nella bara; di notte passeggia attorno alla cripta
-        if (!p.broken && this.night) add('vampire', 'wander', new THREE.Vector3(0.3, 0, 1.2), 3, 0, 0.55);
-        return;
-      case 'soul_gazebo':
-        if (this.night && !p.broken) {
-          for (const [a, k] of [[0, 'ghost'], [Math.PI, 'ghostRare']] as const) {
-            const g = add(k, 'dance', new THREE.Vector3(Math.cos(a) * 0.6, 0, Math.sin(a) * 0.6), 0.6, a);
-            g.lift = 0.3; g.size = 0.8; g.rig.root.scale.setScalar(0.8);
-          }
-        }
-        return;
-      case 'cat_shelter': {
-        const roof = still('idle', 0.55, -0.55, 0.5, 1.04, undefined, 'cat');
-        prop(lpMesh(sleepingCatLP()), -0.45, 0.29, -0.28, 0.8, roof);
-        add('cat', 'wander', new THREE.Vector3(-0.12, 0, 0.6), 1.4, 0, 0.5);
-        return;
-      }
-      case 'ghost_picnic':
-        still('idle', -0.95, -0.55, 0.9, 0, undefined, 'ghost', 0.75);
-        still('cheer', -0.35, 1.0, Math.PI - 0.3, 0, undefined, 'ghost', 0.75);
-        still('idle', 1.0, 0.3, -1.4, 0, undefined, 'ghostRare', 0.75);
-        return;
-      case 'lovers_bench':
-        still('idle', -0.33, 0.0, 0.35, 0.3, undefined, 'ghost', 0.7);
-        still('idle', 0.33, 0.0, -0.35, 0.3, undefined, 'ghostRare', 0.7);
-        return;
-      case 'skeleton_band':
-        still('idle', -0.75, 0.15, 0.25, 0.12, 'violin', 'skeleton');
-        still('idle', 0, -0.15, 0, 0.12, 'sticks', 'skeleton');
-        still('idle', 0.75, 0.15, -0.25, 0.12, 'trumpet', 'skeleton');
-        return;
-      case 'keeper_statue': {
-        // la statua ha l'aspetto del Custode (lo segue se cambia), tutta in pietra
-        const keeper = add('rat', 'still', new THREE.Vector3()); // segnaposto invisibile (niente luci): la statua è l'oggetto
-        keeper.hidden = true; keeper.rig.root.visible = false;
-        const statue = keeperStatue(this.look ?? DEFAULT_LOOK);
-        statue.scale.setScalar(1.5);
-        prop(statue, 0, 0.83, 0, 0, keeper);
-        return;
-      }
-    }
-    if (p.type === 'zombie_bar' || p.type === 'brain_farm') {
-      if (p.broken) return; // chiuso finché non si ripara
-      const n = BUSINESS_PRESENCES[p.type][this.presenceTier];
-      const crew: (() => void)[] = p.type === 'zombie_bar'
-        ? [
-          () => still('work', 0.1, -0.45, 0, 0.06), // il barista asciuga i boccali
-          () => still('sit', -0.6, 0.66, Math.PI, 0.06, 'mug'),
-          () => still('sit', 0.35, 0.66, Math.PI + 0.3, 0.06, 'mug'),
-          () => still('dance', 0.95, 0.82, -0.6, 0.06),
-        ]
-        : [
-          () => still('work', -0.95, 0.1, 0.7, 0, 'hoe'), // il contadino zappa i cervelli
-          () => still('idle', 0.6, 0.75, 0.35), // il venditore accanto al banco (sotto il tendone non si vedrebbe)
-        ];
-      for (const f of crew.slice(0, n)) f();
-      return;
-    }
-    switch (p.type) {
-      case 'zombies_play': {
-        const a = add('zombie', 'sit', new THREE.Vector3(-0.72, 0, 0)); a.facing = Math.PI / 2;
-        const b = add('zombie', 'sit', new THREE.Vector3(0.72, 0, 0)); b.facing = -Math.PI / 2;
-        break;
-      }
-      case 'zombies_dance':
-        add('zombie', 'dance', new THREE.Vector3(0.5, 0, 0), 0.5, 0);
-        add('zombie', 'dance', new THREE.Vector3(-0.5, 0, 0), 0.5, Math.PI);
-        break;
-      case 'zombie_walker': add('zombie', 'wander', new THREE.Vector3(), 2.5, 0, 0.5); break;
-      case 'ghosts_roam':
-        add('ghost', 'circle', new THREE.Vector3(1.4, 0, 0), 1.4, 0, 0.7);
-        add('ghost', 'circle', new THREE.Vector3(-1.4, 0, 0), 1.4, Math.PI, 0.7);
-        break;
-      case 'ghosts_ball': {
-        const g1 = add('ghost', 'goalie', new THREE.Vector3(-0.6, 0, 0)); g1.facing = Math.PI / 2;
-        const g2 = add('ghost', 'goalie', new THREE.Vector3(0.6, 0, 0)); g2.facing = -Math.PI / 2;
-        // la "palla" è un teschio (vedi descrizione del catalogo)
-        const ball = new THREE.Group();
-        const skullLP = new LP('ghostball:skull');
-        skull(skullLP, 0, -0.1, -0.02, 1);
-        const sk = skullLP.build();
-        ball.add(instantiate({ geometries: sk.geometries, lights: [], height: 0.25, mats: LOWPOLY_MATERIALS, dedicated: true }));
-        this.group.add(ball);
-        g1.extra = ball;
-        break;
-      }
+      made[sp.owner].extra = obj;
     }
   }
 
   /** Rimette in mano boccale, zappa o strumento (anche dopo che il rig è stato ricostruito). */
-  private attachProp(pr: Presence) {
-    if (!pr.prop || !pr.rig.parts.armR) return;
-    if (pr.prop === 'mug' || pr.prop === 'hoe') { pr.rig.parts.armR.add(propMesh(pr.prop)); return; }
-    for (const { side, mesh } of instrumentMeshes(pr.prop)) (side > 0 ? pr.rig.parts.armR : pr.rig.parts.armL)?.add(mesh);
-  }
+  private attachProp(pr: Presence) { attachProp(pr.rig, pr.prop); }
 
-  /** Gli scheletri della banda suonano: archetto, bacchette alternate, tromba che dondola. */
-  private play(pr: Presence, t: number) {
-    const L = pr.rig.parts.armL, R = pr.rig.parts.armR, H = pr.rig.parts.head;
-    if (!L || !R) return;
-    const k = t + pr.pos.x;
-    if (pr.prop === 'violin') { L.rotation.x = -1.2; R.rotation.x = -0.6; R.rotation.z = 0.5 + Math.sin(k * 6) * 0.25; if (H) H.rotation.z = 0.15; }
-    else if (pr.prop === 'sticks') { L.rotation.x = -0.9 + Math.sin(k * 9) * 0.3; R.rotation.x = -0.9 - Math.sin(k * 9) * 0.3; }
-    else { L.rotation.x = -1.4 + Math.sin(k * 2) * 0.08; R.rotation.x = -1.4 + Math.sin(k * 2) * 0.08; if (H) H.rotation.x = -0.2 + Math.sin(k * 2) * 0.08; }
-  }
+  /** Gli scheletri della banda suonano. */
+  private play(pr: Presence, t: number) { playPose(pr.rig, pr.prop as Instrument, t + pr.pos.x); }
 
   /** L'avventore alza il boccale: ogni tanto beve un sorso, poi brinda. */
   private sip(pr: Presence, t: number) {
@@ -1743,6 +1570,7 @@ export class Actors {
     for (const p of this.presences) {
       if (!p.hidden) apply(p);
       if (p.extra && p.extra.userData.lift !== undefined) p.extra.position.y = ground(p.extra.position) + p.extra.userData.lift;
+      if (p.extra?.userData.notes) animateNotes(p.extra, t);
     }
     for (const p of this.pets.values()) { if (p.rig.root.visible) apply(p); p.den.group.position.y = ground(p.home); p.den.update(dt, t, this.glyphs); }
     if (this.funeral) for (const m of this.funeral.members) apply(m);

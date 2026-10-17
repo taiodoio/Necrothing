@@ -68,12 +68,13 @@ export function wreath(lp: LP, x: number, y: number, z: number, tilt = -0.25, sc
 }
 
 /** Candela votiva (accesa: fiamma emissiva + luce con tremolio). */
-export function candle(lp: LP, x: number, y: number, z: number, lit = true, h = 0.12) {
+/** Candela; `light` false: fiamma accesa ma senza sorgente propria (la luce la dà il gruppo). */
+export function candle(lp: LP, x: number, y: number, z: number, lit = true, h = 0.12, light = true) {
   lp.cyl(x, y, z, 0.03, 0.028, h, 6, '#d9cdb2', { jitter: 0, vary: 0.04, ao: 0.1 });
   lp.cyl(x, y + h, z, 0.003, 0.003, 0.02, 3, LPC.charcoal, { jitter: 0 });
   if (lit) {
     lp.cyl(x, y + h + 0.012, z, 0.016, 0, 0.055, 4, LPC.flame, { bucket: 'glow', jitter: 0 });
-    lp.light(x, y + h + 0.05, z, LPC.flame, 0.35, 1.8, 0.4, 0.45);
+    if (light) lp.light(x, y + h + 0.05, z, LPC.flame, 0.35, 1.8, 0.4, 0.45);
   }
 }
 
@@ -167,13 +168,14 @@ export function cobweb(lp: LP, x: number, y: number, zFace: number, size = 0.25,
 }
 
 /** Zucca a spicchi; se intagliata e accesa la faccia brilla e fa luce. */
-export function pumpkin(lp: LP, x: number, y: number, z: number, r = 0.14, carved = true, lit = true, yaw = 0) {
+/** Zucca a spicchi; `detail` 0 per le piccole (meno triangoli), `light` false se la luce la dà il gruppo. */
+export function pumpkin(lp: LP, x: number, y: number, z: number, r = 0.14, carved = true, lit = true, yaw = 0, detail = 1, light = true) {
   const rng = lp.rng;
   lp.push([x, y, z], yaw);
-  const n = 7;
+  const n = detail ? 7 : 6;
   for (let i = 0; i < n; i++) {
     const a = (i / n) * Math.PI * 2;
-    lp.blob(Math.cos(a) * r * 0.45, r * 0.72, Math.sin(a) * r * 0.45, r * 0.55, r * 0.72, r * 0.55, rng.pick(['#c8691f', '#b85d1a', '#d4782a']), { detail: 1, jitter: r * 0.05, vary: 0.08, ao: 0.3 });
+    lp.blob(Math.cos(a) * r * 0.45, r * 0.72, Math.sin(a) * r * 0.45, r * 0.55, r * 0.72, r * 0.55, rng.pick(['#c8691f', '#b85d1a', '#d4782a']), { detail, jitter: r * 0.05, vary: 0.08, ao: 0.3 });
   }
   lp.push([0, r * 1.38, 0], rng.range(-0.5, 0.5), 0.3).cyl(0, 0, 0, r * 0.12, r * 0.08, r * 0.35, 5, '#4d5a2e', { jitter: 0 }).pop();
   if (carved) {
@@ -186,7 +188,7 @@ export function pumpkin(lp: LP, x: number, y: number, z: number, r = 0.14, carve
     const m = new THREE.Shape();
     m.moveTo(-r * 0.5, 0); m.lineTo(-r * 0.3, -r * 0.12); m.lineTo(-r * 0.15, 0); m.lineTo(0, -r * 0.14); m.lineTo(r * 0.15, 0); m.lineTo(r * 0.3, -r * 0.12); m.lineTo(r * 0.5, 0); m.lineTo(r * 0.3, -r * 0.25); m.lineTo(-r * 0.3, -r * 0.25); m.closePath();
     lp.push([0, r * 0.6, r * 0.9]).plate(m, 0.01, face.color, { bucket: face.bucket, ao: 0 }).pop();
-    if (lit) lp.light(0, r * 0.7, r * 0.6, '#ff9a3c', 0.45, 2.4, 0.35, 0.6);
+    if (lit && light) lp.light(0, r * 0.7, r * 0.6, '#ff9a3c', 0.45, 2.4, 0.35, 0.6);
   }
   lp.pop();
 }

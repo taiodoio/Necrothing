@@ -4,7 +4,10 @@
 
 import * as THREE from 'three';
 import { GRAVE_FOOTPRINT } from '../game/balance.ts';
-import { CATALOG } from '../game/catalog.ts';
+import { CATALOG, PRESENCE_TYPES } from '../game/catalog.ts';
+import { DEFAULT_LOOK } from '../game/look.ts';
+import { animateRig, buildRig } from '../view/characters.ts';
+import { attachProp, castPose, playPose, presenceLayout, scenePropObject, type Instrument } from '../view/presences.ts';
 import type { GraveType, GraveVisualState } from '../game/graves.ts';
 import type { ArtStyle } from '../game/state.ts';
 import { getModel, instantiate, type CachedModel } from '../render/modelCache.ts';
@@ -62,7 +65,34 @@ export function placeableThumb(type: string, style: ArtStyle, variant = 0): stri
   const key = `${style}|${placeableKey(v)}`;
   if (cache.has(key)) return cache.get(key)!;
   const g = instantiate(getModel(placeableKey(v), style, () => placeableModel(v), 1));
+  if (PRESENCE_TYPES.has(type)) addCast(g, type, style);
   return snapshot(key, g, CATALOG[type].footprint);
+}
+
+/**
+ * Le presenze si vedono anche in miniatura: chi abita l'oggetto (zombie,
+ * strega, scheletri, fantasmi, gatti, la statua), fermo nella sua posa.
+ * Si ritraggono come di notte, quando ci sono tutti (vampiro, gazebo).
+ */
+function addCast(g: THREE.Group, type: string, style: ArtStyle) {
+  const { cast, props } = presenceLayout({ type, broken: false }, { night: true, tier: 'high' });
+  for (const c of cast) {
+    if (c.hidden) continue;
+    const rig = buildRig(c.kind, style);
+    animateRig(rig, castPose(c), 0.6, 0.7);
+    attachProp(rig, c.prop);
+    if (c.prop && c.prop !== 'mug' && c.prop !== 'hoe') playPose(rig, c.prop as Instrument, 0.4);
+    rig.root.position.set(c.x, c.lift ?? 0, c.z);
+    rig.root.rotation.y = c.facing ?? 0;
+    if (c.size) rig.root.scale.setScalar(c.size);
+    g.add(rig.root);
+  }
+  for (const sp of props) {
+    const obj = scenePropObject(sp.kind, DEFAULT_LOOK);
+    obj.position.set(sp.x, sp.y, sp.z);
+    obj.rotation.y = sp.yaw;
+    g.add(obj);
+  }
 }
 
 export function graveThumb(type: GraveType, style: ArtStyle, state: GraveVisualState = 'clean', seed = 0): string {

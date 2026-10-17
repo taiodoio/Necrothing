@@ -4,7 +4,7 @@
 
 import * as THREE from 'three';
 import { BUSINESS, FOREST_MARGIN, GRAVE_FOOTPRINT, KEEPER_LAMP, LIVE_TICK_MS, SOUL_BELL, STAFF, ZOMBIE_MUD } from '../game/balance.ts';
-import { CATALOG, rotatedFootprint } from '../game/catalog.ts';
+import { CATALOG, CATALOG_LIST, rotatedFootprint } from '../game/catalog.ts';
 import type { GraveVisualState } from '../game/graves.ts';
 import { graveVisualState } from '../game/graves.ts';
 import * as R from '../game/rules.ts';
@@ -17,7 +17,7 @@ import { applyStyleUniforms, cacheStats, clearAll, getModel, instantiate, LOWPOL
 import '../render/lowpoly/index.ts';
 import { setVoxelResolution, voxelResolution, voxelsPerWorldUnit } from '../render/voxelMesher.ts';
 import { graveModel } from '../render/models/graves.ts';
-import { placeableKey, placeableModel, type PVis } from '../render/models/registry.ts';
+import { placeableKey, placeableModel, placeableSeed, seedCount, type PVis } from '../render/models/registry.ts';
 import { UI } from '../ui/UI.ts';
 import { drawerOpen, floater, toast } from '../ui/dom.ts';
 import { Actors, graveSpots, type PetMode, type VisitStop } from '../view/Actors.ts';
@@ -154,6 +154,7 @@ export class Game {
     this.ui.maybeTutorial();
     // un'area sbloccata mentre il gioco era chiuso: lo si dice appena aperto
     setTimeout(() => this.offerExpansion(), 2500);
+    setTimeout(() => this.prewarmModels(), 4000);
   }
 
   start() {
@@ -965,6 +966,35 @@ export class Game {
   }
 
   // ── Impostazioni ─────────────────────────────────────────────────────
+
+  /**
+   * Genera in anticipo, nei momenti di calma, i modelli degli oggetti che si
+   * possono posare (prima quelli in inventario), così posarli non fa scattare
+   * il gioco. Uno per volta: se si sta giocando, aspetta.
+   */
+  private prewarmModels() {
+    const style = this.state.settings.style;
+    // prima quello che hai in inventario, poi quello che puoi comprare, poi il resto
+    const now = this.now();
+    const buyable = CATALOG_LIST.filter((d) => ['ok', 'funds'].includes(R.shopAvailability(this.state, d.id, now))).map((d) => d.id);
+    const types = [...new Set([...Object.keys(this.state.inventory), ...buyable, ...CATALOG_LIST.map((d) => d.id)])];
+    const queue: PVis[] = [];
+    for (const type of types) {
+      if (!CATALOG[type] || CATALOG[type].category === 'extra') continue;
+      for (let seed = 0; seed < seedCount(type); seed++) queue.push({ type, variant: 0, seed: placeableSeed(type, seed), dirty: false, broken: false, lit: true });
+    }
+    const idle = (cb: () => void) => ('requestIdleCallback' in window ? window.requestIdleCallback(cb, { timeout: 300 }) : setTimeout(cb, 60));
+    const step = () => {
+      if (this.disposed || this.state.settings.style !== style) return; // cambiata resa: le forme nuove si generano quando servono
+      // mentre il Custode cammina o si sta posando qualcosa si lascia lavorare il gioco
+      if (this.actors.avatarMoving || this.placement || this.drag) { setTimeout(() => idle(step), 600); return; }
+      const v = queue.shift();
+      if (!v) return;
+      getModel(placeableKey(v), style, () => placeableModel(v), v.seed);
+      idle(step);
+    };
+    idle(step);
+  }
 
   setStyle(style: ArtStyle) {
     if (this.state.settings.style === style) return;

@@ -196,6 +196,12 @@ function gazeboWithCustode(): THREE.Group {
 /** Lampione del gioco (per il confronto). */
 const normalLamp = (variant = 0, broken = false) => lampPost({ type: 'lamp_post', variant, dirty: broken, broken, lit: true, seed: 1 });
 
+/** Triangoli e luci di un modello (per le tavole di confronto). */
+function lpStats(m: LPModel): string {
+  const tris = Object.values(m.geometries).reduce((n, g) => n + (g ? (g.index ? g.index.count : g.getAttribute('position').count) / 3 : 0), 0);
+  return `${(tris / 1000).toFixed(1)}k triangoli, ${m.lights.length} luci`;
+}
+
 function lawn(r0: number, r1: number, n: number, seed: number): THREE.Group {
   const g = new THREE.Group();
   const kinds = ['tuft', 'tuft', 'wgrass', 'pebbles', 'flowers', 'leaves', 'shroom'];
@@ -447,6 +453,14 @@ const SETS: Record<string, Panel[]> = {
     { title: 'Lampione del Custode · notte', night: true, dusk: true, yaw: 0.5, zoom: 1.5, center: [0.1, 1.3, 0], build: () => group(inst(M.custodeLamp2LP(true)), lawn(0.7, 1.4, 12, 41)) },
     { title: 'Accanto a un lampione normale', night: true, dusk: true, yaw: 0.35, zoom: 1.7, center: [0.3, 1.3, 0], build: () => group(inst(M.custodeLamp2LP(true), [-0.5, 0, 0]), inst(normalLamp(), [1.1, 0, 0]), lawn(1.4, 2.0, 14, 42)) },
     { title: 'Dentro il raggio non si rompono, fuori sì', night: true, dusk: true, yaw: Math.PI / 4, pitch: 0.85, zoom: 3.9, center: [0.6, 0.5, 0.6], build: () => group(inst(M.custodeLamp2LP(true)), inst(M.keeperRadiusLP(2.5)), inst(normalLamp(), [1.6, 0, -1.0]), inst(normalLamp(1), [-1.3, 0, 1.5]), inst(normalLamp(2, true), [3.3, 0, 3.0]), char('custode', 'idle', [0.9, 0, -0.9], -0.6), lawn(1.0, 3.4, 26, 43)) },
+  ],
+  '10': [
+    { title: `Altare dei morti · prima (${lpStats(M.ofrenda2LP(true, false))})`, night: true, dusk: true, yaw: 0.4, zoom: 1.6, center: [0, 0.8, 0.2], build: () => group(inst(M.ofrenda2LP(true, false)), lawn(1.4, 2.2, 14, 11)) },
+    { title: `Altare dei morti · leggero (${lpStats(M.ofrenda2LP(true, true))})`, night: true, dusk: true, yaw: 0.4, zoom: 1.6, center: [0, 0.8, 0.2], build: () => group(inst(M.ofrenda2LP(true, true)), lawn(1.4, 2.2, 14, 11)) },
+    { title: `Gazebo · prima (${lpStats(M.gazeboSpookyLP(true, false))})`, night: true, dusk: true, yaw: 0.6, zoom: 2.5, center: [0, 1.3, 0], build: () => group(inst(M.gazeboSpookyLP(true, false)), lawn(2.0, 2.9, 22, 3)) },
+    { title: `Gazebo · leggero (${lpStats(M.gazeboSpookyLP(true, true))})`, night: true, dusk: true, yaw: 0.6, zoom: 2.5, center: [0, 1.3, 0], build: () => group(inst(M.gazeboSpookyLP(true, true)), lawn(2.0, 2.9, 22, 3)) },
+    { title: `Campo di zucche · prima (${lpStats(M.pumpkinPatch2LP(true, false))})`, night: true, dusk: true, yaw: 0.55, pitch: 0.6, zoom: 1.85, center: [0, 0.5, 0], build: () => group(inst(M.pumpkinPatch2LP(true, false)), lawn(1.55, 2.3, 20, 7)) },
+    { title: `Campo di zucche · leggero (${lpStats(M.pumpkinPatch2LP(true, true))})`, night: true, dusk: true, yaw: 0.55, pitch: 0.6, zoom: 1.85, center: [0, 0.5, 0], build: () => group(inst(M.pumpkinPatch2LP(true, true)), lawn(1.55, 2.3, 20, 7)) },
   ],
 };
 

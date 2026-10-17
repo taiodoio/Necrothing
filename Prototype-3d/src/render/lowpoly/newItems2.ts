@@ -44,9 +44,11 @@ function batShape(s = 1): THREE.Shape {
 }
 
 /** Osso con le due teste (balaustrini, braccia). */
-function boneStick(lp: LP, a: V3, b: V3, r: number, col: string = LPC.bone) {
-  tube(lp, a, b, r, col, 5);
-  for (const p of [a, b]) for (const s of [-1, 1]) lp.blob(p[0] + s * r * 0.9, p[1], p[2], r * 1.25, r * 1.25, r * 1.25, col, { jitter: 0 });
+function boneStick(lp: LP, a: V3, b: V3, r: number, col: string = LPC.bone, lite = false) {
+  tube(lp, a, b, r, col, lite ? 4 : 5);
+  // leggero: una testa per estremità, schiacciata di lato (da lontano è lo stesso osso)
+  if (lite) for (const p of [a, b]) lp.blob(p[0], p[1], p[2], r * 2.1, r * 1.2, r * 1.2, col, { jitter: 0 });
+  else for (const p of [a, b]) for (const s of [-1, 1]) lp.blob(p[0] + s * r * 0.9, p[1], p[2], r * 1.25, r * 1.25, r * 1.25, col, { jitter: 0 });
 }
 
 // ── Gazebo delle anime ──────────────────────────────────────────────────
@@ -58,7 +60,7 @@ function boneStick(lp: LP, a: V3, b: V3, r: number, col: string = LPC.bone) {
  * lampadario di candele, grammofono per i balli dei fantasmi, pipistrelli
  * ritagliati nel fregio, ragnatele ed edera secca.
  */
-export function gazeboSpookyLP(lit = true): LPModel {
+export function gazeboSpookyLP(lit = true, lite = true): LPModel {
   const lp = new LP('new2:gazebo');
   const r = lp.rng;
   const WD = '#3b3440', WD2 = '#2c2730', BONE = '#d8cfbe', SLATE = '#3d3f55', SLATE2 = '#33354a';
@@ -92,7 +94,8 @@ export function gazeboSpookyLP(lit = true): LPModel {
       // ringhiera: corrimano scuro, zoccolo, balaustrini a forma di osso
       lp.box(0, 0.5, 0, 0.07, 0.045, len, WD2, { bevel: 0.008 });
       lp.box(0, 0.03, 0, 0.06, 0.05, len, WD2, { jitter: 0 });
-      for (let k = 1; k < 7; k++) boneStick(lp, [0, 0.12, -len / 2 + (k * len) / 7], [0, 0.46, -len / 2 + (k * len) / 7], 0.014, BONE);
+      const nb = lite ? 5 : 7;
+      for (let k = 1; k < nb; k++) boneStick(lp, [0, 0.12, -len / 2 + (k * len) / nb], [0, 0.46, -len / 2 + (k * len) / nb], 0.014, BONE, lite);
     }
     // fregio: trave, merletto a punte e un pipistrello ritagliato al centro di ogni campata
     lp.box(0, H - 0.2, 0, 0.06, 0.08, len, WD2, { jitter: 0 });
@@ -113,7 +116,7 @@ export function gazeboSpookyLP(lit = true): LPModel {
     const f = t * (prof.length - 1) - k;
     const rr = prof[k][0] + (prof[k + 1][0] - prof[k][0]) * f, yy = prof[k][1] + (prof[k + 1][1] - prof[k][1]) * f;
     const slope = Math.atan2(prof[k + 1][1] - prof[k][1], prof[k][0] - prof[k + 1][0]);
-    const n = Math.round(rr * 22);
+    const n = Math.round(rr * (lite ? 15 : 22));
     for (let j = 0; j < n; j++) {
       const a = ((j + (row % 2) * 0.5) / n) * Math.PI * 2;
       lp.push([Math.sin(a) * (rr + 0.01), top + 0.06 + yy, Math.cos(a) * (rr + 0.01)], a, slope)
@@ -141,7 +144,7 @@ export function gazeboSpookyLP(lit = true): LPModel {
   // lampadario di ferro con le candele, appeso al centro
   lp.box(0, top - 0.45, 0, 0.012, 0.45, 0.012, LPC.iron, { jitter: 0 });
   lp.add(new THREE.TorusGeometry(0.3, 0.015, 4, 16).rotateX(Math.PI / 2).translate(0, top - 0.48, 0), LPC.iron, { jitter: 0 });
-  for (let i = 0; i < 6; i++) { const a = (i / 6) * Math.PI * 2; tube(lp, [0, top - 0.3, 0], [Math.cos(a) * 0.3, top - 0.48, Math.sin(a) * 0.3], 0.006, LPC.iron, 3); candle(lp, Math.cos(a) * 0.3, top - 0.47, Math.sin(a) * 0.3, lit, 0.08); }
+  for (let i = 0; i < 6; i++) { const a = (i / 6) * Math.PI * 2; tube(lp, [0, top - 0.3, 0], [Math.cos(a) * 0.3, top - 0.48, Math.sin(a) * 0.3], 0.006, LPC.iron, 3); candle(lp, Math.cos(a) * 0.3, top - 0.47, Math.sin(a) * 0.3, lit, 0.08, !lite); }
   // grammofono su un tavolino (la musica dei balli dei fantasmi) e una sedia
   lp.push([-0.75, base, -0.55], 0.6);
   lp.cyl(0, 0, 0, 0.05, 0.03, 0.45, 5, WD2, { jitter: 0 });
@@ -154,13 +157,15 @@ export function gazeboSpookyLP(lit = true): LPModel {
   // ragnatele, foglie secche, candele sul bordo, un corvo sul corrimano
   for (const i of [2, 4, 6]) { const [x, z] = at(i, R - 0.02); cobweb(lp, x * 0.98, top - 0.22, z * 0.98, 0.24, i === 4); }
   deadLeaves(lp, -R, -R, R, R, 18, base + 0.006);
-  for (const i of [0, 3, 6]) { const [x, z] = at(i, R - 0.2); candle(lp, x, base, z, lit, 0.06 + i * 0.01); }
+  for (const i of [0, 3, 6]) { const [x, z] = at(i, R - 0.2); candle(lp, x, base, z, lit, 0.06 + i * 0.01, !lite); }
   { const [x, z] = at(2, R); lp.blob(x, base + 0.56, z, 0.06, 0.06, 0.09, '#1f2128', { jitter: 0 }); lp.blob(x, base + 0.64, z + 0.04, 0.04, 0.04, 0.04, '#1f2128', { jitter: 0 }); }
   for (let i = 0; i < 5; i++) { const a = r.range(0, 6.28); weeds(lp, Math.sin(a) * (R + 0.25), Math.cos(a) * (R + 0.25), 0.9); }
   if (lit) {
     lp.light(0, top - 0.4, 0, LPC.flame, 1, 5.5, 0.25, 1);
     lp.light(0, cy + 0.1, 0, '#9af0b0', 0.4, 3, 0.2, 0.6);
-    for (const s of [-1, 1]) lp.light(s * 0.58, 0.35, R + 0.45, '#9af0b0', 0.3, 2, 0.3, 0.4);
+    // leggero: le due lanterne dell'ingresso fanno una luce sola
+    if (lite) lp.light(0, 0.35, R + 0.45, '#9af0b0', 0.4, 2.4, 0.3, 0.4);
+    else for (const s of [-1, 1]) lp.light(s * 0.58, 0.35, R + 0.45, '#9af0b0', 0.3, 2, 0.3, 0.4);
   }
   return lp.build();
 }
@@ -259,7 +264,8 @@ export function swamp2LP(lit = true): LPModel {
   const shape = new THREE.Shape(); pts.forEach(([x, y], i) => (i ? shape.lineTo(x, y) : shape.moveTo(x, y))); shape.closePath();
   // fango attorno (più largo), fondale scuro, acqua torbida verde
   lp.push([0, 0.004, 0], 0, -Math.PI / 2, 0, [1.12, 1.15, 1]).plate(shape, 0.012, '#3b3026', { ao: 0, vary: 0.06 }).pop();
-  lp.push([0, 0.012, 0], 0, -Math.PI / 2).plate(shape, 0.012, '#141a16', { ao: 0 }).pop();
+  // di notte il fondale emana un verde fioco che si vede attraverso l'acqua torbida
+  lp.push([0, 0.012, 0], 0, -Math.PI / 2).plate(shape, 0.012, lit ? '#1a3f26' : '#141a16', lit ? { ao: 0, bucket: 'glow' } : { ao: 0 }).pop();
   lp.push([0, 0.035, 0], 0, -Math.PI / 2).plate(shape, 0.01, '#2c4a38', { bucket: 'water', vary: 0.05, ao: 0 }).pop();
   // sponda: sassi, muschio, ciuffi
   for (const [x, y] of pts) {
@@ -295,7 +301,18 @@ export function swamp2LP(lit = true): LPModel {
   emergingHand(lp, 0.1, 0.55, 0.2, 0.9, false);
   // bolle e fuochi fatui verdi che galleggiano
   for (let i = 0; i < 8; i++) lp.blob(r.range(-1, 1), 0.06, r.range(-0.55, 0.55), 0.025, 0.02, 0.025, '#8aa87a', { jitter: 0 });
-  if (lit) for (const [x, z] of [[-1.1, 0.2], [0.8, 0.4]]) { lp.blob(x, 0.35, z, 0.04, 0.05, 0.04, '#b6f06a', { bucket: 'glow', jitter: 0 }); lp.light(x, 0.4, z, '#b6f06a', 0.35, 2.4, 0.5, 0.7); }
+  // palude bioluminescente: alghe che brillano a chiazze sull'acqua, funghi luminosi sul ceppo,
+  // qualche lucciola; una sola luce tenue e larga tinge tutto lo specchio (niente faretti sulle mani)
+  if (lit) {
+    for (let i = 0; i < 16; i++) {
+      const cx = r.range(-1.25, 1.25), cz = r.range(-0.7, 0.7);
+      if ((cx / 1.5) ** 2 + (cz / 0.95) ** 2 > 1) continue;
+      lp.cyl(cx, 0.047, cz, r.range(0.025, 0.05), r.range(0.02, 0.045), 0.004, 6, r.pick(['#a8f070', '#8ae0a0', '#c8ff8a']), { bucket: 'glow', jitter: 0 });
+    }
+    for (const [y, a] of [[0.12, 0.4], [0.24, 1.9], [0.33, 3.4]] as const) lp.blob(1.05 + Math.cos(a) * 0.19, y, -0.45 + Math.sin(a) * 0.19, 0.035, 0.016, 0.035, '#9af0d0', { bucket: 'glow', jitter: 0 });
+    for (let i = 0; i < 5; i++) lp.blob(r.range(-1.2, 1.2), r.range(0.3, 0.7), r.range(-0.6, 0.6), 0.012, 0.012, 0.012, '#d8ff7a', { bucket: 'glow', jitter: 0 });
+    lp.light(0, 0.7, 0, '#8ad870', 0.85, 3.8, 0.25, 0);
+  }
   return lp.build();
 }
 
@@ -787,7 +804,7 @@ export function wispTrailLP(len = 0.6): LPModel {
  * sparse a caso tra viticci e foglie larghe, una gigante, alcune
  * intagliate e accese, spaventapasseri con il sacco di iuta e la paglia.
  */
-export function pumpkinPatch2LP(lit = true): LPModel {
+export function pumpkinPatch2LP(lit = true, lite = true): LPModel {
   const lp = new LP('new2:patch');
   const r = lp.rng;
   // zolla di terra irregolare, solchi appena accennati
@@ -817,7 +834,8 @@ export function pumpkinPatch2LP(lit = true): LPModel {
   }
   spots.forEach(([x, z, s], i) => {
     const carved = i !== 0 && r.chance(0.35);
-    pumpkin(lp, x, 0.03, z, s, carved, lit, r.range(-0.8, 0.8));
+    // leggero: spicchi lisci solo per le zucche grandi; luce solo per le intagliate grandi
+    pumpkin(lp, x, 0.03, z, s, carved, lit, r.range(-0.8, 0.8), lite && s < 0.18 ? 0 : 1, !lite || s >= 0.15);
     if (r.chance(0.35)) lp.blob(x + s * 0.8, 0.03, z, s * 0.4, s * 0.2, s * 0.35, '#3a2a20', { jitter: 0.01 }); // terra smossa
   });
   pumpkin(lp, spots[0][0] + 0.12, 0.03 + 0.42, spots[0][1] + 0.02, 0.09, true, lit, 0.4); // zucchina in cima alla gigante
@@ -844,10 +862,11 @@ export function pumpkinPatch2LP(lit = true): LPModel {
 }
 
 /** Fiore di cempasúchil (pompon arancione a petali arricciati). */
-function marigold(lp: LP, x: number, y: number, z: number, s = 1) {
+function marigold(lp: LP, x: number, y: number, z: number, s = 1, lite = false) {
   const r = lp.rng;
   const c = r.pick(['#f0901f', '#f6a92a', '#e07a1a', '#f4b030']);
-  lp.blob(x, y, z, 0.05 * s, 0.04 * s, 0.05 * s, c, { detail: 1, jitter: 0.012 * s });
+  lp.blob(x, y, z, 0.05 * s, 0.04 * s, 0.05 * s, c, { detail: lite ? 0 : 1, jitter: 0.012 * s });
+  if (lite) { for (let i = 0; i < 2; i++) { const a = i * Math.PI + 0.4; lp.blob(x + Math.cos(a) * 0.035 * s, y - 0.005 * s, z + Math.sin(a) * 0.035 * s, 0.03 * s, 0.02 * s, 0.03 * s, i % 2 ? c : '#d8681a', { jitter: 0.006 * s }); } return; }
   for (let i = 0; i < 6; i++) { const a = (i / 6) * Math.PI * 2; lp.blob(x + Math.cos(a) * 0.035 * s, y - 0.005 * s, z + Math.sin(a) * 0.035 * s, 0.025 * s, 0.018 * s, 0.025 * s, i % 2 ? c : '#d8681a', { jitter: 0.006 * s }); }
 }
 
@@ -870,7 +889,7 @@ function calavera(lp: LP, x: number, y: number, z: number, s = 1, yaw = 0) {
  * ritratti, calaveras, pan de muerto, candele a gruppi, vasi di fiori,
  * bicchiere d'acqua, incensiere col fumo di copale, sentiero di petali.
  */
-export function ofrenda2LP(lit = true): LPModel {
+export function ofrenda2LP(lit = true, lite = true): LPModel {
   const lp = new LP('new2:ofrenda');
   const r = lp.rng;
   const CLOTH = '#7a2a5a';
@@ -890,10 +909,10 @@ export function ofrenda2LP(lit = true): LPModel {
   path(lp, AR, 0.02, 0.02, '#8a7a4a', 4);
   for (let i = 0; i < AR.length; i++) {
     const [x, y, z] = AR[i];
-    marigold(lp, x, y, z + 0.04, 1.1); marigold(lp, x * 0.97, y - 0.06, z - 0.03, 0.9);
+    marigold(lp, x, y, z + 0.04, 1.1, lite); marigold(lp, x * 0.97, y - 0.06, z - 0.03, 0.9, lite);
     if (i % 2) lp.blob(x * 1.05, y, z, 0.04, 0.012, 0.03, '#4d6a2e', { jitter: 0 });
   }
-  for (const s of [-1, 1]) for (let k = 0; k < 8; k++) marigold(lp, s * 0.95 + r.range(-0.03, 0.03), 0.1 + k * 0.11, -0.31, 1);
+  for (const s of [-1, 1]) for (let k = 0; k < 8; k++) marigold(lp, s * 0.95 + r.range(-0.03, 0.03), 0.1 + k * 0.11, -0.31, 1, lite);
   // papel picado: fogli traforati su due fili, colori vivi
   const PC = ['#e04a7a', '#f0c02a', '#3ab0a0', '#9a5ad0', '#f0702a'];
   for (const [row, yy] of [[0, 1.55], [1, 1.32]] as const) {
@@ -903,7 +922,7 @@ export function ofrenda2LP(lit = true): LPModel {
       const sh = new THREE.Shape(); sh.moveTo(-0.09, 0); sh.lineTo(0.09, 0); sh.lineTo(0.09, -0.17);
       for (let k = 0; k < 5; k++) sh.lineTo(0.09 - (k + 0.5) * 0.036, k % 2 ? -0.17 : -0.2);
       sh.lineTo(-0.09, -0.17); sh.closePath();
-      for (const [hx, hy, hr] of [[0, -0.07, 0.035], [-0.05, -0.12, 0.018], [0.05, -0.12, 0.018], [0, -0.14, 0.014]]) { const hole = new THREE.Path(); hole.absarc(hx, hy, hr, 0, Math.PI * 2, true); sh.holes.push(hole); }
+      for (const [hx, hy, hr] of (lite ? [[0, -0.07, 0.035], [0, -0.135, 0.016]] : [[0, -0.07, 0.035], [-0.05, -0.12, 0.018], [0.05, -0.12, 0.018], [0, -0.14, 0.014]])) { const hole = new THREE.Path(); hole.absarc(hx, hy, hr, 0, Math.PI * 2, true); sh.holes.push(hole); }
       lp.push([x, y, -0.25 + row * 0.01]).plate(sh, 0.004, PC[(i + row) % PC.length], { ao: 0 }).pop();
     }
   }
@@ -937,16 +956,18 @@ export function ofrenda2LP(lit = true): LPModel {
   // vasi con mazzi di cempasúchil ai lati
   for (const s of [-1, 1]) {
     lp.lathe(s * 0.82, 0.31, 0.3, [[0.0, 0], [0.07, 0], [0.09, 0.08], [0.06, 0.18], [0.07, 0.22], [0, 0.22]], 8, '#3a7ab0', { jitter: 0 });
-    for (let k = 0; k < 6; k++) { const a = (k / 6) * Math.PI * 2; tube(lp, [s * 0.82, 0.52, 0.3], [s * 0.82 + Math.cos(a) * 0.08, 0.68 + (k % 2) * 0.06, 0.3 + Math.sin(a) * 0.06], 0.006, '#4d6a2e', 3); marigold(lp, s * 0.82 + Math.cos(a) * 0.08, 0.7 + (k % 2) * 0.06, 0.3 + Math.sin(a) * 0.06, 0.9); }
+    for (let k = 0; k < 6; k++) { const a = (k / 6) * Math.PI * 2; tube(lp, [s * 0.82, 0.52, 0.3], [s * 0.82 + Math.cos(a) * 0.08, 0.68 + (k % 2) * 0.06, 0.3 + Math.sin(a) * 0.06], 0.006, '#4d6a2e', 3); marigold(lp, s * 0.82 + Math.cos(a) * 0.08, 0.7 + (k % 2) * 0.06, 0.3 + Math.sin(a) * 0.06, 0.9, lite); }
   }
   // candele a gruppi di altezze diverse
   for (const [x, y, z, n] of [[-0.85, 0.31, 0.45, 3], [0.05, 0.31, 0.45, 4], [0.85, 0.31, 0.48, 2], [-0.7, 0.61, 0.15, 2], [0.65, 0.61, 0.12, 3], [0.0, 0.91, -0.12, 3]] as const) {
-    for (let k = 0; k < n; k++) candle(lp, x + (k - (n - 1) / 2) * 0.06, y, z + (k % 2) * 0.04, lit, 0.06 + r.next() * 0.12);
+    for (let k = 0; k < n; k++) candle(lp, x + (k - (n - 1) / 2) * 0.06, y, z + (k % 2) * 0.04, lit, 0.06 + r.next() * 0.12, !lite);
   }
   // sentiero di petali e candele a terra davanti
-  for (let i = 0; i < 70; i++) { const t = r.next(); lp.blob(r.range(-0.25, 0.25) * (1 - t * 0.4), 0.005, 0.6 + t * 0.55, 0.02, 0.005, 0.016, r.pick(['#f0901f', '#f6a92a', '#e07a1a']), { jitter: 0 }); }
-  for (const s of [-1, 1]) candle(lp, s * 0.35, 0, 0.95, lit, 0.1);
+  for (let i = 0; i < (lite ? 32 : 70); i++) { const t = r.next(); lp.blob(r.range(-0.25, 0.25) * (1 - t * 0.4), 0.005, 0.6 + t * 0.55, 0.02, 0.005, 0.016, r.pick(['#f0901f', '#f6a92a', '#e07a1a']), { jitter: 0 }); }
+  for (const s of [-1, 1]) candle(lp, s * 0.35, 0, 0.95, lit, 0.1, !lite);
   if (lit) { lp.light(0, 0.8, 0.5, LPC.flame, 0.7, 4.5, 0.35, 0.9); lp.light(0, 1.2, -0.1, LPC.flame, 0.4, 3, 0.35, 0.6); }
+  // leggero: le candele non hanno ciascuna la sua luce; ne bastano due in più, una per lato
+  if (lit && lite) { for (const s of [-1, 1]) lp.light(s * 0.75, 0.6, 0.4, LPC.flame, 0.7, 3.2, 0.4, 0.6); lp.light(0, 0.45, 0.9, LPC.flame, 0.5, 2.6, 0.4, 0.5); }
   return lp.build();
 }
 

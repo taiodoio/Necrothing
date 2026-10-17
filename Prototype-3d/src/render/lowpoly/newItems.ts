@@ -493,8 +493,9 @@ export function hellCrackLP(lit = true): LPModel {
   for (let i = 0; i < 7; i++) lp.blob(r.range(-1.2, 1.2), 0.06, r.range(-0.7, 0.7) * (i % 2 ? 1 : -1), r.range(0.08, 0.16), r.range(0.06, 0.12), r.range(0.08, 0.14), i % 3 ? '#2a2422' : '#4a2a24', { vary: 0.12 });
   if (lit) {
     for (let i = 0; i < 6; i++) lp.blob(r.range(-1, 1), r.range(0.2, 0.7), r.range(-0.1, 0.15), 0.02, 0.02, 0.02, '#ffb347', { bucket: 'glow', jitter: 0 });
-    lp.light(-0.5, 0.3, 0, '#ff6a2a', 0.8, 3.5, 0.5, 0.8);
-    lp.light(0.6, 0.3, 0, '#ff6a2a', 0.8, 3.5, 0.5, 0.8);
+    // la luce sale dalla fessura, bassa e raccolta: niente alone, solo il riverbero sui bordi
+    lp.light(-0.55, 0.08, 0.05, '#ff6a2a', 0.6, 2.4, 0.5, 0.12);
+    lp.light(0.65, 0.08, 0, '#ff6a2a', 0.6, 2.4, 0.5, 0.12);
   }
   return lp.build();
 }
@@ -659,9 +660,10 @@ export function loversBenchLP(lit = true): LPModel {
 
 // ── Oggetti di scena delle presenze ─────────────────────────────────────
 
-/** Palchetto della banda di scheletri (3×2): pedana, leggii e strumenti appoggiati. */
-export function bandStageLP(lit = true): LPModel {
+/** Palchetto della banda di scheletri: pedana, leggii e strumenti appoggiati; `back` lo sposta indietro (davanti si balla). */
+export function bandStageLP(lit = true, back = 0): LPModel {
   const lp = new LP('new:band');
+  lp.push([0, 0, back]);
   for (let i = 0; i < 8; i++) lp.box(-1.25 + i * 0.36, 0, -0.1, 0.34, 0.12, 1.6, i % 2 ? LPC.wood : LPC.woodDark, { bevel: 0.006, vary: 0.1 });
   for (const x of [-0.9, 0.9]) {
     lp.cyl(x, 0.12, -0.25, 0.015, 0.015, 0.75, 4, LPC.iron, { jitter: 0 });
@@ -677,7 +679,9 @@ export function bandStageLP(lit = true): LPModel {
     lp.cyl(s * 1.3, 0.12, 0.6, 0.02, 0.02, 1.0, 5, LPC.woodDark, { jitter: 0 });
     lp.blob(s * 1.3, 1.12, 0.6, 0.05, 0.07, 0.05, lit ? LPC.lantern : '#3c3a35', lit ? { bucket: 'glow', jitter: 0 } : { jitter: 0 });
   }
-  if (lit) lp.light(0, 1.0, 0.5, LPC.lantern, 0.7, 4.5, 0.25, 0.7);
+  // una luce piccola per lanterna, così il palco è illuminato dai lati e non da una macchia al centro
+  if (lit) for (const s of [-1, 1]) lp.light(s * 1.3, 1.1, 0.6, LPC.lantern, 0.4, 2.6, 0.25, 0.3);
+  lp.pop();
   return lp.build();
 }
 

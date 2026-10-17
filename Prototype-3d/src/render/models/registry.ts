@@ -107,6 +107,11 @@ const BUILDERS: Record<string, (v: PVis) => Model> = {
 /** Quanti semi distinti per tipo (oggetti ripetuti come i sentieri variano). */
 const SEED_VARIANTS: Record<string, number> = { path_stone: 6, path_dirt: 3, tall_grass: 4, wall_stone: 4, fence_wood: 4, fence_iron: 1, dead_tree: 5, bushes: 4 };
 
+/** Quanti semi diversi può avere un tipo (per generare in anticipo tutte le sue forme). */
+export function seedCount(type: string): number {
+  return SEED_VARIANTS[visualOf(type, 0).type] ?? 2;
+}
+
 export function placeableSeed(type: string, idHash: number): number {
   return idHash % (SEED_VARIANTS[type] ?? 2);
 }

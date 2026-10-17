@@ -60,7 +60,7 @@ function boneStick(lp: LP, a: V3, b: V3, r: number, col: string = LPC.bone, lite
  * lampadario di candele, grammofono per i balli dei fantasmi, pipistrelli
  * ritagliati nel fregio, ragnatele ed edera secca.
  */
-export function gazeboSpookyLP(lit = true, lite = false): LPModel {
+export function gazeboSpookyLP(lit = true, lite = true): LPModel {
   const lp = new LP('new2:gazebo');
   const r = lp.rng;
   const WD = '#3b3440', WD2 = '#2c2730', BONE = '#d8cfbe', SLATE = '#3d3f55', SLATE2 = '#33354a';
@@ -804,7 +804,7 @@ export function wispTrailLP(len = 0.6): LPModel {
  * sparse a caso tra viticci e foglie larghe, una gigante, alcune
  * intagliate e accese, spaventapasseri con il sacco di iuta e la paglia.
  */
-export function pumpkinPatch2LP(lit = true, lite = false): LPModel {
+export function pumpkinPatch2LP(lit = true, lite = true): LPModel {
   const lp = new LP('new2:patch');
   const r = lp.rng;
   // zolla di terra irregolare, solchi appena accennati
@@ -889,7 +889,7 @@ function calavera(lp: LP, x: number, y: number, z: number, s = 1, yaw = 0) {
  * ritratti, calaveras, pan de muerto, candele a gruppi, vasi di fiori,
  * bicchiere d'acqua, incensiere col fumo di copale, sentiero di petali.
  */
-export function ofrenda2LP(lit = true, lite = false): LPModel {
+export function ofrenda2LP(lit = true, lite = true): LPModel {
   const lp = new LP('new2:ofrenda');
   const r = lp.rng;
   const CLOTH = '#7a2a5a';

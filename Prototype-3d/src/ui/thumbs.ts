@@ -7,7 +7,7 @@ import { GRAVE_FOOTPRINT } from '../game/balance.ts';
 import { CATALOG, PRESENCE_TYPES } from '../game/catalog.ts';
 import { DEFAULT_LOOK } from '../game/look.ts';
 import { animateRig, buildRig } from '../view/characters.ts';
-import { attachProp, castPose, presenceLayout, propPose, scenePropObject } from '../view/presences.ts';
+import { attachProp, castPose, dimGhosts, presenceLayout, propPose, scenePropObject } from '../view/presences.ts';
 import type { GraveType, GraveVisualState } from '../game/graves.ts';
 import type { ArtStyle } from '../game/state.ts';
 import { getModel, instantiate, type CachedModel } from '../render/modelCache.ts';
@@ -88,6 +88,7 @@ function addCast(g: THREE.Group, type: string, style: ArtStyle) {
     rig.root.position.set(c.x, c.lift ?? 0, c.z);
     rig.root.rotation.y = c.facing ?? 0;
     if (c.size) rig.root.scale.setScalar(c.size);
+    dimGhosts(rig.root, c.dim);
     g.add(rig.root);
   }
   for (const sp of props) {

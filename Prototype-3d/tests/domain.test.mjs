@@ -588,3 +588,124 @@ test('varianti: i salvataggi vecchi trasformano le varianti posate negli oggetti
   // la nuova partita usa già gli oggetti nuovi
   assert.ok(createNewGame(NOW, 4).placeables.some((p) => p.type === 'lamp_post_gothic'));
 });
+
+test('nuovi sbloccabili: in prova si comprano subito (rango, stagione e traguardo saltati), il prezzo resta', () => {
+  const s = createNewGame(NOW, 7);
+  s.player.wisps = 10_000;
+  for (const id of ['keeper_lamp', 'reaper_statue', 'keeper_statue', 'soul_gazebo', 'vampire_crypt', 'lovers_bench', 'skeleton_snowman', 'mystic_staff', 'broom']) {
+    assert.equal(R.shopAvailability(s, id, NOW), 'ok', id);
+  }
+  const before = s.player.wisps;
+  R.buy(s, 'reaper_statue', 1, NOW);
+  assert.equal(before - s.player.wisps, 50);
+  R.buy(s, 'mystic_staff', 1, NOW); // si prende gratis
+  assert.equal(before - s.player.wisps, 50);
+});
+
+test('nuovi sbloccabili: a regime servono rango, stagione e traguardo', async () => {
+  const { CATALOG, isSeasonallyAvailable } = await import('../src/game/catalog.ts');
+  RELEASE_LOCKS.earlyRank = true;
+  try {
+    const s = createNewGame(NOW, 7);
+    s.player.wisps = 10_000;
+    assert.equal(R.shopAvailability(s, 'reaper_statue', NOW), 'rank');
+    s.player.xp = 99_999;
+    // a ottobre la panchina degli innamorati (febbraio) no, il campo di zucche sì
+    assert.equal(R.shopAvailability(s, 'lovers_bench', NOW), 'season');
+    assert.equal(R.shopAvailability(s, 'pumpkin_patch', NOW), 'ok');
+    // il lampione del custode chiede 25 luci riparate, il bastone 500 fuochi fatui guadagnati
+    assert.equal(R.shopAvailability(s, 'keeper_lamp', NOW), 'feat');
+    s.player.counters.lightsRepaired = 25;
+    assert.equal(R.shopAvailability(s, 'keeper_lamp', NOW), 'ok');
+    assert.equal(R.shopAvailability(s, 'mystic_staff', NOW), 'feat');
+    assert.equal(R.hatUnlocked(s, 'witch'), false);
+    s.player.counters.potionsSold = 30;
+    assert.equal(R.hatUnlocked(s, 'witch'), true);
+    // finestre a cavallo di mese e d'anno
+    const altar = CATALOG.dead_altar, snow = CATALOG.skeleton_snowman;
+    assert.ok(isSeasonallyAvailable(altar, 9, 31) && isSeasonallyAvailable(altar, 10, 2));
+    assert.ok(!isSeasonallyAvailable(altar, 9, 30) && !isSeasonallyAvailable(altar, 10, 3));
+    assert.ok(isSeasonallyAvailable(snow, 11, 20) && isSeasonallyAvailable(snow, 0, 10) && !isSeasonallyAvailable(snow, 1, 1));
+  } finally { RELEASE_LOCKS.earlyRank = false; }
+});
+
+test('contatori dei traguardi: luci riparate, fuochi fatui guadagnati, pozioni vendute', () => {
+  const s = createNewGame(NOW, 7);
+  const lamp = s.placeables.find((p) => p.type === 'lamp_post');
+  lamp.broken = true; lamp.dirty = true;
+  R.repairPlaceable(s, lamp.id, NOW);
+  assert.equal(s.player.counters.lightsRepaired, 1);
+  const earned = s.player.counters.wispsEarned;
+  R.collectWisp(s, s.world.looseWisps[0].id);
+  assert.equal(s.player.counters.wispsEarned, earned + 1);
+  s.player.wisps = 1000;
+  R.buy(s, 'witch_corner', 1, NOW);
+  const at = spot(s, [2, 2]);
+  const w = R.placeFromInventory(s, 'witch_corner', at.x, at.y, 0, NOW);
+  const n = R.businessPending(s, w.id, later(2));
+  assert.ok(n >= 6 && n <= 12);
+  R.collectBusiness(s, w.id, later(2));
+  assert.equal(s.player.counters.potionsSold, n);
+});
+
+test('Lampione del Custode: le luci vicine si sporcano ma non si rompono; quelle lontane sì', async () => {
+  const { keeperProtected } = await import('../src/game/simulation.ts');
+  const s = createNewGame(NOW, 7);
+  s.player.wisps = 1000;
+  const near = s.placeables.find((p) => p.type === 'lamp_post'); // (30, 26)
+  const far = s.placeables.find((p) => p.type === 'lamp_post_double'); // (30, 45)
+  R.buy(s, 'keeper_lamp', 1, NOW);
+  const at = nearestFreeSpot(near.x + 2, near.y, [1, 1], buildOccupancy(s), areaForLevel(0));
+  const k = R.placeFromInventory(s, 'keeper_lamp', at.x, at.y, 0, NOW);
+  assert.equal(keeperProtected(s, near), true);
+  assert.equal(keeperProtected(s, far), false);
+  runCatchUp(s, later(60));
+  assert.equal(near.broken, false);
+  assert.equal(near.dirty, true);
+  assert.equal(far.broken, true);
+  assert.equal(k.broken, false); // protegge anche sé stesso
+});
+
+test('campana delle anime: si suona una volta al giorno, non se è rotta', () => {
+  const s = createNewGame(NOW, 7);
+  s.player.wisps = 1000;
+  R.buy(s, 'soul_bell', 1, NOW);
+  const at = spot(s, [2, 2]);
+  const b = R.placeFromInventory(s, 'soul_bell', at.x, at.y, 0, NOW);
+  assert.ok(R.bellReady(s, b.id, NOW));
+  R.ringBell(s, b.id, NOW);
+  assert.ok(!R.bellReady(s, b.id, NOW));
+  assert.throws(() => R.ringBell(s, b.id, new Date(NOW.getTime() + 3_600_000)), R.GameError);
+  assert.ok(R.bellReady(s, b.id, later(1)));
+  b.broken = true;
+  assert.throws(() => R.ringBell(s, b.id, later(1)), R.GameError);
+});
+
+test('zombie e fango: sporca una tomba pulita, avvicina la rottura di una sporca, mai rompe; le tombe appena curate sono al riparo', () => {
+  const s = createNewGame(NOW, 7);
+  const clean = s.graves.find((g) => !g.dirty && !g.weeds && !g.hasFlowers);
+  assert.ok(R.zombieTrample(s, clean.id, NOW));
+  assert.ok(clean.dirty && clean.muddy && !clean.broken);
+  // già sporca: un giorno più vicina alla rottura (ma non oltre l'ultima ora)
+  const since = new Date(clean.dirtySince).getTime();
+  R.zombieTrample(s, clean.id, NOW);
+  assert.equal(new Date(clean.dirtySince).getTime(), since - 86_400_000);
+  for (let i = 0; i < 20; i++) R.zombieTrample(s, clean.id, NOW);
+  assert.equal(clean.broken, false);
+  assert.ok(NOW.getTime() - new Date(clean.dirtySince).getTime() < DECAY.graveBreakDays * 86_400_000);
+  // pulita ora: per qualche ora resta al riparo, e le impronte vanno via
+  R.cleanGrave(s, clean.id, NOW);
+  assert.equal(clean.muddy, false);
+  assert.equal(R.zombieTrample(s, clean.id, new Date(NOW.getTime() + 3_600_000)), false);
+  assert.equal(R.zombieTrample(s, clean.id, new Date(NOW.getTime() + 8 * 3_600_000)), true);
+  // fiori freschi: al riparo
+  const fl = s.graves.find((g) => g.hasFlowers);
+  fl.flowersAt = NOW.toISOString();
+  assert.equal(R.zombieTrample(s, fl.id, new Date(NOW.getTime() + 3_600_000)), false);
+});
+
+test('crepa infernale: chiama i fantasmi come il buco infernale', () => {
+  const s = createNewGame(NOW, 7);
+  s.placeables.push({ id: 'c1', type: 'hell_crack', x: 40, y: 40, rot: 0, variant: 0, lit: true, caredAt: NOW.toISOString(), dirty: false, broken: false, createdAt: NOW.toISOString() });
+  assert.equal(countBuildings(s).hellCrack, 1);
+});

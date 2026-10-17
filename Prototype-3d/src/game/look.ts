@@ -6,7 +6,7 @@ export type HairStyle = 'tufts' | 'bob' | 'long' | 'curly' | 'longcurly' | 'bun'
   | 'fringe' | 'fringeLong' | 'side' | 'sideLong' | 'wavy' | 'wavyLong' | 'buzz';
 /** Testa: umana, zucca intagliata, teschio, zombie. */
 export type HeadStyle = 'human' | 'pumpkin' | 'skull' | 'zombie';
-export type HatStyle = 'wide' | 'top' | 'beanie' | 'none';
+export type HatStyle = 'wide' | 'top' | 'beanie' | 'witch' | 'none';
 export type Outfit = 'coat' | 'cloak' | 'overalls' | 'sweater';
 export type Glasses = 'none' | 'round' | 'square' | 'monocle';
 export type Beard = 'none' | 'short' | 'full' | 'braid';
@@ -53,7 +53,7 @@ export const LOOK_STYLES = {
     ['fringe', 'Frangia corta'], ['fringeLong', 'Frangia lunga'], ['side', 'Di lato corti'], ['sideLong', 'Di lato lunghi'], ['wavy', 'Mossi corti'],
     ['wavyLong', 'Mossi lunghi'], ['curly', 'Ricci'], ['longcurly', 'Ricci lunghi'], ['bun', 'Chignon'], ['none', 'Nessuno'],
   ] as Array<[HairStyle, string]>,
-  hat: [['wide', 'Tesa larga'], ['top', 'Cilindro'], ['beanie', 'Berretto'], ['none', 'Nessuno']] as Array<[HatStyle, string]>,
+  hat: [['wide', 'Tesa larga'], ['top', 'Cilindro'], ['beanie', 'Berretto'], ['witch', 'Da strega'], ['none', 'Nessuno']] as Array<[HatStyle, string]>,
   outfit: [['coat', 'Cappotto'], ['cloak', 'Mantella'], ['overalls', 'Salopette'], ['sweater', 'Maglione']] as Array<[Outfit, string]>,
   glasses: [['none', 'Nessuno'], ['round', 'Tondi'], ['square', 'Squadrati'], ['monocle', 'Monocolo']] as Array<[Glasses, string]>,
   beard: [['none', 'Nessuna'], ['short', 'Corta'], ['full', 'Folta'], ['braid', 'Con treccia']] as Array<[Beard, string]>,

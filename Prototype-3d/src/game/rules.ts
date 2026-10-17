@@ -2,8 +2,8 @@
 // rispetto a three/DOM. Ogni azione muta lo SaveData passato e ritorna un
 // esito (messaggio + ricompense) oppure lancia GameError.
 
-import { BUSINESS, DECAY, EARLY_ACCESS, ECONOMY, RELEASE_LOCKS, EXPANSION, GRAVE_FOOTPRINT, GRAVEDIGGER, WISP_SPAWN, WISPS, XP } from './balance.ts';
-import { CATALOG, isSeasonallyAvailable, placeableDef, repairCost, rotatedFootprint } from './catalog.ts';
+import { BUSINESS, DECAY, EARLY_ACCESS, ECONOMY, HAT_FEATS, RELEASE_LOCKS, EXPANSION, GRAVE_FOOTPRINT, GRAVEDIGGER, WISP_SPAWN, WISPS, XP, ZOMBIE_MUD } from './balance.ts';
+import { CATALOG, isSeasonallyAvailable, placeableDef, repairCost, rotatedFootprint, type PlaceableDef } from './catalog.ts';
 import { CATEGORIES, DEATH_CAUSES, GRAVE_TYPE_MIN_RANK, GRAVE_TYPES, type Category, type DeathCause, type GraveType } from './graves.ts';
 import { evaluateAchievements, rankForXp, type AchievementDef } from './progression.ts';
 import { hashString, newId } from './rng.ts';
@@ -25,6 +25,7 @@ const ok = (message: string, xp = 0, wisps = 0): ActionResult => ({ message, xp,
 function reward(s: SaveData, xp: number, wisps: number) {
   s.player.xp += xp;
   s.player.wisps += wisps;
+  if (wisps > 0) s.player.counters.wispsEarned += wisps;
 }
 
 function spend(s: SaveData, amount: number, what: string) {
@@ -178,6 +179,7 @@ export function bringFlowers(s: SaveData, graveId: string, now: Date): ActionRes
   const alreadyToday = g.hasFlowers && g.flowersAt?.slice(0, 10) === now.toISOString().slice(0, 10);
   g.hasFlowers = true;
   g.flowersAt = now.toISOString();
+  g.caredAt = now.toISOString();
   if (alreadyToday) return ok('I fiori sono ancora freschi.');
   memory(s, g.id, 'flower', now);
   s.player.counters.flowersBrought++;
@@ -188,8 +190,9 @@ export function bringFlowers(s: SaveData, graveId: string, now: Date): ActionRes
 export function cleanGrave(s: SaveData, graveId: string, now: Date): ActionResult {
   const g = graveById(s, graveId);
   if (g.broken) throw new GameError('La tomba è rotta: va prima riparata.');
+  g.caredAt = now.toISOString();
   if (!g.dirty && !g.weeds) return ok('È già in ordine.');
-  g.dirty = false; g.weeds = false; g.dirtySince = null;
+  g.dirty = false; g.weeds = false; g.dirtySince = null; g.muddy = false;
   memory(s, g.id, 'cleaned', now);
   s.player.counters.cleanups++;
   reward(s, XP.cleaned, WISPS.cleaned);
@@ -200,7 +203,7 @@ export function repairGrave(s: SaveData, graveId: string, now: Date): ActionResu
   const g = graveById(s, graveId);
   if (!g.broken) return ok('Non c’è nulla da riparare.');
   spend(s, DECAY.graveRepairCost, 'riparare');
-  g.broken = false; g.dirty = false; g.weeds = false; g.dirtySince = null;
+  g.broken = false; g.dirty = false; g.weeds = false; g.dirtySince = null; g.muddy = false; g.caredAt = now.toISOString();
   memory(s, g.id, 'repaired', now);
   s.player.counters.repairs++;
   reward(s, XP.repaired, 0);
@@ -234,7 +237,7 @@ export function gravediggerClean(s: SaveData, id: string, now: Date): ActionResu
   const g = s.graves.find((x) => x.id === id);
   const p = g ? undefined : s.placeables.find((x) => x.id === id);
   if (g && !g.broken && (g.dirty || g.weeds)) {
-    g.dirty = false; g.weeds = false; g.dirtySince = null;
+    g.dirty = false; g.weeds = false; g.dirtySince = null; g.muddy = false;
     memory(s, g.id, 'cleaned', now);
   } else if (p && !p.broken && p.dirty) {
     p.dirty = false; p.caredAt = now.toISOString();
@@ -299,6 +302,7 @@ export function repairPlaceable(s: SaveData, id: string, now: Date): ActionResul
   spend(s, cost, 'riparare');
   p.broken = false; p.dirty = false; p.caredAt = now.toISOString();
   s.player.counters.repairs++;
+  if (CATALOG[p.type]?.light) s.player.counters.lightsRepaired++;
   reward(s, XP.repaired, 0);
   return ok('Riparato.', XP.repaired, -cost);
 }
@@ -328,18 +332,32 @@ export function placedCount(s: SaveData, type: string): number {
   return s.placeables.filter((p) => p.type === type).length;
 }
 
-export type ShopAvailability = 'ok' | 'rank' | 'season' | 'owned' | 'graves' | 'funds';
+export type ShopAvailability = 'ok' | 'rank' | 'season' | 'feat' | 'owned' | 'graves' | 'funds';
 
 /** Tombe che contano per gli sblocchi: quelle nel cimitero più quelle affidate all'albero. */
 export function graveTotal(s: SaveData): number {
   return s.graves.length + (s.entrusted?.length ?? 0);
 }
 
+/** A che punto è il traguardo che sblocca un oggetto (o un cappello): [fatto, obiettivo]. */
+export function featProgress(s: SaveData, feat: NonNullable<PlaceableDef['feat']>): [number, number] {
+  return [Math.min(feat.goal, s.player.counters[feat.counter] ?? 0), feat.goal];
+}
+
+/** Il cappello da strega (e gli altri cappelli a traguardo) si può indossare? */
+export function hatUnlocked(s: SaveData, hat: string): boolean {
+  const f = HAT_FEATS[hat as keyof typeof HAT_FEATS];
+  if (!f || !RELEASE_LOCKS.earlyRank) return true; // in prova sono tutti liberi
+  return (s.player.counters[f.counter] ?? 0) >= f.goal;
+}
+
 export function shopAvailability(s: SaveData, type: string, now: Date): ShopAvailability {
   const def = placeableDef(type);
-  if (!isSeasonallyAvailable(def, now.getMonth())) return 'season';
   const early = !RELEASE_LOCKS.earlyRank && EARLY_ACCESS.has(type);
+  // gli stagionali già comprati restano: si comprano solo nella loro stagione
+  if (!early && !isSeasonallyAvailable(def, now.getMonth(), now.getDate())) return 'season';
   if (!early && def.minRank > rankForXp(s.player.xp).level) return 'rank';
+  if (!early && def.feat && featProgress(s, def.feat)[0] < def.feat.goal) return 'feat';
   if (def.unique && ownedCount(s, type) + placedCount(s, type) > 0) return 'owned';
   if (RELEASE_LOCKS.minGraves && def.minGraves && graveTotal(s) < def.minGraves) return 'graves';
   if (s.player.wisps < def.cost) return 'funds';
@@ -357,6 +375,7 @@ export function buy(s: SaveData, type: string, qty: number, now: Date): ActionRe
   const avail = shopAvailability(s, type, now);
   if (avail === 'season') throw new GameError('Non è la stagione giusta.');
   if (avail === 'rank') throw new GameError(`Serve il rango ${def.minRank}.`);
+  if (avail === 'feat') throw new GameError(`Si sblocca con un traguardo: ${def.feat!.label.toLowerCase()}.`);
   if (avail === 'owned') throw new GameError('Ne possiedi già uno: è un pezzo unico.');
   const n = Math.max(1, Math.min(qty, maxBuyable(s, type)));
   if (maxBuyable(s, type) < 1) throw new GameError('Fuochi fatui insufficienti.');
@@ -471,9 +490,61 @@ export function businessPending(s: SaveData, id: string, now: Date): number {
 export function collectBusiness(s: SaveData, id: string, now: Date): ActionResult {
   const n = businessPending(s, id, now);
   if (n < 1) throw new GameError('Oggi non c’è ancora niente da riscuotere.');
-  placedById(s, id).collectedAt = now.toISOString();
+  const p = placedById(s, id);
+  p.collectedAt = now.toISOString();
   reward(s, 0, n);
+  if (p.type === 'witch_corner') {
+    s.player.counters.potionsSold += n;
+    return ok(`La strega ha venduto ${n} ${n === 1 ? 'pozione' : 'pozioni'}: +${n} fuochi fatui.`, 0, n);
+  }
   return ok(`Incasso: +${n} fuochi fatui.`, 0, n);
+}
+
+// ── Campana delle anime ─────────────────────────────────────────────────
+
+/** Si può suonare la campana oggi? (Una volta al giorno, e non se è rotta.) */
+export function bellReady(s: SaveData, id: string, now: Date): boolean {
+  const p = s.placeables.find((x) => x.id === id);
+  return !!p && !p.broken && (!p.rungAt || isoDate(new Date(p.rungAt)) !== isoDate(now));
+}
+
+/** Il Custode suona la campana: le anime del cimitero accorrono (le fa comparire la vista). */
+export function ringBell(s: SaveData, id: string, now: Date): ActionResult {
+  const p = placedById(s, id);
+  if (p.type !== 'soul_bell') throw new GameError('Non è una campana.');
+  if (p.broken) throw new GameError('È rotta: va prima riparata.');
+  if (!bellReady(s, id, now)) throw new GameError('La campana ha già suonato oggi: le anime tornano domani.');
+  p.rungAt = now.toISOString();
+  return ok('Din… don… Le anime del cimitero accorrono.');
+}
+
+// ── Zombie e fango ──────────────────────────────────────────────────────
+
+/** Tomba appena curata (pulita, riparata, fiori freschi): per qualche ora gli zombie la lasciano stare. */
+export function graveProtected(g: Grave, now: Date): boolean {
+  const recent = (iso: string | null | undefined) => !!iso && now.getTime() - new Date(iso).getTime() < ZOMBIE_MUD.protectHours * 3_600_000;
+  return recent(g.caredAt) || (g.hasFlowers && recent(g.flowersAt));
+}
+
+/**
+ * Uno zombie passa sulla tomba: se era in ordine la sporca, se era già sporca
+ * la rottura si avvicina di un giorno. Restano le impronte di fango. Non la
+ * rompe mai da solo. Ritorna false se non è successo niente.
+ */
+export function zombieTrample(s: SaveData, graveId: string, now: Date): boolean {
+  const g = s.graves.find((x) => x.id === graveId);
+  if (!g || g.broken || graveProtected(g, now)) return false;
+  if (!g.dirty && !g.weeds) {
+    g.dirty = true; g.dirtySince = now.toISOString();
+    g.hasFlowers = false; g.flowersAt = null;
+  } else {
+    const was = new Date(g.dirtySince ?? now.toISOString()).getTime();
+    // al massimo fino a un'ora prima della rottura: lo zombie avvicina, non rompe
+    const latest = now.getTime() - (DECAY.graveBreakDays * 86_400_000 - 3_600_000);
+    g.dirtySince = new Date(Math.min(was, Math.max(was - 86_400_000, latest))).toISOString();
+  }
+  g.muddy = true;
+  return true;
 }
 
 // ── Raccolta & presenze ─────────────────────────────────────────────────
@@ -530,7 +601,7 @@ export function interactRoamer(
     }
     case 'gravedigger': {
       const near = gravesNear(s, opts.x ?? 0, opts.y ?? 0, GRAVEDIGGER.cleanRadius).filter((g) => !g.broken && (g.dirty || g.weeds));
-      for (const g of near) { g.dirty = false; g.weeds = false; g.dirtySince = null; memory(s, g.id, 'cleaned', now); }
+      for (const g of near) { g.dirty = false; g.weeds = false; g.dirtySince = null; g.muddy = false; memory(s, g.id, 'cleaned', now); }
       c.cleanups += near.length;
       const xp = near.length * XP.gravediggerPerGrave;
       const w = near.length * WISPS.gravediggerPerGrave;

@@ -3,7 +3,7 @@
 // espansione/achievement → salvataggio → sincronizzazione della vista.
 
 import * as THREE from 'three';
-import { BUSINESS, FOREST_MARGIN, GRAVE_FOOTPRINT, LIVE_TICK_MS } from '../game/balance.ts';
+import { BUSINESS, FOREST_MARGIN, GRAVE_FOOTPRINT, KEEPER_LAMP, LIVE_TICK_MS, SOUL_BELL, STAFF, ZOMBIE_MUD } from '../game/balance.ts';
 import { CATALOG, rotatedFootprint } from '../game/catalog.ts';
 import type { GraveVisualState } from '../game/graves.ts';
 import { graveVisualState } from '../game/graves.ts';
@@ -35,7 +35,7 @@ import { closedCoffinLP } from '../render/lowpoly/memoryTree.ts';
 export type Selection = { kind: 'grave' | 'placeable'; id: string } | null;
 
 export type EntityAction =
-  | 'detail' | 'clean' | 'repair' | 'flowers' | 'light' | 'shop' | 'rotate' | 'store' | 'confirm' | 'exhume' | 'move' | 'entrust' | 'memories';
+  | 'detail' | 'clean' | 'repair' | 'flowers' | 'light' | 'shop' | 'rotate' | 'store' | 'confirm' | 'exhume' | 'move' | 'entrust' | 'memories' | 'ring';
 
 const PET_STATUS: Record<PetMode, string> = { free: 'Gira libero', follow: 'Ti segue', home: 'A cuccia' };
 
@@ -123,7 +123,10 @@ export class Game {
     const start = shop ? cellCenter(shop.x + 1, shop.y + 4, [1, 1]) : new THREE.Vector3();
     this.actors = new Actors(this.scene, this.atmosphere, this.state.settings.style, start, this.state.player.look);
     this.refreshWalkable();
+    this.actors.setNight(this.isNight());
     this.actors.syncPresences(this.state, now);
+    this.actors.zombieStep = (r, cell) => this.zombieStep(r, cell);
+    this.actors.setStaff(this.staffOn);
     this.rig.setMode(this.state.settings.camera);
     this.rig.jumpTo(start);
     this.rig.follow = this.actors.avatar.pos;
@@ -222,6 +225,8 @@ export class Game {
     const weather = this.state.settings.weatherEffects ? this.state.world.weather : 'clear';
     if (!force && phase === this.phase && weather === this.atmosphere.getWeather()) return;
     this.phase = phase;
+    this.actors?.setNight(this.isNight());
+    this.actors?.syncPresences(this.state, this.now());
     this.atmosphere.setPhase(phase, weather);
     this.mist?.setConditions(phase, weather, force);
     this.effects.setConditions(phase, weather, true);
@@ -229,6 +234,12 @@ export class Game {
   }
 
   getPhase() { return this.phase; }
+
+  /** Notte (anche forzata dalle impostazioni): il vampiro esce, i fantasmi ballano nel gazebo. */
+  private isNight(): boolean {
+    const o: TimeOverride = this.state.settings.timeOverride;
+    return (o === 'auto' ? dayPhaseForHour(this.now().getHours()) : o) === 'night';
+  }
 
   private readonly resize = () => {
     const w = window.innerWidth, h = window.innerHeight;
@@ -382,10 +393,13 @@ export class Game {
 
   private collectNearbyWisps() {
     const a = this.actors.avatar.pos;
+    // col bastone mistico i fuochi fatui accorrono da lontano
+    const reach = this.staffOn ? STAFF.radius : 0.65;
     for (const w of this.state.world.looseWisps) {
       const p = cellCenter(w.x, w.y, [1, 1]);
-      if (Math.hypot(p.x - a.x, p.z - a.z) < 0.65) {
+      if (Math.hypot(p.x - a.x, p.z - a.z) < reach) {
         const id = w.id;
+        if (reach > 0.65) this.effects.puff(p.clone().setY(0.8), '#8ff0dc');
         this.act((s) => R.collectWisp(s, id), p.clone().setY(1));
         this.ui.bumpWisps();
         return;
@@ -406,7 +420,25 @@ export class Game {
   select(sel: Selection) {
     this.selection = sel;
     this.world.select(sel?.id ?? null);
+    this.refreshKeeperArea();
     this.ui.refreshContext();
+  }
+
+  /**
+   * Area del Lampione del Custode: si vede mentre lo si posa, e in Modifica
+   * quando lo si seleziona (le luci dentro non si rompono).
+   */
+  private refreshKeeperArea() {
+    const p = this.placement;
+    let at: THREE.Vector3 | null = null;
+    if (p?.kind === 'item' && p.type === 'keeper_lamp') at = cellCenter(p.x, p.y, [1, 1]);
+    else if (this.editMode && this.selection) {
+      const k = this.state.placeables.find((x) => x.id === this.selection!.id && x.type === 'keeper_lamp');
+      const c = k && this.entityCells(k.id);
+      if (c) at = cellCenter(this.drag?.id === k.id ? this.drag.x : c.x, this.drag?.id === k.id ? this.drag.y : c.y, [1, 1]);
+    }
+    // semilato: raggio in celle tra i centri + mezza cella (l'area copre le celle intere)
+    this.world.showKeeperArea(at, KEEPER_LAMP.radius + 0.5);
   }
 
   /** Esegue un'azione su tomba/oggetto: il Custode va lì e lavora. */
@@ -433,6 +465,7 @@ export class Game {
         case 'move': this.setEditMode(true); this.select(this.selection); break;
         case 'entrust': this.select(null); this.ui.openEntrust(id); break;
         case 'memories': this.select(null); this.ui.openMemoryTree(); break;
+        case 'ring': this.ringBell(id); break;
       }
     };
     if (instant.includes(action)) { run(); return; }
@@ -444,6 +477,7 @@ export class Game {
   setEditMode(on: boolean) {
     this.editMode = on;
     if (!on) { this.world.endPreview(); this.select(null); }
+    this.refreshKeeperArea();
     this.ui.refreshEditBanner();
     this.ui.refreshContext();
   }
@@ -486,6 +520,7 @@ export class Game {
 
   private refreshPlacement() {
     const p = this.placement;
+    this.refreshKeeperArea();
     if (!p) { this.world.hideGhost(); this.ui.refreshPlacementBar(); return; }
     const fp = this.placementFp();
     p.valid = canPlaceAt(p.x, p.y, fp, buildOccupancy(this.state), areaForLevel(this.state.world.expansionLevel));
@@ -699,6 +734,47 @@ export class Game {
     if (r.memoryId && visit) this.ui.openMemory(r.memoryId, visit);
   }
 
+  // ── Campana delle anime e zombie che infangano ──────────────────────
+
+  /** Il Custode suona la campana: dal cimitero accorrono alcune anime (toccandole si guadagna come sempre). */
+  private ringBell(id: string) {
+    const c = this.entityCells(id);
+    if (!c) return;
+    const center = cellCenter(c.x, c.y, c.fp);
+    this.actors.faceTowards(center);
+    this.actors.cheer(1.2);
+    if (!this.act((s, n) => R.ringBell(s, id, n), center.clone().setY(2.6))) return;
+    this.effects.puff(center.clone().setY(2.2), '#cfeee6');
+    const graves = this.state.graves;
+    for (let i = 0; i < SOUL_BELL.ghosts; i++) {
+      const a = (i / SOUL_BELL.ghosts) * Math.PI * 2 + Math.random() * 0.8, d = 2.2 + Math.random() * 1.2;
+      const g = graves.length ? graves[Math.floor(Math.random() * graves.length)] : undefined;
+      setTimeout(() => this.actors.spawnRoamer({ kind: 'ghost', graveId: g?.id, rare: !!g && !g.legacy && Math.random() < 0.25 }, center.clone().add(new THREE.Vector3(Math.cos(a) * d, 0, Math.sin(a) * d))), 400 + i * 450);
+    }
+  }
+
+  /**
+   * Uno zombie arriva in una cella: se accanto c'è una tomba su cui non ha
+   * ancora tentato la sorte, con una certa probabilità la sporca (una sola
+   * per zombie) e ci lascia le impronte; se era già sporca, la rottura si avvicina.
+   */
+  private zombieStep(r: { muddied?: boolean; tried?: Set<string> }, cell: { x: number; y: number }) {
+    const reach = ZOMBIE_MUD.reach;
+    const near = R.gravesNear(this.state, cell.x, cell.y, reach).filter((g) => !r.tried?.has(g.id));
+    if (!near.length) return;
+    r.tried ??= new Set();
+    for (const g of near) {
+      r.tried.add(g.id);
+      if (Math.random() >= ZOMBIE_MUD.chance) continue;
+      const now = this.now();
+      if (!R.zombieTrample(this.state, g.id, now)) continue;
+      r.muddied = true;
+      this.effects.puff(cellCenter(g.x, g.y, GRAVE_FOOTPRINT).setY(0.3), '#5a4632');
+      this.afterChange();
+      return;
+    }
+  }
+
   // ── Becchino e prete in visita ───────────────────────────────────────
 
   /** La casa del becchino o il santuario (se ci sono e funzionano): da lì escono e lì tornano. */
@@ -833,6 +909,7 @@ export class Game {
     const valid = canPlaceAt(nx, ny, fp, buildOccupancy(this.state, id), areaForLevel(this.state.world.expansionLevel));
     this.drag.x = nx; this.drag.y = ny; this.drag.valid = valid;
     this.world.previewMove(id, nx, ny, valid);
+    this.refreshKeeperArea();
   }
 
   private onDragEnd(_x: number, _y: number, owned: boolean) {
@@ -844,6 +921,7 @@ export class Game {
     if (d.valid) this.act((s) => R.moveEntity(s, d.id, d.x, d.y));
     else { toast('Spazio occupato: torna al suo posto.'); this.world.sync(this.state); }
     this.world.select(d.id);
+    this.refreshKeeperArea();
     this.ui.refreshContext();
   }
 
@@ -853,6 +931,7 @@ export class Game {
     if (!down) return;
     if (k === 'escape') { this.ui.escape(); return; }
     if (k === 'b') this.toggleBike();
+    else if (k === 'f' && this.ownsBroom()) this.toggleBroom();
     else if (k === 'v') this.setStyle(STYLE_CYCLE[(STYLE_CYCLE.indexOf(this.state.settings.style) + 1) % STYLE_CYCLE.length]);
     else if (k === 'e') this.interactNearest();
   }
@@ -922,12 +1001,53 @@ export class Game {
     this.ui.refreshSettingsButtons();
   }
 
-  /** Comprata o venduta la bici: l'icona compare o sparisce (e se non c'è più, si scende). */
-  private bikeOwned = false;
+  /** Comprati o venduti gli Extra: le icone compaiono o spariscono (e se non ci sono più, si scende o si posa il bastone). */
+  private extrasSig = '';
   refreshBike() {
-    const own = this.ownsBike();
-    if (!own && this.actors.riding) this.actors.setRiding(false);
-    if (own !== this.bikeOwned) { this.bikeOwned = own; this.ui.refreshSettingsButtons(); }
+    const bike = this.ownsBike(), broom = this.ownsBroom(), staff = this.ownsStaff();
+    if (!bike && this.actors.riding) this.actors.setRiding(false);
+    if (!broom && this.actors.flying) this.actors.setFlying(false);
+    this.actors.setStaff(this.staffOn);
+    const sig = `${bike}${broom}${staff}`;
+    if (sig !== this.extrasSig) { this.extrasSig = sig; this.ui.refreshSettingsButtons(); }
+  }
+
+  ownsBroom(): boolean { return R.ownedCount(this.state, 'broom') > 0; }
+  ownsStaff(): boolean { return R.ownedCount(this.state, 'mystic_staff') > 0; }
+  get flying(): boolean { return this.actors.flying; }
+  /** Il bastone è impugnato (resta impugnato anche riaprendo il gioco). */
+  get staffOn(): boolean { return this.ownsStaff() && this.state.settings.staffEquipped; }
+
+  /** Sulla scopa si vola sopra tombe e oggetti, più veloci della bici. */
+  toggleBroom() {
+    if (!this.ownsBroom()) { toast('Prima compra la scopa volante in Bottega (Extra).'); return; }
+    this.actors.setFlying(!this.actors.flying);
+    toast(this.actors.flying ? 'A cavalcioni della scopa: si vola sopra tombe e recinti.' : 'Il Custode atterra e scende dalla scopa.');
+    this.ui.refreshSettingsButtons();
+  }
+
+  /** Impugna o posa il bastone mistico: impugnato, i fuochi fatui accorrono da lontano. */
+  toggleStaff() {
+    if (!this.ownsStaff()) { toast('Il bastone mistico si sblocca raccogliendo 500 fuochi fatui.'); return; }
+    this.state.settings.staffEquipped = !this.state.settings.staffEquipped;
+    this.actors.setStaff(this.staffOn);
+    toast(this.staffOn ? 'Bastone impugnato: i fuochi fatui accorrono da lontano.' : 'Bastone posato.');
+    scheduleSave(this.state);
+    this.ui.refreshSettingsButtons();
+  }
+
+  /** Usa un Extra dalla Bottega o dall'inventario (bici, scopa, bastone). */
+  useExtra(id: string) {
+    if (id === 'broom') this.toggleBroom();
+    else if (id === 'mystic_staff') this.toggleStaff();
+    else this.toggleBike();
+  }
+
+  /** Il pulsante d'uso di un Extra, a seconda di com'è ora. */
+  extraLabel(id: string): string {
+    if (id === 'broom') return this.flying ? 'Scendi dalla scopa' : 'Sali sulla scopa';
+    if (id === 'mystic_staff') return this.staffOn ? 'Posa il bastone' : 'Impugna il bastone';
+    return this.riding ? 'Scendi' : 'Sali in sella';
   }
 
   // ── Bar e orto ───────────────────────────────────────────────────────

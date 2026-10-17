@@ -9,7 +9,7 @@ import { DECAY } from '../game/balance.ts';
 import { CATALOG, isPetHouse, repairCost } from '../game/catalog.ts';
 import { GRAVE_STATE_LABELS, GRAVE_TYPE_LABELS, graveVisualState } from '../game/graves.ts';
 import { nextRank, rankForXp, rankProgress } from '../game/progression.ts';
-import type * as R from '../game/rules.ts';
+import * as R from '../game/rules.ts';
 import type { BurialDraft } from '../game/rules.ts';
 import { DAY_PHASE_LABELS } from '../game/time.ts';
 import { $, closeDrawer, drawerOpen, h, toast } from './dom.ts';
@@ -44,6 +44,8 @@ export class UI {
     $('#edit-done').addEventListener('click', () => game.setEditMode(false));
     $('#recenter').addEventListener('click', () => game.recenter());
     $('#bike-toggle').addEventListener('click', () => game.toggleBike());
+    $('#broom-toggle').addEventListener('click', () => game.toggleBroom());
+    $('#staff-toggle').addEventListener('click', () => game.toggleStaff());
     this.refreshSettingsButtons();
     this.refreshEditBanner();
   }
@@ -94,6 +96,17 @@ export class UI {
     bike.classList.toggle('active', riding);
     bike.setAttribute('aria-pressed', String(riding));
     bike.setAttribute('aria-label', riding ? 'Scendi dalla bici' : 'Sali in bici');
+    // scopa volante e bastone mistico: sopra la bici, solo se li si possiede
+    const broom = $('#broom-toggle') as HTMLButtonElement, flying = this.game.flying;
+    broom.hidden = !this.game.ownsBroom();
+    broom.classList.toggle('active', flying);
+    broom.setAttribute('aria-pressed', String(flying));
+    broom.setAttribute('aria-label', flying ? 'Scendi dalla scopa' : 'Sali sulla scopa');
+    const staff = $('#staff-toggle') as HTMLButtonElement, held = this.game.staffOn;
+    staff.hidden = !this.game.ownsStaff();
+    staff.classList.toggle('active', held);
+    staff.setAttribute('aria-pressed', String(held));
+    staff.setAttribute('aria-label', held ? 'Posa il bastone mistico' : 'Impugna il bastone mistico');
     if (drawerOpen() && document.querySelector('[data-settings]')) S.openSettings(this);
   }
 
@@ -224,6 +237,11 @@ export class UI {
       } else {
         if (p.type === 'shop') actions.push({ act: 'shop', label: 'Entra in bottega', icon: 'shop', cls: 'primary' });
         if (p.type === 'memory_tree') { actions.push({ act: 'memories', label: 'Ricordi', icon: 'tree', cls: 'primary' }); sub = `${s.entrusted.length} ${s.entrusted.length === 1 ? 'ricordo' : 'ricordi'}`; }
+        if (p.type === 'soul_bell' && !p.broken) {
+          const ready = R.bellReady(s, p.id, this.game.now());
+          if (ready) actions.push({ act: 'ring', label: 'Suona la campana', icon: 'bell', cls: 'primary' });
+          sub = `${sub} · ${ready ? 'Pronta a suonare' : 'Ha già suonato oggi'}`;
+        }
         actions.push({ act: 'detail', label: 'Dettagli', icon: 'search' });
         if (p.broken) actions.push({ act: 'repair', label: 'Ripara', icon: 'hammer', cls: 'primary', cost: repairCost(def) });
         else if (p.dirty) actions.push({ act: 'clean', label: 'Pulisci', icon: 'broom' });

@@ -5,7 +5,7 @@
 
 import * as THREE from 'three';
 import { CUSTODE_SPEED, MAP_SIZE } from '../game/balance.ts';
-import { isPetHouse, rotatedFootprint, visualOf } from '../game/catalog.ts';
+import { isPetHouse, PRESENCE_TYPES, rotatedFootprint, visualOf } from '../game/catalog.ts';
 import { createRng, hashString } from '../game/rng.ts';
 import type { RoamerKind, SpawnRequest } from '../game/spawn.ts';
 import type { ArtStyle, Placed, SaveData } from '../game/state.ts';
@@ -13,7 +13,10 @@ import type { Rect } from '../game/world.ts';
 import type { Atmosphere, AnchorHandle } from './Atmosphere.ts';
 import { animateRig, buildRig, rigLightPos, type CharacterKind, type Pose, type Rig } from './characters.ts';
 import { LP } from '../render/lowpoly/kit.ts';
-import type { CustodeLook } from '../game/look.ts';
+import { DEFAULT_LOOK, lookKey, type CustodeLook } from '../game/look.ts';
+import { assemble, handPos, HUMAN_PIVOTS, humanSpec } from '../render/lowpoly/v2/custode.ts';
+import { instrumentLP } from '../render/lowpoly/newItems.ts';
+import { broom2LP, mysticStaffLP, sleepingCatLP } from '../render/lowpoly/newItems2.ts';
 import { skull } from '../render/lowpoly/extras.ts';
 import { instantiate, lightWorldPos, LOWPOLY_MATERIALS } from '../render/modelCache.ts';
 import { BIKE, BIKE_SCALE, bicycleLP } from '../render/lowpoly/extraItems.ts';
@@ -34,7 +37,7 @@ const petKind = (h: Placed) => visualOf(h.type, h.variant).variant;
 const FADE_OUT = 0.6;
 
 /** Oggetti che portano con sé presenze animate. */
-const PRESENCE_HOMES = new Set(['zombies_play', 'zombies_dance', 'zombie_walker', 'ghosts_roam', 'ghosts_ball', 'zombie_bar', 'brain_farm']);
+const PRESENCE_HOMES = PRESENCE_TYPES;
 
 /** Andatura zoppa dello zombie: avanza quando poggia la gamba buona, quasi si ferma trascinando l'altra (media ≈ 0,6). */
 export function zombieLurch(phase: number): number {
@@ -72,6 +75,9 @@ export interface Roamer extends Walker {
   hitbox: THREE.Mesh;
   dying: number; // >0 durante la dissolvenza
   perched: boolean;
+  /** Zombie: ha già sporcato una tomba (al massimo una), e le tombe su cui ha già tentato la sorte. */
+  muddied?: boolean;
+  tried?: Set<string>;
 }
 
 /** Una tappa del giro: una tomba o un oggetto (cella e ingombro). */
@@ -99,8 +105,13 @@ interface Presence extends Walker {
   /** Ruolo 'still': la posa che tiene sul posto (barista, avventori, contadino). */
   still?: Pose;
   /** Cosa tiene in mano (si riattacca quando si ricostruisce il rig). */
-  prop?: 'mug' | 'hoe';
+  prop?: PropKind;
+  /** Grandezza (fantasmi del picnic e della panchina più piccoli). */
+  size?: number;
 }
+
+type Instrument = 'violin' | 'sticks' | 'trumpet';
+type PropKind = 'mug' | 'hoe' | Instrument;
 
 /** Quante presenze animano bar e orto: con la fascia del dispositivo (economico, medio, top). */
 export type PresenceTier = 'low' | 'mid' | 'high';
@@ -115,6 +126,25 @@ const PROP_MATS = {
   wood: new THREE.MeshStandardMaterial({ color: '#6b4a2e', flatShading: true, roughness: 0.9 }),
   iron: new THREE.MeshStandardMaterial({ color: '#5f6366', flatShading: true, roughness: 0.6 }),
 };
+
+const lpMesh = (m: LPModel) => instantiate({ geometries: m.geometries, lights: [], height: 1, mats: LOWPOLY_MATERIALS, dedicated: true }, { castShadow: true });
+
+/**
+ * Strumento della banda nella mano (spazio del braccio del rig v2): violino a
+ * sinistra, bacchette in tutte e due le mani, tromba a destra.
+ */
+function instrumentMeshes(kind: Instrument): Array<{ side: number; mesh: THREE.Object3D }> {
+  const at = (side: number, mesh: THREE.Object3D, off: [number, number, number], rot: [number, number, number]) => {
+    const h = handPos(side), pv = side > 0 ? HUMAN_PIVOTS.armR : HUMAN_PIVOTS.armL;
+    mesh.position.set(h.x - pv[0] + off[0], h.y - pv[1] + off[1], h.z - pv[2] + off[2]);
+    mesh.rotation.set(...rot);
+    mesh.name = 'prop';
+    return { side, mesh };
+  };
+  if (kind === 'violin') return [at(-1, lpMesh(instrumentLP('violin')), [0, 0.05, 0.05], [0.4, 0, 1.2])];
+  if (kind === 'trumpet') return [at(1, lpMesh(instrumentLP('trumpet')), [-0.06, 0.05, 0.05], [0, 0, 0])];
+  return [at(1, lpMesh(instrumentLP('sticks')), [0, 0, 0], [-0.6, 0, 0]), at(-1, lpMesh(instrumentLP('sticks')), [0, 0, 0], [-0.3, 0, 0])];
+}
 
 /** Boccale con la schiuma verde o zappa, nella mano destra. */
 function propMesh(kind: 'mug' | 'hoe'): THREE.Group {
@@ -229,6 +259,30 @@ interface Funeral {
 }
 
 const hitMat = new THREE.MeshBasicMaterial({ visible: false });
+const UP = new THREE.Vector3(0, 1, 0);
+/** Altezza del manico della scopa sotto il Custode in volo. */
+const BROOM_Y = 0.75;
+const SPARK_MAT = new THREE.MeshBasicMaterial({ color: '#fff0a0' });
+
+/** Statua del Custode: il suo aspetto, tutto in pietra (colori in scala di grigi tinti di pietra). */
+function keeperStatue(look: CustodeLook): THREE.Group {
+  const S = '#a8a49c', S2 = '#8f8a83', S3 = '#7d7872';
+  const a = assemble(humanSpec({ ...look, sparkle: false, skin: S, hairColor: S2, beardColor: S2, eyes: S3, hatColor: S3, outfitColor: S2, accentColor: S3 }, { name: 'statua', eyes: 'closed', blush: S, mouth: 'flat' }), `statua:${lookKey(look)}`);
+  const inner = a.root.children[0];
+  const parts = Object.keys(HUMAN_PIVOTS);
+  const armR = inner.children[parts.indexOf('armR')];
+  if (armR) { armR.rotation.x = -2.6; armR.rotation.z = 0.15; } // il braccio alzato a salutare
+  const stone = new THREE.Color('#b4aea4'), c = new THREE.Color();
+  a.root.traverse((o) => {
+    const m = o as THREE.Mesh;
+    if (!m.isMesh) return;
+    const col = m.geometry.getAttribute('color') as THREE.BufferAttribute | undefined;
+    if (col) { for (let i = 0; i < col.count; i++) { c.fromBufferAttribute(col, i); const l = 0.35 + 0.65 * (0.3 * c.r + 0.59 * c.g + 0.11 * c.b); col.setXYZ(i, stone.r * l, stone.g * l, stone.b * l); } col.needsUpdate = true; }
+    if (m.material !== LOWPOLY_MATERIALS.solid) m.material = LOWPOLY_MATERIALS.solid;
+    m.castShadow = true;
+  });
+  return a.root;
+}
 let roamerSeq = 0;
 
 export class Actors {
@@ -326,7 +380,7 @@ export class Actors {
     this.remount();
     for (const r of this.roamers.values()) { rebuild(r); r.rig.root.add(r.hitbox); }
     for (const p of this.pets.values()) { rebuild(p); p.rig.root.add(p.hitbox); p.rig.root.visible = p.act !== 'sleep'; }
-    for (const p of this.presences) { rebuild(p); this.attachProp(p); }
+    for (const p of this.presences) { rebuild(p); this.attachProp(p); if (p.size) p.rig.root.scale.setScalar(p.size); p.rig.root.visible = !p.hidden; }
     if (this.funeral) for (const m of this.funeral.members) rebuild(m);
     if (this.rite) for (const m of this.rite.members) rebuild(m);
     for (const d of this.departing) rebuild(d);
@@ -340,18 +394,22 @@ export class Actors {
   private walkable = (x: number, y: number) =>
     x >= this.area.x && y >= this.area.y && x < this.area.x + this.area.w && y < this.area.y + this.area.h && !this.blocked(x, y);
 
+  /** Dove può andare il Custode: sulla scopa vola sopra tombe e oggetti (ma resta nel recinto). */
+  private canGo = (x: number, y: number) =>
+    this.broom ? x >= this.area.x && y >= this.area.y && x < this.area.x + this.area.w && y < this.area.y + this.area.h : this.walkable(x, y);
+
   // ── Custode ──────────────────────────────────────────────────────────
 
   /** Cammina verso una cella; `onArrive` quando arriva (o subito se già lì). */
   walkTo(goal: Cell, onArrive?: () => void): boolean {
     const start = worldToCell(this.avatar.pos);
     let target = goal;
-    if (!this.walkable(goal.x, goal.y)) {
+    if (!this.canGo(goal.x, goal.y)) {
       const alt = this.nearestWalkable(goal, start);
       if (!alt) return false;
       target = alt;
     }
-    const path = findPath(start, target, (x, y) => !this.walkable(x, y) && !(x === start.x && y === start.y), MAP_SIZE);
+    const path = findPath(start, target, (x, y) => !this.canGo(x, y) && !(x === start.x && y === start.y), MAP_SIZE);
     if (!path) return false;
     this.avatar.path = path.slice(1).map((c) => cellCenter(c.x, c.y, [1, 1]));
     if (this.avatar.path.length) this.avatar.path[this.avatar.path.length - 1] = this.cellPoint(target, goal);
@@ -410,7 +468,7 @@ export class Actors {
     const next = this.avatar.pos.clone().addScaledVector(dir, this.avatar.speed * dt);
     const tryMove = (p: THREE.Vector3) => {
       const c = worldToCell(p);
-      if (this.walkable(c.x, c.y)) { this.avatar.pos.copy(p); return true; }
+      if (this.canGo(c.x, c.y)) { this.avatar.pos.copy(p); return true; }
       return false;
     };
     if (!tryMove(next)) {
@@ -438,9 +496,102 @@ export class Actors {
   /** In sella (velocità doppia) o a piedi: la bici compare sotto il Custode e sparisce quando scende. */
   setRiding(on: boolean) {
     if (on === this.riding) return;
-    if (on) this.mount();
+    if (on) { this.setFlying(false); this.mount(); }
     else this.dismount();
     this.avatar.speed = CUSTODE_SPEED.walk * (on ? CUSTODE_SPEED.bike : 1);
+  }
+
+  // ── Scopa volante e bastone mistico ─────────────────────────────────
+
+  private broom: { group: THREE.Group; sparks: THREE.Mesh[] } | null = null;
+  get flying() { return !!this.broom; }
+
+  /** A cavalcioni della scopa: vola sopra tombe e oggetti, più veloce della bici. */
+  setFlying(on: boolean) {
+    if (on === this.flying) return;
+    if (on) { this.setRiding(false); this.mountBroom(); }
+    else this.dismountBroom();
+    this.avatar.speed = CUSTODE_SPEED.walk * (on ? CUSTODE_SPEED.broom : 1);
+  }
+
+  private mountBroom() {
+    const a = this.avatar;
+    const group = new THREE.Group();
+    group.name = 'scopa';
+    const broom = lpMesh(broom2LP());
+    broom.scale.setScalar(1.25);
+    broom.position.set(0, BROOM_Y - 0.02, 0);
+    broom.rotation.x = -0.08;
+    group.add(broom);
+    // scia di stelline dietro la saggina
+    const sparks: THREE.Mesh[] = [];
+    for (let i = 0; i < 6; i++) { const m = new THREE.Mesh(new THREE.OctahedronGeometry(0.03 - i * 0.003), SPARK_MAT); m.raycast = () => undefined; group.add(m); sparks.push(m); }
+    a.rig.root.add(group);
+    // il Custode si siede sul manico: l'anca all'altezza della scopa
+    const inner = a.rig.root.children[0];
+    animateRig(a.rig, 'idle', 0, 0);
+    inner.position.set(0, 0, 0);
+    a.rig.root.updateMatrixWorld(true);
+    const hip = a.rig.root.worldToLocal(a.rig.parts.legL!.getWorldPosition(new THREE.Vector3()));
+    inner.position.set(0, BROOM_Y - hip.y + 0.03, -0.05);
+    this.broom = { group, sparks };
+  }
+
+  private dismountBroom() {
+    const b = this.broom;
+    if (!b) return;
+    b.group.removeFromParent();
+    const a = this.avatar;
+    a.rig.root.children[0].position.set(0, 0, 0);
+    if (a.rig.parts.body) a.rig.parts.body.rotation.x = 0;
+    a.lift = 0;
+    this.broom = null;
+    // si atterra su una cella libera (in volo poteva essere sopra una tomba)
+    const c = worldToCell(a.pos);
+    if (!this.walkable(c.x, c.y)) {
+      const free = this.nearestWalkable(c, c);
+      if (free) { a.pos.copy(cellCenter(free.x, free.y, [1, 1])); a.path = []; }
+    }
+  }
+
+  /** A cavalcioni: gambe ai lati del manico, mani avanti, busto chino; si ondeggia in volo. */
+  private poseBroom(t: number) {
+    const b = this.broom!;
+    const a = this.avatar;
+    a.lift = 0.12 + Math.sin(t * 2.1) * 0.05;
+    const root = a.rig.root;
+    root.updateMatrixWorld(true);
+    const p = a.rig.parts;
+    const v = new THREE.Vector3();
+    const aim = (part: THREE.Group | undefined, x: number, y: number, z: number) => {
+      if (!part) return;
+      const from = root.worldToLocal(part.getWorldPosition(v));
+      part.rotation.x = -Math.atan2(z - from.z, -(y - from.y));
+      part.rotation.z = Math.atan2(x - from.x, -(y - from.y)) * 0.9;
+    };
+    for (const s of [-1, 1]) {
+      aim(s < 0 ? p.legL : p.legR, s * 0.2, BROOM_Y - 0.2, 0.18);
+      if (a.pose === 'idle' || a.pose === 'walk') aim(s < 0 ? p.armL : p.armR, s * 0.07, BROOM_Y + 0.02, 0.45);
+    }
+    if (p.body) p.body.rotation.x = 0.18;
+    if (p.head) p.head.rotation.x = -0.1;
+    b.sparks.forEach((m, i) => { m.position.set(Math.sin(t * 3 + i * 2.1) * 0.12, BROOM_Y + Math.cos(t * 2.5 + i * 1.7) * 0.08, -1.0 - i * 0.18); m.rotation.y = t * 4 + i; });
+  }
+
+  /** Il bastone mistico in mano (al posto di niente: la pala resta, il bastone si aggiunge a destra). */
+  private staff: THREE.Object3D | null = null;
+  setStaff(on: boolean) {
+    if (!!this.staff === on) return;
+    if (this.staff) { this.staff.removeFromParent(); this.staff = null; }
+    if (!on) return;
+    const arm = this.avatar.rig.parts.armR;
+    if (!arm) return;
+    const h = handPos(1), pv = HUMAN_PIVOTS.armR;
+    const staff = lpMesh(mysticStaffLP(true));
+    staff.position.set(h.x - pv[0], h.y - pv[1] - 0.42, h.z - pv[2] + 0.02);
+    staff.name = 'bastone';
+    arm.add(staff);
+    this.staff = staff;
   }
 
   private mount() {
@@ -485,8 +636,10 @@ export class Actors {
     this.ride = null;
   }
 
-  /** Il rig del Custode è stato ricostruito (stile, aspetto): la bici torna sotto di lui. */
+  /** Il rig del Custode è stato ricostruito (stile, aspetto): bici, scopa e bastone tornano con lui. */
   private remount() {
+    if (this.staff) { this.staff = null; this.setStaff(true); }
+    if (this.broom) { this.broom = null; this.mountBroom(); }
     const r = this.ride;
     if (!r) return;
     this.atmosphere.removeAnchor(r.lamp?.handle);
@@ -674,6 +827,7 @@ export class Actors {
     if (!r.path.length) {
       const ghost = r.kind === 'ghost';
       const cell = worldToCell(r.pos);
+      if (r.kind === 'zombie' && !r.muddied) this.zombieStep?.(r, cell);
       const free = (d: Cell) => {
         const nx = cell.x + d.x, ny = cell.y + d.y;
         const inArea = nx >= this.area.x && ny >= this.area.y && nx < this.area.x + this.area.w && ny < this.area.y + this.area.h;
@@ -716,7 +870,7 @@ export class Actors {
   syncPresences(state: SaveData, now: Date) {
     this.syncPets(state);
     const homes = state.placeables.filter((p) => PRESENCE_HOMES.has(p.type));
-    const sig = `${this.presenceTier}|` + homes.map((p) => `${p.id}:${p.x}:${p.y}:${p.variant}:${p.broken}`).join('|');
+    const sig = `${this.presenceTier}|${this.night}|${this.look ? lookKey(this.look) : ''}|` + homes.map((p) => `${p.id}:${p.x}:${p.y}:${p.rot}:${p.variant}:${p.broken}`).join('|');
     if (sig === this.presenceSig) return;
     this.presenceSig = sig;
     for (const p of this.presences) { this.disposeWalker(p); if (p.extra) this.group.remove(p.extra); }
@@ -728,22 +882,87 @@ export class Actors {
   private presenceTier: PresenceTier = 'high';
   setPresenceTier(t: PresenceTier) { this.presenceTier = t; }
 
+  /** Ogni cella raggiunta da uno zombie (la vista decide se sporca una tomba lì accanto). */
+  zombieStep: ((r: Roamer, cell: Cell) => void) | null = null;
+
+  /** Notte: il vampiro esce dalla cripta, i fantasmi vanno a ballare nel gazebo. */
+  private night = false;
+  setNight(on: boolean) { this.night = on; }
+
   private addPresences(p: Placed, _now: Date) {
     const center = cellCenter(p.x, p.y, rotatedFootprint(p.type, p.rot));
+    // gli oggetti ruotati portano con sé chi li abita (posizioni nello spazio dell'oggetto)
+    const turn = -p.rot * Math.PI / 2;
     const add = (kind: CharacterKind, role: Presence['role'], offset: THREE.Vector3, radius = 0, angle = 0, speed = 0.6) => {
-      const w = this.makeWalker(kind, center.clone().add(offset), speed);
+      const w = this.makeWalker(kind, center.clone().add(offset.clone().applyAxisAngle(UP, turn)), speed);
       const pr: Presence = { ...w, placeId: p.id, role, home: center.clone(), radius, angle, hidden: false };
       this.presences.push(pr);
       return pr;
     };
-    /** Zombie fermo al suo posto: con una posa, magari sulla pedana e con qualcosa in mano. */
-    const still = (pose: Pose, x: number, z: number, facing: number, lift = 0, prop?: Presence['prop']) => {
-      const pr = add('zombie', 'still', new THREE.Vector3(x, 0, z));
-      pr.still = pose; pr.facing = facing; pr.lift = lift; pr.prop = prop;
-      pr.rig.root.rotation.y = facing;
+    /** Chi resta al suo posto (di solito uno zombie): con una posa, magari su una pedana, grande o piccolo e con qualcosa in mano. */
+    const still = (pose: Pose, x: number, z: number, facing: number, lift = 0, prop?: Presence['prop'], kind: CharacterKind = 'zombie', size = 1) => {
+      const pr = add(kind, 'still', new THREE.Vector3(x, 0, z));
+      pr.still = pose; pr.facing = facing + turn; pr.lift = lift; pr.prop = prop; pr.size = size;
+      pr.rig.root.rotation.y = pr.facing;
+      pr.rig.root.scale.setScalar(size);
       this.attachProp(pr);
       return pr;
     };
+    /** Un oggetto fermo che fa parte della scena (il gatto che dorme, la statua del Custode). */
+    const prop = (obj: THREE.Object3D, x: number, y: number, z: number, yaw: number, owner: Presence) => {
+      const at = new THREE.Vector3(x, 0, z).applyAxisAngle(UP, turn).add(center);
+      obj.position.set(at.x, this.ground(at) + y, at.z);
+      obj.userData.lift = y; // la quota del terreno si riprende a ogni frame
+      obj.rotation.y = yaw + turn;
+      this.group.add(obj);
+      owner.extra = obj;
+    };
+    switch (p.type) {
+      case 'witch_corner':
+        if (!p.broken) still('work', 0.85, 0.0, -0.65, 0, undefined, 'witch'); // gira la pozione nel calderone
+        return;
+      case 'vampire_crypt':
+        // di giorno dorme nella bara; di notte passeggia attorno alla cripta
+        if (!p.broken && this.night) add('vampire', 'wander', new THREE.Vector3(0.3, 0, 1.2), 3, 0, 0.55);
+        return;
+      case 'soul_gazebo':
+        if (this.night && !p.broken) {
+          for (const [a, k] of [[0, 'ghost'], [Math.PI, 'ghostRare']] as const) {
+            const g = add(k, 'dance', new THREE.Vector3(Math.cos(a) * 0.6, 0, Math.sin(a) * 0.6), 0.6, a);
+            g.lift = 0.3; g.size = 0.8; g.rig.root.scale.setScalar(0.8);
+          }
+        }
+        return;
+      case 'cat_shelter': {
+        const roof = still('idle', 0.55, -0.55, 0.5, 1.04, undefined, 'cat');
+        prop(lpMesh(sleepingCatLP()), -0.45, 0.29, -0.28, 0.8, roof);
+        add('cat', 'wander', new THREE.Vector3(-0.12, 0, 0.6), 1.4, 0, 0.5);
+        return;
+      }
+      case 'ghost_picnic':
+        still('idle', -0.95, -0.55, 0.9, 0, undefined, 'ghost', 0.75);
+        still('cheer', -0.35, 1.0, Math.PI - 0.3, 0, undefined, 'ghost', 0.75);
+        still('idle', 1.0, 0.3, -1.4, 0, undefined, 'ghostRare', 0.75);
+        return;
+      case 'lovers_bench':
+        still('idle', -0.33, 0.0, 0.35, 0.3, undefined, 'ghost', 0.7);
+        still('idle', 0.33, 0.0, -0.35, 0.3, undefined, 'ghostRare', 0.7);
+        return;
+      case 'skeleton_band':
+        still('idle', -0.75, 0.15, 0.25, 0.12, 'violin', 'skeleton');
+        still('idle', 0, -0.15, 0, 0.12, 'sticks', 'skeleton');
+        still('idle', 0.75, 0.15, -0.25, 0.12, 'trumpet', 'skeleton');
+        return;
+      case 'keeper_statue': {
+        // la statua ha l'aspetto del Custode (lo segue se cambia), tutta in pietra
+        const keeper = add('rat', 'still', new THREE.Vector3()); // segnaposto invisibile (niente luci): la statua è l'oggetto
+        keeper.hidden = true; keeper.rig.root.visible = false;
+        const statue = keeperStatue(this.look ?? DEFAULT_LOOK);
+        statue.scale.setScalar(1.5);
+        prop(statue, 0, 0.83, 0, 0, keeper);
+        return;
+      }
+    }
     if (p.type === 'zombie_bar' || p.type === 'brain_farm') {
       if (p.broken) return; // chiuso finché non si ripara
       const n = BUSINESS_PRESENCES[p.type][this.presenceTier];
@@ -792,10 +1011,21 @@ export class Actors {
     }
   }
 
-  /** Rimette in mano boccale o zappa (anche dopo che il rig è stato ricostruito). */
+  /** Rimette in mano boccale, zappa o strumento (anche dopo che il rig è stato ricostruito). */
   private attachProp(pr: Presence) {
     if (!pr.prop || !pr.rig.parts.armR) return;
-    pr.rig.parts.armR.add(propMesh(pr.prop));
+    if (pr.prop === 'mug' || pr.prop === 'hoe') { pr.rig.parts.armR.add(propMesh(pr.prop)); return; }
+    for (const { side, mesh } of instrumentMeshes(pr.prop)) (side > 0 ? pr.rig.parts.armR : pr.rig.parts.armL)?.add(mesh);
+  }
+
+  /** Gli scheletri della banda suonano: archetto, bacchette alternate, tromba che dondola. */
+  private play(pr: Presence, t: number) {
+    const L = pr.rig.parts.armL, R = pr.rig.parts.armR, H = pr.rig.parts.head;
+    if (!L || !R) return;
+    const k = t + pr.pos.x;
+    if (pr.prop === 'violin') { L.rotation.x = -1.2; R.rotation.x = -0.6; R.rotation.z = 0.5 + Math.sin(k * 6) * 0.25; if (H) H.rotation.z = 0.15; }
+    else if (pr.prop === 'sticks') { L.rotation.x = -0.9 + Math.sin(k * 9) * 0.3; R.rotation.x = -0.9 - Math.sin(k * 9) * 0.3; }
+    else { L.rotation.x = -1.4 + Math.sin(k * 2) * 0.08; R.rotation.x = -1.4 + Math.sin(k * 2) * 0.08; if (H) H.rotation.x = -0.2 + Math.sin(k * 2) * 0.08; }
   }
 
   /** L'avventore alza il boccale: ogni tanto beve un sorso, poi brinda. */
@@ -1479,10 +1709,12 @@ export class Actors {
       d = Math.atan2(Math.sin(d), Math.cos(d));
       w.rig.root.rotation.y += d * Math.min(1, dt * 12);
       // in sella non si cammina: si pedala (gambe e braccia le mette poseRider)
-      const riding = w === a && this.ride;
+      const riding = w === a && (this.ride || this.broom);
       animateRig(w.rig, riding && w.pose === 'walk' ? 'idle' : w.pose, t + w.phase, w.phase);
-      if (riding) this.poseRider(dt);
+      if (riding && this.ride) this.poseRider(dt);
+      else if (riding) this.poseBroom(t);
       else if ((w as Presence).prop === 'mug') this.sip(w as Presence, t);
+      else if ((w as Presence).prop && (w as Presence).prop !== 'hoe') this.play(w as Presence, t);
       // ombra vera nella mappa delle ombre, oppure disco sotto i piedi
       const cast = !this.blobShadows;
       if (w.rig.root.userData.cast !== cast) {
@@ -1508,7 +1740,10 @@ export class Actors {
     };
     apply(a);
     for (const r of this.roamers.values()) apply(r);
-    for (const p of this.presences) if (!p.hidden) apply(p);
+    for (const p of this.presences) {
+      if (!p.hidden) apply(p);
+      if (p.extra && p.extra.userData.lift !== undefined) p.extra.position.y = ground(p.extra.position) + p.extra.userData.lift;
+    }
     for (const p of this.pets.values()) { if (p.rig.root.visible) apply(p); p.den.group.position.y = ground(p.home); p.den.update(dt, t, this.glyphs); }
     if (this.funeral) for (const m of this.funeral.members) apply(m);
     if (this.rite) for (const m of this.rite.members) apply(m);

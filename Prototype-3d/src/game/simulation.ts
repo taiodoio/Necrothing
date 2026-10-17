@@ -5,8 +5,8 @@
 //    fuochi fatui secondo la matrice di spawn.
 // Deterministico rispetto a seed + ora (stessa ora → stessi esiti).
 
-import { DECAY, SIM, WISPS, XP } from './balance.ts';
-import { CATALOG } from './catalog.ts';
+import { DECAY, KEEPER_LAMP, SIM, WISPS, XP } from './balance.ts';
+import { CATALOG, rotatedFootprint } from './catalog.ts';
 import { createRng, hashString, newId, type Rng } from './rng.ts';
 import { computeSpawns, liveWispChance, wispCap, type SpawnRequest } from './spawn.ts';
 import type { SaveData, Weather } from './state.ts';
@@ -60,6 +60,23 @@ export function placeableDecayDays(p: { id: string; caredAt: string }): { dirty:
   return { dirty, broken: dirty + Math.round(b0 + (b1 - b0) * u('rotto')) };
 }
 
+/** Distanza (celle, tra i centri degli ingombri) entro cui il Lampione del Custode tiene in vita le luci. */
+function center(p: { type: string; x: number; y: number; rot: number }): [number, number] {
+  const [w, d] = rotatedFootprint(p.type, p.rot);
+  return [p.x + w / 2, p.y + d / 2];
+}
+
+/** Una luce che il Lampione del Custode (non rotto) protegge: non si rompe mai. */
+export function keeperProtected(s: Pick<SaveData, 'placeables'>, p: SaveData['placeables'][number]): boolean {
+  if (!CATALOG[p.type]?.light) return false;
+  const [x, y] = center(p);
+  return s.placeables.some((k) => {
+    if (k.type !== 'keeper_lamp' || k.broken) return false;
+    const [kx, ky] = center(k);
+    return Math.max(Math.abs(kx - x), Math.abs(ky - y)) <= KEEPER_LAMP.radius;
+  });
+}
+
 export function runCatchUp(s: SaveData, now: Date): CatchUpReport {
   const last = new Date(s.world.lastSimulationAt);
   const elapsedDays = Math.max(0, daysBetween(last, now));
@@ -111,12 +128,13 @@ export function runCatchUp(s: SaveData, now: Date): CatchUpReport {
   }
 
   // Luci e costruzioni: si sporcano e si rompono con tempi larghi e diversi a ogni ciclo di cura.
+  // Le luci vicine al Lampione del Custode (acceso o spento, purché non rotto) si sporcano ma non si rompono.
   for (const p of s.placeables) {
     if (!CATALOG[p.type]?.decays) continue;
     const age = daysBetween(p.caredAt, now);
     const d = placeableDecayDays(p);
     if (!p.dirty && age >= d.dirty) { p.dirty = true; r.placeablesDirty++; }
-    if (!p.broken && age >= d.broken) { p.dirty = true; p.broken = true; r.placeablesBroken++; }
+    if (!p.broken && age >= d.broken && !keeperProtected(s, p)) { p.dirty = true; p.broken = true; r.placeablesBroken++; }
   }
 
   // Benedizione narrativa del prete (offline).

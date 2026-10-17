@@ -73,8 +73,21 @@ export const SIM = {
  */
 export const RELEASE_LOCKS = { minGraves: false, earlyRank: false };
 
-/** Oggetti in prova: con `RELEASE_LOCKS.earlyRank` spento si comprano a qualsiasi rango. */
-export const EARLY_ACCESS: ReadonlySet<string> = new Set(['bike', 'zombie_bar', 'brain_farm']);
+/**
+ * Oggetti in prova: con `RELEASE_LOCKS.earlyRank` spento si comprano a
+ * qualsiasi rango, in qualsiasi stagione e senza il traguardo che li sblocca
+ * (il prezzo resta).
+ */
+export const EARLY_ACCESS: ReadonlySet<string> = new Set([
+  'bike', 'zombie_bar', 'brain_farm',
+  'candelabra', 'spirit_lantern', 'skull_garland', 'keeper_lamp', 'book_pile', 'stuffed_crow', 'gargoyle', 'reaper_statue', 'keeper_statue',
+  'soul_bell', 'soul_gazebo', 'cypress', 'glow_shrooms', 'witch_apple', 'swing_tree', 'stone_circle', 'hand_swamp', 'hell_crack',
+  'cat_shelter', 'ghost_picnic', 'witch_corner', 'skeleton_band', 'vampire_crypt',
+  'pumpkin_patch', 'giant_web', 'dead_altar', 'skeleton_snowman', 'fence_lights', 'lovers_bench', 'mystic_staff', 'broom',
+]);
+
+/** Cappelli del Custode che si sbloccano con un traguardo (anche questi liberi in prova). */
+export const HAT_FEATS = { witch: { counter: 'potionsSold', goal: 30, label: 'La strega deve vendere 30 pozioni' } } as const;
 
 export const DECAY = {
   /** Tomba: giorni dal primo segno d'incuria (erbacce o sporco) a rotta. */
@@ -139,6 +152,8 @@ export const SPAWN_MODIFIERS = {
   zombieBar: 0.06,
   zombieFarm: 0.03,
   hellHoleGhostBonus: 0.04,
+  /** La crepa infernale chiama i fantasmi come il buco infernale. */
+  hellCrackGhostBonus: 0.04,
   /** Fiori portati aumentano gli eventi (Implementation_Note). */
   flowerEventBonus: 0.01,
 } as const;
@@ -151,10 +166,29 @@ export const SPAWN_MODIFIERS = {
 export const BUSINESS: Record<string, { perDay: [number, number]; cap: number }> = {
   zombie_bar: { perDay: [3, 6], cap: 15 },
   brain_farm: { perDay: [2, 5], cap: 12 },
+  // ogni fuoco fatuo incassato è una pozione venduta
+  witch_corner: { perDay: [3, 6], cap: 15 },
 };
 
-/** Velocità del Custode a piedi (celle al secondo) e moltiplicatore in bicicletta. */
-export const CUSTODE_SPEED = { walk: 3.1, bike: 2 } as const;
+/** Velocità del Custode a piedi (celle al secondo) e moltiplicatori in bicicletta e sulla scopa. */
+export const CUSTODE_SPEED = { walk: 3.1, bike: 2, broom: 2.6 } as const;
+
+/** Bastone mistico: da quanto lontano (celle) i fuochi fatui accorrono al Custode (senza: 0,65). */
+export const STAFF = { radius: 3.5 } as const;
+
+/** Lampione del Custode: le luci entro questo raggio (celle, tra i centri) non si rompono. */
+export const KEEPER_LAMP = { radius: 4 } as const;
+
+/** Campana delle anime: quanti fantasmi accorrono quando la si suona (una volta al giorno). */
+export const SOUL_BELL = { ghosts: 3 } as const;
+
+/**
+ * Zombie che passano accanto a una tomba (solo mentre si gioca): con questa
+ * probabilità la sporcano (al massimo una tomba per zombie) lasciando le
+ * impronte di fango; se era già sporca, la rottura si avvicina di un giorno.
+ * Le tombe appena pulite o coi fiori freschi sono al riparo per qualche ora.
+ */
+export const ZOMBIE_MUD = { chance: 0.35, protectHours: 6, reach: 1 } as const;
 
 /** Becchino: raggio della vecchia pulizia al tocco; quota delle cose sporche che sistema in ogni giro. */
 export const GRAVEDIGGER = { cleanRadius: 4, roundShare: 0.5 } as const;

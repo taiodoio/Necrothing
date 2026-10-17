@@ -9,7 +9,7 @@ import { LP as LPClass, type LP, type LPOpts } from '../kit.ts';
 import { DEFAULT_LOOK } from '../../../game/look.ts';
 import {
   humanSpec, atPivot, type KawaiiSpec, type KPart, V2_SCALE, beginCreature, eyesLP, hairLayer, headAt, headFront, headGeo, surfaceAlong, headCenter, headRadii, onSkin, sheet, taperTube, rbox, shade,
-  smooth, lerp, DEG, O, footGeo,
+  smooth, lerp, DEG, O, footGeo, witchHat,
 } from './custode.ts';
 
 const v = (x: number, y: number, z: number) => new THREE.Vector3(x, y, z);
@@ -541,7 +541,38 @@ function birdSpec(o: Bird): KawaiiSpec {
 const CAT: Quad = { name: 'gatto', color: '#2a2930', belly: '#3a3842', eyes: '#a6d84f', glow: true, head: [0.2, 0.17, 0.17], ears: 'cat', tail: 'up', ruff: true, whiskers: true, nose: '#d68f8f', inner: '#8a5a68' };
 const RAT: Quad = { name: 'ratto', color: '#6c6876', belly: '#8f8a9a', eyes: '#1b1a20', head: [0.17, 0.15, 0.16], ears: 'mouse', tail: 'long', snout: true, whiskers: true, nose: '#d68f8f', inner: '#d6a3a3', scale: 0.62 };
 
+/** La strega dell'angolo delle pozioni: pelle verdina, capelli lunghi viola, cappello e mestolo. */
+function witch(): KawaiiSpec {
+  return humanSpec(
+    { skin: '#b6d29a', sparkle: false, hair: 'long', hairColor: '#4a2a5a', eyes: '#2f5a32', hat: 'none', outfit: 'cloak', outfitColor: '#4a3a5a', accentColor: '#5f8a4a', beard: 'none', mustache: 'none', freckles: true },
+    {
+      name: 'strega', mouth: 'smile', blush: '#d99a9a', hat: (lp) => witchHat(lp), hatPh: 50,
+      held: [{ side: 1, build: (lp: LP) => { lp.cyl(0, -0.05, 0.03, 0.012, 0.012, 0.5, 5, '#6b4a2e', O); lp.blob(0, -0.07, 0.03, 0.045, 0.02, 0.045, '#5a5650', O); } }],
+      head: (lp: LP) => onSkin(lp, headFront(0, 0.68), 0.03, 0, (q) => q.blob(0, 0, 0.02, 0.035, 0.03, 0.05, '#a6c48a', O)),
+    },
+  );
+}
+
+/** Il vampiro della cripta: pallido, mantello nero foderato di rosso col colletto alto, canini. */
+function vampire(): KawaiiSpec {
+  return humanSpec(
+    { skin: '#e4e0ee', sparkle: false, hair: 'side', hairColor: '#1b1a20', eyes: '#8a2a2a', hat: 'none', outfit: 'coat', outfitColor: '#1b1a20', accentColor: '#8e1f2a', beard: 'none', mustache: 'none' },
+    {
+      name: 'vampiro', mouth: 'smile', blush: '#d8a8c8', held: [], plainCoat: true,
+      head: (lp: LP) => { for (const s of [-1, 1]) onSkin(lp, headFront(s * 0.035, 0.6), 0.006, 0, (q) => q.add(new THREE.ConeGeometry(0.012, 0.035, 4).rotateX(Math.PI), '#fbf7ef', O)); },
+      chest: (lp: LP) => {
+        lp.add(new THREE.CylinderGeometry(0.2, 0.34, 0.5, 12, 1, true, Math.PI / 2 + 0.25, Math.PI - 0.5).translate(0, 0.26, -0.02), '#141418', O);
+        lp.add(new THREE.CylinderGeometry(0.19, 0.33, 0.49, 12, 1, true, Math.PI / 2 + 0.25, Math.PI - 0.5).scale(-1, 1, 1).translate(0, 0.26, -0.02), '#8e1f2a', O);
+        for (const sd of [-1, 1]) { lp.push([sd * 0.14, 0.5, 0.0], sd * -0.5, -0.3); lp.add(new THREE.BoxGeometry(0.16, 0.2, 0.015).translate(0, 0.08, 0), '#141418', O); lp.add(new THREE.BoxGeometry(0.15, 0.19, 0.01).translate(0, 0.08, 0.009), '#8e1f2a', O); lp.pop(); }
+        lp.blob(0, 0.44, 0.2, 0.03, 0.03, 0.012, GOLD, O);
+      },
+    },
+  );
+}
+
 export const V2_SPECS: Record<string, KawaiiSpec> = {
+  witch: witch(),
+  vampire: vampire(),
   custode: humanSpec(DEFAULT_LOOK),
   gravedigger: gravedigger(),
   priest: priest(),

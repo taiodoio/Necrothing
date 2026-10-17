@@ -537,8 +537,8 @@ export function glowShroomsLP(lit = true): LPModel {
  * baldacchino di ferro con il drappo di velluto, candelabri, rose, targa
  * «Non disturbare»; di giorno è chiusa e i pipistrelli dormono appesi.
  */
-export function vampireCryptLP(night: boolean): LPModel {
-  const lp = new LP(`new2:vampire:${night}`);
+export function vampireCryptLP(night: boolean, candles = night): LPModel {
+  const lp = new LP(`new2:vampire:${night}:${candles}`);
   const r = lp.rng;
   const VEL = '#6b1a24';
   lp.box(0, 0, 0, 1.75, 0.1, 1.5, LPC.stoneDark, { bevel: 0.02 });
@@ -575,14 +575,14 @@ export function vampireCryptLP(night: boolean): LPModel {
   for (const s of [-1, 1]) {
     lp.cyl(s * 0.75, 0.1, 0.55, 0.08, 0.03, 0.05, 6, LPC.iron, { jitter: 0 });
     lp.cyl(s * 0.75, 0.15, 0.55, 0.02, 0.02, 0.6, 5, LPC.iron, { jitter: 0 });
-    for (const dx of [-0.08, 0, 0.08]) candle(lp, s * 0.75 + dx, 0.75 - Math.abs(dx), 0.55, night, 0.08);
+    for (const dx of [-0.08, 0, 0.08]) candle(lp, s * 0.75 + dx, 0.75 - Math.abs(dx), 0.55, candles, 0.08);
     tube(lp, [s * 0.75 - 0.08, 0.72, 0.55], [s * 0.75 + 0.08, 0.72, 0.55], 0.008, LPC.iron, 3);
   }
   for (let i = 0; i < 8; i++) lp.blob(r.range(-0.7, 0.7), 0.105, r.range(0.4, 0.7), 0.025, 0.02, 0.025, i % 2 ? '#a81a2a' : '#c82a3a', { jitter: 0 });
   // pipistrelli: di giorno appesi a testa in giù al baldacchino, di notte in volo
   if (!night) for (const [x, z] of [[-0.3, 0.45], [0.1, 0.45], [0.35, -0.7]]) { lp.box(x, 1.55, z, 0.005, 0.05, 0.005, LPC.iron, { jitter: 0 }); lp.blob(x, 1.45, z, 0.03, 0.06, 0.025, '#1b1a20', { jitter: 0 }); }
   else for (const [x, y, z, a] of [[0.4, 1.95, 0.2, 0.3], [-0.5, 2.1, -0.1, -0.5], [0.0, 2.3, -0.4, 0.8], [0.7, 1.7, -0.6, -0.2]]) lp.push([x, y, z], a).plate(batShape(1.3), 0.01, '#1b1a20', { ao: 0 }).pop();
-  if (night) lp.light(0, 0.9, 0.55, LPC.flame, 0.7, 4, 0.35, 0.8);
+  if (candles) lp.light(0, 0.9, 0.55, LPC.flame, 0.7, 4, 0.35, 0.8);
   return lp.build();
 }
 
@@ -1124,5 +1124,17 @@ export function keeperRadiusLP(radius: number): LPModel {
   const lp = new LP(`new2:keeperradius:${radius}`);
   const n = Math.round(radius * 9);
   for (let i = 0; i < n; i++) { const a = (i / n) * Math.PI * 2; lp.push([Math.sin(a) * radius, 0.02, Math.cos(a) * radius], a).box(0, 0, 0, 0.22, 0.012, 0.05, '#ffcf7a', { bucket: 'glow', jitter: 0 }).pop(); }
+  return lp.build();
+}
+
+/** Area del Lampione del Custode (in modifica): quadrato tratteggiato a terra di semilato `half`. */
+export function keeperAreaLP(half: number): LPModel {
+  const lp = new LP(`new2:keeperarea:${half}`);
+  const n = Math.round(half * 2.5);
+  for (let side = 0; side < 4; side++) {
+    lp.push([0, 0.03, 0], (side * Math.PI) / 2);
+    for (let i = 0; i < n; i++) { const t = -half + (i + 0.5) * ((2 * half) / n); lp.box(t, 0, half, ((2 * half) / n) * 0.55, 0.012, 0.06, '#ffcf7a', { bucket: 'glow', jitter: 0 }); }
+    lp.pop();
+  }
   return lp.build();
 }

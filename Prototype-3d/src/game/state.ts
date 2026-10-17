@@ -40,6 +40,10 @@ export interface Grave {
   dirtySince: string | null;
   broken: boolean;
   lastAnniversaryYear: number | null;
+  /** Ultima cura (pulizia, fiori, riparazione): per qualche ora gli zombie non la sporcano. */
+  caredAt?: string;
+  /** Sporcata da uno zombie: sopra lo sporco ci sono le impronte di fango (vanno via pulendo). */
+  muddy?: boolean;
   /** Lascito del vecchio custode (tutorial), non una sepoltura del giocatore. */
   legacy?: boolean;
   createdAt: string;
@@ -62,8 +66,10 @@ export interface Placed {
   createdAt: string;
   /** Casetta per animale: cosa fa il suo animale (libero, segue il Custode, a cuccia). */
   petMode?: 'free' | 'follow' | 'home';
-  /** Bar e orto: ultima riscossione dei fuochi fatui (assente = dalla posa). */
+  /** Bar, orto e strega: ultima riscossione dei fuochi fatui (assente = dalla posa). */
   collectedAt?: string;
+  /** Campana delle anime: l'ultima volta che è stata suonata (una volta al giorno). */
+  rungAt?: string;
 }
 
 export interface LooseWisp {
@@ -100,6 +106,12 @@ export interface Counters {
   decorationsPlaced: number;
   photosTaken: number;
   repairs: number;
+  /** Luci riparate (sblocca il Lampione del Custode). */
+  lightsRepaired: number;
+  /** Fuochi fatui guadagnati in tutto (sblocca il Bastone mistico). */
+  wispsEarned: number;
+  /** Pozioni vendute dalla strega (sblocca il cappello da strega). */
+  potionsSold: number;
 }
 
 export interface Player {
@@ -139,6 +151,8 @@ export interface Settings {
   editIntroSeen: boolean;
   shopTutorialDone: boolean;
   showDebug: boolean;
+  /** Il Custode impugna il Bastone mistico (i fuochi fatui accorrono da lontano). */
+  staffEquipped: boolean;
 }
 
 export interface SaveData {
@@ -167,12 +181,14 @@ export const DEFAULT_SETTINGS: Settings = {
   editIntroSeen: false,
   shopTutorialDone: false,
   showDebug: false,
+  staffEquipped: false,
 };
 
 export function emptyCounters(): Counters {
   return {
     flowersBrought: 0, cleanups: 0, ghostsWitnessed: 0, npcEncountered: 0,
     wispsSpent: 0, decorationsPlaced: 0, photosTaken: 0, repairs: 0,
+    lightsRepaired: 0, wispsEarned: 0, potionsSold: 0,
   };
 }
 

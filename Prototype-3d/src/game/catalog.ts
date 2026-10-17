@@ -18,6 +18,9 @@ export const PLACEABLE_CATEGORY_LABELS: Record<PlaceableCategory, string> = {
   extra: 'Extra',
 };
 
+/** Contatori del giocatore che sbloccano oggetti speciali. */
+export type FeatCounter = 'lightsRepaired' | 'wispsEarned' | 'potionsSold';
+
 export interface PlaceableDef {
   id: string;
   label: string;
@@ -50,6 +53,13 @@ export interface PlaceableDef {
   look?: number;
   /** Disponibile solo in un mese (0 = gennaio). */
   onlyMonth?: number;
+  /**
+   * Stagionale: si compra solo tra queste date (mese 0-11, giorno), estremi
+   * compresi, anche a cavallo d'anno. Comprato, resta per sempre.
+   */
+  season?: { from: [number, number]; to: [number, number]; label: string };
+  /** Si sblocca con un traguardo (oltre al rango): un contatore del giocatore che arriva a `goal`. */
+  feat?: { counter: FeatCounter; goal: number; label: string };
   /** Testo personalizzabile (cartello). */
   editableText?: boolean;
   /** Si sblocca solo con almeno queste tombe nel cimitero (contando anche quelle già affidate all'albero). */
@@ -71,6 +81,10 @@ const defs: PlaceableDef[] = [
   { id: 'skull_candle', label: 'Teschio con candela', category: 'light', footprint: [1, 1], cost: 5, minRank: 2, decays: true, light: true, description: 'Un vecchio amico che ha trovato una nuova vocazione.' },
   { id: 'torch', label: 'Torcia in fiamme', category: 'light', footprint: [1, 1], cost: 6, minRank: 2, decays: true, light: true, description: 'Per i rituali, o per trovare le chiavi.' },
   { id: 'bonfire', label: 'Falò esoterico', category: 'light', footprint: [2, 2], cost: 14, minRank: 3, decays: true, light: true, description: 'Il fuoco crepita in una lingua che nessuno parla più.' },
+  { id: 'candelabra', label: 'Candelabro gotico', category: 'light', footprint: [1, 1], cost: 14, minRank: 2, decays: true, light: true, description: 'Cinque candele in ferro battuto. La cera cola sempre verso chi passa.' },
+  { id: 'spirit_lantern', label: 'Lanterna degli spiriti', category: 'light', footprint: [1, 1], cost: 18, minRank: 3, decays: true, light: true, description: 'Una colonnina di pietra con una fiamma azzurra. I glifi si accendono da soli.' },
+  { id: 'skull_garland', label: 'Ghirlanda di teschi luminosi', category: 'light', footprint: [3, 1], cost: 26, minRank: 3, decays: true, light: true, rotatable: true, walkable: true, description: 'Teschietti accesi appesi tra due pali: da tendere sopra i sentieri.' },
+  { id: 'keeper_lamp', label: 'Lampione del Custode', category: 'light', footprint: [1, 1], cost: 30, minRank: 3, unique: true, decays: true, light: true, feat: { counter: 'lightsRepaired', goal: 25, label: 'Ripara 25 luci' }, description: 'Il suo bastone piantato a terra, la sua lanterna, il suo cappello. Le luci qui attorno non si rompono mai.' },
   { id: 'candle_tree', label: 'Albero con candele', category: 'light', footprint: [3, 3], cost: 24, minRank: 4, decays: true, light: true, description: 'Un albero morto che ha deciso di fare luce sugli altri.' },
 
   // ── Decorazioni ───────────────────────────────────────────────────────
@@ -81,6 +95,11 @@ const defs: PlaceableDef[] = [
   { id: 'open_coffin', label: 'Bara aperta', category: 'decoration', footprint: [1, 2], cost: 10, minRank: 2, rotatable: true, description: 'Vuota. Per ora. Gli zombie la trovano molto accogliente.' },
   { id: 'bones', label: 'Ossa', category: 'decoration', footprint: [1, 1], cost: 3, minRank: 1, walkable: true, description: 'Qualcuno le ha perse. Qualcun altro le cerca.' },
   { id: 'vase', label: 'Anfora', category: 'decoration', footprint: [1, 1], cost: 3, minRank: 1, description: 'Terracotta antica. Dentro, solo polvere. Si spera.' },
+  { id: 'book_pile', label: 'Pila di libri ammuffiti', category: 'decoration', footprint: [1, 1], cost: 6, minRank: 1, description: 'Epitaffi mai scritti e romanzi mai finiti. Odorano di cantina.' },
+  { id: 'stuffed_crow', label: 'Corvo impagliato', category: 'decoration', footprint: [1, 1], cost: 10, minRank: 2, description: 'Non vola più. Ti segue con lo sguardo lo stesso.' },
+  { id: 'gargoyle', label: 'Gargoyle', category: 'decoration', footprint: [1, 1], cost: 24, minRank: 3, description: 'Accovacciato sul suo pilastro. Di notte gli occhi si accendono.' },
+  { id: 'reaper_statue', label: 'Mietitore di pietra', category: 'decoration', footprint: [2, 2], cost: 50, minRank: 4, description: 'Incappucciato, con la falce. Sotto il cappuccio, di notte, qualcosa ti guarda.' },
+  { id: 'keeper_statue', label: 'Statua del Custode', category: 'decoration', footprint: [2, 2], cost: 100, minRank: 5, unique: true, description: 'Tu, in pietra, per sempre. Cambia aspetto e la statua cambia con te.' },
   { id: 'urn', label: 'Urna', category: 'decoration', footprint: [1, 1], cost: 5, minRank: 2, family: 'vase', look: 1, description: 'Col coperchio ben chiuso. Meglio non chiedere.' },
 
   // ── Costruzioni ───────────────────────────────────────────────────────
@@ -103,6 +122,8 @@ const defs: PlaceableDef[] = [
   { id: 'fountain', label: 'Fontana', category: 'structure', footprint: [3, 3], cost: 40, minRank: 3, unique: true, decays: true, description: 'L’acqua è torbida e canticchia.' },
   { id: 'hell_hole', label: 'Buco infernale', category: 'structure', footprint: [2, 2], cost: 45, minRank: 4, unique: true, decays: true, light: true, description: 'Un bagliore rosso dal profondo. Aumenta le apparizioni.' },
   { id: 'memory_tree', label: 'Albero dei ricordi', category: 'structure', footprint: [5, 5], cost: 150, minRank: 1, unique: true, minGraves: 20, description: 'Un albero antico che accoglie ciò che non vuoi più tenere in una tomba. Affidagli una sepoltura: la terra se la prende, lo spazio si libera, il ricordo resta appeso ai suoi rami.' },
+  { id: 'soul_bell', label: 'Campana delle anime', category: 'structure', footprint: [2, 2], cost: 60, minRank: 4, unique: true, decays: true, light: true, description: 'Suonala una volta al giorno: le anime del cimitero accorrono a salutarti.' },
+  { id: 'soul_gazebo', label: 'Gazebo delle anime', category: 'structure', footprint: [4, 4], cost: 70, minRank: 4, unique: true, decays: true, light: true, description: 'Rotondo, con la cupola a scaglie e le lanterne verdi. Di notte i fantasmi ci vengono a ballare.' },
   { id: 'pet_house', label: 'Cuccia del cane', category: 'structure', footprint: [2, 2], cost: 20, minRank: 2, decays: true, description: 'Ci vive un cagnolino scheletro: gira libero per il cimitero e torna a dormire in tana. Toccalo per farti raggiungere, liberarlo, mandarlo a cuccia, accarezzarlo o lanciargli l’osso.' },
   { id: 'pet_house_cat', label: 'Cuccia del gatto', category: 'structure', footprint: [2, 2], cost: 22, minRank: 2, decays: true, family: 'pet_house', look: 1, description: 'Ci vive un gatto scheletro: fa le fusa, ma solo quando gli pare. Toccalo per farti raggiungere, liberarlo, mandarlo a cuccia, accarezzarlo o lanciargli l’osso.' },
   { id: 'pet_house_rabbit', label: 'Casetta del coniglio', category: 'structure', footprint: [2, 2], cost: 24, minRank: 3, decays: true, family: 'pet_house', look: 2, description: 'Ci vive un coniglietto scheletro: saltella tra le lapidi. Toccalo per farti raggiungere, liberarlo, mandarlo a cuccia, accarezzarlo o lanciargli l’osso.' },
@@ -122,6 +143,13 @@ const defs: PlaceableDef[] = [
   { id: 'bushes', label: 'Cespugli', category: 'ambient', footprint: [2, 2], cost: 4, minRank: 1, description: 'Ci si nasconde il gatto nero. Sempre.' },
   { id: 'hillock', label: 'Collinetta', category: 'ambient', footprint: [2, 2], cost: 6, minRank: 1, description: 'Un piccolo rilievo erboso. Meglio non chiedersi cosa ci sia sotto.' },
   { id: 'tall_grass', label: 'Erba alta', category: 'ambient', footprint: [1, 1], cost: 1, minRank: 1, walkable: true, description: 'Incolta per scelta artistica.' },
+  { id: 'cypress', label: 'Cipresso', category: 'ambient', footprint: [1, 1], cost: 6, minRank: 1, description: 'Alto, scuro, composto. Il più serio degli alberi.' },
+  { id: 'glow_shrooms', label: 'Funghi luminosi sul tronco', category: 'ambient', footprint: [2, 1], cost: 12, minRank: 2, rotatable: true, description: 'Un tronco caduto che di notte si accende di funghi e spore.' },
+  { id: 'witch_apple', label: 'Melo stregato', category: 'ambient', footprint: [2, 2], cost: 14, minRank: 2, description: 'Le mele sono rosse, lucide e decisamente non da mangiare.' },
+  { id: 'swing_tree', label: 'Albero dell’altalena', category: 'ambient', footprint: [2, 2], cost: 28, minRank: 3, description: 'L’altalena dondola piano. Non c’è vento.' },
+  { id: 'stone_circle', label: 'Cerchio di pietre', category: 'ambient', footprint: [3, 3], cost: 30, minRank: 3, description: 'Pietre alte e basse attorno a un altare. Nessuno ricorda chi le ha messe.' },
+  { id: 'hand_swamp', label: 'Palude con le mani', category: 'ambient', footprint: [4, 3], cost: 35, minRank: 3, unique: true, description: 'Acqua ferma, canne e qualche mano che saluta. Meglio non ricambiare.' },
+  { id: 'hell_crack', label: 'Crepa infernale', category: 'ambient', footprint: [3, 2], cost: 60, minRank: 5, unique: true, light: true, description: 'Il terreno si spacca e da sotto sale un bagliore rosso. Aumenta le apparizioni.' },
   { id: 'mud', label: 'Terreno fangoso', category: 'ambient', footprint: [1, 1], cost: 1, minRank: 1, walkable: true, description: 'Risucchia gli stivali. E a volte restituisce cose.' },
 
   // ── Presenze (NPC piazzabili) ─────────────────────────────────────────
@@ -131,7 +159,23 @@ const defs: PlaceableDef[] = [
   { id: 'ghosts_roam', label: 'Fantasmi erranti', category: 'npc', footprint: [1, 1], cost: 28, minRank: 3, walkable: true, description: 'Girano in tondo attraverso tutto, lapidi comprese.' },
   { id: 'ghosts_ball', label: 'Fantasmi a palla', category: 'npc', footprint: [2, 2], cost: 34, minRank: 4, walkable: true, description: 'Giocano a palla con un teschio. Il teschio si diverte meno.' },
 
+  { id: 'cat_shelter', label: 'Rifugio dei gatti', category: 'npc', footprint: [2, 2], cost: 25, minRank: 2, unique: true, description: 'Una cassetta, una coperta e tre gatti neri. Uno dorme sempre.' },
+  { id: 'ghost_picnic', label: 'Picnic dei fantasmi', category: 'npc', footprint: [2, 2], cost: 40, minRank: 3, unique: true, description: 'Tovaglia a quadri, tè freddo (molto freddo) e tre fantasmi in gita.' },
+  { id: 'witch_corner', label: 'Angolo della strega', category: 'npc', footprint: [2, 2], cost: 55, minRank: 4, unique: true, decays: true, light: true, description: 'Una strega vende pozioni dal suo calderone e incassa qualche fuoco fatuo al giorno.' },
+  { id: 'skeleton_band', label: 'Banda di scheletri', category: 'npc', footprint: [3, 2], cost: 65, minRank: 4, unique: true, light: true, description: 'Violino, tamburo e tromba. Suonano a orecchio: non ne hanno.' },
+  { id: 'vampire_crypt', label: 'Cripta del vampiro', category: 'npc', footprint: [2, 2], cost: 90, minRank: 5, unique: true, decays: true, light: true, description: 'Di giorno dorme nella bara. Di notte esce a fare due passi tra le tombe.' },
+
+  // ── Stagionali ────────────────────────────────────────────────────────
+  { id: 'pumpkin_patch', label: 'Campo di zucche', category: 'ambient', footprint: [3, 3], cost: 20, minRank: 1, light: true, season: { from: [9, 1], to: [9, 31], label: 'ottobre' }, description: 'Solo a ottobre: zucche storte, qualcuna intagliata, tutte che ti guardano.' },
+  { id: 'giant_web', label: 'Ragnatela gigante', category: 'decoration', footprint: [2, 1], cost: 12, minRank: 1, rotatable: true, season: { from: [9, 1], to: [9, 31], label: 'ottobre' }, description: 'Solo a ottobre. Il ragno è in ferie, ma torna.' },
+  { id: 'dead_altar', label: 'Altare dei morti', category: 'decoration', footprint: [2, 2], cost: 25, minRank: 1, light: true, season: { from: [9, 31], to: [10, 2], label: '31 ott – 2 nov' }, description: 'Dal 31 ottobre al 2 novembre: candele, cempasúchil e foto di chi torna a trovarci.' },
+  { id: 'skeleton_snowman', label: 'Pupazzo scheletrico', category: 'decoration', footprint: [1, 1], cost: 15, minRank: 1, season: { from: [11, 1], to: [0, 31], label: 'dic – gen' }, description: 'A dicembre e gennaio: due palle di neve, un teschio e un cilindro.' },
+  { id: 'fence_lights', label: 'Luci di Natale sul recinto', category: 'light', footprint: [1, 1], cost: 3, minRank: 1, light: true, rotatable: true, season: { from: [11, 1], to: [0, 31], label: 'dic – gen' }, description: 'A dicembre e gennaio: un pezzo di staccionata con le lucine. Si mettono in fila.' },
+  { id: 'lovers_bench', label: 'Panchina dei fantasmi innamorati', category: 'npc', footprint: [2, 1], cost: 30, minRank: 1, light: true, rotatable: true, season: { from: [1, 1], to: [1, 29], label: 'febbraio' }, description: 'A febbraio: due fantasmi su una panchina. Si tengono per mano, quando se la ricordano.' },
+
   // ── Extra (non si piazzano: si usano) ─────────────────────────────────
+  { id: 'mystic_staff', label: 'Bastone mistico', category: 'extra', footprint: [1, 1], cost: 0, minRank: 4, unique: true, feat: { counter: 'wispsEarned', goal: 500, label: 'Raccogli 500 fuochi fatui' }, description: 'Il Custode lo impugna e i fuochi fatui accorrono da lontano.' },
+  { id: 'broom', label: 'Scopa volante', category: 'extra', footprint: [1, 2], cost: 120, minRank: 5, unique: true, description: 'Il Custode ci sale a cavalcioni e vola sopra tombe e recinti, più veloce della bici.' },
   { id: 'bike', label: 'Bicicletta', category: 'extra', footprint: [1, 1], cost: 50, minRank: 2, unique: true, description: 'Il Custode pedala al doppio della velocità. Il cestino con la zucca è compreso.' },
 ];
 
@@ -169,8 +213,18 @@ export function rotatedFootprint(type: string, rot: number): [number, number] {
   return rot % 2 === 1 ? [d, w] : [w, d];
 }
 
-export function isSeasonallyAvailable(def: PlaceableDef, month0: number): boolean {
-  return def.onlyMonth === undefined || def.onlyMonth === month0;
+export function isSeasonallyAvailable(def: PlaceableDef, month0: number, day = 15): boolean {
+  if (def.onlyMonth !== undefined && def.onlyMonth !== month0) return false;
+  if (!def.season) return true;
+  const k = (m: number, d: number) => m * 32 + d, at = k(month0, day);
+  const a = k(...def.season.from), b = k(...def.season.to);
+  return a <= b ? at >= a && at <= b : at >= a || at <= b;
+}
+
+/** Quando si trova in Bottega uno stagionale («solo a dicembre», «solo ottobre»…). */
+export function seasonLabel(def: PlaceableDef): string {
+  if (def.season) return def.season.label;
+  return def.onlyMonth === 11 ? 'dicembre' : '';
 }
 
 export function repairCost(def: PlaceableDef): number {
@@ -179,3 +233,7 @@ export function repairCost(def: PlaceableDef): number {
 
 /** Oggetti che contano come "tombe dissotterrate" per lo spawn degli zombie. */
 export const ZOMBIE_ATTRACTORS = new Set(['open_grave', 'open_coffin']);
+
+/** Le presenze piazzabili che vivono attorno al loro oggetto (anche fuori dalla categoria Presenze). */
+export const PRESENCE_TYPES = new Set(['zombies_play', 'zombies_dance', 'zombie_walker', 'ghosts_roam', 'ghosts_ball', 'zombie_bar', 'brain_farm',
+  'cat_shelter', 'ghost_picnic', 'witch_corner', 'skeleton_band', 'vampire_crypt', 'lovers_bench', 'soul_gazebo', 'keeper_statue']);

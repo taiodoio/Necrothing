@@ -28,18 +28,20 @@ export interface BuildingCounts {
   shrine: number;
   openGraves: number;
   hellHole: number;
+  hellCrack: number;
   zombieBar: number;
   brainFarm: number;
 }
 
 export function countBuildings(state: Pick<SaveData, 'placeables'>): BuildingCounts {
-  const c: BuildingCounts = { mausoleum: 0, gravediggerHouse: 0, shrine: 0, openGraves: 0, hellHole: 0, zombieBar: 0, brainFarm: 0 };
+  const c: BuildingCounts = { mausoleum: 0, gravediggerHouse: 0, shrine: 0, openGraves: 0, hellHole: 0, hellCrack: 0, zombieBar: 0, brainFarm: 0 };
   for (const p of state.placeables) {
     if (p.broken) continue; // un edificio rotto non "funziona"
     if (p.type === 'mausoleum') c.mausoleum++;
     else if (p.type === 'gravedigger_house') c.gravediggerHouse++;
     else if (p.type === 'shrine') c.shrine++;
     else if (p.type === 'hell_hole') c.hellHole++;
+    else if (p.type === 'hell_crack') c.hellCrack++;
     else if (p.type === 'zombie_bar') c.zombieBar++;
     else if (p.type === 'brain_farm') c.brainFarm++;
     else if (ZOMBIE_ATTRACTORS.has(p.type)) c.openGraves++;
@@ -59,7 +61,7 @@ export function computeSpawns(
   const out: SpawnRequest[] = [];
 
   if (graves.length > 0) {
-    const ghost = (isNight ? SPAWN_CHANCE.ghostGenericNight : SPAWN_CHANCE.ghostGenericDay) + SPAWN_MODIFIERS.hellHoleGhostBonus * b.hellHole;
+    const ghost = (isNight ? SPAWN_CHANCE.ghostGenericNight : SPAWN_CHANCE.ghostGenericDay) + SPAWN_MODIFIERS.hellHoleGhostBonus * b.hellHole + SPAWN_MODIFIERS.hellCrackGhostBonus * b.hellCrack;
     if (rng.chance(ghost * mult)) out.push({ kind: 'ghost', graveId: rng.pick(graves).id });
     const rare = isNight ? SPAWN_CHANCE.ghostObjectNight : SPAWN_CHANCE.ghostObjectDay;
     const own = graves.filter((g) => !g.legacy);

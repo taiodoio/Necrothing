@@ -475,41 +475,61 @@ export function witchAppleLP(lit = true): LPModel {
 }
 
 /**
- * Masso spaventoso (2×2): un unico grande masso muschioso con la fronte
- * aggrottata e la bocca a crepa piena di denti di pietra; di giorno dorme
- * (palpebre chiuse), di notte apre due occhi ambra che brillano.
+ * Roccia mostruosa (2×2): una piccola montagna appuntita con due guglie
+ * minori, massi ai lati e muschio sulle cenge; davanti una bocca scavata
+ * con i denti aguzzi e sopra due cavità per gli occhi (di notte un bagliore).
  */
-export function scaryBoulderLP(night: boolean): LPModel {
-  const lp = new LP(`new2:boulder:${night}`);
+export function fangRockLP(night: boolean): LPModel {
+  const lp = new LP(`new2:fang:${night}`);
   const r = lp.rng;
-  const S = '#5d6068', S2 = '#4a4c54';
-  lp.blob(0, 0.5, -0.05, 0.75, 0.55, 0.62, S, { detail: 1, vary: 0.08, jitter: 0.06, topTint: LPC.moss, topAmount: 0.6, ao: 0.35 });
-  lp.blob(-0.55, 0.22, 0.25, 0.32, 0.25, 0.3, S2, { detail: 1, vary: 0.1, jitter: 0.05, topTint: LPC.moss, topAmount: 0.5 });
-  lp.blob(0.6, 0.15, 0.35, 0.25, 0.17, 0.22, S2, { vary: 0.1, jitter: 0.04, topTint: LPC.moss, topAmount: 0.4 });
-  // arcate sopraccigliari aggrottate
-  for (const s of [-1, 1]) lp.push([s * 0.22, 0.78, 0.48], s * -0.25, 0, s * 0.35).blob(0, 0, 0, 0.18, 0.06, 0.08, S2, { jitter: 0.01, vary: 0.08 }).pop();
-  // occhi: incavi scuri; di notte iridi ambra che brillano, di giorno palpebre chiuse
-  for (const s of [-1, 1]) {
-    lp.blob(s * 0.22, 0.66, 0.5, 0.11, 0.07, 0.04, '#1a1a1e', { jitter: 0 });
-    if (night) {
-      lp.blob(s * 0.22, 0.66, 0.53, 0.075, 0.05, 0.02, '#ffb02a', { bucket: 'glow', jitter: 0 });
-      lp.blob(s * 0.2, 0.66, 0.545, 0.022, 0.04, 0.01, '#3a1a0a', { jitter: 0 }); // pupilla a fessura
-    } else {
-      lp.push([s * 0.22, 0.66, 0.53], 0, 0.2).blob(0, 0, 0, 0.11, 0.035, 0.04, S, { jitter: 0 }).pop();
-      lp.box(s * 0.22, 0.645, 0.565, 0.14, 0.008, 0.006, '#2a2a30', { jitter: 0 });
-    }
+  const S = '#62656b', S2 = '#4d5058', S3 = '#73746f';
+  const mossy = { topTint: LPC.moss, topAmount: 0.65 };
+  // guglia principale: tronco di piramide a sei facce, una faccia piatta verso +z (il viso)
+  const H = 1.9, R0 = 0.78, R1 = 0.04;
+  const rAt = (y: number) => R0 + (R1 - R0) * (y / H);
+  lp.push([0, 0, -0.05], Math.PI / 6).cyl(0, 0, 0, R0, R1, H, 6, S, { vary: 0.07, jitter: 0.015, ao: 0.35, ...mossy }).pop();
+  // cenge e spigoli di roccia che rompono le facce
+  for (let i = 0; i < 6; i++) {
+    const a = (i / 6) * Math.PI * 2, y = r.range(0.3, 1.2);
+    if (Math.abs(Math.sin(a / 2)) < 0.3) continue; // lascia libero il viso
+    lp.push([Math.sin(a) * rAt(y) * 0.9, y, -0.05 + Math.cos(a) * rAt(y) * 0.9], a, 0.5).cyl(0, 0, 0, 0.14, 0.02, 0.32, 4, S2, { jitter: 0.01, vary: 0.08, ...mossy }).pop();
   }
-  // naso a sperone e bocca a crepa con i denti di pietra
-  lp.push([0, 0.52, 0.56], 0, 0.3).cyl(0, 0, 0, 0.08, 0.02, 0.14, 4, S2, { jitter: 0.01 }).pop();
-  const mouth = new THREE.Shape(); mouth.moveTo(-0.3, 0); mouth.lineTo(-0.15, -0.05); mouth.lineTo(0, -0.02); mouth.lineTo(0.14, -0.06); mouth.lineTo(0.3, 0.01); mouth.lineTo(0.15, -0.11); mouth.lineTo(-0.15, -0.1); mouth.closePath();
-  lp.push([0, 0.4, 0.57], 0, -0.2).plate(mouth, 0.02, '#141418', { ao: 0 }).pop();
-  for (let i = 0; i < 6; i++) lp.push([-0.22 + i * 0.09, 0.39, 0.585], 0, 0, i % 2 ? Math.PI : 0).cyl(0, -0.03, 0, 0.025, 0, 0.05, 3, '#8a8a80', { jitter: 0 }).pop();
-  // muschio, licheni gialli, ciuffi alla base, qualche ossicino
-  for (let i = 0; i < 6; i++) moss(lp, r.range(-0.6, 0.6), r.range(0.3, 0.9), r.range(-0.3, 0.4), 0.08);
-  for (let i = 0; i < 5; i++) lp.blob(r.range(-0.5, 0.5), r.range(0.25, 0.85), 0.5 + r.range(-0.05, 0.05), 0.03, 0.03, 0.01, '#b8a84a', { jitter: 0 });
-  for (let i = 0; i < 7; i++) { const a = r.range(0, 6.28); grassTuft(lp, Math.cos(a) * 0.85, Math.sin(a) * 0.75, 1.1, ['#55603a', '#6b6242', '#4a5a36']); }
-  for (let i = 0; i < 3; i++) boneStick(lp, [r.range(-0.4, 0.4), 0.02, 0.7], [r.range(-0.4, 0.4), 0.02, 0.8], 0.012, LPC.bone);
-  if (night) lp.light(0, 0.66, 0.8, '#ffb02a', 0.35, 2.6, 0.15, 0.5);
+  // due guglie minori ai fianchi, appena inclinate
+  for (const [x, z, h, rr, tilt] of [[-0.62, -0.35, 1.15, 0.38, 0.18], [0.66, -0.25, 0.85, 0.32, -0.2]] as const) {
+    lp.push([x, 0, z], r.range(0, 1), 0, tilt).cyl(0, 0, 0, rr, 0.03, h, 5, S2, { vary: 0.08, jitter: 0.02, ao: 0.3, ...mossy }).pop();
+  }
+  // il viso, sulla faccia frontale inclinata
+  const face = (y: number) => [0, y, -0.05 + rAt(y) * Math.cos(Math.PI / 6) + 0.005] as V3;
+  const tilt = -Math.atan((R0 - R1) * Math.cos(Math.PI / 6) / H);
+  // occhi: due cavità a mandorla inclinate (arrabbiate) sotto le arcate
+  for (const s of [-1, 1]) {
+    lp.push(face(0.98), 0, tilt).push([s * 0.17, 0, 0], 0, 0, s * 0.3);
+    const eye = new THREE.Shape(); eye.moveTo(-0.15, 0); eye.quadraticCurveTo(0, 0.12, 0.15, 0); eye.quadraticCurveTo(0, -0.09, -0.15, 0);
+    lp.plate(eye, 0.012, '#121216', { ao: 0 });
+    if (night) lp.push([0.0, -0.005, 0.013]).blob(0, 0, 0, 0.05, 0.04, 0.006, '#ff8a2a', { bucket: 'glow', jitter: 0 }).pop();
+    lp.box(0, 0.095, 0.02, 0.34, 0.05, 0.07, S2, { bevel: 0.01, jitter: 0.008 }); // arcata
+    lp.pop().pop();
+  }
+  // bocca: cavità larga e irregolare con i denti aguzzi sopra e sotto
+  lp.push(face(0.45), 0, tilt);
+  const m = new THREE.Shape();
+  m.moveTo(-0.34, 0.02); m.lineTo(-0.2, 0.12); m.lineTo(0, 0.15); m.lineTo(0.2, 0.11); m.lineTo(0.34, 0.03); m.lineTo(0.22, -0.12); m.lineTo(0, -0.16); m.lineTo(-0.24, -0.11); m.closePath();
+  lp.plate(m, 0.014, '#0e0e12', { ao: 0 });
+  if (night) lp.blob(0, -0.02, 0.01, 0.16, 0.06, 0.005, '#5a2010', { bucket: 'glow', jitter: 0 }); // brace in gola
+  // labbro di roccia attorno
+  for (let k = 0; k < 12; k++) { const a = (k / 12) * Math.PI * 2; lp.blob(Math.cos(a) * 0.36, Math.sin(a) * 0.17, 0.02, 0.06, 0.04, 0.04, S3, { jitter: 0.008 }); }
+  const TOOTH = '#d8d2c0';
+  for (let k = 0; k < 7; k++) { const x = -0.24 + k * 0.08, h = k % 2 ? 0.09 : 0.13; lp.push([x, 0.12 - Math.abs(x) * 0.1, 0.03]).cyl(0, -h, 0, 0.0, 0.03, h, 4, TOOTH, { jitter: 0 }).pop(); }
+  for (let k = 0; k < 6; k++) { const x = -0.2 + k * 0.08, h = k % 2 ? 0.08 : 0.11; lp.push([x, -0.13 + Math.abs(x) * 0.08, 0.03]).cyl(0, 0, 0, 0.028, 0.0, h, 4, TOOTH, { jitter: 0 }).pop(); }
+  lp.pop();
+  // massi ai lati, sassi, muschio, ciuffi; qualche ossicino davanti alla bocca
+  for (const [x, z, sx, sy] of [[-0.85, 0.35, 0.3, 0.22], [0.9, 0.3, 0.24, 0.18], [-0.45, 0.75, 0.16, 0.12], [0.55, 0.78, 0.13, 0.1], [0.95, -0.55, 0.2, 0.15]] as const) lp.blob(x, sy * 0.7, z, sx, sy, sx * 0.9, r.pick([S, S2, S3]), { detail: 1, vary: 0.1, jitter: 0.04, ...mossy });
+  for (let i = 0; i < 6; i++) moss(lp, r.range(-0.6, 0.6), r.range(0.2, 1.1), r.range(-0.5, 0.2), 0.08);
+  pebbles(lp, -0.9, 0.4, 0.9, 0.95, 6);
+  for (let i = 0; i < 8; i++) { const a = r.range(0, 6.28); grassTuft(lp, Math.cos(a) * 0.95, Math.sin(a) * 0.85, 1.1, ['#55603a', '#6b6242', '#4a5a36']); }
+  for (let i = 0; i < 2; i++) boneStick(lp, [-0.2 + i * 0.35, 0.02, 0.82], [-0.05 + i * 0.3, 0.02, 0.9], 0.012, LPC.bone);
+  skull(lp, 0.28, 0.0, 0.85, 0.6);
+  if (night) lp.light(0, 0.8, 0.9, '#ff8a2a', 0.3, 2.4, 0.3, 0.5);
   return lp.build();
 }
 

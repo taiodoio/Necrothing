@@ -587,11 +587,16 @@ export class Actors {
     const arm = this.avatar.rig.parts.armR;
     if (!arm) return;
     const h = handPos(1), pv = HUMAN_PIVOTS.armR;
+    // impugnato nella mano e inclinato di ~25° in fuori (e appena in avanti), non dritto lungo il corpo
+    const grip = new THREE.Group();
+    grip.name = 'bastone';
+    grip.position.set(h.x - pv[0], h.y - pv[1], h.z - pv[2] + 0.02);
+    grip.rotation.set(0.12, 0, -0.42);
     const staff = lpMesh(mysticStaffLP(true));
-    staff.position.set(h.x - pv[0], h.y - pv[1] - 0.42, h.z - pv[2] + 0.02);
-    staff.name = 'bastone';
-    arm.add(staff);
-    this.staff = staff;
+    staff.position.set(0, -0.42, 0);
+    grip.add(staff);
+    arm.add(grip);
+    this.staff = grip;
   }
 
   private mount() {

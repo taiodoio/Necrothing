@@ -25,7 +25,7 @@ import { P } from '../render/palette.ts';
 import { drawIcon } from '../ui/icons.ts';
 import type { Atmosphere, AnchorHandle } from './Atmosphere.ts';
 import { buildChunk, CHUNK, groundType, lowNoise, naturalHeight, surfaceHeight, WORLD_MAX, WORLD_MIN, type Ground, type GroundInput } from './terrain.ts';
-import { ChunkBaker } from './baker.ts';
+import { ChunkBaker, chunkOf } from './baker.ts';
 
 
 export const HALF = MAP_SIZE / 2;
@@ -392,27 +392,46 @@ export class WorldView {
    * prato; felci, cespugli, erba secca e foglie nel bosco. Evita oggetti e
    * sentieri. I modelli sono pochi e condivisi, varia solo la trasformazione.
    */
+  /** Celle occupate (e di che tipo) l'ultima volta che si è cotto il prato: per rifare solo i blocchi cambiati. */
+  private decorCells = new Map<string, string>();
+
   private syncDecor(state: SaveData) {
     const occ = buildOccupancy(state);
-    const sig = `${this.style}|${this.quality}|${this.decorLod?.join('/') ?? ''}|${state.world.expansionLevel}|${[...occ.owner.keys()].sort().join(';')}`;
-    if (sig === this.decorSig) return;
-    this.decorSig = sig;
-    for (const g of [this.decorLayer, this.decorLight]) for (const c of [...g.children]) { g.remove(c); (c as THREE.Mesh).geometry.dispose(); }
+    const base = `${this.style}|${this.quality}|${this.decorLod?.join('/') ?? ''}|${state.world.expansionLevel}`;
+    // cella → chi la occupa (anche il tipo: un sentiero al posto di un'aiuola cambia i bordi)
+    const cells = new Map<string, string>();
+    const typeOf = new Map(state.placeables.map((p) => [p.id, p.type] as const));
+    for (const [k, id] of occ.owner) cells.set(k, typeOf.get(id) ?? 'g');
+    let only: Set<string> | null = null;
+    if (base === this.decorSig) {
+      // stessa resa e stesso recinto: si rifanno solo i blocchi (12×12) delle celle cambiate e dei loro vicini
+      only = new Set();
+      const touch = (k: string) => { const [x, y] = k.split(',').map(Number); for (const [dx, dy] of [[0, 0], [1, 0], [-1, 0], [0, 1], [0, -1]]) only!.add(chunkOf(x + dx, y + dy)); };
+      for (const [k, v] of cells) if (this.decorCells.get(k) !== v) touch(k);
+      for (const k of this.decorCells.keys()) if (!cells.has(k)) touch(k);
+      if (!only.size) return;
+    }
+    this.decorSig = base;
+    this.decorCells = cells;
+    for (const g of [this.decorLayer, this.decorLight]) for (const c of [...g.children]) {
+      if (only && !only.has(String(c.userData.chunk))) continue;
+      g.remove(c); (c as THREE.Mesh).geometry.dispose();
+    }
     const per = (q: 'low' | 'medium' | 'high') => (q === 'low' ? 0.45 : q === 'medium' ? 0.85 : 1.25) * 1.15; // +15% di fiori, sassi, ciuffi
     if (this.decorLod) {
       // qualità Auto: ricco nella fascia nitida, leggero in quelle sfocate (vedi updateDecorLod)
-      this.bakeDecor(state, occ, per(this.decorLod[0]), this.decorLayer);
-      this.bakeDecor(state, occ, per(this.decorLod[1]), this.decorLight);
+      this.bakeDecor(state, occ, per(this.decorLod[0]), this.decorLayer, only);
+      this.bakeDecor(state, occ, per(this.decorLod[1]), this.decorLight, only);
       this.lodSig = '';
-    } else this.bakeDecor(state, occ, per(this.quality), this.decorLayer);
+    } else this.bakeDecor(state, occ, per(this.quality), this.decorLayer, only);
   }
 
-  private bakeDecor(state: SaveData, occ: ReturnType<typeof buildOccupancy>, per: number, target: THREE.Group) {
+  private bakeDecor(state: SaveData, occ: ReturnType<typeof buildOccupancy>, per: number, target: THREE.Group, only: ReadonlySet<string> | null = null) {
     const input = this.groundInput!;
     // un generatore per cella (dalle sue coordinate): piazzare o togliere un
     // oggetto cambia solo le sue celle, il resto del prato non si sposta
     const cellRng = (x: number, y: number, salt: number) => createRng(Math.floor(hash3(x, y, salt, state.seed) * 4294967296));
-    const baker = new ChunkBaker();
+    const baker = new ChunkBaker(only);
     const st = this.style;
     const M = {
       tuft: (v: number) => getModel(`tuft:${v % 6}`, st, () => sceneryTuft(v % 6), v),
@@ -435,6 +454,7 @@ export class WorldView {
     const a = this.area;
     for (let y = a.y - reach; y < a.y + a.h + reach; y++) {
       for (let x = a.x - reach; x < a.x + a.w + reach; x++) {
+        if (only && !only.has(chunkOf(x, y))) continue;
         const k = `${x},${y}`;
         const gt = groundType(input, x, y);
         if (occ.owner.has(k) || gt === 'path' || gt === 'fence' || gt === 'dirt' || gt === 'mud') continue;

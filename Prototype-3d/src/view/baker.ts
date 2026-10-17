@@ -9,11 +9,18 @@ import { CHUNK } from './terrain.ts';
 
 interface Item { geo: THREE.BufferGeometry; matrix: THREE.Matrix4; tint: number }
 
+/** Chunk (`cx,cy`) di una cella. */
+export const chunkOf = (cellX: number, cellY: number) => `${Math.floor(cellX / CHUNK)},${Math.floor(cellY / CHUNK)}`;
+
 export class ChunkBaker {
   private groups = new Map<string, { chunk: string; bucket: Bucket; mats: MaterialSet; items: Item[] }>();
 
+  /** `only`: si cuociono solo questi chunk (gli altri restano com'erano). */
+  constructor(private readonly only: ReadonlySet<string> | null = null) {}
+
   add(model: CachedModel, matrix: THREE.Matrix4, tint: number, cellX: number, cellY: number) {
-    const chunk = `${Math.floor(cellX / CHUNK)},${Math.floor(cellY / CHUNK)}`;
+    const chunk = chunkOf(cellX, cellY);
+    if (this.only && !this.only.has(chunk)) return;
     for (const [bucket, geo] of Object.entries(model.geometries) as [Bucket, THREE.BufferGeometry][]) {
       if (!geo) continue;
       const key = `${chunk}|${bucket}|${model.mats.solid.uuid}`;

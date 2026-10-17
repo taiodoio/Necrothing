@@ -730,7 +730,7 @@ export function hairLayer(lp: LP, o: { locks: number; hem: (thDeg: number) => nu
 }
 
 /** Fin dove arrivano i capelli sotto ciascun cappello (φ, gradi). */
-const HAT_PH: Record<HatStyle, number> = { none: 89, wide: 40, top: 42, beanie: 30, witch: 50 };
+const HAT_PH: Record<HatStyle, number> = { none: 89, wide: 40, top: 42, beanie: 30, witch: 42 };
 const hatPh = () => X.hatPh ?? HAT_PH[L.hat];
 
 /** Riccioli: palline schiacciate distribuite a file regolari sulla superficie dei capelli. */
@@ -842,7 +842,7 @@ function tufts(lp: LP, tone: (k: number) => string) {
 function hatGeo(lp: LP) {
   if (X.hat) { X.hat(lp); return; }
   if (L.hat === 'none') return;
-  if (L.hat === 'witch') { witchHat(lp, L.hatColor, L.accentColor); return; }
+  if (L.hat === 'witch') { witchHat(lp, L.hatColor, L.accentColor, hatPh()); return; }
   const c = L.hatColor, d = shade(c, -0.08);
   if (L.hat === 'beanie') {
     sheet(lp, 30, 6, (u, v) => [Math.PI + u * Math.PI, lerp(26, 89, v) * DEG], (_u, v) => 0.06 + 0.03 * smooth(0.3, 1, v), c);
@@ -865,15 +865,27 @@ function hatGeo(lp: LP) {
 }
 
 /** Cappello da strega (spazio della testa): tesa larga, cono piegato, nastro e fibbia. */
-export function witchHat(lp: LP, color = '#2a2235', band = '#5f8a4a') {
-  const y = headAt(0, 50 * DEG).p.y;
-  lp.cyl(C.x, y - 0.01, C.z + 0.01, 0.44, 0.43, 0.03, 20, color, O);
-  lp.push([C.x, y + 0.02, C.z], 0, -0.12, 0.08);
-  lp.cyl(0, 0, 0, 0.24, 0.12, 0.28, 14, color, O);
-  lp.push([0, 0.28, -0.02], 0, -0.35, 0.15).cyl(0, 0, 0, 0.12, 0.0, 0.26, 12, color, O).pop();
-  lp.cyl(0, 0.02, 0, 0.245, 0.24, 0.05, 14, band, O);
-  lp.add(new THREE.BoxGeometry(0.06, 0.06, 0.01).translate(0, 0.045, 0.24), '#c9a227', O);
-  lp.pop();
+export function witchHat(lp: LP, color = '#2a2235', band = '#5f8a4a', ph = 50) {
+  // come gli altri cappelli: la tesa poggia dove finiscono i capelli e il cono li copre tutti
+  const at = (th: number) => shellAt(th, (ph - 4) * DEG).p;
+  const y = at(0).y - 0.005;
+  const headR = Math.max(...[0, 90, 180, -90].map((t) => Math.hypot(at(t * DEG).x - C.x, at(t * DEG).z - C.z)));
+  const cr = headR + 0.06, R = cr + 0.16;
+  // tesa larga e morbida che spiove appena verso il bordo
+  lp.lathe(C.x, y - 0.02, C.z, [[cr - 0.04, 0.03], [cr + 0.07, 0.018], [R - 0.02, -0.01], [R, -0.026], [R - 0.003, -0.01], [cr + 0.07, 0.038], [cr - 0.04, 0.05]], 22, color, O);
+  // cono in un pezzo solo: un tubo che si stringe e si piega all'indietro e di lato, con la punta floscia
+  const pts: THREE.Vector3[] = [], radii: number[] = [];
+  const N = 8;
+  for (let i = 0; i <= N; i++) {
+    const t = i / N;
+    pts.push(new THREE.Vector3(C.x + 0.07 * t ** 3, y + 0.01 + 0.56 * t - 0.1 * t ** 3, C.z - 0.22 * t ** 2.2));
+    radii.push(Math.max(0.006, cr * (1 - t) ** 0.95));
+  }
+  lp.add(taperTube(pts, radii, 16), color, O);
+  // nastro con la fibbia
+  lp.cyl(C.x, y + 0.012, C.z, cr + 0.006, cr * 0.95, 0.065, 18, band, O);
+  lp.add(new THREE.BoxGeometry(0.075, 0.07, 0.012).translate(C.x, y + 0.045, C.z + cr * 0.97 + 0.006), '#c9a227', O);
+  lp.add(new THREE.BoxGeometry(0.04, 0.035, 0.014).translate(C.x, y + 0.045, C.z + cr * 0.97 + 0.008), band, O);
 }
 
 /** Occhiali, lentiggini, cerotto. */

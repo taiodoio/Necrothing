@@ -99,8 +99,12 @@ interagisci, `B` sali/scendi dalla bici, `F` sali/scendi dalla scopa, `V` cambia
   sugli assi X/Z e cambiano direzione sugli ostacoli; i fantasmi attraversano tutto.
   Toccarle dà XP/✦; il becchino pulisce gratis le tombe vicine. Mausoleo, santuario,
   casa del becchino, bare aperte e buco infernale modificano le probabilità.
-- **Presenze piazzabili**: zombie che giocano a carte o ballano, zombie errante,
-  fantasmi in girotondo o a palla con un teschio, e l'**animale
+- **Presenze piazzabili**: zombie che giocano a carte o ballano, fantasmi a palla con un
+  teschio, lo **spaventapasseri** (testa di zucca che gira piano verso il Custode quando è
+  vicino, di notte accesa; ogni tanto un corvo arriva in volo, si posa sulla manica e riparte),
+  lo **scheletro giardiniere** (cappello di paglia, rastrella a due mani attorno al suo mucchio
+  di foglie; camminando porta il rastrello con sé). Sostituiscono zombie e fantasmi erranti,
+  che il gioco porta già da sé: nei salvataggi vecchi diventano questi due. E l'**animale
   domestico**: la casetta per animali (cane, gatto, coniglio, papera, corvo scheletro) porta con sé
   il suo animaletto. Libero gira per il cimitero e ogni tanto torna a dormire in tana (si vedono
   gli occhietti nel buio dell'arco e salgono le "z"); ogni animale ha il suo menù (toccandolo,

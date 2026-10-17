@@ -16,7 +16,7 @@ import { DEFAULT_LOOK, lookKey, type CustodeLook } from '../game/look.ts';
 
 export type CharacterKind =
   | 'custode' | 'priest' | 'gravedigger' | 'mourner' | 'mournerB' | 'ghost' | 'ghostRare'
-  | 'zombie' | 'skeleton' | 'cat' | 'crow' | 'rat' | 'witch' | 'vampire'
+  | 'zombie' | 'skeleton' | 'gardener' | 'cat' | 'crow' | 'rat' | 'witch' | 'vampire'
   | 'petDog' | 'petCat' | 'petRabbit' | 'petDuck' | 'petCrow';
 
 type PartName = 'body' | 'head' | 'armL' | 'armR' | 'legL' | 'legR' | 'extra';
@@ -171,6 +171,7 @@ function spec(kind: CharacterKind): Spec {
         }),
       };
     case 'skeleton':
+    case 'gardener': // il giardiniere è uno scheletro col cappello di paglia
       return {
         parts: [
           { name: 'legL', pivot: [-1, 5, 0], build: (b) => { b.box(-0.5, -5, -0.5, 0.5, 0, 0.5, P.bone); b.box(-0.7, -5, -0.6, 0.7, -4.4, 1.2, P.bone); } },
@@ -183,7 +184,12 @@ function spec(kind: CharacterKind): Spec {
               b.box(-2.6, 5.2, -0.6, 2.6, 5.8, 0.6, P.bone);
             },
           },
-          { name: 'head', pivot: [0, 10.5, 0], build: (b) => { b.box(-1.8, 0.4, -1.8, 1.8, 3.8, 1.8, P.bone); b.box(-1.2, -0.4, -1.2, 1.2, 0.6, 1.4, P.bone); b.box(-1.2, 1.7, 1.6, -0.3, 2.6, 2, P.ink); b.box(0.3, 1.7, 1.6, 1.2, 2.6, 2, P.ink); } },
+          {
+            name: 'head', pivot: [0, 10.5, 0], build: (b) => {
+              b.box(-1.8, 0.4, -1.8, 1.8, 3.8, 1.8, P.bone); b.box(-1.2, -0.4, -1.2, 1.2, 0.6, 1.4, P.bone); b.box(-1.2, 1.7, 1.6, -0.3, 2.6, 2, P.ink); b.box(0.3, 1.7, 1.6, 1.2, 2.6, 2, P.ink);
+              if (kind === 'gardener') { b.box(-3.2, 3.6, -3.2, 3.2, 4.1, 3.2, '#c9a35a'); b.box(-2, 4.1, -2, 2, 5.4, 2, '#c9a35a'); b.box(-2.1, 4.1, -2.1, 2.1, 4.6, 2.1, '#8e2f2a'); }
+            },
+          },
           { name: 'armL', pivot: [-2.8, 10.4, 0], build: (b) => b.box(-0.4, -6, -0.4, 0.4, 0, 0.4, P.bone) },
           { name: 'armR', pivot: [2.8, 10.4, 0], build: (b) => b.box(-0.4, -6, -0.4, 0.4, 0, 0.4, P.bone) },
         ],

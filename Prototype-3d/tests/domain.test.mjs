@@ -709,3 +709,15 @@ test('crepa infernale: chiama i fantasmi come il buco infernale', () => {
   s.placeables.push({ id: 'c1', type: 'hell_crack', x: 40, y: 40, rot: 0, variant: 0, lit: true, caredAt: NOW.toISOString(), dirty: false, broken: false, createdAt: NOW.toISOString() });
   assert.equal(countBuildings(s).hellCrack, 1);
 });
+
+test('zombie e fantasmi erranti diventano spaventapasseri e giardiniere (piazzati e in inventario)', async () => {
+  const { normalizeSave } = await import('../src/game/state.ts');
+  const old = createNewGame(NOW, 5);
+  old.placeables.push({ ...old.placeables[0], id: 'zw', type: 'zombie_walker', lit: false }, { ...old.placeables[0], id: 'gr', type: 'ghosts_roam' });
+  old.inventory = { zombie_walker: 1, ghosts_roam: 2, gardener_corner: 1 };
+  const s = normalizeSave(JSON.parse(JSON.stringify(old)));
+  assert.equal(s.placeables.find((p) => p.id === 'zw').type, 'scarecrow');
+  assert.equal(s.placeables.find((p) => p.id === 'zw').lit, true, 'la zucca si accende');
+  assert.equal(s.placeables.find((p) => p.id === 'gr').type, 'gardener_corner');
+  assert.deepEqual(s.inventory, { gardener_corner: 3, scarecrow: 1 });
+});

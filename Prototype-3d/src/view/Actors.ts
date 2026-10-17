@@ -15,7 +15,7 @@ import { animateRig, buildRig, rigLightPos, type CharacterKind, type Pose, type 
 import { DEFAULT_LOOK, lookKey, type CustodeLook } from '../game/look.ts';
 import { handPos, HUMAN_PIVOTS } from '../render/lowpoly/v2/custode.ts';
 import { broom2LP, mysticStaffLP } from '../render/lowpoly/newItems2.ts';
-import { animateNotes, attachProp, lpMesh, playPose, presenceLayout, scenePropObject, type Instrument, type PresenceRole, type PresenceTier, type PropKind } from './presences.ts';
+import { animateNotes, attachProp, lpMesh, presenceLayout, propPose, scenePropObject, type PresenceRole, type PresenceTier, type PropKind } from './presences.ts';
 export { BUSINESS_PRESENCES, type PresenceTier } from './presences.ts';
 import { instantiate, lightWorldPos, LOWPOLY_MATERIALS } from '../render/modelCache.ts';
 import { BIKE, BIKE_SCALE, bicycleLP } from '../render/lowpoly/extraItems.ts';
@@ -852,9 +852,6 @@ export class Actors {
   /** Rimette in mano boccale, zappa o strumento (anche dopo che il rig è stato ricostruito). */
   private attachProp(pr: Presence) { attachProp(pr.rig, pr.prop); }
 
-  /** Gli scheletri della banda suonano. */
-  private play(pr: Presence, t: number) { playPose(pr.rig, pr.prop as Instrument, t + pr.pos.x); }
-
   /** L'avventore alza il boccale: ogni tanto beve un sorso, poi brinda. */
   private sip(pr: Presence, t: number) {
     const arm = pr.rig.parts.armR;
@@ -1541,7 +1538,7 @@ export class Actors {
       if (riding && this.ride) this.poseRider(dt);
       else if (riding) this.poseBroom(t);
       else if ((w as Presence).prop === 'mug') this.sip(w as Presence, t);
-      else if ((w as Presence).prop && (w as Presence).prop !== 'hoe') this.play(w as Presence, t);
+      else if ((w as Presence).prop) propPose(w.rig, (w as Presence).prop!, t + w.pos.x, w.pose === 'walk');
       // ombra vera nella mappa delle ombre, oppure disco sotto i piedi
       const cast = !this.blobShadows;
       if (w.rig.root.userData.cast !== cast) {

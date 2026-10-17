@@ -556,20 +556,6 @@ export function npcHomeLP(v: PVis): LPModel {
       lp.push([-0.7, 0.24, -0.62], 0, 0.6).lathe(0, 0, 0, [[0.02, 0], [0.03, 0.15], [0.08, 0.28], [0.16, 0.34], [0.18, 0.35]], 8, LPC.gold, { jitter: 0 }).pop();
       break;
     }
-    case 'zombie_walker': {
-      lp.blob(0, 0.0, 0, 0.42, 0.12, 0.42, LPC.soil, { detail: 1, jitter: 0.03 });
-      // la mano che saluta è una parte animata (animated.ts); qui terra smossa e lapide storta
-      lp.push([-0.25, 0.05, -0.32], 0.3, -0.25).extrude(roundTopShape(0.32, 0.42, 6), 0.08, LPC.stone, { bevel: 0.01, topTint: LPC.moss, topAmount: 0.4 }).pop();
-      for (let i = 0; i < 5; i++) lp.blob(r.range(-0.3, 0.3), 0.08, r.range(-0.2, 0.3), 0.06, 0.04, 0.06, LPC.soilDark, { jitter: 0.01 });
-      pebbles(lp, -0.4, -0.4, 0.4, 0.4, 4);
-      break;
-    }
-    case 'ghosts_roam': {
-      lp.push([0, 0, -0.1]).extrude(roundTopShape(0.45, 0.6, 7), 0.14, LPC.stoneDark, { bevel: 0.012, topTint: LPC.moss, topAmount: 0.5 }).pop();
-      lp.push([0, 0.18, -0.02]).plate(roundTopShape(0.2, 0.26, 6), 0.01, LPC.spectral, { bucket: 'glow', ao: 0 }).pop();
-      lp.light(0, 0.3, 0.1, LPC.spectral, 0.4, 2.5, 0.3, 0.6);
-      break;
-    }
     case 'ghosts_ball': {
       for (const x of [-0.8, 0.8]) {
         for (const z of [-0.28, 0.28]) lp.cyl(x, 0, z, 0.03, 0.03, 0.5, 5, LPC.bone, { jitter: 0 });

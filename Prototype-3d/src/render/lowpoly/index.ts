@@ -25,6 +25,7 @@ import {
 import { memoryTreeLP } from './memoryTree.ts';
 import { bicycleLP, brainFarmLP, zombieBarLP } from './extraItems.ts';
 import { LP_UNLOCKABLES } from './unlockables.ts';
+import { gardenerCornerLP, scarecrowBodyLP } from './newItems3.ts';
 import { weathered } from './weathering.ts';
 import { CATALOG } from '../../game/catalog.ts';
 import { GRAVE_FOOTPRINT } from '../../game/balance.ts';
@@ -82,8 +83,8 @@ export const LP_PLACEABLES: Record<string, (v: PVis) => LPModel> = {
   mud: mudLP,
   zombies_play: npcHomeLP,
   zombies_dance: npcHomeLP,
-  zombie_walker: npcHomeLP,
-  ghosts_roam: npcHomeLP,
+  scarecrow: (v) => scarecrowBodyLP(v.lit),
+  gardener_corner: () => gardenerCornerLP(),
   ghosts_ball: npcHomeLP,
   zombie_bar: zombieBarLP,
   brain_farm: brainFarmLP,

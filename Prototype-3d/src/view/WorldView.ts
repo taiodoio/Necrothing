@@ -1058,6 +1058,10 @@ export class WorldView {
 
   // ── Animazione ───────────────────────────────────────────────────────
 
+  /** Chi guardano gli oggetti che seguono con lo sguardo (lo spaventapasseri): il Custode. */
+  private watchTarget: THREE.Vector3 | null = null;
+  watch(target: THREE.Vector3 | null) { this.watchTarget = target; }
+
   update(_dt: number, t: number) {
     for (const w of this.wisps.values()) {
       w.group.position.y = w.base.y + Math.sin(t * 2.2 + w.phase) * 0.12;
@@ -1073,7 +1077,7 @@ export class WorldView {
       this.atmosphere.moveAnchor(w.anchor, w.group.position);
     }
     this.flushZones();
-    for (const e of this.entities.values()) e.anim?.update(t + e.group.position.x * 0.37);
+    for (const e of this.entities.values()) { e.anim?.watch?.(this.watchTarget); e.anim?.update(t + e.group.position.x * 0.37); }
     if (this.areaOutline) (this.areaOutline.material as THREE.MeshBasicMaterial).opacity = 0.65 + Math.sin(t * 3) * 0.25;
     for (const e of this.entities.values()) {
       if (e.badge) e.badge.position.y = e.height + 0.45 + Math.sin(t * 2.5 + e.group.position.x) * 0.06;

@@ -10,6 +10,7 @@ import * as N from '../render/lowpoly/newItems.ts';
 import * as M from '../render/lowpoly/newItems2.ts';
 import * as S from '../render/lowpoly/newItems3.ts';
 import { gardenerSpec } from '../render/lowpoly/v2/npc.ts';
+import { rakeGrip, rakeMesh } from '../view/presences.ts';
 import { LP_SCENERY } from '../render/lowpoly/index.ts';
 import { lowpolyGrave } from '../render/lowpoly/graves.ts';
 import { lampPost } from '../render/lowpoly/lights.ts';
@@ -359,40 +360,23 @@ function snowman2(): THREE.Group {
 
 /** Spaventapasseri: la testa ruota a parte (verso il Custode), il corvo si posa sul braccio. */
 function scarecrow(lit: boolean, headYaw = 0, crow = false): THREE.Group {
-  const s = group(inst(S.scarecrowBodyLP()), inst(S.scarecrowHeadLP(lit), [0, S.SCARECROW_NECK, 0], headYaw));
-  if (crow) { const c = char('crow', 'idle', [0.33, 1.03, -0.02], 0.9, 0.4); c.scale.setScalar(0.55); s.add(c); }
-  s.scale.setScalar(S.SCARECROW_SCALE);
+  const s = group(inst(S.scarecrowBodyLP(lit)), inst(S.scarecrowHeadLP(lit), [0, S.SCARECROW_NECK, 0], headYaw));
+  if (crow) { const c = char('crow', 'idle', [0.33 * S.SCARECROW_SCALE, 1.03 * S.SCARECROW_SCALE, -0.02], 0.9, 0.4); c.scale.setScalar(0.55 * S.SCARECROW_SCALE); s.add(c); }
   return group(s, lawn(0.7, 1.5, 12, 51));
 }
 
-/** Il braccio (perno `pv`, mano a riposo in `rest`) ruota per portare la mano sul segmento G→T del manico. */
-function reach(arm: THREE.Object3D, pv: THREE.Vector3, rest: THREE.Vector3, G: THREE.Vector3, T: THREE.Vector3, far: boolean) {
-  const len = rest.distanceTo(pv), d = T.clone().sub(G), f = G.clone().sub(pv);
-  const A = d.dot(d), B = 2 * f.dot(d), C = f.dot(f) - len * len, disc = B * B - 4 * A * C;
-  const sRoot = disc >= 0 ? (-B + (far ? 1 : -1) * Math.sqrt(disc)) / (2 * A) : -B / (2 * A);
-  const target = G.clone().addScaledVector(d, THREE.MathUtils.clamp(sRoot, 0, 1));
-  arm.quaternion.setFromUnitVectors(rest.clone().sub(pv).normalize(), target.sub(pv).normalize());
-}
-
 /**
- * Scheletro giardiniere che rastrella: il pettine a terra davanti e di lato,
- * il manico sale verso il fianco; la destra lo tiene in basso, la sinistra in alto.
- * `t` è la fase del gesto (il pettine va avanti e torna).
+ * Scheletro giardiniere che rastrella (lo stesso gesto del gioco): il pettine a
+ * terra davanti e di lato, la destra in basso sul manico, la sinistra in alto.
  */
 function gardener(t = 0): THREE.Group {
   const a = assemble(gardenerSpec(), 'giardiniere');
   const inner = a.root.children[0];
   const parts: Record<string, THREE.Object3D> = {};
   Object.keys(HUMAN_PIVOTS).forEach((k, i) => { parts[k] = inner.children[i]; });
-  const sw = Math.sin(t) * 0.09;
-  const G = new THREE.Vector3(0.3, 0.075, 0.62 + sw), T = new THREE.Vector3(-0.02, 0.4, 0.04 + sw * 0.4);
-  const y = T.clone().sub(G).normalize(), x = new THREE.Vector3().crossVectors(y, new THREE.Vector3(0, 1, 0)).normalize(), z = new THREE.Vector3().crossVectors(x, y);
-  const rake = inst(S.rakeLP(G.distanceTo(T) + 0.14));
-  rake.position.copy(G); rake.quaternion.setFromRotationMatrix(new THREE.Matrix4().makeBasis(x, y, z));
+  const rake = rakeMesh();
   inner.add(rake);
-  const pv = (k: 'armL' | 'armR') => new THREE.Vector3(...HUMAN_PIVOTS[k]);
-  reach(parts.armR, pv('armR'), handPos(1), G, T, false);
-  reach(parts.armL, pv('armL'), handPos(-1), G, T, true);
+  rakeGrip(parts.armL, parts.armR, rake, Math.sin(t) * 0.09);
   parts.head.rotation.x = 0.2; parts.head.rotation.y = 0.25;
   return a.root;
 }

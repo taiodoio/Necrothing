@@ -135,16 +135,22 @@ export function npcHome(v: PVis): Model {
       b.push([-6, 4, -6], 0, 0.5).cyl(0, 0, 0, 6, 0.6, 3, P.gold, { seg: 8 }).pop();
       break;
     }
-    case 'zombie_walker': {
-      b.ell(0, 0, 0, 4, 1.4, 4, P.earth, { jitter: 0.12 });
-      b.box(-0.6, 0, 1, 0.6, 4, 2, P.zombie);
-      for (let i = -1; i <= 1; i++) b.box(i * 0.6 - 0.2, 4, 1, i * 0.6 + 0.2, 5.5, 2, P.zombie);
+    case 'scarecrow': {
+      b.ell(0, 0, 0, 4, 1, 4, P.earth, { jitter: 0.12 });
+      b.box(-0.4, 0, -0.4, 0.4, 13, 0.4, P.woodDark); // palo
+      b.box(-4.5, 9.6, -0.4, 4.5, 10.4, 0.4, P.wood); // traversa con le maniche
+      b.box(-2, 6, -1.6, 2, 11, 1.6, '#5d4a3c');
+      b.box(-4.6, 9.2, -0.8, -2, 11, 0.8, '#5d4a3c'); b.box(2, 9.2, -0.8, 4.6, 11, 0.8, '#5d4a3c');
+      b.box(-0.6, 8, 1.6, 0.4, 9, 1.9, P.red); // toppa
+      b.box(-2, 11, -2, 2, 14.4, 2, '#c8691f'); // zucca
+      b.box(-1.2, 12.4, 1.9, -0.4, 13.2, 2.2, '#ffb54a', { bucket: 'glow' }); b.box(0.4, 12.4, 1.9, 1.2, 13.2, 2.2, '#ffb54a', { bucket: 'glow' });
+      b.box(-3, 14.4, -3, 3, 15, 3, '#4a3f35'); b.box(-1.8, 15, -1.8, 1.8, 17, 1.8, '#4a3f35');
       break;
     }
-    case 'ghosts_roam': {
-      b.box(-2, 0, -2, 2, 6, 2, P.stoneDark, { rough: 0.7 });
-      b.box(-0.8, 3, 1.8, 0.8, 4.5, 2.4, P.spectral, { bucket: 'glow' });
-      b.light(0, 4, 2.2, P.spectral, 0.4, 2.5, 0.3, 0.6);
+    case 'gardener_corner': {
+      b.ell(1, 0, 1, 3.2, 1.8, 3.2, '#a0682f', { jitter: 0.2 });
+      b.cyl(-2.4, -2, 0, 2.4, 1.4, 1.4, '#9a7a4a', { seg: 8 }); // cesta
+      b.box(2.2, 0, -3, 3.6, 1.6, -1.6, '#6f7d84'); // annaffiatoio
       break;
     }
     case 'ghosts_ball': {

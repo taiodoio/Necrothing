@@ -155,8 +155,8 @@ const defs: PlaceableDef[] = [
   // ── Presenze (NPC piazzabili) ─────────────────────────────────────────
   { id: 'zombies_play', label: 'Zombie che giocano', category: 'npc', footprint: [2, 2], cost: 30, minRank: 3, walkable: true, description: 'Giocano a carte. Barano entrambi.' },
   { id: 'zombies_dance', label: 'Zombie che ballano', category: 'npc', footprint: [2, 2], cost: 30, minRank: 3, walkable: true, description: 'Il ritmo ce l’hanno ancora nelle ossa.' },
-  { id: 'zombie_walker', label: 'Zombie errante', category: 'npc', footprint: [1, 1], cost: 26, minRank: 3, walkable: true, description: 'Passeggia senza meta, come la domenica.' },
-  { id: 'ghosts_roam', label: 'Fantasmi erranti', category: 'npc', footprint: [1, 1], cost: 28, minRank: 3, walkable: true, description: 'Girano in tondo attraverso tutto, lapidi comprese.' },
+  { id: 'scarecrow', label: 'Spaventapasseri', category: 'npc', footprint: [1, 1], cost: 26, minRank: 3, light: true, description: 'Ti segue con lo sguardo ovunque tu vada. Il corvo sul braccio, invece, fa finta di niente.' },
+  { id: 'gardener_corner', label: 'Scheletro giardiniere', category: 'npc', footprint: [1, 1], cost: 28, minRank: 3, description: 'Rastrella le stesse foglie da trent’anni. Non ha fretta.' },
   { id: 'ghosts_ball', label: 'Fantasmi a palla', category: 'npc', footprint: [2, 2], cost: 34, minRank: 4, walkable: true, description: 'Giocano a palla con un teschio. Il teschio si diverte meno.' },
 
   { id: 'cat_shelter', label: 'Rifugio dei gatti', category: 'npc', footprint: [2, 2], cost: 25, minRank: 2, unique: true, description: 'Una cassetta, una coperta e tre gatti neri. Uno dorme sempre.' },
@@ -235,5 +235,5 @@ export function repairCost(def: PlaceableDef): number {
 export const ZOMBIE_ATTRACTORS = new Set(['open_grave', 'open_coffin']);
 
 /** Le presenze piazzabili che vivono attorno al loro oggetto (anche fuori dalla categoria Presenze). */
-export const PRESENCE_TYPES = new Set(['zombies_play', 'zombies_dance', 'zombie_walker', 'ghosts_roam', 'ghosts_ball', 'zombie_bar', 'brain_farm',
+export const PRESENCE_TYPES = new Set(['zombies_play', 'zombies_dance', 'gardener_corner', 'ghosts_ball', 'zombie_bar', 'brain_farm',
   'cat_shelter', 'ghost_picnic', 'witch_corner', 'skeleton_band', 'vampire_crypt', 'lovers_bench', 'soul_gazebo', 'keeper_statue']);

@@ -9,13 +9,14 @@ import { lookKey, type CustodeLook } from '../game/look.ts';
 import { assemble, handPos, HUMAN_PIVOTS, humanSpec } from '../render/lowpoly/v2/custode.ts';
 import { instrumentLP } from '../render/lowpoly/newItems.ts';
 import { sleepingCatLP } from '../render/lowpoly/newItems2.ts';
+import { rakeLP } from '../render/lowpoly/newItems3.ts';
 import { skull } from '../render/lowpoly/extras.ts';
 import { LP, type LPModel } from '../render/lowpoly/kit.ts';
 import { instantiate, LOWPOLY_MATERIALS } from '../render/modelCache.ts';
 import type { CharacterKind, Pose, Rig } from './characters.ts';
 
 export type Instrument = 'violin' | 'sticks' | 'trumpet';
-export type PropKind = 'mug' | 'hoe' | Instrument;
+export type PropKind = 'mug' | 'hoe' | 'rake' | Instrument;
 export type PresenceRole = 'sit' | 'dance' | 'wander' | 'circle' | 'goalie' | 'still';
 
 /** Quante presenze animano bar e orto: con la fascia del dispositivo (economico, medio, top). */
@@ -84,9 +85,8 @@ export function presenceLayout(p: Pick<Placed, 'type' | 'broken'>, opts: { night
     case 'zombies_dance':
       cast.push({ kind: 'zombie', role: 'dance', x: 0.5, z: 0, radius: 0.5, angle: 0 }, { kind: 'zombie', role: 'dance', x: -0.5, z: 0, radius: 0.5, angle: Math.PI });
       break;
-    case 'zombie_walker': cast.push({ kind: 'zombie', role: 'wander', x: 0, z: 0, radius: 2.5, speed: 0.5 }); break;
-    case 'ghosts_roam':
-      cast.push({ kind: 'ghost', role: 'circle', x: 1.4, z: 0, radius: 1.4, angle: 0, speed: 0.7 }, { kind: 'ghost', role: 'circle', x: -1.4, z: 0, radius: 1.4, angle: Math.PI, speed: 0.7 });
+    case 'gardener_corner': // rastrella attorno al suo mucchio di foglie
+      cast.push({ kind: 'gardener', role: 'wander', x: -0.2, z: -0.55, facing: 0.6, radius: 1.8, speed: 0.4, prop: 'rake' });
       break;
     case 'ghosts_ball':
       cast.push({ kind: 'ghost', role: 'goalie', x: -0.6, z: 0, facing: Math.PI / 2 }, { kind: 'ghost', role: 'goalie', x: 0.6, z: 0, facing: -Math.PI / 2 });
@@ -198,10 +198,62 @@ function propMesh(kind: 'mug' | 'hoe'): THREE.Group {
   return g;
 }
 
-/** Mette in mano boccale, zappa o strumento (anche dopo che il rig è stato ricostruito). */
+// ── Rastrello del giardiniere ───────────────────────────────────────────
+
+/** Pettine a terra davanti e di lato, cima del manico verso il fianco (spazio del corpo del rig v2). */
+const RAKE_G = new THREE.Vector3(0.3, 0.075, 0.62), RAKE_T = new THREE.Vector3(-0.02, 0.4, 0.04);
+const RAKE_LEN = RAKE_G.distanceTo(RAKE_T) + 0.14;
+const UP = new THREE.Vector3(0, 1, 0);
+
+/** Il braccio (perno `pv`, mano a riposo in `rest`) ruota per portare la mano sul manico G→T. */
+function reach(arm: THREE.Object3D, pv: THREE.Vector3, rest: THREE.Vector3, G: THREE.Vector3, T: THREE.Vector3, far: boolean) {
+  const len = rest.distanceTo(pv), d = T.clone().sub(G), f = G.clone().sub(pv);
+  const A = d.dot(d), B = 2 * f.dot(d), C = f.dot(f) - len * len, disc = B * B - 4 * A * C;
+  const s = disc >= 0 ? (-B + (far ? 1 : -1) * Math.sqrt(disc)) / (2 * A) : -B / (2 * A);
+  const target = G.clone().addScaledVector(d, THREE.MathUtils.clamp(s, 0, 1));
+  arm.quaternion.setFromUnitVectors(rest.clone().sub(pv).normalize(), target.sub(pv).normalize());
+}
+
+/**
+ * Rastrello impugnato a due mani, di lato: la destra in basso sul manico, la
+ * sinistra in alto vicino al fianco. `swing` porta il pettine avanti e indietro.
+ */
+export function rakeGrip(armL: THREE.Object3D, armR: THREE.Object3D, rake: THREE.Object3D, swing: number) {
+  const G = RAKE_G.clone(), T = RAKE_T.clone();
+  G.z += swing; T.z += swing * 0.4;
+  const y = T.clone().sub(G).normalize(), x = new THREE.Vector3().crossVectors(y, UP).normalize(), z = new THREE.Vector3().crossVectors(x, y);
+  rake.position.copy(G);
+  rake.quaternion.setFromRotationMatrix(new THREE.Matrix4().makeBasis(x, y, z));
+  reach(armR, new THREE.Vector3(...HUMAN_PIVOTS.armR), handPos(1), G, T, false);
+  reach(armL, new THREE.Vector3(...HUMAN_PIVOTS.armL), handPos(-1), G, T, true);
+}
+
+/** Il rastrello come oggetto del corpo (non della mano: lo tengono tutte e due). */
+export function rakeMesh(): THREE.Object3D {
+  const m = lpMesh(rakeLP(RAKE_LEN));
+  m.name = 'rake';
+  return m;
+}
+
+/** Fermo rastrella (testa china sul pettine); camminando lo porta con sé. */
+function rakePose(rig: Rig, k: number, moving: boolean) {
+  const L = rig.parts.armL, R = rig.parts.armR, rake = R?.parent?.getObjectByName('rake');
+  if (!L || !R || !rake) return;
+  rakeGrip(L, R, rake, moving ? 0 : Math.sin(k * 2.4) * 0.09);
+  if (!moving && rig.parts.head) { rig.parts.head.rotation.x = 0.2; rig.parts.head.rotation.y = 0.25; }
+}
+
+/** Gesto dell'oggetto in mano (strumenti, rastrello); boccale e zappa li anima chi li usa. */
+export function propPose(rig: Rig, prop: PropKind, k: number, moving = false) {
+  if (prop === 'rake') rakePose(rig, k, moving);
+  else if (prop !== 'mug' && prop !== 'hoe') playPose(rig, prop, k);
+}
+
+/** Mette in mano boccale, zappa, rastrello o strumento (anche dopo che il rig è stato ricostruito). */
 export function attachProp(rig: Rig, prop: PropKind | undefined) {
   if (!prop || !rig.parts.armR) return;
   if (prop === 'mug' || prop === 'hoe') { rig.parts.armR.add(propMesh(prop)); return; }
+  if (prop === 'rake') { rig.parts.armR.parent?.add(rakeMesh()); return; }
   for (const { side, mesh } of instrumentMeshes(prop)) (side > 0 ? rig.parts.armR : rig.parts.armL)?.add(mesh);
 }
 

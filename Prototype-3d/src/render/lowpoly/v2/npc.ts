@@ -589,6 +589,7 @@ export const V2_SPECS: Record<string, KawaiiSpec> = {
   mournerB: mournerB(),
   zombie: zombie(),
   skeleton: skeleton(),
+  gardener: gardenerSpec(),
   ghost: ghostSpec(false),
   ghostRare: ghostSpec(true),
   cat: quadSpec(CAT),

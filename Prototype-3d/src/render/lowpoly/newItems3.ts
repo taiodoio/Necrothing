@@ -20,16 +20,20 @@ function straw(lp: LP, x: number, y: number, z: number, ry: number, rx: number, 
   }
 }
 
-/**
- * Spaventapasseri (corpo): palo, traversa, giacca rattoppata e paglia. La testa
- * è un modello a parte (`scarecrowHeadLP`) che ruota sul collo, a quota `SCARECROW_NECK`.
- */
-export const SCARECROW_NECK = 1.1;
 /** Lo spaventapasseri è più alto del Custode: il modello si disegna in scala. */
 export const SCARECROW_SCALE = 1.3;
-export function scarecrowBodyLP(): LPModel {
+/** Quota del collo (già in scala): lì poggia e ruota la testa. */
+export const SCARECROW_NECK = 1.1 * SCARECROW_SCALE;
+
+/**
+ * Spaventapasseri (corpo): palo, traversa, giacca rattoppata e paglia. La testa
+ * è un modello a parte (`scarecrowHeadLP`) che ruota sul collo; di notte la sua
+ * luce sta qui, nel corpo, così non si sposta quando la testa gira.
+ */
+export function scarecrowBodyLP(lit = false): LPModel {
   const lp = new LP('new:scarecrow');
   const r = lp.rng;
+  lp.push([0, 0, 0], 0, 0, 0, SCARECROW_SCALE);
   // terra smossa, erbacce e due zucchette ai piedi
   lp.blob(0, 0, 0, 0.42, 0.06, 0.42, LPC.soil, { detail: 1, jitter: 0.02 });
   weeds(lp, -0.3, 0.25, 0.8); weeds(lp, 0.33, -0.22, 0.7); grassTuft(lp, 0.28, 0.3, 0.9); grassTuft(lp, -0.32, -0.28, 0.8);
@@ -68,13 +72,15 @@ export function scarecrowBodyLP(): LPModel {
   // colletto di paglia
   straw(lp, 0, 1.04, 0, 0, 0.9, 4, 0.08); straw(lp, 0, 1.04, 0, Math.PI, 0.9, 4, 0.08);
   straw(lp, 0, 1.04, 0, Math.PI / 2, 0.9, 3, 0.08); straw(lp, 0, 1.04, 0, -Math.PI / 2, 0.9, 3, 0.08);
+  lp.pop();
+  if (lit) lp.light(0, SCARECROW_NECK + 0.15, 0.15, '#ff9a3c', 0.45, 2.6, 0.35, 0.6);
   return lp.build();
 }
 
 /** Testa dello spaventapasseri (origine sul collo): zucca intagliata e cappellaccio storto. Di notte la zucca si accende. */
-export function scarecrowHeadLP(lit: boolean): LPModel {
-  const lp = new LP('new:scarecrowHead');
-  pumpkin(lp, 0, -0.02, 0, 0.17, true, lit, 0, 1);
+export function scarecrowHead(lp: LP, lit: boolean) {
+  lp.push([0, 0, 0], 0, 0, 0, SCARECROW_SCALE);
+  pumpkin(lp, 0, -0.02, 0, 0.17, true, lit, 0, 1, false);
   // cappello floscio, un po' di lato
   lp.push([0.02, 0.22, -0.01], 0.3, -0.12, 0.14);
   lp.lathe(0, 0, 0, [[0.06, 0.02], [0.2, 0.0], [0.25, -0.025], [0.252, -0.012], [0.2, 0.014], [0.12, 0.03]], 12, '#4a3f35', { vary: 0.12, jitter: 0.012 });
@@ -83,8 +89,17 @@ export function scarecrowHeadLP(lit: boolean): LPModel {
   lp.pop();
   straw(lp, -0.15, 0.17, 0.03, -Math.PI / 2, 1.6, 4, 0.09);
   straw(lp, 0.12, 0.15, -0.1, Math.PI / 2, 1.7, 3, 0.08);
+  lp.pop();
+}
+
+export function scarecrowHeadLP(lit: boolean): LPModel {
+  const lp = new LP('new:scarecrowHead');
+  scarecrowHead(lp, lit);
   return lp.build();
 }
+
+/** Dove si posa il corvo: in cima alla manica destra, vicino al polso (già in scala). */
+export const SCARECROW_PERCH = new THREE.Vector3(0.33, 1.07, -0.02).multiplyScalar(SCARECROW_SCALE);
 
 /** Angolo del giardiniere: mucchio di foglie, cesta di vimini, annaffiatoio. */
 export function gardenerCornerLP(): LPModel {

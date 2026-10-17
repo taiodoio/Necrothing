@@ -475,51 +475,6 @@ export function witchAppleLP(lit = true): LPModel {
 }
 
 /**
- * Roccia a teschio (3×3): un grande teschio di pietra mezzo interrato, col
- * muschio sul cranio. Orbite profonde, naso a triangolo, fila di denti con
- * la bocca buia dietro. Di notte orbite e bocca si accendono.
- */
-export function skullRockLP(night: boolean): LPModel {
-  const lp = new LP(`new2:skullrock:${night}`);
-  const r = lp.rng;
-  const ST = '#a19c92', ST2 = '#8e897f';
-  const mossy = { topTint: '#73843c', topAmount: 0.55 };
-  const HOLE = night ? '#ff8a3a' : '#17151a';
-  const holeOpt = night ? { bucket: 'glow' as const, jitter: 0 } : { jitter: 0 };
-  // cranio e mascella superiore (il teschio affonda un po' nel terreno)
-  lp.blob(0, 1.0, -0.1, 0.92, 0.85, 0.95, ST, { detail: 1, vary: 0.06, jitter: 0.07, ao: 0.3, ...mossy });
-  lp.box(0, 0.0, 0.3, 1.1, 0.62, 0.7, ST2, { bevel: 0.12, vary: 0.06, jitter: 0.03, ao: 0.35 });
-  // zigomi e arcata sopraccigliare
-  for (const sx of [-1, 1]) {
-    lp.blob(sx * 0.5, 0.62, 0.52, 0.16, 0.13, 0.16, ST, { detail: 1, vary: 0.06, jitter: 0.02 });
-    lp.blob(sx * 0.33, 1.22, 0.7, 0.3, 0.1, 0.16, ST, { vary: 0.06, jitter: 0.02, ...mossy });
-  }
-  // orbite: incavi scuri, profondi (di notte brillano)
-  for (const sx of [-1, 1]) {
-    lp.blob(sx * 0.33, 0.95, 0.74, 0.25, 0.24, 0.14, '#17151a', { jitter: 0.01 });
-    lp.blob(sx * 0.33, 0.94, 0.8, 0.14, 0.13, 0.08, HOLE, holeOpt);
-  }
-  // naso: triangolo rovesciato scuro
-  const nose = new THREE.Shape(); nose.moveTo(-0.11, 0.0); nose.lineTo(0.11, 0.0); nose.lineTo(0, -0.2); nose.closePath();
-  lp.push([0, 0.74, 0.86], 0, -0.25).plate(nose, 0.03, '#17151a', { ao: 0 }).pop();
-  // bocca: fessura buia dietro a una fila di denti squadrati
-  lp.box(0, 0.22, 0.62, 0.78, 0.26, 0.05, HOLE, holeOpt);
-  for (let k = 0; k < 5; k++) {
-    const x = -0.32 + k * 0.16 + r.range(-0.015, 0.015);
-    lp.push([x, 0, 0.66], r.range(-0.1, 0.1), 0, r.range(-0.08, 0.08)).box(0, 0.33, 0, 0.13, 0.15 - (k % 2) * 0.03, 0.09, '#d6cfbf', { bevel: 0.025, jitter: 0.006 }).pop();
-    if (k !== 2) lp.push([x, 0, 0.66], r.range(-0.1, 0.1), 0, r.range(-0.08, 0.08)).box(0, 0.12, 0, 0.12, 0.12 + (k % 2) * 0.02, 0.09, '#cbc4b3', { bevel: 0.025, jitter: 0.006 }).pop();
-  }
-  // crepa sul cranio, muschio, erba e sassi alla base
-  for (const [x, y, z, a] of [[-0.35, 1.55, 0.35, 0.6], [-0.2, 1.45, 0.5, -0.4]] as const) lp.push([x, y, z], 0, -0.6, a).box(0, 0, 0, 0.025, 0.22, 0.02, '#4a4640', { jitter: 0 }).pop();
-  for (let i = 0; i < 4; i++) moss(lp, r.range(-0.6, 0.6), r.range(1.4, 1.75), r.range(-0.6, 0.2), 0.12);
-  lp.blob(-1.05, 0.1, 0.7, 0.2, 0.15, 0.18, ST2, { vary: 0.06, jitter: 0.03, ...mossy });
-  lp.blob(0.95, 0.08, 0.8, 0.15, 0.1, 0.14, ST2, { vary: 0.06, jitter: 0.03 });
-  for (let i = 0; i < 9; i++) { const a = r.range(0, 6.28); grassTuft(lp, Math.sin(a) * 1.15, Math.cos(a) * 1.05, 1.1, ['#6a7a34', '#55603a']); }
-  if (night) { lp.light(0, 0.9, 1.2, '#ff8a3a', 0.3, 2.4, 0.35, 0.6); lp.light(0, 0.25, 1.0, '#ff8a3a', 0.2, 1.8, 0.35, 0.4); }
-  return lp.build();
-}
-
-/**
  * Funghi luminosi su un tronco caduto (2×1): tronco cavo con la corteccia
  * a placche, l'estremità spezzata a schegge e l'altra tagliata con gli
  * anelli, un ramo mozzo, muschio, felci e funghi che fanno luce fredda.
@@ -1013,5 +968,88 @@ export function skeletonSnowman2LP(): LPModel {
   lp.cyl(0.02, 1.16, 0, 0.17, 0.17, 0.02, 12, '#141418', { jitter: 0 }); // cilindro
   lp.cyl(0.02, 1.18, 0, 0.1, 0.1, 0.22, 12, '#141418', { jitter: 0 });
   lp.cyl(0.02, 1.2, 0, 0.102, 0.102, 0.035, 12, '#5a2a30', { jitter: 0 });
+  return lp.build();
+}
+
+// ── Mietitore di pietra e impronte di fango ─────────────────────────────
+
+/**
+ * Mietitore di pietra (2×2): statua incappucciata consumata dal tempo, la
+ * tonaca a pieghe, una mano ossuta che regge la falce, su un basamento;
+ * muschio sulle spalle. Di notte due puntini luminosi sotto il cappuccio.
+ */
+export function reaperLP(night: boolean): LPModel {
+  const lp = new LP(`new2:reaper:${night}`);
+  const r = lp.rng;
+  const ST = '#8f8b84', ST2 = '#7a766f';
+  const mossy = { topTint: '#73843c', topAmount: 0.45 };
+  // basamento a due gradini
+  lp.box(0, 0, 0, 1.3, 0.14, 1.1, ST2, { bevel: 0.02, vary: 0.06, ...mossy });
+  lp.box(0, 0.14, 0, 1.0, 0.12, 0.85, ST, { bevel: 0.015, vary: 0.06 });
+  const B = 0.26;
+  // tonaca: cono svasato a pieghe
+  lp.lathe(0, B, -0.02, [[0.42, 0], [0.4, 0.15], [0.33, 0.55], [0.27, 0.95], [0.24, 1.12], [0.0, 1.14]], 8, ST, { vary: 0.06, jitter: 0.02, ao: 0.3, ...mossy });
+  for (let k = 0; k < 6; k++) { const a = (k / 6) * Math.PI * 2 + 0.3; lp.push([Math.sin(a) * 0.33, B, -0.02 + Math.cos(a) * 0.33], a).box(0, 0, 0, 0.06, 0.75, 0.05, ST2, { jitter: 0.01 }).pop(); } // pieghe
+  lp.blob(0, B + 1.08, -0.02, 0.34, 0.13, 0.27, ST, { vary: 0.06, jitter: 0.02, ...mossy }); // spalle
+  // cappuccio: guscio a punta chinato in avanti, bordo spesso e buio dentro
+  lp.push([0, B + 1.3, 0.02], 0, 0.22);
+  lp.blob(0, 0, -0.02, 0.24, 0.27, 0.25, ST, { detail: 1, vary: 0.06, jitter: 0.015, ...mossy });
+  lp.blob(0, 0.16, -0.16, 0.12, 0.14, 0.12, ST, { jitter: 0.01, ...mossy });
+    const rim = new THREE.TorusGeometry(0.16, 0.045, 5, 10); rim.scale(1, 1.2, 1);
+  lp.push([0, -0.03, 0.2]).add(rim, ST2, { vary: 0.05, jitter: 0.008 }).pop();
+  lp.blob(0, -0.03, 0.17, 0.15, 0.19, 0.09, '#121115', { jitter: 0 }); // buio sotto il cappuccio
+  for (const s of [-1, 1]) lp.blob(s * 0.055, 0.0, 0.25, 0.022, 0.016, 0.01, night ? '#9af0ff' : '#1d1d22', night ? { bucket: 'glow', jitter: 0 } : { jitter: 0 });
+  lp.pop();
+  // falce: manico storto davanti a destra, lama larga sopra la testa
+  const SX = 0.4, SZ = 0.3, TOP = B + 2.0;
+  tube(lp, [SX, B - 0.02, SZ], [SX - 0.04, TOP, SZ - 0.05], 0.032, '#5a4a3a', 6, 0.026);
+  lp.push([SX - 0.04, TOP - 0.02, SZ - 0.05]);
+  const blade = new THREE.Shape();
+  blade.moveTo(0, 0.04); blade.quadraticCurveTo(-0.5, 0.2, -0.95, -0.22); blade.quadraticCurveTo(-0.5, -0.02, 0, -0.08); blade.closePath();
+  lp.extrude(blade, 0.03, '#8d929a', { jitter: 0, vary: 0.04, ...mossy });
+  lp.pop();
+  lp.box(SX - 0.04, TOP - 0.06, SZ - 0.05, 0.08, 0.06, 0.06, '#4a3f35', { jitter: 0 }); // ghiera
+  // braccio dalla spalla alla mano, mano ossuta sul manico
+  tube(lp, [0.26, B + 1.06, 0.02], [SX - 0.02, B + 0.92, SZ - 0.02], 0.085, ST, 6, 0.065, { vary: 0.06 });
+  for (let f = 0; f < 4; f++) lp.box(SX - 0.03 + (f % 2) * 0.004, B + 0.95 - f * 0.035, SZ + 0.035, 0.05, 0.022, 0.03, '#b8b2a4', { jitter: 0 });
+  // erba alla base, un ciuffo di muschio, foglie
+  for (let i = 0; i < 7; i++) { const a = r.range(0, 6.28); grassTuft(lp, Math.sin(a) * 0.75, Math.cos(a) * 0.65, 1, ['#6a7a34', '#55603a']); }
+  moss(lp, -0.3, 0.27, 0.3, 0.1);
+  deadLeaves(lp, -0.7, -0.6, 0.7, 0.6, 6);
+  if (night) lp.light(0, B + 1.3, 0.5, '#9af0ff', 0.1, 1.5, 0.3, 0);
+  return lp.build();
+}
+
+/**
+ * Impronte di fango (1 asset per tutte le tombe): una scia di orme di
+ * zombie (un piede trascinato) che attraversa il basamento della tomba,
+ * con qualche schizzo. Si appoggia sopra la tomba sporcata da uno zombie.
+ */
+export function mudTracksLP(seed = 1): LPModel {
+  const lp = new LP(`new2:tracks:${seed}`);
+  const r = lp.rng;
+  // altezza del tumulo (stesso blob della tomba) per appoggiarci le orme
+  const moundY = (x: number, z: number) => { const k = 1 - (x / 0.5) ** 2 - ((z - 0.32) / 0.56) ** 2; return k > 0 ? 0.11 * Math.sqrt(k) : 0; };
+  const foot = (x: number, z: number, yaw: number, drag: boolean) => {
+    const onMound = moundY(x, z) > 0, y = moundY(x, z) + 0.008;
+    const col = onMound ? '#1a130f' : r.pick(['#4a3a2c', '#3e3026']);
+    lp.push([x, y, z], yaw, -Math.PI / 2);
+    const oval = (cx: number, cy: number, rx: number, ry: number) => { const e = new THREE.Shape(); e.absellipse(cx, cy, rx, ry, 0, Math.PI * 2, false, 0); lp.plate(e, 0.004, col, { ao: 0 }); };
+    if (drag) oval(0, -0.04, 0.05, 0.16); // piede trascinato: strisciata lunga
+    else { oval(0, 0.03, 0.062, 0.075); oval(0, -0.1, 0.045, 0.045); } // pianta e tallone staccati
+    for (let t = 0; t < 4; t++) oval(-0.045 + t * 0.03, (drag ? 0.15 : 0.13) - Math.abs(t - 1.5) * 0.012, 0.016, 0.019); // dita
+    lp.pop();
+  };
+  // scia che attraversa la tomba: un passo buono e uno trascinato
+  const n = 9, z0 = 0.95 + r.range(-0.1, 0.1), z1 = 0.05 + r.range(-0.1, 0.1);
+  for (let i = 0; i < n; i++) {
+    const t = i / (n - 1), x = -1.15 + t * 2.3, z = z0 + (z1 - z0) * t + (i % 2 ? 0.08 : -0.08);
+    const yaw = Math.atan2(2.3, z1 - z0) + r.range(-0.15, 0.15);
+    foot(x, z, yaw, i % 2 === 1);
+  }
+  for (let i = 0; i < 8; i++) { // zolle cadute
+    const x = r.range(-1.0, 1.0), z = z0 + (z1 - z0) * ((x + 1.15) / 2.3) + r.range(-0.25, 0.25);
+    lp.blob(x, moundY(x, z) + 0.01, z, r.range(0.025, 0.05), 0.02, r.range(0.025, 0.04), r.pick(['#4a3a2c', '#3e3026']), { jitter: 0.006 });
+  }
   return lp.build();
 }

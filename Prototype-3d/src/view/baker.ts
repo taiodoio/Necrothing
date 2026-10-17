@@ -15,8 +15,10 @@ export const chunkOf = (cellX: number, cellY: number) => `${Math.floor(cellX / C
 export class ChunkBaker {
   private groups = new Map<string, { chunk: string; bucket: Bucket; mats: MaterialSet; items: Item[] }>();
 
-  /** `only`: si cuociono solo questi chunk (gli altri restano com'erano). */
-  constructor(private readonly only: ReadonlySet<string> | null = null) {}
+  /** Si cuociono solo questi chunk (gli altri restano com'erano); null = tutti. */
+  private readonly only: ReadonlySet<string> | null;
+
+  constructor(only: ReadonlySet<string> | null = null) { this.only = only; }
 
   add(model: CachedModel, matrix: THREE.Matrix4, tint: number, cellX: number, cellY: number) {
     const chunk = chunkOf(cellX, cellY);

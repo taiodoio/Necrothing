@@ -16,7 +16,7 @@ import { GRASS, LPC } from '../render/lowpoly/palette.ts';
 import { flower, grassTuft, moss, pebbles } from '../render/lowpoly/details.ts';
 import { mushroom } from '../render/lowpoly/nature.ts';
 import { instantiate, LOWPOLY_MATERIALS, type CachedModel } from '../render/modelCache.ts';
-import { closeDrawer, h, openDrawer, toast } from './dom.ts';
+import { closeDrawer, confirmDialog, h, openDrawer, toast } from './dom.ts';
 import type { UI } from './UI.ts';
 
 let groundModel: CachedModel | null = null;
@@ -234,7 +234,7 @@ export function openCustomize(ui: UI) {
   } }, 'Originale');
   openDrawer('Personaggio', body, {
     footer: h('div', { class: 'row look-foot' }, reset, saveBtn),
-    beforeClose: () => !dirty() || confirm('Hai modificato l’aspetto del Custode senza salvare. Chiudere e perdere le modifiche?'),
+    beforeClose: () => !dirty() || confirmDialog({ title: 'Modifiche non salvate', message: 'Hai cambiato l’aspetto del Custode senza salvare. Chiudere e perdere le modifiche?', ok: 'Chiudi', cancel: 'Resta', danger: true }),
     onClose: () => preview.dispose(),
   });
 }

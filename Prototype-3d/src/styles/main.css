@@ -45,7 +45,7 @@ button:disabled { opacity: 0.45; cursor: default; }
 /* ── Cornici pixel (border-image a 9 fette, il centro riempie) ──── */
 .player-chip, .clock-block, .icon-btn, .slots, .slot, .ctx, .ctx-actions button, .drawer, .tab, .card, .chip,
 .field input, .field textarea, .field select, .qty button, .big-btn, .pill, .ach, .toast, .tutorial, .edit-banner,
-.seg, .photo-grid button, .photo-view, .fab, .debug, .fatal, .hero img, .kv-box {
+.seg, .photo-grid button, .photo-view, .fab, .debug, .fatal, .hero img, .kv-box, .dialog {
   border: var(--bw) solid transparent; border-radius: 0; background: none;
   border-image: var(--frame) 3 fill / var(--bw) / 0 stretch;
 }
@@ -53,8 +53,8 @@ button:disabled { opacity: 0.45; cursor: default; }
 .field input, .field textarea, .field select { border-image-source: var(--frame-input); }
 .big-btn, .pill.primary { border-image-source: var(--frame-btn); }
 .slot.active, .card.selected, .tab.active, .chip.active, .ctx-actions button.primary, .icon-btn.active, .toast.ach,
-.ach.got, .edit-banner, .tutorial, .fab { border-image-source: var(--frame-gold); }
-.ctx-actions button.danger, .pill.danger, .fatal { border-image-source: var(--frame-danger); }
+.ach.got, .edit-banner, .tutorial, .fab, .dialog { border-image-source: var(--frame-gold); }
+.ctx-actions button.danger, .pill.danger, .fatal, .big-btn.danger { border-image-source: var(--frame-danger); }
 .player-chip, .clock-block, .icon-btn, .fab, .slots, .ctx, .toast, .tutorial, .edit-banner { filter: var(--drop); }
 button.slot:active, .icon-btn:active, .ctx-actions button:active, .big-btn:active, .pill:active, .card:active, .chip:active, .tab:active, .fab:active { transform: translateY(2px); }
 
@@ -195,6 +195,14 @@ button.slot:active, .icon-btn:active, .ctx-actions button:active, .big-btn:activ
 .qty b { min-width: 40px; text-align: center; font-size: 22px; }
 .big-btn { width: 100%; min-height: 54px; color: #1a140b; font-weight: 700; font-size: 17px; letter-spacing: 0.02em; display: flex; align-items: center; justify-content: center; gap: 8px; }
 .big-btn.ghost { color: var(--paper); font-weight: 600; }
+.big-btn.danger { color: var(--danger); }
+
+/* ── Dialogo di conferma (al posto di confirm() del browser) ───── */
+.dialog-scrim { position: absolute; inset: 0; z-index: 13; display: grid; place-items: center; padding: 16px; background: rgba(4, 5, 8, 0.62); }
+.dialog { width: min(92vw, 380px); padding: 10px 14px 14px; display: grid; gap: 12px; filter: var(--drop); }
+.dialog h3 { margin: 0; font: 400 28px/1.05 var(--gothic); color: var(--gold-bright); text-shadow: 0 2px 0 #000; }
+.dialog p { margin: 0; font-size: 15px; line-height: 1.45; color: var(--paper); }
+.dialog .row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
 .ach { display: grid; grid-template-columns: 40px 1fr; gap: 8px; align-items: center; padding: 2px 6px 2px 2px; margin-bottom: 4px; }
 .ach .ico { display: grid; place-items: center; filter: grayscale(1) brightness(0.7); }
 .ach.got .ico { filter: none; }

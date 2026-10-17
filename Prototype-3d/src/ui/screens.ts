@@ -14,7 +14,7 @@ import * as R from '../game/rules.ts';
 import { createNewGame, type SaveData, type TimeOverride } from '../game/state.ts';
 import { computePrestige, detectDistricts, DISTRICT_LABELS, expansionStatus } from '../game/world.ts';
 import { newId } from '../game/rng.ts';
-import { $, closeDrawer, fmtDate, h, openDrawer, setDrawerBody, setDrawerFooter, toast } from './dom.ts';
+import { $, closeDrawer, confirmDialog, fmtDate, h, openDrawer, setDrawerBody, setDrawerFooter, toast } from './dom.ts';
 import { graveThumb, placeableThumb } from './thumbs.ts';
 import { ACH_ICONS, icon } from './icons.ts';
 import type { UI } from './UI.ts';
@@ -410,8 +410,8 @@ export function openSettings(ui: UI) {
     h('p', { class: 'muted', 'data-build': 'true' }, buildLabel()),
     h('div', { class: 'row' },
       h('a', { class: 'big-btn ghost', href: './gallery.html', style: 'display:grid;place-items:center;text-decoration:none' }, 'Galleria asset'),
-      h('button', { class: 'big-btn ghost', style: 'color:var(--danger)', onclick: () => {
-        if (!confirm('Ricominciare da capo? Il cimitero attuale andrà perso.')) return;
+      h('button', { class: 'big-btn ghost', style: 'color:var(--danger)', onclick: async () => {
+        if (!await confirmDialog({ title: 'Nuova partita', message: 'Ricominciare da capo? Il cimitero attuale andrà perso.', ok: 'Ricomincia', danger: true })) return;
         game.replaceState(createNewGame(new Date()));
         closeDrawer();
         toast('Un nuovo cimitero ti aspetta.');

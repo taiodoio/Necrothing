@@ -197,6 +197,17 @@ button.slot:active, .icon-btn:active, .ctx-actions button:active, .big-btn:activ
 .big-btn.ghost { color: var(--paper); font-weight: 600; }
 .big-btn.danger { color: var(--danger); }
 
+/* ── Foto dell'oggetto: ritratto incorniciato con la lapide in piccolo ── */
+.portrait { position: relative; width: 210px; margin: 2px auto 10px; }
+.portrait > img.pic { display: block; width: 100%; height: auto; aspect-ratio: 1; object-fit: cover; box-sizing: border-box; padding: 4px; border: 10px solid transparent; border-image: var(--frame-gold) 3 fill / 10px / 0 stretch; filter: var(--drop); }
+.portrait > img.stone { position: absolute; right: -30px; bottom: -22px; width: 92px; height: 92px; border: 0; border-image: none; filter: drop-shadow(0 4px 3px rgba(0, 0, 0, 0.75)); }
+.photo-pick { display: grid; gap: 10px; }
+.filters { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
+.filters .card { min-height: 0; padding: 4px 3px 2px; }
+.filters .card img { width: 100%; height: auto; aspect-ratio: 1; object-fit: cover; }
+.filters .card b { font-size: 12px; }
+.postcard-view { display: block; width: 100%; max-width: 360px; margin: 0 auto; box-shadow: 0 0 0 2px #07080b, 0 8px 18px rgba(0, 0, 0, 0.6); }
+
 /* ── Dialogo di conferma (al posto di confirm() del browser) ───── */
 .dialog-scrim { position: absolute; inset: 0; z-index: 13; display: grid; place-items: center; padding: 16px; background: rgba(4, 5, 8, 0.62); }
 .dialog { width: min(92vw, 380px); padding: 10px 14px 14px; display: grid; gap: 12px; filter: var(--drop); }

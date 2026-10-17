@@ -75,6 +75,7 @@ const photo = squareCrop(samplePhoto());
 const FILTERS: PhotoFilter[] = ['none', 'sepia', 'bw', 'worn'];
 const filtered = Object.fromEntries(FILTERS.map((f) => [f, applyPhotoFilter(photo, f, 11)])) as Record<PhotoFilter, HTMLCanvasElement>;
 const url = (c: HTMLCanvasElement) => c.toDataURL('image/jpeg', 0.85);
+/** Filtro scelto nella sepoltura d'esempio (si parte sempre da «Originale»). */
 const chosen: PhotoFilter = 'worn';
 const stone = graveThumb('gothic', 'lowpoly', 'flowers', 1);
 
@@ -83,7 +84,10 @@ const GRAVE = {
   dates: '12 mar 2014 — 3 ott 2026', cause: 'Surriscaldato', category: 'Elettronica', lapide: 'Gotica',
 };
 
-const portrait = (src: string) => h('div', { class: 'portrait' }, h('img', { class: 'pic', src, alt: '' }), h('img', { class: 'stone', src: stone, alt: '' }));
+/** Foto incorniciata; la lapide in piccolo solo quando è già scelta (non nel passo della foto). */
+const portrait = (src: string | null, withStone = true) => src
+  ? h('div', { class: 'portrait' }, h('img', { class: 'pic', src, alt: '' }), withStone ? h('img', { class: 'stone', src: stone, alt: '' }) : null)
+  : h('div', { class: 'portrait empty' }, h('div', { class: 'pic' }, icon('photo', 40), 'Nessuna foto'));
 
 /** Un telefono: lo sfondo del gioco, lo scrim e il drawer con titolo, corpo e piede. */
 function phone(caption: string, title: string, body: Node, foot: Node | null, steps?: [number, number]) {
@@ -101,12 +105,14 @@ const btn = (label: string, ghost = false, ic?: string) => h('button', { class: 
 
 async function screens() {
   const tav = document.getElementById('tavola')!;
-  // 1 · passo «Foto» della sepoltura
-  const s1 = h('div', { class: 'photo-pick' },
+  // 1 · passo «Foto» della sepoltura: senza foto i filtri restano spenti; scattata, mostrano la foto
+  const pick = (taken: boolean) => h('div', { class: 'photo-pick' },
     h('p', { class: 'muted', style: 'margin:0' }, 'Una foto dell’oggetto, per ricordarlo com’era. È facoltativa.'),
-    portrait(url(filtered[chosen])),
-    h('div', { class: 'filters' }, ...FILTERS.map((f) => h('button', { class: `card${f === chosen ? ' selected' : ''}` }, h('img', { src: url(filtered[f]), alt: '' }), h('b', {}, PHOTO_FILTER_LABELS[f])))),
-    row(btn('Scatta', true, 'photo'), btn('Dalla galleria', true)),
+    portrait(taken ? url(filtered.none) : null, false),
+    h('div', { class: 'filters' }, ...FILTERS.map((f) => h('button', { class: `card${taken && f === 'none' ? ' selected' : ''}`, disabled: !taken },
+      taken ? h('img', { src: url(filtered[f]), alt: '' }) : h('div', { style: 'width:100%;aspect-ratio:1;background:#1a1e26;box-shadow:inset 0 0 0 2px #07080b' }),
+      h('b', {}, PHOTO_FILTER_LABELS[f])))),
+    row(btn(taken ? 'Rifai' : 'Scatta', true, 'photo'), btn('Dalla galleria', true)),
   );
   // 2 · riepilogo prima di scegliere il posto
   const kv = (extra: Array<[string, string]> = []) => h('dl', { class: 'kv' }, ...[['Categoria', GRAVE.category], ['Vissuto', GRAVE.dates], ['Causa', GRAVE.cause], ['Lapide', GRAVE.lapide], ...extra].flatMap(([k, v]) => [h('dt', {}, k), h('dd', {}, v)]));
@@ -114,16 +120,17 @@ async function screens() {
   const s2 = h('div', {}, hero(), kv(), h('p', { class: 'muted' }, 'Dopo la conferma scegli il posto nel cimitero: arriverà il corteo funebre.'));
   // 3 · cartolina
   const card = await drawPostcard({ name: GRAVE.name, dates: GRAVE.dates, cause: GRAVE.cause, category: GRAVE.category, epitaph: GRAVE.epitaph, photo: filtered[chosen], headstone: await img(stone) });
-  const s3 = h('div', {}, h('img', { class: 'postcard-view', src: card.toDataURL('image/png'), alt: '' }), h('p', { class: 'muted', style: 'text-align:center' }, 'Mandala a chi l’ha conosciuto. C’è anche il link al gioco.'));
+  const s3 = h('div', {}, h('img', { class: 'postcard-view', src: card.toDataURL('image/png'), alt: '' }), h('p', { class: 'muted', style: 'text-align:center' }, 'Mandala a chi l’ha conosciuto.'));
   // 4 · dettaglio della tomba (la lente)
   const s4 = h('div', {}, hero(), kv([['Stato', 'Con i fiori']]),
     h('div', { class: 'section-title' }, 'Ricordi'),
     h('ul', { class: 'timeline' }, h('li', {}, h('time', {}, '3 ott 2026'), 'Sepoltura'), h('li', {}, h('time', {}, '5 ott 2026'), 'Fiori freschi')));
   tav.append(
-    phone('1 · Sepoltura: la foto (passo 2 di 6)', 'Seppellisci', s1, row(btn('Indietro', true), btn('Avanti')), [1, 6]),
-    phone('2 · Riepilogo: prima di scegliere il posto', 'Seppellisci', s2, row(btn('Cartolina', true), btn('Scegli il posto')), [5, 6]),
+    phone('1a · Foto (passo 2 di 6): ancora da scattare', 'Seppellisci', pick(false), row(btn('Indietro', true), btn('Salta')), [1, 6]),
+    phone('1b · Scattata: i filtri mostrano la tua foto', 'Seppellisci', pick(true), row(btn('Indietro', true), btn('Avanti')), [1, 6]),
+    phone('2 · Riepilogo (scelto «Rovinata»)', 'Seppellisci', s2, row(btn('Cartolina', true), btn('Scegli il posto')), [5, 6]),
     phone('3 · Cartolina funebre', 'Cartolina funebre', s3, row(btn('Salva immagine', true), btn('Condividi'))),
-    phone('4 · Dettaglio della tomba (lente)', 'Memoria', s4, h('div', { style: 'display:grid;grid-template-columns:1fr 1fr;gap:6px' }, btn('Mostra sulla mappa', true), btn('Cartolina', true), h('button', { class: 'big-btn', style: 'grid-column:1/-1' }, 'Affida all’albero'))),
+    phone('4 · Dettaglio (lente): prima l’azione da fare', 'Memoria', s4, h('div', { style: 'display:grid;gap:6px' }, row(btn('Cartolina', true), btn('Affida all’albero', true)), btn('Rinnova fiori', false, 'flower'))),
   );
   hydrateIcons(tav);
 }

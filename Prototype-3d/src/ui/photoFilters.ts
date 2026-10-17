@@ -57,7 +57,7 @@ export function applyPhotoFilter(src: HTMLCanvasElement, filter: PhotoFilter, se
   g.putImageData(img, 0, 0);
   if (filter !== 'worn') return vignette(c, filter === 'bw' ? 0.35 : 0.3);
   // rovinata: vignetta forte, macchie, graffi, polvere, piega e angoli consumati
-  vignette(c, 0.6);
+  vignette(c, 0.45);
   for (let i = 0; i < 5; i++) {
     const x = rng.range(0, W), y = rng.range(0, H), r = rng.range(W * 0.05, W * 0.16);
     const st = g.createRadialGradient(x, y, 0, x, y, r);
@@ -82,20 +82,52 @@ export function applyPhotoFilter(src: HTMLCanvasElement, filter: PhotoFilter, se
   g.beginPath(); g.moveTo(0, fy); g.lineTo(W, fy + rng.range(-H * 0.12, H * 0.12)); g.stroke();
   g.strokeStyle = 'rgba(40,25,10,0.18)'; g.lineWidth = 3 * (W / 720);
   g.beginPath(); g.moveTo(0, fy + 3); g.lineTo(W, fy + 3 + rng.range(-H * 0.12, H * 0.12)); g.stroke();
-  // bordi consumati: la carta schiarisce verso i lati, con sbrecciature irregolari
-  const edge = W * 0.045;
-  for (const [x0, y0, x1, y1] of [[0, 0, edge, 0], [W, 0, W - edge, 0], [0, 0, 0, edge], [0, H, 0, H - edge]]) {
-    const eg = g.createLinearGradient(x0, y0, x1, y1);
-    eg.addColorStop(0, 'rgba(232,216,184,0.55)'); eg.addColorStop(1, 'rgba(232,216,184,0)');
-    g.fillStyle = eg; g.fillRect(0, 0, W, H);
-  }
-  g.fillStyle = 'rgba(236,224,196,0.85)';
-  for (let i = 0; i < 90; i++) {
-    const side = i % 4, t = rng.range(0, side < 2 ? W : H), d = rng.range(0, edge * 0.5), s = rng.range(2, 7) * (W / 720);
-    const [x, y] = side === 0 ? [t, d] : side === 1 ? [t, H - d - s] : side === 2 ? [d, t] : [W - d - s, t];
-    g.fillRect(x, y, s, s);
-  }
+  wornEdges(g, W, H, rng);
   return c;
+}
+
+/** Rumore morbido (griglia di valori casuali interpolata), 0..1. */
+function valueNoise(rng: ReturnType<typeof createRng>, cells: number) {
+  const n = cells + 1, v = Array.from({ length: n * n }, () => rng.next());
+  const sm = (t: number) => t * t * (3 - 2 * t);
+  return (u: number, w: number) => {
+    const x = u * cells, y = w * cells, i = Math.min(cells - 1, Math.floor(x)), j = Math.min(cells - 1, Math.floor(y));
+    const fx = sm(x - i), fy = sm(y - j);
+    const a = v[j * n + i] + (v[j * n + i + 1] - v[j * n + i]) * fx;
+    const b = v[(j + 1) * n + i] + (v[(j + 1) * n + i + 1] - v[(j + 1) * n + i]) * fx;
+    return a + (b - a) * fy;
+  };
+}
+
+/**
+ * Bordi consumati: verso i lati l'emulsione si stacca a chiazze (si vede la
+ * carta chiara) e prima c'è un alone bruno dove la stampa è invecchiata. Il
+ * contorno segue un rumore a due scale, quindi non è mai una riga dritta.
+ */
+function wornEdges(g: CanvasRenderingContext2D, W: number, H: number, rng: ReturnType<typeof createRng>) {
+  const coarse = valueNoise(rng, 7), fine = valueNoise(rng, 40);
+  const band = Math.min(W, H) * 0.11;
+  const img = g.getImageData(0, 0, W, H);
+  const d = img.data;
+  for (let y = 0; y < H; y++) {
+    for (let x = 0; x < W; x++) {
+      const e = Math.min(x, y, W - 1 - x, H - 1 - y);
+      if (e > band) { x = Math.max(x, W - 2 - Math.ceil(band)); continue; } // salta il centro della riga
+      const n = coarse(x / W, y / H) * 0.7 + fine(x / W, y / H) * 0.3;
+      const t = band * (0.15 + 0.85 * n * n); // quanto entra il consumo in questo punto
+      const paper = Math.min(1, Math.max(0, (t * 0.55 - e) / (t * 0.2 + 1)));
+      const age = Math.max(0, 1 - Math.abs(e - t * 0.75) / (t * 0.6 + 1)) * 0.5;
+      const i = (y * W + x) * 4;
+      const grain = 0.9 + fine(y / H, x / W) * 0.12;
+      for (let k = 0; k < 3; k++) {
+        let v = d[i + k];
+        v += ([88, 58, 30][k] - v) * age;
+        v += ([232, 219, 190][k] * grain - v) * paper;
+        d[i + k] = clamp(v);
+      }
+    }
+  }
+  g.putImageData(img, 0, 0);
 }
 
 function vignette(c: HTMLCanvasElement, amount: number): HTMLCanvasElement {

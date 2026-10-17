@@ -1,6 +1,7 @@
 // Cartolina funebre da condividere: nome, date, causa, epitaffio, la foto
-// dell'oggetto incorniciata con la sua lapide in piccolo, e il rimando al
-// gioco. Disegnata su una tela 1080×1350 (4:5, va bene per chat e social).
+// dell'oggetto incorniciata con la sua lapide in piccolo, e il nome del
+// gioco (il link o il QR arriveranno con la pubblicazione negli store).
+// Disegnata su una tela 1080×1350 (4:5, va bene per chat e social).
 
 export interface PostcardData {
   name: string;
@@ -13,7 +14,6 @@ export interface PostcardData {
   headstone: CanvasImageSource | null;
 }
 
-export const GAME_URL = 'necrothing.vercel.app';
 export const POSTCARD_W = 1080, POSTCARD_H = 1350;
 
 const GOLD = '#d8b26a', GOLD_HI = '#f1d39c', INK = '#07080b', PAPER = '#e8dcc4', MUTED = '#9a8f7c';
@@ -93,9 +93,9 @@ export async function drawPostcard(d: PostcardData): Promise<HTMLCanvasElement> 
   }
   // la lapide in piccolo, in basso a destra sopra la cornice
   if (d.photo && d.headstone) {
-    const hs = 200;
-    g.save(); g.shadowColor = 'rgba(0,0,0,0.7)'; g.shadowBlur = 18; g.shadowOffsetY = 6;
-    g.drawImage(d.headstone, fx + S - hs * 0.62, fy + S - hs * 0.68, hs, hs);
+    const hs = 136;
+    g.save(); g.shadowColor = 'rgba(0,0,0,0.7)'; g.shadowBlur = 14; g.shadowOffsetY = 5;
+    g.drawImage(d.headstone, fx + S - hs * 0.6, fy + S - hs * 0.66, hs, hs);
     g.restore();
   }
   // date, causa, epitaffio
@@ -110,14 +110,14 @@ export async function drawPostcard(d: PostcardData): Promise<HTMLCanvasElement> 
     g.fillStyle = '#cfc6b2'; g.font = `400 34px ${PIXEL}`;
     for (const line of wrap(g, `“${d.epitaph}”`, W - 220, 2)) { g.fillText(line, W / 2, y); y += 44; }
   }
-  // rimando al gioco
+  // il nome del gioco
   const fy2 = H - 150;
   g.fillStyle = 'rgba(216,178,106,0.5)'; g.fillRect(W / 2 - 220, fy2 - 70, 440, 2);
   corner(g, W / 2, fy2 - 69, 7);
   g.fillStyle = GOLD; g.font = `400 54px ${GOTHIC}`;
   g.fillText('Riposa a Necrothing', W / 2, fy2);
   g.fillStyle = MUTED; g.font = `400 28px ${PIXEL}`;
-  g.fillText(`il cimitero degli oggetti · ${GAME_URL}`, W / 2, fy2 + 46);
+  g.fillText('il cimitero degli oggetti', W / 2, fy2 + 46);
   return c;
 }
 
@@ -125,7 +125,7 @@ export async function drawPostcard(d: PostcardData): Promise<HTMLCanvasElement> 
 export async function sharePostcard(canvas: HTMLCanvasElement, name: string): Promise<'shared' | 'downloaded' | 'cancelled'> {
   const blob = await new Promise<Blob>((res) => canvas.toBlob((b) => res(b!), 'image/png'));
   const file = new File([blob], `necrothing-${name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'cartolina'}.png`, { type: 'image/png' });
-  const text = `In memoria di ${name}. Sepolto a Necrothing, il cimitero degli oggetti: https://${GAME_URL}`;
+  const text = `In memoria di ${name}. Sepolto a Necrothing, il cimitero degli oggetti.`;
   const nav = navigator as Navigator & { canShare?: (d: unknown) => boolean };
   if (nav.canShare?.({ files: [file] })) {
     try { await navigator.share({ files: [file], text, title: `In memoria di ${name}` }); return 'shared'; } catch { return 'cancelled'; }

@@ -989,7 +989,14 @@ export function reaperLP(night: boolean): LPModel {
   const B = 0.26;
   // tonaca: cono svasato a pieghe
   lp.lathe(0, B, -0.02, [[0.42, 0], [0.4, 0.15], [0.33, 0.55], [0.27, 0.95], [0.24, 1.12], [0.0, 1.14]], 8, ST, { vary: 0.06, jitter: 0.02, ao: 0.3, ...mossy });
-  for (let k = 0; k < 6; k++) { const a = (k / 6) * Math.PI * 2 + 0.3; lp.push([Math.sin(a) * 0.33, B, -0.02 + Math.cos(a) * 0.33], a).box(0, 0, 0, 0.06, 0.75, 0.05, ST2, { jitter: 0.01 }).pop(); } // pieghe
+  // pieghe morbide che seguono la tonaca e un orlo ondulato che ricade sul basamento
+  const robeR = (h: number) => h < 0.15 ? 0.42 - h * 0.13 : h < 0.55 ? 0.4 - (h - 0.15) * 0.175 : 0.33 - (h - 0.55) * 0.15;
+  for (let k = 0; k < 7; k++) {
+    const a0 = (k / 7) * Math.PI * 2 + r.range(-0.15, 0.15), sway = r.range(-0.18, 0.18);
+    const pts: V3[] = [0.02, 0.3, 0.6, 0.85].map((h, i) => { const a = a0 + sway * (1 - i / 3), rr = robeR(h) - 0.01; return [Math.sin(a) * rr, B + h, -0.02 + Math.cos(a) * rr]; });
+    path(lp, pts, 0.045, 0.012, ST, 5);
+  }
+  for (let k = 0; k < 16; k++) { const a = (k / 16) * Math.PI * 2; lp.blob(Math.sin(a) * 0.4, B + 0.015, -0.02 + Math.cos(a) * 0.4, 0.08, 0.03, 0.06, ST, { jitter: 0.008, vary: 0.05 }); }
   lp.blob(0, B + 1.08, -0.02, 0.34, 0.13, 0.27, ST, { vary: 0.06, jitter: 0.02, ...mossy }); // spalle
   // cappuccio: guscio a punta chinato in avanti, bordo spesso e buio dentro
   lp.push([0, B + 1.3, 0.02], 0, 0.22);

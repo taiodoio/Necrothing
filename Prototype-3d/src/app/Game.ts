@@ -27,6 +27,7 @@ import { Effects } from '../view/Effects.ts';
 import { ForestMist } from '../view/ForestMist.ts';
 import { PostFX } from '../view/PostFX.ts';
 import { cellCenter, HALF, worldToCell, WorldView } from '../view/WorldView.ts';
+import { WalkTarget } from '../view/walkTarget.ts';
 import { AUTO_STEPS, AutoGovernor, detectTier, TIER_LABELS, TIERS, type AutoProfile } from './AutoQuality.ts';
 import { Input } from './Input.ts';
 import { loadSave, saveNow, scheduleSave } from './persistence.ts';
@@ -86,6 +87,8 @@ export class Game {
   private canvas: HTMLCanvasElement;
   private postfx: PostFX;
   private focusNdc = new THREE.Vector3();
+  /** Il cerchio dorato sul punto dove sta andando il Custode. */
+  private readonly walkMark = new WalkTarget();
 
   constructor(canvas: HTMLCanvasElement) {
     this.canvas = canvas;
@@ -122,6 +125,7 @@ export class Game {
     const shop = this.state.placeables.find((p) => p.type === 'shop');
     const start = shop ? cellCenter(shop.x + 1, shop.y + 4, [1, 1]) : new THREE.Vector3();
     this.actors = new Actors(this.scene, this.atmosphere, this.state.settings.style, start, this.state.player.look);
+    this.scene.add(this.walkMark.group);
     this.refreshWalkable();
     this.actors.setNight(this.isNight());
     this.actors.syncPresences(this.state, now);
@@ -165,6 +169,21 @@ export class Game {
 
   // ── Loop ─────────────────────────────────────────────────────────────
 
+  /** Mette il cerchio dorato sulla meta appena scelta (l'ultimo punto del percorso). */
+  private markWalk() {
+    const end = this.actors.avatar.path[this.actors.avatar.path.length - 1];
+    if (!end) return;
+    this.walkMark.show(new THREE.Vector3(end.x, this.world.heightAt(end.x, end.z), end.z));
+  }
+
+  /** Il cerchio svanisce quando il Custode arriva o cambia meta (altro tocco, tastiera, oggetto). */
+  private stepWalkMark(dt: number, t: number) {
+    const end = this.actors.avatar.path[this.actors.avatar.path.length - 1];
+    const at = this.walkMark.group.position;
+    if (!end || Math.hypot(end.x - at.x, end.z - at.z) > 0.05) this.walkMark.hide();
+    this.walkMark.update(dt, t);
+  }
+
   private readonly tick = () => {
     if (this.disposed) return;
     const raw = this.clock.getDelta();
@@ -177,6 +196,7 @@ export class Game {
     if (this.spotsVersion !== this.world.version) { this.spots = graveSpots(this.state); this.spotsVersion = this.world.version; }
     this.actors.update(dt, t, this.spots, (p) => this.groundAt(p));
     this.collectNearbyWisps();
+    this.stepWalkMark(dt, t);
     this.world.watch(this.actors.avatar.pos);
     this.world.update(dt, t);
     this.mist?.update(dt, (this.scene.fog as THREE.Fog).color);
@@ -640,7 +660,7 @@ export class Game {
     if (hit?.petId && !this.editMode) { this.tapPet(hit.petId); return; }
     if (hit?.wispId) {
       const w = this.state.world.looseWisps.find((q) => q.id === hit.wispId);
-      if (w && !this.editMode) { this.actors.walkTo({ x: w.x, y: w.y }); this.rig.follow = this.actors.avatar.pos; }
+      if (w && !this.editMode && this.actors.walkTo({ x: w.x, y: w.y })) { this.markWalk(); this.rig.follow = this.actors.avatar.pos; }
       return;
     }
     if (hit?.entityId) {
@@ -659,7 +679,7 @@ export class Game {
     if (this.selection) { this.select(null); if (this.editMode) return; }
     const g = this.groundCell(x, y);
     if (g && !this.editMode) {
-      this.actors.walkTo(g.cell);
+      if (this.actors.walkTo(g.cell)) this.markWalk();
       this.rig.follow = this.actors.avatar.pos;
     }
   }

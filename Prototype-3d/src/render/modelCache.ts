@@ -80,6 +80,42 @@ export const LOWPOLY_MATERIALS: MaterialSet = {
 /** Terreno low-poly: shading morbido (normali per vertice), così il suolo resta calmo. */
 export const LOWPOLY_TERRAIN = new THREE.MeshStandardMaterial({ vertexColors: true, flatShading: false, roughness: 0.95, metalness: 0 });
 
+/**
+ * Materiali leggeri (telefoni deboli): Lambert al posto del PBR, stesso
+ * aspetto piatto (flat shading, colori per vertice) con un calcolo della luce
+ * molto più semplice per pixel. `setLiteMaterials` li scambia nelle mesh già
+ * in scena e in LOWPOLY_MATERIALS (così anche le nuove li usano).
+ */
+type LiteKey = 'solid' | 'water' | 'gloss' | 'selected' | 'invalid';
+const FULL_MATS: Record<LiteKey, THREE.Material> = { solid: LOWPOLY_MATERIALS.solid, water: LOWPOLY_MATERIALS.water, gloss: LOWPOLY_MATERIALS.gloss, selected: LOWPOLY_MATERIALS.selected, invalid: LOWPOLY_MATERIALS.invalid };
+let liteMats: (Record<LiteKey, THREE.Material> & { terrain: THREE.Material }) | null = null;
+let liteOn = false;
+export const liteMaterialsOn = () => liteOn;
+
+export function setLiteMaterials(on: boolean, root?: THREE.Object3D) {
+  liteMats ??= {
+    solid: new THREE.MeshLambertMaterial({ vertexColors: true, flatShading: true }),
+    water: new THREE.MeshLambertMaterial({ vertexColors: true, flatShading: true, transparent: true, opacity: 0.86 }),
+    gloss: new THREE.MeshLambertMaterial({ vertexColors: true, flatShading: true }),
+    selected: new THREE.MeshLambertMaterial({ vertexColors: true, flatShading: true, emissive: new THREE.Color('#5a4120'), emissiveIntensity: 0.45 }),
+    invalid: new THREE.MeshLambertMaterial({ vertexColors: true, flatShading: true, emissive: new THREE.Color('#7a1f1f'), emissiveIntensity: 0.9 }),
+    terrain: new THREE.MeshLambertMaterial({ vertexColors: true }),
+  };
+  liteOn = on;
+  const swap = new Map<THREE.Material, THREE.Material>([[on ? LOWPOLY_TERRAIN : liteMats.terrain, on ? liteMats.terrain : LOWPOLY_TERRAIN]]);
+  for (const k of Object.keys(FULL_MATS) as LiteKey[]) {
+    const [from, to] = on ? [FULL_MATS[k], liteMats[k]] : [liteMats[k], FULL_MATS[k]];
+    swap.set(from, to);
+    (LOWPOLY_MATERIALS as unknown as Record<LiteKey, THREE.Material>)[k] = to;
+  }
+  root?.traverse((o) => {
+    const m = o as THREE.Mesh;
+    if (!m.isMesh) return;
+    if (Array.isArray(m.material)) m.material = m.material.map((x) => swap.get(x) ?? x);
+    else m.material = swap.get(m.material) ?? m.material;
+  });
+}
+
 export function materialsFor(style: ArtStyle): MaterialSet {
   return style === 'lowpoly' ? LOWPOLY_MATERIALS : MATERIALS;
 }

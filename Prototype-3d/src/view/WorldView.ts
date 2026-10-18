@@ -181,6 +181,17 @@ export class WorldView {
   staticShadows = false;
   /** Moltiplicatore della densità del bosco attorno al recinto (1 = come il livello di qualità). */
   forestScale = 1;
+  /**
+   * Mondo leggero (telefoni deboli): un terzo dell'erba e dei sassi, metà
+   * degli alberi e tutti nella versione semplice. Sono loro a fare quasi
+   * tutti i triangoli (il cimitero vero pesa poco).
+   */
+  lite = false;
+  setLite(on: boolean, state: SaveData) {
+    if (this.lite === on) return;
+    this.lite = on;
+    this.sync(state);
+  }
   /** Cresce a ogni cambiamento visibile della scena: chi lo osserva sa quando ridisegnare le ombre. */
   version = 0;
 
@@ -317,7 +328,7 @@ export class WorldView {
 
   /** Recinto + cancello (instancing) e bosco (cotto per chunk). */
   private syncScenery(state: SaveData) {
-    const sig = `${this.style}|${state.world.expansionLevel}|${this.quality}|${this.forestScale}`;
+    const sig = `${this.style}|${state.world.expansionLevel}|${this.quality}|${this.forestScale}|${this.lite}`;
     if (sig === this.scenerySig) return;
     this.scenerySig = sig;
     for (const h of this.sceneryAnchors) this.atmosphere.removeAnchor(h);
@@ -354,10 +365,10 @@ export class WorldView {
     // nebbia ne nascondono la semplificazione.
     const rng = createRng(state.seed + 77);
     const input = this.groundInput!;
-    const density = (this.quality === 'low' ? 0.22 : this.quality === 'medium' ? 0.32 : 0.42) * this.forestScale;
+    const density = (this.quality === 'low' ? 0.22 : this.quality === 'medium' ? 0.32 : 0.42) * this.forestScale * (this.lite ? 0.5 : 1);
     const baker = new ChunkBaker();
-    const nearRes = this.quality === 'high' ? 1.6 : 1.0;
-    const farRes = this.quality === 'high' ? 1.0 : 0.7;
+    const farRes = this.lite ? 0.6 : this.quality === 'high' ? 1.0 : 0.7;
+    const nearRes = this.lite ? farRes : this.quality === 'high' ? 1.6 : 1.0; // leggera: alberi semplici anche vicino al recinto
     for (let y = WORLD_MIN; y < WORLD_MAX; y += 2) {
       for (let x = WORLD_MIN; x < WORLD_MAX; x += 2) {
         const gt = groundType(input, x, y);
@@ -397,7 +408,7 @@ export class WorldView {
 
   private syncDecor(state: SaveData) {
     const occ = buildOccupancy(state);
-    const base = `${this.style}|${this.quality}|${this.decorLod?.join('/') ?? ''}|${state.world.expansionLevel}`;
+    const base = `${this.style}|${this.quality}|${this.decorLod?.join('/') ?? ''}|${state.world.expansionLevel}|${this.lite}`;
     // cella → chi la occupa (anche il tipo: un sentiero al posto di un'aiuola cambia i bordi)
     const cells = new Map<string, string>();
     const typeOf = new Map(state.placeables.map((p) => [p.id, p.type] as const));
@@ -417,7 +428,7 @@ export class WorldView {
       if (only && !only.has(String(c.userData.chunk))) continue;
       g.remove(c); (c as THREE.Mesh).geometry.dispose();
     }
-    const per = (q: 'low' | 'medium' | 'high') => (q === 'low' ? 0.45 : q === 'medium' ? 0.85 : 1.25) * 1.15; // +15% di fiori, sassi, ciuffi
+    const per = (q: 'low' | 'medium' | 'high') => (q === 'low' ? 0.45 : q === 'medium' ? 0.85 : 1.25) * 1.15 * (this.lite ? 0.35 : 1); // +15% di fiori, sassi, ciuffi
     if (this.decorLod) {
       // qualità Auto: ricco nella fascia nitida, leggero in quelle sfocate (vedi updateDecorLod)
       this.bakeDecor(state, occ, per(this.decorLod[0]), this.decorLayer, only);

@@ -128,8 +128,10 @@ export class AutoGovernor {
 
   profile(): AutoProfile { return { tier: this.tier, step: this.step, ceiling: this.ceiling, top: this.top }; }
 
-  /** Sotto quanti FPS si scende: un po' sotto il ritmo atteso (a 60 basta restare sopra i 28). */
-  static low(target: number) { return Math.min(28, target * 0.8); }
+  /** Sotto quanti FPS si scende di risoluzione: 45 se si punta a 60, 24 se si punta a 30. */
+  static low(target: number) { return target >= 60 ? 45 : 24; }
+  /** Sotto quanti FPS, già alla risoluzione più bassa, si scende di livello: solo se si fatica davvero. */
+  static veryLow(target: number) { return target >= 60 ? 28 : 21; }
   /** Sopra quanti FPS c'è margine per salire. */
   static high(target: number) { return target * 0.83; }
 
@@ -169,7 +171,7 @@ export class AutoGovernor {
       }
       const slower = last(5);
       const i = ORDER.indexOf(this.tier);
-      if (slower && slower.every((f) => f < low - 3) && i > 0) {
+      if (slower && slower.every((f) => f < AutoGovernor.veryLow(target)) && i > 0) {
         // il livello raggiunto da poco non regge: non ci si torna più
         if (this.sinceTierUp < 40) this.top = ORDER[i - 1];
         this.tier = ORDER[i - 1];

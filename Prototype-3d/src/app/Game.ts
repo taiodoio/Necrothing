@@ -80,7 +80,8 @@ export class Game {
   private liveSalt = 0;
   private phaseTimer = 0;
   private hudTimer = 0;
-  private fps = { frames: 0, time: 0, value: 0 };
+  /** FPS disegnati e quante volte al secondo il browser chiama il loop (per le statistiche). */
+  private fps = { frames: 0, time: 0, value: 0, calls: 0, callsValue: 0 };
   private disposed = false;
   private canvas: HTMLCanvasElement;
   private postfx: PostFX;
@@ -216,9 +217,13 @@ export class Game {
     return still ? Math.min(this.frameCap, IDLE_FPS) : this.frameCap;
   }
 
-  private readonly tick = () => {
+  private readonly tick = (time?: number) => {
     if (this.disposed) return;
-    const now = performance.now();
+    // l'ora del frame data dal browser (allineata allo schermo): quella presa qui dentro
+    // ritarda di qualche ms quando il frame prima era pesante, e un frame a 60 FPS
+    // sembrerebbe arrivato troppo presto e verrebbe saltato (su iPhone si scendeva verso 30)
+    const now = time ?? performance.now();
+    this.fps.calls++;
     const cap = this.currentCap(now);
     // frame saltato: niente lavoro (il tempo si accumula e il prossimo frame lo recupera); un po' di
     // tolleranza perché sugli schermi a 120 Hz 60 FPS restino 60 e non scendano a 40
@@ -262,7 +267,12 @@ export class Game {
     this.ui.frame();
 
     this.fps.frames++; this.fps.time += dt;
-    if (this.fps.time >= 0.5) { this.fps.value = Math.round(this.fps.frames / this.fps.time); this.fps.frames = 0; this.fps.time = 0; this.ui.refreshDebug(this.debugInfo()); }
+    if (this.fps.time >= 0.5) {
+      this.fps.value = Math.round(this.fps.frames / this.fps.time);
+      this.fps.callsValue = Math.round(this.fps.calls / this.fps.time);
+      this.fps.frames = 0; this.fps.time = 0; this.fps.calls = 0;
+      this.ui.refreshDebug(this.debugInfo());
+    }
   };
 
   private groundAt(p: THREE.Vector3): number {
@@ -1390,7 +1400,7 @@ export class Game {
     const info = this.renderer.info.render;
     const cs = cacheStats();
     return [
-      `FPS ${this.fps.value}`,
+      `FPS ${this.fps.value} · il browser ne offre ${this.fps.callsValue}/s`,
       this.qualityInfo(),
       `draw calls ${info.calls} · tri ${info.triangles.toLocaleString('it-IT')}`,
       `stile ${this.state.settings.style} · camera ${this.state.settings.camera}`,

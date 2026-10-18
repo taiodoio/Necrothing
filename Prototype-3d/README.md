@@ -72,9 +72,22 @@ interagisci, `B` sali/scendi dalla bici, `F` sali/scendi dalla scopa, `V` cambia
 
 ### Dinamiche (portate dalla PWA, regole in `src/game/`)
 
-- **Sepoltura** in 5 passi (nome+categoria, date+causa, epitaffio, lapide, anteprima),
+- **Sepoltura** in 6 passi (nome+categoria, **foto**, date+causa, epitaffio, lapide, riepilogo),
   poi scegli il posto sulla mappa e arriva il **corteo funebre** (prete, dolenti,
   becchino). Una sola cosa astratta al giorno. Lapidi più ricche sbloccate dal rango.
+  - **Foto dell'oggetto** (facoltativa): «Scatta» apre la fotocamera, «Dalla galleria» una foto
+    già fatta; ritaglio quadrato a 720 px. Scorrendo sulla foto (o con le frecce) si cambia
+    filtro: Originale, Seppia, B/N, Rovinata (seppia sbiadita con grana, graffi, piega e bordi
+    consumati). Il filtro è applicato ai pixel: la foto salvata, esportata e sulla cartolina è
+    già filtrata. Nel **dettaglio della tomba** la foto incorniciata prende il posto della lapide,
+    che resta in piccolo in basso a destra.
+  - **Cartolina funebre** (1080×1350): nome, foto con la lapide, date, causa, epitaffio e
+    «Riposa a Necrothing». Dal riepilogo (prima di scegliere il posto) e dal dettaglio della
+    tomba; «Condividi» apre la condivisione del telefono (o scarica l'immagine).
+  - Nel dettaglio della tomba il pulsante principale è l'azione che serve (ripara, pulisci,
+    porta/rinnova fiori); sopra, cartolina e «Affida all'albero».
+- **Dove va il Custode**: toccando il terreno compare un cerchio dorato sulla meta; svanisce
+  quando arriva o cambia meta.
 - **Ciclo delle tombe** (esclusivo): pulita → fiori → dopo 3 giorni appassiscono e la
   tomba è sporca → dopo 10 giorni sporca si **rompe** (riparare costa 6 ✦ e pulisce).
   I fiori si portano solo su una tomba pulita.
@@ -169,7 +182,9 @@ interagisci, `B` sali/scendi dalla bici, `F` sali/scendi dalla scopa, `V` cambia
   nero della scena, *Salva / Condividi / Elimina*; **Galleria** in IndexedDB.
 - **Impostazioni**: stile, qualità (auto/bassa/media/alta), ora del giorno (reale o
   forzata), sfocatura ai bordi, effetti meteo, statistiche tecniche, backup `.necro3d`,
-  nuova partita.
+  nuova partita. Il backup è uno **ZIP**: `save.json` con lo stato e le foto come veri file
+  JPEG (`photos/` quelle del cimitero, `graves/` quelle degli oggetti sepolti); i vecchi
+  backup in JSON si importano ancora.
 - **Qualità Auto** (predefinita per le nuove partite; i tre livelli manuali restano
   invariati), `src/app/AutoQuality.ts`: all'avvio stima la fascia del dispositivo
   (economico / medio / top, dalla GPU e dalla memoria) che fissa densità di bosco e prato e

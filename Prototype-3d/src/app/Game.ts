@@ -30,7 +30,7 @@ import { cellCenter, HALF, worldToCell, WorldView } from '../view/WorldView.ts';
 import { WalkTarget } from '../view/walkTarget.ts';
 import { AUTO_STEPS, AutoGovernor, detectTier, TIER_LABELS, TIERS, type AutoProfile } from './AutoQuality.ts';
 import { Input } from './Input.ts';
-import { loadSave, saveNow, scheduleSave } from './persistence.ts';
+import { loadSave, persistenceOn, saveNow, scheduleSave } from './persistence.ts';
 import { closedCoffinLP } from '../render/lowpoly/memoryTree.ts';
 
 export type Selection = { kind: 'grave' | 'placeable'; id: string } | null;
@@ -90,12 +90,13 @@ export class Game {
   /** Il cerchio dorato sul punto dove sta andando il Custode. */
   private readonly walkMark = new WalkTarget();
 
-  constructor(canvas: HTMLCanvasElement) {
+  /** `state`: parte da questo stato invece che dal salvataggio; `prewarm: false` non genera modelli in anticipo (pagina delle misure). */
+  constructor(canvas: HTMLCanvasElement, opts: { state?: SaveData; prewarm?: boolean } = {}) {
     this.canvas = canvas;
     const now = new Date();
     const params = new URLSearchParams(location.search);
     const urlSeed = Number(params.get('seed'));
-    this.state = loadSave() ?? createNewGame(now, Number.isFinite(urlSeed) && urlSeed > 0 ? urlSeed : undefined);
+    this.state = opts.state ?? loadSave() ?? createNewGame(now, Number.isFinite(urlSeed) && urlSeed > 0 ? urlSeed : undefined);
     // flag di sviluppo: ?style=voxel|miniature|lowpoly (alias ?renderer=legacy|lowpoly)
     const forced = params.get('style') ?? ({ legacy: 'voxel', lowpoly: 'lowpoly' } as Record<string, string>)[params.get('renderer') ?? ''];
     if (forced === 'voxel' || forced === 'miniature' || forced === 'lowpoly') this.state.settings.style = forced;
@@ -158,7 +159,7 @@ export class Game {
     this.ui.maybeTutorial();
     // un'area sbloccata mentre il gioco era chiuso: lo si dice appena aperto
     setTimeout(() => this.offerExpansion(), 2500);
-    setTimeout(() => this.prewarmModels(), 4000);
+    if (opts.prewarm !== false) setTimeout(() => this.prewarmModels(), 4000);
   }
 
   start() {
@@ -1398,5 +1399,6 @@ function loadAutoProfile(): AutoProfile {
 }
 
 function saveAutoProfile(p: AutoProfile) {
+  if (!persistenceOn()) return;
   try { localStorage.setItem(AUTO_KEY, JSON.stringify({ ...p, gpu: gpuName ?? deviceInfo().gpu })); } catch { /* storage pieno o bloccato */ }
 }

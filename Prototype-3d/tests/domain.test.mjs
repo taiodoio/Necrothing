@@ -744,3 +744,16 @@ test('backup ZIP: stato, foto del cimitero e foto delle tombe tornano identici; 
   assert.deepEqual(legacy.memorials, []);
   assert.throws(() => unpackBackup(new TextEncoder().encode('{"format":"altro"}')), /non riconosciuto/);
 });
+
+test('cimitero pieno per le misure: tante tombe, tutte le presenze, niente sovrapposizioni, sempre uguale', async () => {
+  const { fullCemetery } = await import('../src/game/fullCemetery.ts');
+  const s = fullCemetery(4242, NOW);
+  assert.ok(s.graves.length >= 100, `tombe ${s.graves.length}`);
+  for (const t of ['zombie_bar', 'witch_corner', 'skeleton_band', 'vampire_crypt', 'scarecrow', 'gardener_corner', 'soul_gazebo']) assert.ok(s.placeables.some((p) => p.type === t), t);
+  const cells = new Set();
+  for (const e of [...s.graves.map((g) => ({ x: g.x, y: g.y, fp: [2, 2] })), ...s.placeables.map((p) => ({ x: p.x, y: p.y, fp: rotatedFootprint(p.type, p.rot) }))]) {
+    for (let dx = 0; dx < e.fp[0]; dx++) for (let dy = 0; dy < e.fp[1]; dy++) { const k = `${e.x + dx},${e.y + dy}`; assert.ok(!cells.has(k), `cella ${k} doppia`); cells.add(k); }
+  }
+  const again = fullCemetery(4242, NOW);
+  assert.deepEqual(again.graves.map((g) => [g.x, g.y, g.graveType]), s.graves.map((g) => [g.x, g.y, g.graveType]));
+});

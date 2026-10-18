@@ -9,7 +9,13 @@ export type { MemorialPhoto, PhotoRecord };
 
 const KEY = 'necrothing3d.save.v1';
 
+/** Spento dalla pagina delle misure: niente letture né scritture del salvataggio vero. */
+let persistence = true;
+export function setPersistence(on: boolean) { persistence = on; }
+export const persistenceOn = () => persistence;
+
 export function loadSave(): SaveData | null {
+  if (!persistence) return null;
   try {
     const raw = localStorage.getItem(KEY);
     return raw ? normalizeSave(JSON.parse(raw)) : null;
@@ -20,6 +26,7 @@ export function loadSave(): SaveData | null {
 
 let pending = 0;
 export function saveNow(state: SaveData) {
+  if (!persistence) return;
   try {
     localStorage.setItem(KEY, JSON.stringify(state));
   } catch (e) {
@@ -29,6 +36,7 @@ export function saveNow(state: SaveData) {
 
 /** Salvataggio con debounce (le azioni ravvicinate scrivono una volta sola). */
 export function scheduleSave(state: SaveData) {
+  if (!persistence) return;
   window.clearTimeout(pending);
   pending = window.setTimeout(() => saveNow(state), 250);
 }

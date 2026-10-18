@@ -1426,6 +1426,8 @@ export class Game {
 // ── Profilo della qualità Auto (per dispositivo: resta nel browser, non nel salvataggio) ──
 
 const AUTO_KEY = 'necro3d:auto-quality';
+/** Cresce quando cambia la stima del dispositivo: i profili ricordati prima si rifanno (v2: iPhone in Alta). */
+const AUTO_VERSION = 2;
 /** Dopo quanto senza tocchi il gioco rallenta, e a quanti frame al secondo (sotto i menù ancora meno). */
 const IDLE_MS = 4000, IDLE_FPS = 15, MENU_FPS = 10;
 let gpuName: string | null = null;
@@ -1449,13 +1451,13 @@ function deviceInfo() {
 function loadAutoProfile(): AutoProfile {
   const info = deviceInfo();
   try {
-    const saved = JSON.parse(localStorage.getItem(AUTO_KEY) ?? 'null') as (AutoProfile & { gpu: string }) | null;
-    if (saved && saved.gpu === info.gpu && saved.tier in PROFILES && saved.top in PROFILES) return saved;
-  } catch { /* profilo illeggibile (o della versione con le fasce): si riparte */ }
+    const saved = JSON.parse(localStorage.getItem(AUTO_KEY) ?? 'null') as (AutoProfile & { gpu: string; v?: number }) | null;
+    if (saved && saved.v === AUTO_VERSION && saved.gpu === info.gpu && saved.tier in PROFILES && saved.top in PROFILES) return saved;
+  } catch { /* profilo illeggibile: si riparte */ }
   return newAutoProfile(detectTier(info));
 }
 
 function saveAutoProfile(p: AutoProfile) {
   if (!persistenceOn()) return;
-  try { localStorage.setItem(AUTO_KEY, JSON.stringify({ ...p, gpu: gpuName ?? deviceInfo().gpu })); } catch { /* storage pieno o bloccato */ }
+  try { localStorage.setItem(AUTO_KEY, JSON.stringify({ ...p, gpu: gpuName ?? deviceInfo().gpu, v: AUTO_VERSION })); } catch { /* storage pieno o bloccato */ }
 }

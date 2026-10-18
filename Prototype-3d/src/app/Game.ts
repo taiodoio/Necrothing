@@ -9,7 +9,7 @@ import type { GraveVisualState } from '../game/graves.ts';
 import { graveVisualState } from '../game/graves.ts';
 import * as R from '../game/rules.ts';
 import { catchUpMessage, liveTick, runCatchUp } from '../game/simulation.ts';
-import { createNewGame, type ArtStyle, type FpsSetting, type Quality, type QualitySetting, type SaveData, type TimeOverride } from '../game/state.ts';
+import { createNewGame, type FpsSetting, type Quality, type QualitySetting, type SaveData, type TimeOverride } from '../game/state.ts';
 import { dayPhaseForHour, type DayPhase } from '../game/time.ts';
 import type { CustodeLook } from '../game/look.ts';
 import { areaForLevel, buildOccupancy, canPlaceAt, gateCells, nearestFreeSpot } from '../game/world.ts';
@@ -50,8 +50,6 @@ export interface Placement {
   valid: boolean;
 }
 
-export const STYLE_CYCLE: ArtStyle[] = ['lowpoly', 'voxel', 'miniature'];
-export const STYLE_LABELS: Record<ArtStyle, string> = { lowpoly: 'Gothic Low-Poly', voxel: 'Gothic Voxel', miniature: 'Miniatura' };
 
 /** Densità dei voxel per qualità (voxel per unità di design; 10 unità = 1 cella). */
 const VOXEL_RES: Record<Quality, number> = { low: 1.0, medium: 1.6, high: 2.0 };
@@ -101,9 +99,7 @@ export class Game {
     const params = new URLSearchParams(location.search);
     const urlSeed = Number(params.get('seed'));
     this.state = opts.state ?? loadSave() ?? createNewGame(now, Number.isFinite(urlSeed) && urlSeed > 0 ? urlSeed : undefined);
-    // flag di sviluppo: ?style=voxel|miniature|lowpoly (alias ?renderer=legacy|lowpoly)
-    const forced = params.get('style') ?? ({ legacy: 'voxel', lowpoly: 'lowpoly' } as Record<string, string>)[params.get('renderer') ?? ''];
-    if (forced === 'voxel' || forced === 'miniature' || forced === 'lowpoly') this.state.settings.style = forced;
+    this.state.settings.style = 'lowpoly'; // l'unico stile del gioco (voxel e miniatura erano prove)
     if (this.state.settings.quality === 'auto') this.auto = new AutoGovernor(loadAutoProfile());
     const q = this.baseQuality();
     this.renderer = new THREE.WebGLRenderer({ canvas, antialias: opts.antialias ?? q !== 'low', powerPreference: 'high-performance', preserveDrawingBuffer: false });
@@ -998,7 +994,6 @@ export class Game {
     if (k === 'escape') { this.ui.escape(); return; }
     if (k === 'b') this.toggleBike();
     else if (k === 'f' && this.ownsBroom()) this.toggleBroom();
-    else if (k === 'v') this.setStyle(STYLE_CYCLE[(STYLE_CYCLE.indexOf(this.state.settings.style) + 1) % STYLE_CYCLE.length]);
     else if (k === 'e') this.interactNearest();
   }
 
@@ -1059,20 +1054,6 @@ export class Game {
       idle(step);
     };
     idle(step);
-  }
-
-  setStyle(style: ArtStyle) {
-    if (this.state.settings.style === style) return;
-    this.state.settings.style = style;
-    const sel = this.selection;
-    applyStyleUniforms(style, voxelsPerWorldUnit());
-    this.world.setStyle(style, this.state);
-    this.actors.setStyle(style);
-    this.select(sel);
-    if (this.placement) this.refreshPlacement();
-    scheduleSave(this.state);
-    this.ui.refreshSettingsButtons();
-    toast(`Resa: ${STYLE_LABELS[style]}`);
   }
 
   /** Personalizzazione del Custode: salva e ricostruisce subito il personaggio. */

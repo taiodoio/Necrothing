@@ -429,7 +429,6 @@ export function openSettings(ui: UI) {
     h('div', { class: 'section-title' }, 'Terreno'),
     terrainSection(ui),
     h('div', { class: 'section-title' }, 'Resa grafica'),
-    h('div', { class: 'setting' }, 'Stile', seg(s.style, [['lowpoly', 'Low-Poly'], ['voxel', 'Voxel'], ['miniature', 'Miniatura']], (v) => game.setStyle(v))),
     h('div', { class: 'setting' }, 'Qualità', seg(s.quality, [['auto', 'Auto'], ['low', 'Bassa'], ['medium', 'Media'], ['high', 'Alta']], (v) => game.setQuality(v))),
     s.quality === 'auto' ? h('p', { class: 'muted', style: 'margin:-2px 0 4px;font-size:12px' }, 'Auto sceglie Bassa, Media o Alta in base al dispositivo, e scende di livello se il gioco rallenta.') : null,
     h('div', { class: 'setting' }, 'Fluidità', seg<FpsSetting>(s.fps, [['auto', 'Auto'], ['30', '30 FPS'], ['60', '60 FPS']], (v) => game.setFps(v))),

@@ -4,18 +4,19 @@ Versione giocabile di Necrothing in 3D, mobile-first, con le stesse dinamiche de
 PWA React (`necrothing-docs/prototype/`). È tutto generato dal codice (TypeScript +
 Three.js + Vite): non ci sono modelli, texture o immagini esterne.
 
-Tre stili di resa sugli **stessi dati di gioco**: **Gothic Low-Poly** (predefinito,
-sfaccettato, materiali opachi e luci calde), **Gothic Voxel** (la resa precedente) e
-**Miniatura**. Si cambiano da Impostazioni → Stile, col tasto `V` o con
-`?style=lowpoly|voxel|miniature` (alias `?renderer=lowpoly|legacy`).
+Lo stile è **Gothic Low-Poly**: sfaccettato, materiali opachi e luci calde. Le rese
+**Voxel** e **Miniatura** erano prove e sono state tolte dal gioco (i salvataggi che le
+usavano passano al low-poly); il mesher voxel resta solo come ripiego interno per i
+modelli che non hanno ancora un generatore low-poly dedicato, e la galleria di sviluppo
+(`/gallery.html`) le mostra ancora.
 
 | Low-Poly · giorno | Low-Poly · notte |
 |---|---|
 | ![](screenshots/A-lowpoly-giorno.jpg) | ![](screenshots/B-lowpoly-notte.jpg) |
 
-| Low-Poly · dall'alto | Voxel (legacy) · stessa scena | Miniatura · stessa scena |
-|---|---|---|
-| ![](screenshots/C-lowpoly-dallalto.jpg) | ![](screenshots/D-voxel-legacy.jpg) | ![](screenshots/E-miniatura.jpg) |
+| Low-Poly · dall'alto |
+|---|
+| ![](screenshots/C-lowpoly-dallalto.jpg) |
 
 | Telefono · notte | Telefono · giorno | Telefono · UI e menù contestuale |
 |---|---|---|
@@ -68,7 +69,7 @@ esegue fisicamente (cammina, lavora, poi arriva la ricompensa).
 
 **Controlli** — Touch: tocca per camminare/selezionare, trascina per spostare la mappa,
 pizzica per lo zoom. Desktop: WASD/frecce muovono il Custode, rotella zoom, `E`
-interagisci, `B` sali/scendi dalla bici, `F` sali/scendi dalla scopa, `V` cambia stile (low-poly → voxel → miniatura), `Esc` chiude.
+interagisci, `B` sali/scendi dalla bici, `F` sali/scendi dalla scopa, `Esc` chiude.
 
 ### Dinamiche (portate dalla PWA, regole in `src/game/`)
 
@@ -180,27 +181,26 @@ interagisci, `B` sali/scendi dalla bici, `F` sali/scendi dalla scopa, `V` cambia
   in Modifica (o si rimettono in inventario) e poi si salva.
 - **Foto**: rettangolo ridimensionabile dagli angoli + otturatore, scatto in bianco e
   nero della scena, *Salva / Condividi / Elimina*; **Galleria** in IndexedDB.
-- **Impostazioni**: stile, qualità (auto/bassa/media/alta), ora del giorno (reale o
+- **Impostazioni**: qualità (auto/bassa/media/alta), fluidità (auto/30/60 FPS), ora del giorno (reale o
   forzata), sfocatura ai bordi, effetti meteo, statistiche tecniche, backup `.necro3d`,
   nuova partita. Il backup è uno **ZIP**: `save.json` con lo stato e le foto come veri file
   JPEG (`photos/` quelle del cimitero, `graves/` quelle degli oggetti sepolti); i vecchi
   backup in JSON si importano ancora.
-- **Qualità Auto** (predefinita per le nuove partite; i tre livelli manuali restano
-  invariati), `src/app/AutoQuality.ts`: all'avvio stima la fascia del dispositivo
-  (economico / medio / top, dalla GPU e dalla memoria) che fissa densità di bosco e prato e
-  luci reali nella scena (4/7/10: le altre sorgenti tengono solo l'alone e lo shader non le
-  calcola). Poi un regolatore a finestre di 1 s sceglie il gradino (pixel ratio 1→2, mappa
-  ombre 1024→2048, sfocatura, MSAA): scende se resta sotto 28 FPS per 2 s, risale dopo 8 s
-  sopra 50 FPS, e un gradino che appena salito fa crollare gli FPS non si ritenta (tetto);
-  al gradino più basso ancora lento scende di fascia. Il profilo è ricordato per dispositivo
-  (localStorage). Nelle fasce economica e media le ombre della scena si ridisegnano solo
-  quando cambia qualcosa (camera, sole, scena) e i personaggi hanno un'ombra a disco.
-  In tutte le fasce (fase 2): tombe e oggetti fermi sono fusi per zona di 8×8 celle (una
-  mesh per materiale: stesso disegno, circa metà delle draw call); un oggetto esce dalla
-  fusione quando va visto da solo (selezionato, segnato in rosso, nascosto, trascinato,
-  animato) e la sua zona si ricompone. Il prato ha due versioni, ricca nella fascia nitida
-  e leggera in quelle sfocate; nelle fasce media e top il bosco è due volte più fitto.
-  In *Statistiche tecniche* compaiono fascia e gradino.
+- **Livelli di qualità** (`src/app/AutoQuality.ts`), misurati su telefoni veri con
+  `/bench.html`: **Bassa** (mondo alleggerito, luci delle lanterne finte, materiale semplice
+  Lambert, niente ombre, risoluzione fino a 1), **Media** (luci finte, materiale semplice,
+  ombre ferme che si ridisegnano solo quando cambia la vista, risoluzione fino a 1,5) e
+  **Alta** (luci vere, ombre vive, risoluzione fino a 2). In tutti i livelli tombe e oggetti
+  fermi sono fusi per zona di 8×8 celle (una mesh per materiale, circa metà delle draw call).
+- **Qualità Auto** (predefinita): sceglie il livello dalla GPU e dalla memoria, poi un
+  regolatore a finestre di 1 s regola la risoluzione dentro al livello (scende se resta sotto
+  il ritmo per 2 s, risale dopo 8 s con margine, non ritenta un gradino che ha fatto crollare
+  gli FPS). Alla risoluzione più bassa ancora lento scende di livello; può risalire fino al
+  livello stimato, e un livello che non ha retto non si ritenta. Il profilo è ricordato per
+  dispositivo (localStorage).
+- **Fluidità**: Auto (60 FPS in Alta, 30 in Media e Bassa), 30 o 60. Da fermo (4 s senza
+  tocchi, Custode fermo) il gioco scende a 15 FPS e sotto i menù a 10, per la batteria.
+  In *Statistiche tecniche* compaiono livello, risoluzione, tetto FPS, ombre e luci.
 
 ### Mondo, camera e resa
 
@@ -278,8 +278,8 @@ src/
   (`ModelBuilder`). Il mesher voxel le rasterizza in cubetti con occlusione ambientale
   (rasterizzazione conservativa per sbarre e aste sottili); il mesher *miniatura* le
   trasforma in solidi low-poly con vertici irregolari e colore per faccia. Dimensioni e
-  pivot coincidono (testato). Cambiare stile (`V`) ricostruisce solo le mesh: posizioni,
-  stati, selezione e Custode restano dove sono.
+  pivot coincidono (testato). Nel gioco si usa solo il low-poly (i generatori dedicati,
+  con questi modelli come ripiego).
 - **Camere ortografiche vere**: obliqua a 40° di elevazione; *dall'alto* esattamente
   lungo −Y (testato). Per la leggibilità dall'alto ci sono targhette pixel (scopa/martello)
   sugli oggetti da curare, cornice di selezione e aloni delle luci.
@@ -329,7 +329,7 @@ fiori/sporco/rotto, decadimento 3/7 giorni, bottega e vendita, modifica/rotazion
 riponi, becchino, modificatori di spawn, determinismo, espansione monotona,
 achievement, distretti, catalogo; determinismo del mesher, parità dimensioni
 voxel/miniatura, tutte le lapidi × stati, ogni voce del catalogo in ogni stato,
-rasterizzazione conservativa, camera perpendicolare, stato invariato al cambio stile;
+rasterizzazione conservativa, camera perpendicolare;
 **low-poly**: adapter chiave → generatore per ogni lapide × stato, determinismo e
 varianti per seme, stati che cambiano la geometria, ingombri degli oggetti migrati,
 luci accese/spente, fallback e materiali per stile, parti dei personaggi, scenografia,

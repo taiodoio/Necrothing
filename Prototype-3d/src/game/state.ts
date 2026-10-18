@@ -375,6 +375,8 @@ export function normalizeSave(raw: unknown): SaveData | null {
   }
   // la vista dall'alto è stata tolta (al suo posto c'è la bicicletta)
   if (data.settings && (data.settings as { camera?: string }).camera !== 'angled') data.settings = { ...data.settings, camera: 'angled' };
+  // gli stili di prova (voxel, miniatura) sono stati tolti: il gioco è low-poly
+  if (data.settings && data.settings.style !== 'lowpoly') data.settings = { ...data.settings, style: 'lowpoly' };
   return {
     ...base,
     ...data,

@@ -20,9 +20,12 @@ import type { SaveData } from './game/state.ts';
 import { fullCemetery } from './game/fullCemetery.ts';
 import { areaForLevel } from './game/world.ts';
 import { cellCenter } from './view/WorldView.ts';
+import { setFlatTerrain } from './view/terrain.ts';
 import type { QualitySetting } from './game/state.ts';
 
 setPersistence(false);
+// terreno piatto nel recinto: le colline confondono la lettura e sporcano le ombre (solo qui, non nel gioco)
+setFlatTerrain(true);
 
 interface Inner {
   renderer: THREE.WebGLRenderer;

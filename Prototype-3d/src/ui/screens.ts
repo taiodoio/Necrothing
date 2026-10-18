@@ -19,6 +19,9 @@ import { graveThumb, placeableThumb } from './thumbs.ts';
 import { ACH_ICONS, icon } from './icons.ts';
 import type { UI } from './UI.ts';
 import { openCustomize } from './customize.ts';
+import { BurialPhoto, loadImage, openPostcard, photoStep, portrait } from './memorial.ts';
+import type { PostcardData } from './postcard.ts';
+import { memorials } from '../app/persistence.ts';
 
 const EPITAPHS = [
   'Ha dato tutto. Anche la garanzia.',
@@ -31,13 +34,32 @@ const EPITAPHS = [
 
 // ── Sepoltura ──────────────────────────────────────────────────────────
 
+/** La foto della sepoltura in corso (resta se si torna indietro dal posizionamento). */
+let burialPhoto = new BurialPhoto();
+
+/** Dati della cartolina per una tomba (o una bozza): date, etichette, lapide in miniatura e foto. */
+export async function postcardData(g: { name: string; birthDate: string | null; deathDate: string | null; deathCause: R.BurialDraft['deathCause']; category: R.BurialDraft['category']; epitaph: string | null; graveType: NonNullable<R.BurialDraft['graveType']> }, photo: string | null, ui: UI, seed = 1): Promise<PostcardData> {
+  const style = ui.game.state.settings.style;
+  return {
+    name: g.name,
+    dates: g.birthDate ? `${fmtDate(g.birthDate)} — ${fmtDate(g.deathDate)}` : `† ${fmtDate(g.deathDate)}`,
+    cause: g.deathCause ? DEATH_CAUSE_LABELS[g.deathCause] : '—',
+    category: g.category ? CATEGORY_LABELS[g.category] : '—',
+    epitaph: g.epitaph || null,
+    photo: photo ? await loadImage(photo) : null,
+    headstone: await loadImage(graveThumb(g.graveType, style, 'flowers', seed)),
+  };
+}
+
 export function openBurial(ui: UI, initial?: R.BurialDraft, startStep = 0) {
   const game = ui.game;
   const now = game.now();
   const d: R.BurialDraft = initial ? { ...initial } : R.emptyDraft(now);
+  if (!initial) burialPhoto = new BurialPhoto();
+  const photo = burialPhoto;
   let step = startStep;
   const level = rankForXp(game.state.player.xp).level;
-  const total = 5;
+  const total = 6;
 
   const render = () => {
     const errors = R.validateDraft(d, now);
@@ -54,6 +76,8 @@ export function openBurial(ui: UI, initial?: R.BurialDraft, startStep = 0) {
       );
       if (d.category === 'abstract' && !R.canBuryAbstractToday(game.state, now)) body.append(h('p', { class: 'err muted' }, 'Hai già seppellito una cosa astratta oggi: torna domani.'));
     } else if (step === 1) {
+      body.append(photoStep(photo, render));
+    } else if (step === 2) {
       body.append(
         h('div', { class: 'row' },
           field('Nato il (facoltativo)', h('input', { type: 'date', value: d.birthDate ?? '', max: d.deathDate ?? undefined, onchange: (e: Event) => { d.birthDate = (e.target as HTMLInputElement).value || null; render(); } }), errors.birthDate),
@@ -64,14 +88,14 @@ export function openBurial(ui: UI, initial?: R.BurialDraft, startStep = 0) {
           onclick: () => { d.deathCause = c; render(); },
         }, DEATH_CAUSE_LABELS[c])))),
       );
-    } else if (step === 2) {
+    } else if (step === 3) {
       const ta = h('textarea', { maxLength: 240, placeholder: 'Un ultimo pensiero…', oninput: (e: Event) => { d.epitaph = (e.target as HTMLTextAreaElement).value; } });
       ta.value = d.epitaph;
       body.append(
         field('Epitaffio (facoltativo)', ta),
         h('div', { class: 'chips' }, ...EPITAPHS.map((t) => h('button', { class: 'chip', onclick: () => { d.epitaph = t; render(); } }, t))),
       );
-    } else if (step === 3) {
+    } else if (step === 4) {
       body.append(h('p', { class: 'muted' }, 'Scegli la lapide. Le più ricche si sbloccano salendo di rango.'),
         h('div', { class: 'grid' }, ...GRAVE_TYPES.map((t) => {
           const locked = GRAVE_TYPE_MIN_RANK[t] > level;
@@ -82,8 +106,9 @@ export function openBurial(ui: UI, initial?: R.BurialDraft, startStep = 0) {
           }, h('img', { src: graveThumb(t, game.state.settings.style), alt: '' }), h('b', {}, GRAVE_TYPE_LABELS[t]), locked ? h('span', { class: 'lock' }, icon('lock', 12), `R${GRAVE_TYPE_MIN_RANK[t]}`) : null);
         })));
     } else {
+      const stone = graveThumb(d.graveType!, game.state.settings.style, 'flowers', 1);
       body.append(h('div', { class: 'hero' },
-        h('img', { src: graveThumb(d.graveType!, game.state.settings.style, 'flowers', 1), alt: '' }),
+        photo.has ? portrait(photo.url(), stone) : h('img', { src: stone, alt: '' }),
         h('h3', {}, d.name || '—'),
         d.epitaph ? h('div', { class: 'epitaph' }, `“${d.epitaph}”`) : null,
       ), h('dl', { class: 'kv' },
@@ -96,14 +121,21 @@ export function openBurial(ui: UI, initial?: R.BurialDraft, startStep = 0) {
     setDrawerBody(body);
 
     const stepValid = step === 0 ? !errors.name && !errors.category && !(d.category === 'abstract' && !R.canBuryAbstractToday(game.state, now))
-      : step === 1 ? !errors.deathDate && !errors.birthDate && !errors.deathCause
-        : step === 3 ? !errors.graveType : step === 4 ? Object.keys(errors).length === 0 : true;
-    setDrawerFooter(h('div', { class: 'row' },
-      step > 0 ? h('button', { class: 'big-btn ghost', onclick: () => { step--; render(); } }, 'Indietro') : h('button', { class: 'big-btn ghost', onclick: () => closeDrawer() }, 'Annulla'),
-      step < total - 1
-        ? h('button', { class: 'big-btn', onclick: () => { if (!stepValid) { toast(Object.values(R.validateDraft(d, now))[0] ?? 'Completa i campi.'); return; } step++; render(); } }, 'Avanti')
-        : h('button', { class: 'big-btn', disabled: !stepValid, onclick: () => { closeDrawer(); game.startGravePlacement(d); } }, 'Scegli il posto'),
-    ));
+      : step === 2 ? !errors.deathDate && !errors.birthDate && !errors.deathCause
+        : step === 4 ? !errors.graveType : step === 5 ? Object.keys(errors).length === 0 : true;
+    const last = step === total - 1;
+    const back = step > 0
+      ? h('button', { class: 'big-btn ghost', onclick: () => { step--; render(); } }, 'Indietro')
+      : h('button', { class: 'big-btn ghost', onclick: () => closeDrawer() }, 'Annulla');
+    if (!last) {
+      setDrawerFooter(h('div', { class: 'row' }, back,
+        h('button', { class: 'big-btn', onclick: () => { if (!stepValid) { toast(Object.values(R.validateDraft(d, now))[0] ?? 'Completa i campi.'); return; } step++; render(); } }, step === 1 && !photo.has ? 'Salta' : 'Avanti')));
+    } else {
+      // nel riepilogo la cartolina si può già mandare, prima di scegliere il posto
+      setDrawerFooter(h('div', { style: 'display:grid;gap:6px' },
+        h('div', { class: 'row' }, back, h('button', { class: 'big-btn ghost', onclick: async () => openPostcard(await postcardData({ ...d, graveType: d.graveType! }, photo.url(), ui)) }, 'Cartolina')),
+        h('button', { class: 'big-btn', disabled: !stepValid, onclick: async () => { d.photoId = await photo.store(); closeDrawer(); game.startGravePlacement(d); } }, 'Scegli il posto')));
+    }
   };
   openDrawer('Seppellisci', h('div'));
   render();
@@ -272,9 +304,18 @@ export function openDetail(ui: UI, id: string) {
   if (g) {
     const vs = graveVisualState(g);
     const mem = s.memories.filter((m) => m.graveId === id).slice(-8).reverse();
+    // la foto dell'oggetto (se c'è) prende il posto della lapide, che resta in piccolo in basso a destra
+    const stone = graveThumb(g.graveType, style, vs, g.seed % 4);
+    const head = h('img', { src: stone, alt: '' }) as HTMLElement;
+    let photoUrl: string | null = null;
+    if (g.photoId) void memorials.get(g.photoId).then((m) => { if (m && head.isConnected) { photoUrl = m.dataUrl; head.replaceWith(portrait(m.dataUrl, stone)); } }).catch(() => undefined);
+    // l'azione principale è quella che serve adesso (come nel menù sulla mappa)
+    const main: { act: 'repair' | 'clean' | 'flowers'; label: string; ic: string } = g.broken ? { act: 'repair', label: `Ripara (${DECAY.graveRepairCost})`, ic: 'hammer' }
+      : g.dirty || g.weeds ? { act: 'clean', label: 'Pulisci', ic: 'broom' }
+        : { act: 'flowers', label: g.hasFlowers ? 'Rinnova fiori' : 'Porta fiori', ic: 'flower' };
     openDrawer(g.legacy ? 'Lascito del vecchio custode' : 'Memoria', h('div', {},
       h('div', { class: 'hero' },
-        h('img', { src: graveThumb(g.graveType, style, vs, g.seed % 4), alt: '' }),
+        head,
         h('h3', {}, g.name),
         g.epitaph ? h('div', { class: 'epitaph' }, `“${g.epitaph}”`) : null),
       h('dl', { class: 'kv' },
@@ -285,9 +326,11 @@ export function openDetail(ui: UI, id: string) {
         h('dt', {}, 'Stato'), h('dd', {}, GRAVE_STATE_LABELS[vs] + (g.broken ? ` (riparare costa ${DECAY.graveRepairCost} fuochi fatui)` : '')),
       ),
       mem.length ? h('div', {}, h('div', { class: 'section-title' }, 'Ricordi'), h('ul', { class: 'timeline' }, ...mem.map((m) => h('li', {}, h('time', {}, fmtDate(m.at)), MEMORY_LABELS[m.type])))) : null,
-    ), { footer: h('div', { class: 'row' },
-      h('button', { class: 'big-btn ghost', onclick: () => { closeDrawer(); game.focusEntity(id); } }, 'Mostra sulla mappa'),
-      R.memoryTree(s) ? h('button', { class: 'big-btn', onclick: () => ui.openEntrust(id) }, 'Affida all’albero') : null) });
+    ), { footer: h('div', { style: 'display:grid;gap:6px' },
+      h('div', { class: 'row' },
+        h('button', { class: 'big-btn ghost', onclick: async () => openPostcard(await postcardData(g, photoUrl, ui, g.seed % 4)) }, 'Cartolina'),
+        R.memoryTree(s) ? h('button', { class: 'big-btn ghost', onclick: () => ui.openEntrust(id) }, 'Affida all’albero') : null),
+      h('button', { class: 'big-btn', onclick: () => { closeDrawer(true); game.performEntityAction(id, main.act); } }, icon(main.ic, 22), main.label)) });
     return;
   }
   const p = s.placeables.find((x) => x.id === id);
@@ -377,7 +420,7 @@ export function openSettings(ui: UI) {
     onchange: async (e: Event) => {
       const f = (e.target as HTMLInputElement).files?.[0];
       if (!f) return;
-      try { game.replaceState(await importBackup(await f.text())); toast('Backup ripristinato.'); closeDrawer(); } catch (err) { toast(err instanceof Error ? err.message : 'Import fallito.'); }
+      try { game.replaceState(await importBackup(await f.arrayBuffer())); toast('Backup ripristinato.'); closeDrawer(); } catch (err) { toast(err instanceof Error ? err.message : 'Import fallito.'); }
       (e.target as HTMLInputElement).value = ''; // lo stesso file si può riscegliere
     },
   });

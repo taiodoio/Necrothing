@@ -721,3 +721,26 @@ test('zombie e fantasmi erranti diventano spaventapasseri e giardiniere (piazzat
   assert.equal(s.placeables.find((p) => p.id === 'gr').type, 'gardener_corner');
   assert.deepEqual(s.inventory, { gardener_corner: 3, scarecrow: 1 });
 });
+
+test('backup ZIP: stato, foto del cimitero e foto delle tombe tornano identici; i vecchi backup JSON si importano ancora', async () => {
+  const { packBackup, unpackBackup, bytesToDataUrl, dataUrlToBytes } = await import('../src/app/backup.ts');
+  const jpeg = bytesToDataUrl(new Uint8Array([0xff, 0xd8, 0xff, 0xe0, 1, 2, 3, 250, 0xff, 0xd9]), 'image/jpeg');
+  const state = createNewGame(NOW, 9);
+  state.graves[0].photoId = 'mp_1';
+  const zip = packBackup(state, [{ id: 'ph_1', createdAt: '2026-10-01T10:00:00Z', dataUrl: jpeg }], [{ id: 'mp_1', dataUrl: jpeg }]);
+  assert.deepEqual([...zip.slice(0, 2)], [0x50, 0x4b], 'è uno ZIP');
+  const back = unpackBackup(zip);
+  assert.deepEqual(back.state, JSON.parse(JSON.stringify(state)));
+  assert.deepEqual(back.photos, [{ id: 'ph_1', createdAt: '2026-10-01T10:00:00Z', dataUrl: jpeg }]);
+  assert.deepEqual(back.memorials, [{ id: 'mp_1', dataUrl: jpeg }]);
+  // le immagini stanno nello ZIP come file veri, non in base64
+  const { unzipSync } = await import('fflate');
+  const files = unzipSync(zip);
+  assert.deepEqual([...files['graves/mp_1.jpg']], [...dataUrlToBytes(jpeg).bytes]);
+  // vecchio formato: un JSON con le foto in base64
+  const old = new TextEncoder().encode(JSON.stringify({ format: 'necrothing-3d', version: 1, state, photos: [{ id: 'ph_2', createdAt: 'x', dataUrl: jpeg }] }));
+  const legacy = unpackBackup(old);
+  assert.equal(legacy.photos[0].id, 'ph_2');
+  assert.deepEqual(legacy.memorials, []);
+  assert.throws(() => unpackBackup(new TextEncoder().encode('{"format":"altro"}')), /non riconosciuto/);
+});

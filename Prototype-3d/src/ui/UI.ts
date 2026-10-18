@@ -149,7 +149,7 @@ export class UI {
   openEntrust(graveId: string) { T.openEntrust(this, graveId); }
   openMemoryTree() { T.openMemoryTree(this); }
   openMemory(id: string, visit?: R.ActionResult) { T.openMemory(this, id, visit); }
-  reopenBurial(draft: BurialDraft) { S.openBurial(this, draft, 4); }
+  reopenBurial(draft: BurialDraft) { S.openBurial(this, draft, 5); }
 
   refreshEditBanner() {
     // durante la riduzione del recinto le istruzioni le dà il suo banner

@@ -90,8 +90,11 @@ export class Game {
   /** Il cerchio dorato sul punto dove sta andando il Custode. */
   private readonly walkMark = new WalkTarget();
 
-  /** `state`: parte da questo stato invece che dal salvataggio; `prewarm: false` non genera modelli in anticipo (pagina delle misure). */
-  constructor(canvas: HTMLCanvasElement, opts: { state?: SaveData; prewarm?: boolean } = {}) {
+  /**
+   * `state`: parte da questo stato invece che dal salvataggio; `prewarm: false` non genera modelli in anticipo;
+   * `antialias: false` toglie l'antialiasing dello schermo (pagina delle misure: lì lo decide la sfocatura).
+   */
+  constructor(canvas: HTMLCanvasElement, opts: { state?: SaveData; prewarm?: boolean; antialias?: boolean } = {}) {
     this.canvas = canvas;
     const now = new Date();
     const params = new URLSearchParams(location.search);
@@ -102,7 +105,7 @@ export class Game {
     if (forced === 'voxel' || forced === 'miniature' || forced === 'lowpoly') this.state.settings.style = forced;
     if (this.state.settings.quality === 'auto') this.auto = new AutoGovernor(loadAutoProfile());
     const q = this.baseQuality();
-    this.renderer = new THREE.WebGLRenderer({ canvas, antialias: q !== 'low', powerPreference: 'high-performance', preserveDrawingBuffer: false });
+    this.renderer = new THREE.WebGLRenderer({ canvas, antialias: opts.antialias ?? q !== 'low', powerPreference: 'high-performance', preserveDrawingBuffer: false });
     this.renderer.outputColorSpace = THREE.SRGBColorSpace;
     this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
     this.renderer.toneMappingExposure = 1.18;

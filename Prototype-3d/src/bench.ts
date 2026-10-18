@@ -30,6 +30,8 @@ interface Inner {
   atmosphere: { setLightBudget(n: number | null): void; setFakeLights(on: boolean): void };
   actors: { group?: THREE.Object3D; stats(): { roamers: number; presences: number } };
   world: { setLite(on: boolean, state: SaveData): void };
+  postfx: { setSamples(n: number): void };
+  mist: { group: THREE.Object3D } | null;
   resize(): void;
 }
 
@@ -38,19 +40,22 @@ interface Variant {
   shadows?: boolean; blur?: boolean; lights?: boolean; actors?: boolean; view?: number;
   /** Ottimizzazioni per i telefoni deboli: mondo con meno triangoli, luci finte, materiale semplice, tetto alla risoluzione. */
   lite?: boolean; fake?: boolean; liteMat?: boolean; dpr?: number;
+  /** Antialiasing della sfocatura (campioni MSAA; 0 = niente) e nebbia del bosco. */
+  msaa?: number; mist?: boolean;
 }
-const LITE = { lite: true, fake: true, liteMat: true, shadows: false, dpr: 1.25 } as const;
+// leggera senza il materiale semplice (sull'Adreno non aiutava): meno triangoli, luci finte, niente ombre, risoluzione 1,25
+const LITE = { lite: true, fake: true, shadows: false, dpr: 1.25 } as const;
 const VARIANTS: Variant[] = [
   { id: 'A', label: 'Oggi · Notte · Alta', night: true, quality: 'high' },
-  { id: 'H', label: 'Oggi · Notte · Bassa', night: true, quality: 'low' },
-  { id: '1', label: 'Alta + meno triangoli', night: true, quality: 'high', lite: true },
-  { id: '2', label: '1 + luci finte', night: true, quality: 'high', lite: true, fake: true },
-  { id: '3', label: '2 + materiale semplice', night: true, quality: 'high', lite: true, fake: true, liteMat: true },
-  { id: '4', label: 'Leggera: 3 + niente ombre + risoluzione 1,25', night: true, quality: 'high', ...LITE },
-  { id: '5', label: 'Leggera · zoom lontano', night: true, quality: 'high', ...LITE, view: 30 },
-  { id: '6', label: 'Leggera · giorno', night: false, quality: 'high', ...LITE },
+  { id: '4', label: 'Leggera del primo giro (con materiale semplice)', night: true, quality: 'high', ...LITE, liteMat: true },
+  { id: '7', label: '4 col materiale di oggi', night: true, quality: 'high', ...LITE },
+  { id: '8', label: '7 + risoluzione 1,0', night: true, quality: 'high', ...LITE, dpr: 1 },
+  { id: '9', label: '8 + sfocatura senza antialiasing', night: true, quality: 'high', ...LITE, dpr: 1, msaa: 0 },
+  { id: '10', label: '8 senza sfocatura (né antialiasing)', night: true, quality: 'high', ...LITE, dpr: 1, blur: false },
+  { id: '11', label: '10 senza nebbia del bosco', night: true, quality: 'high', ...LITE, dpr: 1, blur: false, mist: false },
+  { id: '12', label: '11 · zoom lontano', night: true, quality: 'high', ...LITE, dpr: 1, blur: false, mist: false, view: 30 },
 ];
-const WARM = 3000, MEASURE = 10000;
+const WARM = 2000, MEASURE = 7000; // prove più corte: il telefono si scalda meno
 
 const panel = document.getElementById('bench')!;
 const style = document.createElement('style');
@@ -80,7 +85,8 @@ state.settings.shopTutorialDone = true; // niente benvenuto sopra alla scena
 const genMs = performance.now() - t0;
 const canvas = document.querySelector<HTMLCanvasElement>('#world')!;
 const t1 = performance.now();
-const game = new Game(canvas, { state, prewarm: false });
+// antialiasing dello schermo spento: lo decide la sfocatura (che ha il suo, come nel gioco a qualità Alta)
+const game = new Game(canvas, { state, prewarm: false, antialias: false });
 const buildMs = performance.now() - t1;
 (window as unknown as { necro: Game }).necro = game;
 game.start();
@@ -117,6 +123,8 @@ function apply(v: Variant) {
   if (!v.fake) inner.atmosphere.setLightBudget(v.lights === false ? 0 : null);
   setLiteMaterials(!!v.liteMat, game.scene);
   inner.renderer.shadowMap.enabled = v.shadows !== false;
+  inner.postfx.setSamples(v.msaa ?? 4);
+  if (inner.mist) inner.mist.group.visible = v.mist !== false;
   if (v.dpr) { inner.renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, v.dpr)); inner.resize(); }
   const ag = actorsGroup();
   if (ag) ag.visible = v.actors !== false;

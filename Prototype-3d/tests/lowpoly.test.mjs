@@ -669,6 +669,12 @@ test('qualità Auto: livello dal dispositivo, risoluzione dentro al livello, sce
   assert.equal(g.ceiling, 1);
   run(g, 60, 120, 60);
   assert.equal(g.step, 1, 'non ritenta il gradino che non reggeva');
+  // in Alta (si punta a 60) 35 FPS sono pochi: si abbassa la risoluzione, ma non si cambia livello
+  const a35 = new AutoGovernor(newAutoProfile('high'));
+  assert.deepEqual(run(a35, 35, 5.5, 60), ['step']);
+  const b35 = new AutoGovernor({ tier: 'high', step: 0, ceiling: 2, top: 'high' });
+  assert.deepEqual(run(b35, 35, 30, 60), []);
+  assert.equal(b35.tier, 'high');
   // a 30 FPS pieni (Media, Bassa) va tutto bene: niente discese
   const m = new AutoGovernor(newAutoProfile('medium'));
   assert.deepEqual(run(m, 30, 60, 30), []);

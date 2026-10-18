@@ -25,7 +25,7 @@ setPersistence(false);
 interface Inner {
   renderer: THREE.WebGLRenderer;
   rig: { follow: THREE.Vector3 | null; camera: THREE.Camera; setView(h: number): void; jumpTo(p: THREE.Vector3): void };
-  tick(): void;
+  tick(time?: number): void;
 }
 
 const LEVELS: Quality[] = ['low', 'medium', 'high'];
@@ -73,7 +73,7 @@ const inner = game as unknown as Inner;
 // il loop del gioco, cronometrato: il tempo speso a preparare e mandare i frame
 // (sul telefono è la cosa più vicina alla batteria che una pagina possa misurare)
 let work = 0;
-inner.renderer.setAnimationLoop(() => { const s = performance.now(); inner.tick(); work += performance.now() - s; });
+inner.renderer.setAnimationLoop((time) => { const s = performance.now(); inner.tick(time); work += performance.now() - s; });
 
 // dispositivo
 const gl = inner.renderer.getContext();

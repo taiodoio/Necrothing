@@ -7,7 +7,7 @@
 import * as THREE from 'three';
 import type { Quality, Weather } from '../game/state.ts';
 import type { DayPhase } from '../game/time.ts';
-import { MATERIALS } from '../render/modelCache.ts';
+import { lightWorldPos, MATERIALS } from '../render/modelCache.ts';
 import type { LightAnchor } from '../render/shape.ts';
 import { FireFlicker, seedFromPosition } from './FireFlicker.ts';
 import { radialGlowTexture } from '../render/glowTexture.ts';
@@ -90,6 +90,8 @@ export class Atmosphere {
   private nextFlash = 6;
   private poolTimer = 0;
   private readonly scene: THREE.Scene;
+  /** Luci finte (telefoni deboli): niente luci vere, una pozza di luce dipinta a terra per ogni sorgente. */
+  private fake: THREE.InstancedMesh | null = null;
   quality: Quality;
 
   constructor(scene: THREE.Scene, quality: Quality) {
@@ -228,6 +230,42 @@ export class Atmosphere {
     this.sun.target.updateMatrixWorld();
   }
 
+  /**
+   * Luci finte: le luci vere si tolgono (lo shader non le calcola più) e al
+   * loro posto ogni sorgente accesa ha un alone tondo a terra, additivo, che
+   * tremola con la fiamma. Un'unica mesh per tutte (una sola draw call).
+   */
+  setFakeLights(on: boolean) {
+    if (on === !!this.fake) return;
+    this.setLightBudget(on ? 0 : null);
+    if (!on) { this.group.remove(this.fake!); this.fake!.geometry.dispose(); (this.fake!.material as THREE.Material).dispose(); this.fake = null; return; }
+    const mat = new THREE.MeshBasicMaterial({ map: getHaloTexture(), transparent: true, blending: THREE.AdditiveBlending, depthWrite: false, fog: false });
+    this.fake = new THREE.InstancedMesh(new THREE.PlaneGeometry(2, 2).rotateX(-Math.PI / 2), mat, 512);
+    this.fake.count = 0;
+    this.fake.frustumCulled = false;
+    this.fake.renderOrder = 2;
+    this.group.add(this.fake);
+  }
+
+  private updateFake(t: number, pool: number) {
+    const m = this.fake!;
+    const mat4 = new THREE.Matrix4(), q = new THREE.Quaternion(), p = new THREE.Vector3(), sc = new THREE.Vector3(), c = new THREE.Color(), lp = new THREE.Vector3();
+    let i = 0;
+    for (const e of this.anchors.values()) {
+      if (!e.on || e.anchor.intensity <= 0.2 || i >= 512) continue;
+      const f = e.flicker.value(t);
+      const r = e.anchor.range * 0.42;
+      // a terra sotto la sorgente (l'ancora sta in alto sul modello: la sua quota nel modello è l'altezza da terra)
+      p.set(e.pos.x, e.pos.y - lightWorldPos(e.anchor, lp).y + 0.04, e.pos.z);
+      m.setMatrixAt(i, mat4.compose(p, q, sc.set(r, 1, r)));
+      m.setColorAt(i, c.set(e.anchor.color).multiplyScalar(Math.min(1, e.anchor.intensity) * 0.4 * pool * f));
+      i++;
+    }
+    m.count = i;
+    m.instanceMatrix.needsUpdate = true;
+    if (m.instanceColor) m.instanceColor.needsUpdate = true;
+  }
+
   addAnchor(pos: THREE.Vector3, anchor: LightAnchor, on = true): AnchorHandle {
     const id = this.nextId++;
     const mat = new THREE.SpriteMaterial({ map: getHaloTexture(), color: anchor.color, blending: THREE.AdditiveBlending, depthWrite: false, transparent: true, fog: false });
@@ -296,6 +334,7 @@ export class Atmosphere {
       (e.sprite.material as THREE.SpriteMaterial).opacity = e.on ? p.halo * Math.min(1, e.anchor.intensity * 1.4) * f : 0;
       e.sprite.visible = e.on && p.halo > 0.02 && e.anchor.halo > 0.05; // alone 0: luce senza bagliore (riverbero diffuso)
     }
+    if (this.fake) this.updateFake(t, p.pool);
     // Il pool di luci reali segue le sorgenti più vicine al centro della vista.
     // Assegnazione stabile (una luce resta sulla sua sorgente finché serve) e
     // dissolvenze in entrata/uscita: niente accensioni di colpo.

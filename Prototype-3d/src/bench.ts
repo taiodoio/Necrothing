@@ -2,7 +2,10 @@
 // al volo, senza leggere né scrivere il salvataggio. Una serie di prove da
 // qualche secondo ciascuna, con la camera che gira piano sul cimitero, e per
 // ognuna FPS medi, frame lenti, draw call e triangoli. Alla fine una tabella
-// da copiare.
+// da copiare. Le prove «leggere» accendono una per volta le ottimizzazioni
+// per i telefoni deboli (meno triangoli, luci finte, materiale semplice,
+// niente ombre e risoluzione ridotta). Prima di misurare si preparano gli
+// shader di tutte le prove, così cambiare impostazione non blocca il frame.
 
 import '@fontsource/pixelify-sans/400.css';
 import '@fontsource/pixelify-sans/600.css';
@@ -12,6 +15,8 @@ import './styles/main.css';
 import * as THREE from 'three';
 import { Game } from './app/Game.ts';
 import { setPersistence } from './app/persistence.ts';
+import { setLiteMaterials } from './render/modelCache.ts';
+import type { SaveData } from './game/state.ts';
 import { fullCemetery } from './game/fullCemetery.ts';
 import { areaForLevel } from './game/world.ts';
 import { cellCenter } from './view/WorldView.ts';
@@ -21,21 +26,29 @@ setPersistence(false);
 
 interface Inner {
   renderer: THREE.WebGLRenderer;
-  rig: { follow: THREE.Vector3 | null; viewHeight: number; setView(h: number): void; jumpTo(p: THREE.Vector3): void; snap?(): void };
-  atmosphere: { setLightBudget(n: number | null): void };
+  rig: { follow: THREE.Vector3 | null; viewHeight: number; camera: THREE.Camera; setView(h: number): void; jumpTo(p: THREE.Vector3): void; snap?(): void };
+  atmosphere: { setLightBudget(n: number | null): void; setFakeLights(on: boolean): void };
   actors: { group?: THREE.Object3D; stats(): { roamers: number; presences: number } };
+  world: { setLite(on: boolean, state: SaveData): void };
+  resize(): void;
 }
 
-interface Variant { id: string; label: string; night: boolean; quality: QualitySetting; shadows?: boolean; blur?: boolean; lights?: boolean; actors?: boolean; view?: number }
+interface Variant {
+  id: string; label: string; night: boolean; quality: QualitySetting;
+  shadows?: boolean; blur?: boolean; lights?: boolean; actors?: boolean; view?: number;
+  /** Ottimizzazioni per i telefoni deboli: mondo con meno triangoli, luci finte, materiale semplice, tetto alla risoluzione. */
+  lite?: boolean; fake?: boolean; liteMat?: boolean; dpr?: number;
+}
+const LITE = { lite: true, fake: true, liteMat: true, shadows: false, dpr: 1.25 } as const;
 const VARIANTS: Variant[] = [
-  { id: 'A', label: 'Notte · Alta · tutto', night: true, quality: 'high' },
-  { id: 'B', label: 'Notte · Alta · senza ombre', night: true, quality: 'high', shadows: false },
-  { id: 'C', label: 'Notte · Alta · senza sfocatura', night: true, quality: 'high', blur: false },
-  { id: 'D', label: 'Notte · Alta · senza luci', night: true, quality: 'high', lights: false },
-  { id: 'E', label: 'Notte · Alta · senza personaggi', night: true, quality: 'high', actors: false },
-  { id: 'F', label: 'Notte · Alta · zoom lontano', night: true, quality: 'high', view: 30 },
-  { id: 'G', label: 'Giorno · Alta · tutto', night: false, quality: 'high' },
-  { id: 'H', label: 'Notte · Bassa · tutto', night: true, quality: 'low' },
+  { id: 'A', label: 'Oggi · Notte · Alta', night: true, quality: 'high' },
+  { id: 'H', label: 'Oggi · Notte · Bassa', night: true, quality: 'low' },
+  { id: '1', label: 'Alta + meno triangoli', night: true, quality: 'high', lite: true },
+  { id: '2', label: '1 + luci finte', night: true, quality: 'high', lite: true, fake: true },
+  { id: '3', label: '2 + materiale semplice', night: true, quality: 'high', lite: true, fake: true, liteMat: true },
+  { id: '4', label: 'Leggera: 3 + niente ombre + risoluzione 1,25', night: true, quality: 'high', ...LITE },
+  { id: '5', label: 'Leggera · zoom lontano', night: true, quality: 'high', ...LITE, view: 30 },
+  { id: '6', label: 'Leggera · giorno', night: false, quality: 'high', ...LITE },
 ];
 const WARM = 3000, MEASURE = 10000;
 
@@ -99,15 +112,33 @@ function apply(v: Variant) {
   game.setQuality(v.quality);
   game.setTimeOverride(v.night ? 'night' : 'day');
   game.setEdgeBlur(v.blur !== false);
+  inner.world.setLite(!!v.lite, state); // rifà erba e bosco se cambia
+  inner.atmosphere.setFakeLights(!!v.fake);
+  if (!v.fake) inner.atmosphere.setLightBudget(v.lights === false ? 0 : null);
+  setLiteMaterials(!!v.liteMat, game.scene);
   inner.renderer.shadowMap.enabled = v.shadows !== false;
-  inner.atmosphere.setLightBudget(v.lights === false ? 0 : null);
+  if (v.dpr) { inner.renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, v.dpr)); inner.resize(); }
   const ag = actorsGroup();
   if (ag) ag.visible = v.actors !== false;
   inner.rig.follow = null;
   inner.rig.setView(v.view ?? 18);
 }
 
-interface Result { v: Variant; fps: number; median: number; p95: number; worst: number; slow: number; calls: number; tris: number; frames: number }
+/**
+ * Prepara gli shader di tutte le prove (come farebbe il gioco al caricamento):
+ * dopo, passare da una configurazione all'altra non ricompila niente.
+ */
+async function prepare(onStep: (i: number) => void) {
+  for (const [i, v] of VARIANTS.entries()) {
+    onStep(i);
+    apply(v);
+    await new Promise((r) => requestAnimationFrame(r));
+    inner.renderer.compile(game.scene, inner.rig.camera as unknown as THREE.Camera);
+    await new Promise((r) => requestAnimationFrame(r));
+  }
+}
+
+interface Result { v: Variant; fps: number; median: number; p95: number; worst: number; slow: number; calls: number; tris: number; frames: number; stall: number }
 
 function run(v: Variant): Promise<Result> {
   apply(v);
@@ -115,12 +146,13 @@ function run(v: Variant): Promise<Result> {
     const start = performance.now();
     let last = start;
     const dts: number[] = [];
-    let calls = 0, tris = 0, n = 0;
+    let calls = 0, tris = 0, n = 0, stall = 0;
     const frame = (now: number) => {
       const el = now - start;
       // la camera gira piano sul cimitero (così si misura anche quello che entra e esce dalla vista)
       const a = (el / 20000) * Math.PI * 2;
       inner.rig.jumpTo(center.clone().add(new THREE.Vector3(Math.cos(a) * 9, 0, Math.sin(a) * 9)));
+      if (el <= WARM) stall = Math.max(stall, now - last); // blocco al cambio di impostazione (shader, ricostruzioni)
       if (el > WARM) {
         dts.push(now - last);
         const info = inner.renderer.info.render;
@@ -131,7 +163,7 @@ function run(v: Variant): Promise<Result> {
       const s = [...dts].sort((x, y) => x - y);
       const q = (p: number) => s[Math.min(s.length - 1, Math.floor(p * s.length))];
       const total = dts.reduce((x, y) => x + y, 0);
-      resolve({ v, frames: dts.length, fps: (dts.length / total) * 1000, median: q(0.5), p95: q(0.95), worst: s[s.length - 1], slow: dts.filter((d) => d > 33.4).length, calls: Math.round(calls / Math.max(1, n)), tris: Math.round(tris / Math.max(1, n)) });
+      resolve({ v, frames: dts.length, fps: (dts.length / total) * 1000, median: q(0.5), p95: q(0.95), worst: s[s.length - 1], slow: dts.filter((d) => d > 33.4).length, calls: Math.round(calls / Math.max(1, n)), tris: Math.round(tris / Math.max(1, n)), stall });
     };
     requestAnimationFrame(frame);
   });
@@ -139,7 +171,7 @@ function run(v: Variant): Promise<Result> {
 
 const fmt = (x: number, d = 1) => x.toFixed(d);
 function table(rs: Result[]) {
-  return `<table><tr><th></th><th>FPS</th><th>ms 95%</th><th>&gt;33ms</th><th>draw</th><th>tri</th></tr>${rs.map((r) => `<tr><td>${r.v.id}</td><td>${fmt(r.fps)}</td><td>${fmt(r.p95)}</td><td>${r.slow}</td><td>${r.calls}</td><td>${(r.tris / 1000).toFixed(0)}k</td></tr>`).join('')}</table>
+  return `<table><tr><th></th><th>FPS</th><th>ms 95%</th><th>&gt;33ms</th><th>blocco</th><th>draw</th><th>tri</th></tr>${rs.map((r) => `<tr><td>${r.v.id}</td><td>${fmt(r.fps)}</td><td>${fmt(r.p95)}</td><td>${r.slow}</td><td>${fmt(r.stall, 0)}</td><td>${r.calls}</td><td>${(r.tris / 1000).toFixed(0)}k</td></tr>`).join('')}</table>
     <p class="muted" style="margin:6px 0 0">${VARIANTS.map((v) => `<b>${v.id}</b> ${v.label}`).join(' · ')}</p>`;
 }
 function text(rs: Result[]) {
@@ -152,8 +184,10 @@ function text(rs: Result[]) {
     `scena: ${state.graves.length} tombe · ${state.placeables.length} oggetti · presenze ${st.roamers}+${st.presences}`,
     `generazione ${fmt(genMs, 0)} ms · costruzione scena ${fmt(buildMs, 0)} ms`,
     '',
-    'prova | FPS | ms mediano | ms 95% | peggiore | frame >33ms | draw call | triangoli',
-    ...rs.map((r) => `${r.v.id} ${r.v.label} | ${fmt(r.fps)} | ${fmt(r.median)} | ${fmt(r.p95)} | ${fmt(r.worst, 0)} | ${r.slow}/${r.frames} | ${r.calls} | ${r.tris}`),
+    `preparazione shader ${fmt(prepMs, 0)} ms`,
+    '',
+    'prova | FPS | ms mediano | ms 95% | peggiore | frame >33ms | blocco al cambio ms (ricostruzioni comprese) | draw call | triangoli',
+    ...rs.map((r) => `${r.v.id} ${r.v.label} | ${fmt(r.fps)} | ${fmt(r.median)} | ${fmt(r.p95)} | ${fmt(r.worst, 0)} | ${r.slow}/${r.frames} | ${fmt(r.stall, 0)} | ${r.calls} | ${r.tris}`),
   ].join('\n');
 }
 
@@ -163,14 +197,22 @@ function intro() {
   say(`<h1>Misura delle prestazioni</h1>
     <p>Cimitero pieno: <b>${state.graves.length}</b> tombe, <b>${state.placeables.length}</b> oggetti, presenze ${st.roamers}+${st.presences}.
     Generato in ${fmt(genMs, 0)} ms, scena costruita in ${fmt(buildMs, 0)} ms.</p>
-    <p class="muted">${VARIANTS.length} prove da ${(WARM + MEASURE) / 1000} s (circa ${Math.round(VARIANTS.length * (WARM + MEASURE) / 1000 / 60 * 10) / 10} minuti). Tieni il telefono fermo, schermo acceso, niente altre app. Il tuo salvataggio non viene toccato.</p>
+    <p class="muted">Prima si preparano gli shader, poi ${VARIANTS.length} prove da ${(WARM + MEASURE) / 1000} s (circa ${Math.round(VARIANTS.length * (WARM + MEASURE) / 1000 / 60 * 10) / 10} minuti in tutto, più la preparazione). Tieni il telefono fermo, schermo acceso, niente altre app. Il tuo salvataggio non viene toccato.</p>
     <button id="go">Avvia</button>`);
   document.getElementById('go')!.onclick = start;
 }
 
+let prepMs = 0, prepared = false;
+
 async function start() {
   const rs: Result[] = [];
   panel.classList.add('min');
+  if (!prepared) {
+    const tp = performance.now();
+    await prepare((i) => say(`<h1>Preparo gli shader ${i + 1}/${VARIANTS.length}</h1><p class="muted">Una volta sola, come farebbe il gioco al caricamento.</p>`));
+    prepMs = performance.now() - tp;
+    prepared = true;
+  }
   for (const [i, v] of VARIANTS.entries()) {
     say(`<h1>Misura ${i + 1}/${VARIANTS.length}</h1><p>${v.label}</p>${rs.length ? table(rs) : ''}`);
     rs.push(await run(v));
@@ -192,3 +234,5 @@ async function start() {
 // si parte quando la scena ha disegnato qualche frame
 setTimeout(intro, 1500);
 if (new URLSearchParams(location.search).has('auto')) setTimeout(start, 2500);
+// per le prove manuali dalla console: benchApply('4') mostra quella configurazione
+(window as unknown as { benchApply: (id: string) => void }).benchApply = (id) => { const v = VARIANTS.find((x) => x.id === id); if (v) apply(v); };

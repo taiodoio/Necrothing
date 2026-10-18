@@ -94,10 +94,3 @@ test('camera: la vista dall’alto è perpendicolare, quella obliqua a ~40°', (
   assert.ok(Math.abs(elev - 40) < 1, `elevazione ${elev}`);
 });
 
-test('cambiare stile non tocca lo stato di gioco', () => {
-  const s = createNewGame(new Date('2026-10-09T12:00:00Z'), 5);
-  const before = JSON.stringify({ g: s.graves, p: s.placeables, w: s.world, pl: s.player });
-  s.settings.style = 'miniature';
-  s.settings.camera = 'top';
-  assert.equal(JSON.stringify({ g: s.graves, p: s.placeables, w: s.world, pl: s.player }), before);
-});

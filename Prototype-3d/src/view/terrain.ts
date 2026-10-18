@@ -75,19 +75,19 @@ function hillField(seed: number, x: number, y: number): number {
   return h;
 }
 
-/** Altezza naturale (senza pad) di una cella, in unità mondo. */
-/** Recinto piatto (solo la pagina di misura): niente colline né pozze dentro al cimitero. */
-let flatInside = false;
+/** Recinto piatto: niente collinette dentro al cimitero (si legge meglio e le ombre restano pulite); il bosco attorno le tiene. */
+let flatInside = true;
 export function setFlatTerrain(on: boolean) { flatInside = on; }
 
+/** Altezza naturale (senza pad) di una cella, in unità mondo. */
 export function naturalHeight(input: GroundInput, cx: number, cy: number): number {
   const g = groundAt(input, cx, cy);
+  if (g === 'fence') return 0;
+  if (g === 'mud') return -STEP;
   if (flatInside) {
     const a0 = input.area;
     if (cx >= a0.x - 1 && cy >= a0.y - 1 && cx <= a0.x + a0.w && cy <= a0.y + a0.h) return 0;
   }
-  if (g === 'fence') return 0;
-  if (g === 'mud') return -STEP;
   const a = input.area;
   const inside = cx >= a.x && cy >= a.y && cx < a.x + a.w && cy < a.y + a.h;
   if (inside) {

@@ -17,6 +17,8 @@ export type CameraMode = 'angled' | 'top';
 export type Quality = 'low' | 'medium' | 'high';
 /** Qualità scelta nelle impostazioni: un livello fisso, o «auto» (si adatta al dispositivo). */
 export type QualitySetting = Quality | 'auto';
+/** Frame al secondo: «auto» = 60 in Alta, 30 in Media e Bassa. */
+export type FpsSetting = 'auto' | '30' | '60';
 export type TimeOverride = 'auto' | DayPhase;
 export type Weather = 'clear' | 'fog' | 'rain' | 'storm';
 
@@ -144,6 +146,7 @@ export interface Settings {
   style: ArtStyle;
   camera: CameraMode;
   quality: QualitySetting;
+  fps: FpsSetting;
   timeOverride: TimeOverride;
   weatherEffects: boolean;
   /** Sfocatura tilt-shift ai bordi (media/alta qualità). */
@@ -175,6 +178,7 @@ export const DEFAULT_SETTINGS: Settings = {
   style: 'lowpoly',
   camera: 'angled',
   quality: 'auto',
+  fps: 'auto',
   timeOverride: 'auto',
   weatherEffects: true,
   edgeBlur: true,
@@ -371,6 +375,8 @@ export function normalizeSave(raw: unknown): SaveData | null {
   }
   // la vista dall'alto è stata tolta (al suo posto c'è la bicicletta)
   if (data.settings && (data.settings as { camera?: string }).camera !== 'angled') data.settings = { ...data.settings, camera: 'angled' };
+  // gli stili di prova (voxel, miniatura) sono stati tolti: il gioco è low-poly
+  if (data.settings && data.settings.style !== 'lowpoly') data.settings = { ...data.settings, style: 'lowpoly' };
   return {
     ...base,
     ...data,

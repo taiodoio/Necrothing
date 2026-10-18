@@ -120,14 +120,16 @@ test('scenografia: recinto, cancello e vegetazione hanno generatori', () => {
   assert.ok(LP_SCENERY.gate('lit').lights.length >= 2);
 });
 
-test('terreno: colline nel recinto, pad piani sotto le tombe, superficie continua', () => {
+test('terreno: recinto piatto, collinette nel bosco, pad piani sotto le tombe, superficie continua', () => {
   const s = createNewGame(new Date('2026-10-09T12:00:00Z'), 717);
   const area = areaForLevel(0);
   const input = { seed: 717, area, overrides: new Map(), pads: new Map() };
   let max = 0;
   for (let y = area.y; y < area.y + area.h; y++) for (let x = area.x; x < area.x + area.w; x++) max = Math.max(max, naturalHeight(input, x, y));
-  assert.ok(max > 0.4, `ci sono collinette (max ${max})`);
-  assert.equal(naturalHeight(input, area.x, area.y + 10), 0, 'piatto lungo il recinto');
+  assert.equal(max, 0, 'dentro al recinto è tutto piano');
+  let out = 0;
+  for (let y = area.y - 12; y < area.y; y++) for (let x = area.x; x < area.x + area.w; x++) out = Math.max(out, naturalHeight(input, x, y));
+  assert.ok(out > 0.4, `fuori, nel bosco, ci sono collinette (max ${out})`);
   // pad: tutte le celle di una tomba alla stessa quota
   const g = s.graves[0];
   const h = naturalHeight(input, g.x, g.y);
@@ -630,44 +632,72 @@ test('presenze erranti: a frame regolari camminano davvero (prima restavano a gi
   assert.ok(a.avatar.speed > 0.85 * 2, 'il Custode è molto più svelto');
 });
 
-test('qualità Auto: fascia del dispositivo e regolatore con isteresi (scende presto, sale piano, non ritenta ciò che non regge)', async () => {
-  const { detectTier, AutoGovernor, TIERS, AUTO_STEPS } = await import('../src/app/AutoQuality.ts');
+test('qualità Auto: livello dal dispositivo, risoluzione dentro al livello, scende presto e sale piano, non ritenta ciò che non regge', async () => {
+  const { detectTier, AutoGovernor, PROFILES, newAutoProfile } = await import('../src/app/AutoQuality.ts');
   assert.equal(detectTier({ gpu: 'Apple GPU', cores: 6, mobile: true }), 'high');
+  assert.equal(detectTier({ gpu: 'Adreno (TM) 509', mobile: true }), 'low');
   assert.equal(detectTier({ gpu: 'Adreno (TM) 610', mobile: true }), 'low');
-  assert.equal(detectTier({ gpu: 'Adreno (TM) 619', mobile: true }), 'mid');
+  assert.equal(detectTier({ gpu: 'Adreno (TM) 619', mobile: true }), 'medium');
   assert.equal(detectTier({ gpu: 'Adreno (TM) 740', mobile: true }), 'high');
   assert.equal(detectTier({ gpu: 'Mali-G52 MC2', mobile: true }), 'low');
-  assert.equal(detectTier({ gpu: 'Mali-G78 MP14', mobile: true }), 'mid');
+  assert.equal(detectTier({ gpu: 'Mali-G78 MP14', mobile: true }), 'medium');
   assert.equal(detectTier({ gpu: 'Mali-G715-Immortalis MC11', mobile: true }), 'high');
-  assert.equal(detectTier({ gpu: 'Adreno (TM) 740', memory: 2, mobile: true }), 'low', 'poca memoria: economico');
+  assert.equal(detectTier({ gpu: 'Adreno (TM) 740', memory: 2, mobile: true }), 'low', 'poca memoria: Bassa');
   assert.equal(detectTier({ gpu: 'ANGLE (NVIDIA GeForce RTX)', mobile: false }), 'high');
-  for (const t of Object.values(TIERS)) assert.ok(t.startStep <= t.maxStep && t.maxStep < AUTO_STEPS.length);
-  // gradini sempre più ricchi
-  for (let i = 1; i < AUTO_STEPS.length; i++) assert.ok(AUTO_STEPS[i].dpr >= AUTO_STEPS[i - 1].dpr && AUTO_STEPS[i].shadow >= AUTO_STEPS[i - 1].shadow);
+  // profili misurati: dal più leggero al più ricco; 60 FPS solo in Alta
+  assert.deepEqual(Object.values(PROFILES).map((p) => p.shadows), ['off', 'still', 'live']);
+  assert.deepEqual(Object.values(PROFILES).map((p) => p.fps), [30, 30, 60]);
+  for (const p of Object.values(PROFILES)) for (let i = 1; i < p.dpr.length; i++) assert.ok(p.dpr[i] > p.dpr[i - 1]);
+  assert.ok(PROFILES.low.lite && PROFILES.low.fakeLights && PROFILES.medium.fakeLights && !PROFILES.high.fakeLights);
 
-  const run = (g, fps, seconds) => { const out = []; for (let t = 0; t < seconds; t += 1 / fps) { const d = g.frame(1 / fps); if (d) out.push(d); } return out; };
-  // sotto i 30 FPS si scende subito (dopo l'assestamento), un gradino alla volta
-  const g = new AutoGovernor({ tier: 'mid', step: 3, ceiling: 4 });
-  assert.deepEqual(run(g, 20, 5.5), ['down']);
+  const run = (g, fps, seconds, target) => { const out = []; for (let t = 0; t < seconds; t += 1 / fps) { const d = g.frame(1 / fps, target); if (d) out.push(d); } return out; };
+  // si parte dalla risoluzione più alta del livello stimato
+  const g = new AutoGovernor(newAutoProfile('high'));
   assert.equal(g.step, 2);
-  // con margine si risale solo dopo il periodo di attesa, e piano
-  assert.deepEqual(run(g, 60, 20), [], 'subito dopo una discesa non si risale');
+  // sotto il ritmo si scende subito (dopo l'assestamento), un gradino alla volta
+  assert.deepEqual(run(g, 20, 5.5, 60), ['step']);
+  assert.equal(g.step, 1);
+  // con margine si risale solo dopo il periodo di attesa
+  assert.deepEqual(run(g, 60, 20, 60), [], 'subito dopo una discesa non si risale');
   let up = null;
-  for (let t = 0; t < 30 && !up; t += 1 / 60) up = g.frame(1 / 60);
-  assert.equal(up, 'up');
-  assert.equal(g.step, 3);
+  for (let t = 0; t < 30 && !up; t += 1 / 60) up = g.frame(1 / 60, 60);
+  assert.equal(up, 'step');
+  assert.equal(g.step, 2);
   // la salita fa crollare gli FPS: si torna giù e quel gradino diventa il tetto
-  assert.deepEqual(run(g, 22, 6), ['down']);
-  assert.equal(g.ceiling, 2);
-  run(g, 60, 120);
-  assert.equal(g.step, 2, 'non ritenta il gradino che non reggeva');
+  assert.deepEqual(run(g, 22, 6, 60), ['step']);
+  assert.equal(g.ceiling, 1);
+  run(g, 60, 120, 60);
+  assert.equal(g.step, 1, 'non ritenta il gradino che non reggeva');
+  // a 30 FPS pieni (Media, Bassa) va tutto bene: niente discese
+  const m = new AutoGovernor(newAutoProfile('medium'));
+  assert.deepEqual(run(m, 30, 60, 30), []);
   // pause lunghe (app in background) non contano
-  const p = new AutoGovernor({ tier: 'low', step: 1, ceiling: 3 });
-  assert.deepEqual(run(p, 2, 20), []);
-  // al gradino più basso e ancora lento: si scende di fascia
-  const f = new AutoGovernor({ tier: 'mid', step: 0, ceiling: 4 });
-  assert.ok(run(f, 15, 12).includes('tierDown'));
+  const p = new AutoGovernor(newAutoProfile('low'));
+  assert.deepEqual(run(p, 2, 20, 30), []);
+  // alla risoluzione più bassa e ancora lento: si scende di livello (si riparte dalla risoluzione più alta)
+  const f = new AutoGovernor({ tier: 'medium', step: 0, ceiling: 1, top: 'medium' });
+  assert.ok(run(f, 12, 12, 30).includes('tier'));
   assert.equal(f.tier, 'low');
+  assert.equal(f.step, PROFILES.low.dpr.length - 1);
+  // poi, se Bassa va bene a lungo, si riprova Media (il livello stimato) …
+  let r = [];
+  for (let t = 0; t < 200 && !r.includes('tier'); t += 1 / 30) { const d = f.frame(1 / 30, 30); if (d) r.push(d); }
+  assert.equal(f.tier, 'medium');
+  // … ma se non regge si torna giù e Media non si ritenta più
+  assert.ok(run(f, 12, 12, 30).includes('tier'));
+  assert.equal(f.tier, 'low');
+  assert.equal(f.top, 'low');
+  run(f, 30, 300, 30);
+  assert.equal(f.tier, 'low');
+  // mai sopra il livello stimato
+  const l = new AutoGovernor(newAutoProfile('low'));
+  run(l, 30, 300, 30);
+  assert.equal(l.tier, 'low');
+  // fermo o sotto un menù il gioco rallenta apposta: hold() azzera il giudizio
+  const h = new AutoGovernor(newAutoProfile('high'));
+  run(h, 60, 4, 60);
+  for (let i = 0; i < 100; i++) h.hold();
+  assert.deepEqual(run(h, 60, 10, 60), []);
 });
 
 test('qualità Auto: le luci in più escono proprio dalla scena (lo shader non le calcola), e tornano per i livelli manuali', async () => {

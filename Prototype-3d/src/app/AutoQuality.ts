@@ -62,8 +62,9 @@ export function detectTier(d: DeviceInfo): Quality {
   const g = d.gpu.toLowerCase();
   if (d.memory !== undefined && d.memory <= 3) return 'low';
   if (!d.mobile) return /swiftshader|llvmpipe|software|basic render/.test(g) ? 'low' : 'high';
-  // Apple: Safari non dice quale chip; gli iPhone recenti reggono l'Alta
-  if (g.includes('apple')) return (d.cores ?? 6) >= 6 ? 'high' : 'medium';
+  // Apple: Safari non dice quale chip né quanti core (hardwareConcurrency è finto, di solito 2):
+  // si parte da Alta, che gli iPhone recenti reggono, e sui più vecchi il regolatore scende da sé
+  if (g.includes('apple')) return 'high';
   const adreno = /adreno[^0-9]*(\d{3})/.exec(g);
   if (adreno) {
     const n = Number(adreno[1]);

@@ -635,6 +635,7 @@ test('presenze erranti: a frame regolari camminano davvero (prima restavano a gi
 test('qualità Auto: livello dal dispositivo, risoluzione dentro al livello, scende presto e sale piano, non ritenta ciò che non regge', async () => {
   const { detectTier, AutoGovernor, PROFILES, newAutoProfile } = await import('../src/app/AutoQuality.ts');
   assert.equal(detectTier({ gpu: 'Apple GPU', cores: 6, mobile: true }), 'high');
+  assert.equal(detectTier({ gpu: 'Apple GPU', cores: 2, mobile: true }), 'high', 'Safari su iPhone dichiara 2 core: non conta');
   assert.equal(detectTier({ gpu: 'Adreno (TM) 509', mobile: true }), 'low');
   assert.equal(detectTier({ gpu: 'Adreno (TM) 610', mobile: true }), 'low');
   assert.equal(detectTier({ gpu: 'Adreno (TM) 619', mobile: true }), 'medium');

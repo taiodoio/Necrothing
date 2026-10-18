@@ -96,6 +96,7 @@ export class Game {
    */
   constructor(canvas: HTMLCanvasElement, opts: { state?: SaveData; prewarm?: boolean; antialias?: boolean } = {}) {
     this.canvas = canvas;
+    for (const ev of ['pointerdown', 'pointermove', 'wheel', 'keydown', 'touchstart'] as const) window.addEventListener(ev, this.markActive, { passive: true });
     const now = new Date();
     const params = new URLSearchParams(location.search);
     const urlSeed = Number(params.get('seed'));
@@ -188,8 +189,47 @@ export class Game {
     this.walkMark.update(dt, t);
   }
 
+  // ── Frame al secondo (batteria) ──────────────────────────────────────
+
+  /** Tetto ai frame al secondo (null: quanti ne dà lo schermo). */
+  private frameCap: number | null = null;
+  /** Da fermo (nessun tocco da qualche secondo) o sotto un menù: frame al secondo ancora più bassi (null: no). */
+  private idleFps: number | null = null;
+  private lastFrameAt = 0;
+  private lastActiveAt = 0;
+  /** Frame disegnati davvero (quelli saltati dal tetto non contano). */
+  framesDrawn = 0;
+  private readonly markActive = () => { this.lastActiveAt = performance.now(); };
+
+  /**
+   * Meno frame = meno lavoro per GPU e CPU = meno batteria. `cap` limita
+   * sempre; `idle` vale dopo IDLE_MS senza tocchi (e sotto i menù ne basta
+   * ancora meno), finché il Custode non si muove.
+   */
+  setFrameCap(cap: number | null, idle: number | null = null) {
+    this.frameCap = cap;
+    this.idleFps = idle;
+    this.lastActiveAt = performance.now();
+  }
+
+  private currentCap(now: number): number | null {
+    let cap = this.frameCap;
+    if (this.idleFps) {
+      const still = now - this.lastActiveAt > IDLE_MS && !this.actors.avatarMoving && !this.placement && !this.drag;
+      if (drawerOpen()) cap = Math.min(cap ?? 60, Math.min(this.idleFps, 10));
+      else if (still) cap = Math.min(cap ?? 60, this.idleFps);
+    }
+    return cap;
+  }
+
   private readonly tick = () => {
     if (this.disposed) return;
+    const now = performance.now();
+    const cap = this.currentCap(now);
+    // frame saltato: niente lavoro (il tempo si accumula e il prossimo frame lo recupera)
+    if (cap && now - this.lastFrameAt < 1000 / cap - 2) return;
+    this.lastFrameAt = now;
+    this.framesDrawn++;
     const raw = this.clock.getDelta();
     const dt = Math.min(0.05, raw);
     const t = this.clock.elapsedTime;
@@ -1373,6 +1413,8 @@ export class Game {
 // ── Profilo della qualità Auto (per dispositivo: resta nel browser, non nel salvataggio) ──
 
 const AUTO_KEY = 'necro3d:auto-quality';
+/** Dopo quanto senza tocchi il gioco rallenta (se il rallentamento da fermo è acceso). */
+const IDLE_MS = 4000;
 let gpuName: string | null = null;
 
 /** GPU e memoria del dispositivo (per stimare la fascia). */

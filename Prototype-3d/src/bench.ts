@@ -1,11 +1,11 @@
 // Pagina di misura (bench.html): il gioco vero su un cimitero pieno generato
-// al volo, senza leggere né scrivere il salvataggio. Una serie di prove da
-// qualche secondo ciascuna, con la camera che gira piano sul cimitero, e per
-// ognuna FPS medi, frame lenti, draw call e triangoli. Alla fine una tabella
-// da copiare. Le prove «leggere» accendono una per volta le ottimizzazioni
-// per i telefoni deboli (meno triangoli, luci finte, materiale semplice,
-// niente ombre e risoluzione ridotta). Prima di misurare si preparano gli
-// shader di tutte le prove, così cambiare impostazione non blocca il frame.
+// al volo, senza leggere né scrivere il salvataggio. Si sceglie uno dei tre
+// profili che poi la qualità Auto userà da sola in base al telefono
+// (Leggera, Media, Piena) e le opzioni per la batteria (30 FPS, rallenta da
+// fermo); si può girare nel cimitero con le statistiche dal vivo, oppure
+// lanciare il test automatico che misura tutto e prepara i risultati da
+// copiare. Gli shader dei tre profili si preparano all'inizio, così cambiare
+// profilo non blocca il frame.
 
 import '@fontsource/pixelify-sans/400.css';
 import '@fontsource/pixelify-sans/600.css';
@@ -16,12 +16,11 @@ import * as THREE from 'three';
 import { Game } from './app/Game.ts';
 import { setPersistence } from './app/persistence.ts';
 import { setLiteMaterials } from './render/modelCache.ts';
-import type { SaveData } from './game/state.ts';
+import type { Quality, SaveData } from './game/state.ts';
 import { fullCemetery } from './game/fullCemetery.ts';
 import { areaForLevel } from './game/world.ts';
 import { cellCenter } from './view/WorldView.ts';
 import { setFlatTerrain } from './view/terrain.ts';
-import type { QualitySetting } from './game/state.ts';
 
 setPersistence(false);
 // terreno piatto nel recinto: le colline confondono la lettura e sporcano le ombre (solo qui, non nel gioco)
@@ -29,50 +28,48 @@ setFlatTerrain(true);
 
 interface Inner {
   renderer: THREE.WebGLRenderer;
-  rig: { follow: THREE.Vector3 | null; viewHeight: number; camera: THREE.Camera; setView(h: number): void; jumpTo(p: THREE.Vector3): void; snap?(): void };
+  rig: { follow: THREE.Vector3 | null; camera: THREE.Camera; setView(h: number): void; jumpTo(p: THREE.Vector3): void };
   atmosphere: { setLightBudget(n: number | null): void; setFakeLights(on: boolean): void };
-  actors: { group?: THREE.Object3D; stats(): { roamers: number; presences: number } };
-  world: { setLite(on: boolean, state: SaveData): void };
+  actors: { setBlobShadows(on: boolean): void };
+  world: { setLite(on: boolean, state: SaveData): void; setMergeStatic(on: boolean): void; setStyle(style: SaveData['settings']['style'], state: SaveData, force: boolean): void; staticShadows: boolean };
   postfx: { setSamples(n: number): void };
-  mist: { group: THREE.Object3D } | null;
+  tick(): void;
   resize(): void;
 }
 
-interface Variant {
-  id: string; label: string; night: boolean; quality: QualitySetting;
-  shadows?: boolean; blur?: boolean; lights?: boolean; actors?: boolean; view?: number;
-  /** Ottimizzazioni per i telefoni deboli: mondo con meno triangoli, luci finte, materiale semplice, tetto alla risoluzione. */
-  lite?: boolean; fake?: boolean; liteMat?: boolean; dpr?: number;
-  /** Antialiasing della sfocatura (campioni MSAA; 0 = niente) e nebbia del bosco. */
-  msaa?: number; mist?: boolean;
+/** I tre profili che la qualità Auto sceglierà da sola in base al telefono. */
+interface Profile {
+  id: string; label: string; note: string; quality: Quality;
+  /** Mondo con meno triangoli, luci finte a terra, materiale semplice (Lambert). */
+  lite: boolean; fake: boolean; liteMat: boolean;
+  /** Ombre: niente (disco sotto i piedi), ferme (ridisegnate solo se cambia la vista) o vive. */
+  shadows: 'off' | 'still' | 'live';
+  /** Tetto alla risoluzione e campioni di antialiasing della sfocatura. */
+  dpr: number; msaa: number;
 }
-// leggera senza il materiale semplice (sull'Adreno non aiutava): meno triangoli, luci finte, niente ombre, risoluzione 1,25
-const LITE = { lite: true, fake: true, shadows: false, dpr: 1.25 } as const;
-const VARIANTS: Variant[] = [
-  { id: 'A', label: 'Oggi · Notte · Alta', night: true, quality: 'high' },
-  { id: '4', label: 'Leggera del primo giro (con materiale semplice)', night: true, quality: 'high', ...LITE, liteMat: true },
-  { id: '7', label: '4 col materiale di oggi', night: true, quality: 'high', ...LITE },
-  { id: '8', label: '7 + risoluzione 1,0', night: true, quality: 'high', ...LITE, dpr: 1 },
-  { id: '9', label: '8 + sfocatura senza antialiasing', night: true, quality: 'high', ...LITE, dpr: 1, msaa: 0 },
-  { id: '10', label: '8 senza sfocatura (né antialiasing)', night: true, quality: 'high', ...LITE, dpr: 1, blur: false },
-  { id: '11', label: '10 senza nebbia del bosco', night: true, quality: 'high', ...LITE, dpr: 1, blur: false, mist: false },
-  { id: '12', label: '11 · zoom lontano', night: true, quality: 'high', ...LITE, dpr: 1, blur: false, mist: false, view: 30 },
+const PROFILES: Profile[] = [
+  { id: 'light', label: 'Leggera', note: 'telefoni deboli', quality: 'medium', lite: true, fake: true, liteMat: true, shadows: 'off', dpr: 1, msaa: 0 },
+  { id: 'medium', label: 'Media', note: 'telefoni medi', quality: 'medium', lite: false, fake: true, liteMat: true, shadows: 'still', dpr: 1.5, msaa: 2 },
+  { id: 'full', label: 'Piena', note: 'telefoni forti', quality: 'high', lite: false, fake: false, liteMat: false, shadows: 'live', dpr: 2, msaa: 4 },
 ];
-const WARM = 2000, MEASURE = 7000; // prove più corte: il telefono si scalda meno
+/** Frame al secondo da fermo (sotto i menù ne bastano ancora meno: lo decide il gioco). */
+const IDLE_FPS = 15;
 
 const panel = document.getElementById('bench')!;
 const style = document.createElement('style');
 style.textContent = `
-  .bench { position: fixed; z-index: 50; left: 8px; right: 8px; top: calc(8px + env(safe-area-inset-top)); max-height: 70vh; overflow: auto;
-    background: rgba(10,12,16,0.92); color: #e8dcc4; font: 13px/1.35 system-ui, sans-serif; padding: 10px 12px; border: 2px solid #d8b26a; }
+  .bench { position: fixed; z-index: 50; left: 8px; right: 8px; top: calc(8px + env(safe-area-inset-top)); max-height: 72vh; overflow: auto;
+    background: rgba(10,12,16,0.93); color: #e8dcc4; font: 13px/1.35 system-ui, sans-serif; padding: 10px 12px; border: 2px solid #d8b26a; }
+  .bench.mini { left: 8px; right: auto; top: auto; bottom: calc(96px + env(safe-area-inset-bottom)); padding: 6px 8px; }
   .bench h1 { margin: 0 0 6px; font: 600 16px system-ui, sans-serif; color: #f1d39c; }
-  .bench button { font: 600 15px system-ui, sans-serif; padding: 10px 14px; margin: 6px 6px 0 0; background: #d8b26a; color: #1a140b; border: 0; }
-  .bench button.ghost { background: #2a2e36; color: #e8dcc4; }
-  .bench table { border-collapse: collapse; width: 100%; margin-top: 6px; font-size: 12px; }
+  .bench button { font: 600 14px system-ui, sans-serif; padding: 9px 12px; margin: 6px 6px 0 0; background: #2a2e36; color: #e8dcc4; border: 0; }
+  .bench button.on, .bench button.cta { background: #d8b26a; color: #1a140b; }
+  .bench button small { font-weight: 400; opacity: 0.8; }
+  .bench .live { font: 600 13px ui-monospace, monospace; color: #f1d39c; margin: 8px 0 0; }
+  .bench table { border-collapse: collapse; width: 100%; margin-top: 8px; font-size: 12px; }
   .bench td, .bench th { padding: 3px 4px; border-bottom: 1px solid #333; text-align: right; }
   .bench td:first-child, .bench th:first-child { text-align: left; }
   .bench .muted { color: #9a8f7c; }
-  .bench.min { max-height: none; bottom: auto; }
 `;
 document.head.append(style);
 const say = (html: string) => { panel.innerHTML = html; };
@@ -88,12 +85,16 @@ state.settings.shopTutorialDone = true; // niente benvenuto sopra alla scena
 const genMs = performance.now() - t0;
 const canvas = document.querySelector<HTMLCanvasElement>('#world')!;
 const t1 = performance.now();
-// antialiasing dello schermo spento: lo decide la sfocatura (che ha il suo, come nel gioco a qualità Alta)
+// antialiasing dello schermo spento: lo decide la sfocatura (col suo MSAA, come nel gioco)
 const game = new Game(canvas, { state, prewarm: false, antialias: false });
 const buildMs = performance.now() - t1;
 (window as unknown as { necro: Game }).necro = game;
-game.start();
 const inner = game as unknown as Inner;
+
+// il loop del gioco, cronometrato: il tempo speso a preparare e mandare i frame
+// (sul telefono è la cosa più vicina alla batteria che una pagina possa misurare)
+let work = 0;
+inner.renderer.setAnimationLoop(() => { const s = performance.now(); inner.tick(); work += performance.now() - s; });
 
 // dispositivo
 const gl = inner.renderer.getContext();
@@ -102,148 +103,198 @@ const gpu = String((dbg && gl.getParameter(dbg.UNMASKED_RENDERER_WEBGL)) || gl.g
 const device = {
   ua: navigator.userAgent, gpu, dpr: window.devicePixelRatio,
   screen: `${window.innerWidth}×${window.innerHeight}`,
-  canvas: `${canvas.width}×${canvas.height}`,
   cores: navigator.hardwareConcurrency ?? '?', memory: (navigator as Navigator & { deviceMemory?: number }).deviceMemory ?? '?',
 };
 
 const area = areaForLevel(state.world.expansionLevel);
 const center = cellCenter(area.x + area.w / 2, area.y + area.h / 2, [1, 1]);
-const actorsGroup = (): THREE.Object3D | null => {
-  const g = inner.actors.group;
-  if (g) return g;
-  // ripiego: il gruppo che contiene il rig del Custode
-  let found: THREE.Object3D | null = null;
-  game.scene.traverse((o) => { if (!found && o.name === 'actors') found = o; });
-  return found;
-};
 
-function apply(v: Variant) {
-  game.setQuality(v.quality);
-  game.setTimeOverride(v.night ? 'night' : 'day');
-  game.setEdgeBlur(v.blur !== false);
-  inner.world.setLite(!!v.lite, state); // rifà erba e bosco se cambia
-  inner.atmosphere.setFakeLights(!!v.fake);
-  if (!v.fake) inner.atmosphere.setLightBudget(v.lights === false ? 0 : null);
-  setLiteMaterials(!!v.liteMat, game.scene);
-  inner.renderer.shadowMap.enabled = v.shadows !== false;
-  inner.postfx.setSamples(v.msaa ?? 4);
-  if (inner.mist) inner.mist.group.visible = v.mist !== false;
-  if (v.dpr) { inner.renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, v.dpr)); inner.resize(); }
-  const ag = actorsGroup();
-  if (ag) ag.visible = v.actors !== false;
-  inner.rig.follow = null;
-  inner.rig.setView(v.view ?? 18);
+// ── Profili e batteria ──────────────────────────────────────────────────
+
+let profile = PROFILES[2];
+let cap30 = false, idle = false;
+
+function applyProfile(p: Profile) {
+  profile = p;
+  game.setQuality(p.quality);
+  game.setTimeOverride('night');
+  inner.world.setLite(p.lite, state); // rifà erba e bosco se cambia
+  inner.world.setMergeStatic(true); // oggetti fermi fusi per zona, come in Auto
+  const still = p.shadows === 'still';
+  if (inner.world.staticShadows !== still) { inner.world.staticShadows = still; inner.world.setStyle(state.settings.style, state, true); }
+  inner.actors.setBlobShadows(p.shadows !== 'live');
+  inner.renderer.shadowMap.enabled = p.shadows !== 'off';
+  inner.renderer.shadowMap.autoUpdate = p.shadows === 'live';
+  inner.renderer.shadowMap.needsUpdate = true;
+  inner.atmosphere.setFakeLights(p.fake);
+  if (!p.fake) inner.atmosphere.setLightBudget(null);
+  setLiteMaterials(p.liteMat, game.scene);
+  inner.renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, p.dpr));
+  inner.resize();
+  inner.postfx.setSamples(p.msaa);
+  applyBattery();
 }
 
-/**
- * Prepara gli shader di tutte le prove (come farebbe il gioco al caricamento):
- * dopo, passare da una configurazione all'altra non ricompila niente.
- */
-async function prepare(onStep: (i: number) => void) {
-  for (const [i, v] of VARIANTS.entries()) {
-    onStep(i);
-    apply(v);
-    await new Promise((r) => requestAnimationFrame(r));
-    inner.renderer.compile(game.scene, inner.rig.camera as unknown as THREE.Camera);
-    await new Promise((r) => requestAnimationFrame(r));
+function applyBattery() { game.setFrameCap(cap30 ? 30 : null, idle ? IDLE_FPS : null); }
+
+const nextFrame = () => new Promise((r) => requestAnimationFrame(r));
+
+/** Prepara gli shader dei tre profili (come farebbe il gioco al caricamento). */
+async function prepare() {
+  for (const [i, p] of PROFILES.entries()) {
+    say(`<h1>Preparo gli shader ${i + 1}/${PROFILES.length}</h1><p class="muted">Una volta sola, come farebbe il gioco al caricamento.</p>`);
+    applyProfile(p);
+    await nextFrame();
+    inner.renderer.compile(game.scene, inner.rig.camera);
+    await nextFrame();
   }
 }
 
-interface Result { v: Variant; fps: number; median: number; p95: number; worst: number; slow: number; calls: number; tris: number; frames: number; stall: number }
+// ── Statistiche dal vivo ────────────────────────────────────────────────
 
-function run(v: Variant): Promise<Result> {
-  apply(v);
+const live = { fps: 0, work: 0, calls: 0, tris: 0 };
+let seenFrames = 0, seenWork = 0, seenAt = performance.now();
+const liveText = () => `${live.fps.toFixed(0)} FPS · lavoro ${live.work.toFixed(0)} ms/s · ${live.calls} draw · ${(live.tris / 1000).toFixed(0)}k tri`;
+setInterval(() => {
+  const now = performance.now(), secs = (now - seenAt) / 1000;
+  live.fps = (game.framesDrawn - seenFrames) / secs;
+  live.work = (work - seenWork) / secs;
+  live.calls = inner.renderer.info.render.calls;
+  live.tris = inner.renderer.info.render.triangles;
+  seenFrames = game.framesDrawn; seenWork = work; seenAt = now;
+  const el = document.getElementById('live');
+  if (el) el.textContent = liveText();
+}, 500);
+
+// ── Pannello ────────────────────────────────────────────────────────────
+
+let mini = false, testing = false, results = '';
+
+function render() {
+  if (testing) return;
+  const options = `${profile.label}${cap30 ? ' · 30 FPS' : ''}${idle ? ' · rallenta da fermo' : ''}`;
+  if (mini) {
+    panel.className = 'bench mini';
+    say(`<div class="live" id="live" style="margin:0">${liveText()}</div><div class="muted">${options}</div><button id="open">Apri il pannello</button>`);
+    document.getElementById('open')!.onclick = () => { mini = false; render(); };
+    return;
+  }
+  panel.className = 'bench';
+  say(`<h1>Misura delle prestazioni</h1>
+    <div class="muted">Cimitero pieno: ${state.graves.length} tombe, ${state.placeables.length} oggetti · ${device.gpu} · dpr ${device.dpr}</div>
+    <div>${PROFILES.map((p) => `<button data-p="${p.id}" class="${p === profile ? 'on' : ''}">${p.label}<br><small>${p.note}</small></button>`).join('')}</div>
+    <div><button id="cap" class="${cap30 ? 'on' : ''}">30 FPS</button><button id="idle" class="${idle ? 'on' : ''}">Rallenta da fermo</button></div>
+    <div class="live" id="live">${liveText()}</div>
+    <div><button class="cta" id="go">Avvia il test</button><button id="hide">Nascondi e gira</button></div>
+    ${results}`);
+  panel.querySelectorAll<HTMLButtonElement>('[data-p]').forEach((b) => { b.onclick = () => { applyProfile(PROFILES.find((p) => p.id === b.dataset.p)!); render(); }; });
+  document.getElementById('cap')!.onclick = () => { cap30 = !cap30; applyBattery(); render(); };
+  document.getElementById('idle')!.onclick = () => { idle = !idle; applyBattery(); render(); };
+  document.getElementById('hide')!.onclick = () => { mini = true; render(); };
+  document.getElementById('go')!.onclick = runTest;
+  const copy = document.getElementById('copy');
+  if (copy) copy.onclick = async () => {
+    try { await navigator.clipboard.writeText(lastOut); copy.textContent = 'Copiato ✓'; } catch { copy.textContent = 'Seleziona il testo qui sotto'; }
+  };
+}
+
+// ── Test automatico ─────────────────────────────────────────────────────
+
+interface Run { label: string; p: Profile; cap: number | null; idle: boolean }
+interface Result { r: Run; fps: number; p95: number; slow: number; work: number; calls: number; tris: number }
+// ogni profilo: libero e a 30 FPS con la camera che gira, poi fermo senza tocchi (rallenta da fermo)
+const RUNS: Run[] = PROFILES.flatMap((p) => [
+  { label: `${p.label} · libero`, p, cap: null, idle: false },
+  { label: `${p.label} · 30 FPS`, p, cap: 30, idle: false },
+  { label: `${p.label} · da fermo`, p, cap: 30, idle: true },
+]);
+const WARM = 2000, MEASURE = 7000;
+/** Da fermo si comincia a misurare quando il gioco ha già rallentato (4 s senza tocchi). */
+const IDLE_WARM = 5000;
+
+function measure(r: Run): Promise<Result> {
+  applyProfile(r.p);
+  game.setFrameCap(r.cap, r.idle ? IDLE_FPS : null);
+  inner.rig.follow = null;
+  inner.rig.setView(18);
+  inner.rig.jumpTo(center.clone());
+  const warm = r.idle ? IDLE_WARM : WARM;
+  // un frame è lento se arriva ben dopo il ritmo atteso
+  const late = 1000 / (r.idle ? IDLE_FPS : r.cap ?? 30) + 8;
   return new Promise((resolve) => {
     const start = performance.now();
-    let last = start;
-    const dts: number[] = [];
-    let calls = 0, tris = 0, n = 0, stall = 0;
-    const frame = (now: number) => {
+    let w0 = 0, f0 = 0, lastFrames = 0, lastAt = 0, calls = 0, tris = 0, n = 0;
+    const gaps: number[] = [];
+    const step = (now: number) => {
       const el = now - start;
-      // la camera gira piano sul cimitero (così si misura anche quello che entra e esce dalla vista)
-      const a = (el / 20000) * Math.PI * 2;
-      inner.rig.jumpTo(center.clone().add(new THREE.Vector3(Math.cos(a) * 9, 0, Math.sin(a) * 9)));
-      if (el <= WARM) stall = Math.max(stall, now - last); // blocco al cambio di impostazione (shader, ricostruzioni)
-      if (el > WARM) {
-        dts.push(now - last);
-        const info = inner.renderer.info.render;
-        calls += info.calls; tris += info.triangles; n++;
+      // la camera gira piano sul cimitero; da fermo resta dov'è
+      if (!r.idle) { const a = (el / 20000) * Math.PI * 2; inner.rig.jumpTo(center.clone().add(new THREE.Vector3(Math.cos(a) * 9, 0, Math.sin(a) * 9))); }
+      if (el >= warm) {
+        if (!lastAt) { w0 = work; f0 = game.framesDrawn; lastFrames = f0; lastAt = now; }
+        else if (game.framesDrawn !== lastFrames) {
+          gaps.push(now - lastAt);
+          lastAt = now; lastFrames = game.framesDrawn;
+          calls += inner.renderer.info.render.calls; tris += inner.renderer.info.render.triangles; n++;
+        }
       }
-      last = now;
-      if (el < WARM + MEASURE) { requestAnimationFrame(frame); return; }
-      const s = [...dts].sort((x, y) => x - y);
-      const q = (p: number) => s[Math.min(s.length - 1, Math.floor(p * s.length))];
-      const total = dts.reduce((x, y) => x + y, 0);
-      resolve({ v, frames: dts.length, fps: (dts.length / total) * 1000, median: q(0.5), p95: q(0.95), worst: s[s.length - 1], slow: dts.filter((d) => d > 33.4).length, calls: Math.round(calls / Math.max(1, n)), tris: Math.round(tris / Math.max(1, n)), stall });
+      if (el < warm + MEASURE) { requestAnimationFrame(step); return; }
+      const secs = (now - start - warm) / 1000;
+      const s = [...gaps].sort((x, y) => x - y);
+      resolve({
+        r, fps: (game.framesDrawn - f0) / secs, p95: s[Math.min(s.length - 1, Math.floor(0.95 * s.length))] ?? 0,
+        slow: gaps.filter((g) => g > late).length, work: (work - w0) / secs,
+        calls: Math.round(calls / Math.max(1, n)), tris: Math.round(tris / Math.max(1, n)),
+      });
     };
-    requestAnimationFrame(frame);
+    requestAnimationFrame(step);
   });
 }
 
 const fmt = (x: number, d = 1) => x.toFixed(d);
-function table(rs: Result[]) {
-  return `<table><tr><th></th><th>FPS</th><th>ms 95%</th><th>&gt;33ms</th><th>blocco</th><th>draw</th><th>tri</th></tr>${rs.map((r) => `<tr><td>${r.v.id}</td><td>${fmt(r.fps)}</td><td>${fmt(r.p95)}</td><td>${r.slow}</td><td>${fmt(r.stall, 0)}</td><td>${r.calls}</td><td>${(r.tris / 1000).toFixed(0)}k</td></tr>`).join('')}</table>
-    <p class="muted" style="margin:6px 0 0">${VARIANTS.map((v) => `<b>${v.id}</b> ${v.label}`).join(' · ')}</p>`;
-}
-function text(rs: Result[]) {
-  const st = inner.actors.stats();
-  return [
-    'NECROTHING · misura prestazioni',
+let lastOut = '', prepMs = 0;
+
+async function runTest() {
+  testing = true;
+  panel.className = 'bench';
+  const keep = { profile, cap30, idle };
+  const rs: Result[] = [];
+  for (const [i, r] of RUNS.entries()) {
+    say(`<h1>Test ${i + 1}/${RUNS.length}</h1><p>${r.label}</p><p class="muted">Non toccare lo schermo: circa ${Math.round(RUNS.reduce((t, x) => t + (x.idle ? IDLE_WARM : WARM) + MEASURE, 0) / 60000 * 10) / 10} minuti in tutto.</p>${rs.length ? table(rs) : ''}`);
+    rs.push(await measure(r));
+  }
+  testing = false;
+  lastOut = [
+    'NECROTHING · misura prestazioni (profili)',
     `GPU: ${device.gpu}`,
     `UA: ${device.ua}`,
-    `schermo ${device.screen} · dpr ${device.dpr} · canvas ${device.canvas} · core ${device.cores} · mem ${device.memory}`,
-    `scena: ${state.graves.length} tombe · ${state.placeables.length} oggetti · presenze ${st.roamers}+${st.presences}`,
-    `generazione ${fmt(genMs, 0)} ms · costruzione scena ${fmt(buildMs, 0)} ms`,
+    `schermo ${device.screen} · dpr ${device.dpr} · core ${device.cores} · mem ${device.memory}`,
+    `scena: ${state.graves.length} tombe · ${state.placeables.length} oggetti · generazione ${fmt(genMs, 0)} ms · costruzione ${fmt(buildMs, 0)} ms · shader ${fmt(prepMs, 0)} ms`,
     '',
-    `preparazione shader ${fmt(prepMs, 0)} ms`,
-    '',
-    'prova | FPS | ms mediano | ms 95% | peggiore | frame >33ms | blocco al cambio ms (ricostruzioni comprese) | draw call | triangoli',
-    ...rs.map((r) => `${r.v.id} ${r.v.label} | ${fmt(r.fps)} | ${fmt(r.median)} | ${fmt(r.p95)} | ${fmt(r.worst, 0)} | ${r.slow}/${r.frames} | ${fmt(r.stall, 0)} | ${r.calls} | ${r.tris}`),
+    'prova | FPS | ms 95% | frame lenti | lavoro ms/s | draw call | triangoli',
+    ...rs.map((x) => `${x.r.label} | ${fmt(x.fps)} | ${fmt(x.p95)} | ${x.slow} | ${fmt(x.work, 0)} | ${x.calls} | ${x.tris}`),
   ].join('\n');
+  (window as unknown as { benchResult: string }).benchResult = lastOut;
+  ({ cap30, idle } = keep);
+  applyProfile(keep.profile);
+  results = `${table(rs)}
+    <p class="muted" style="margin:6px 0 0">«lavoro» = millisecondi al secondo spesi a preparare e mandare i frame: meno lavoro, meno batteria. «lenti» = frame arrivati in ritardo sul ritmo atteso.</p>
+    <button class="cta" id="copy">Copia risultati</button>
+    <pre class="muted" style="white-space:pre-wrap;font-size:11px">${lastOut.replace(/</g, '&lt;')}</pre>`;
+  render();
 }
 
-function intro() {
-  const st = inner.actors.stats();
-  panel.classList.remove('min');
-  say(`<h1>Misura delle prestazioni</h1>
-    <p>Cimitero pieno: <b>${state.graves.length}</b> tombe, <b>${state.placeables.length}</b> oggetti, presenze ${st.roamers}+${st.presences}.
-    Generato in ${fmt(genMs, 0)} ms, scena costruita in ${fmt(buildMs, 0)} ms.</p>
-    <p class="muted">Prima si preparano gli shader, poi ${VARIANTS.length} prove da ${(WARM + MEASURE) / 1000} s (circa ${Math.round(VARIANTS.length * (WARM + MEASURE) / 1000 / 60 * 10) / 10} minuti in tutto, più la preparazione). Tieni il telefono fermo, schermo acceso, niente altre app. Il tuo salvataggio non viene toccato.</p>
-    <button id="go">Avvia</button>`);
-  document.getElementById('go')!.onclick = start;
-}
-
-let prepMs = 0, prepared = false;
-
-async function start() {
-  const rs: Result[] = [];
-  panel.classList.add('min');
-  if (!prepared) {
-    const tp = performance.now();
-    await prepare((i) => say(`<h1>Preparo gli shader ${i + 1}/${VARIANTS.length}</h1><p class="muted">Una volta sola, come farebbe il gioco al caricamento.</p>`));
-    prepMs = performance.now() - tp;
-    prepared = true;
-  }
-  for (const [i, v] of VARIANTS.entries()) {
-    say(`<h1>Misura ${i + 1}/${VARIANTS.length}</h1><p>${v.label}</p>${rs.length ? table(rs) : ''}`);
-    rs.push(await run(v));
-  }
-  apply(VARIANTS[0]);
-  const out = text(rs);
-  panel.classList.remove('min');
-  say(`<h1>Fatto</h1>${table(rs)}<p class="muted">GPU: ${device.gpu} · schermo ${device.screen} · dpr ${device.dpr}</p>
-    <button id="copy">Copia risultati</button><button class="ghost" id="again">Ripeti</button>
-    <pre class="muted" style="white-space:pre-wrap;font-size:11px">${out.replace(/</g, '&lt;')}</pre>`);
-  document.getElementById('copy')!.onclick = async () => {
-    try { await navigator.clipboard.writeText(out); (document.getElementById('copy') as HTMLButtonElement).textContent = 'Copiato ✓'; }
-    catch { (document.getElementById('copy') as HTMLButtonElement).textContent = 'Seleziona il testo qui sotto'; }
-  };
-  document.getElementById('again')!.onclick = start;
-  (window as unknown as { benchResult: string }).benchResult = out;
+function table(rs: Result[]) {
+  return `<table><tr><th></th><th>FPS</th><th>ms 95%</th><th>lenti</th><th>lavoro</th><th>draw</th><th>tri</th></tr>${rs.map((x) => `<tr><td>${x.r.label}</td><td>${fmt(x.fps)}</td><td>${fmt(x.p95)}</td><td>${x.slow}</td><td>${fmt(x.work, 0)}</td><td>${x.calls}</td><td>${(x.tris / 1000).toFixed(0)}k</td></tr>`).join('')}</table>`;
 }
 
 // si parte quando la scena ha disegnato qualche frame
-setTimeout(intro, 1500);
-if (new URLSearchParams(location.search).has('auto')) setTimeout(start, 2500);
-// per le prove manuali dalla console: benchApply('4') mostra quella configurazione
-(window as unknown as { benchApply: (id: string) => void }).benchApply = (id) => { const v = VARIANTS.find((x) => x.id === id); if (v) apply(v); };
+setTimeout(async () => {
+  const tp = performance.now();
+  await prepare();
+  prepMs = performance.now() - tp;
+  applyProfile(PROFILES[2]);
+  render();
+  if (new URLSearchParams(location.search).has('auto')) runTest();
+}, 1200);
+// per le prove dalla console: benchProfile('light' | 'medium' | 'full')
+(window as unknown as { benchProfile: (id: string) => void }).benchProfile = (id) => { const p = PROFILES.find((x) => x.id === id); if (p) { applyProfile(p); render(); } };

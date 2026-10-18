@@ -9,11 +9,11 @@ import type { GraveVisualState } from '../game/graves.ts';
 import { graveVisualState } from '../game/graves.ts';
 import * as R from '../game/rules.ts';
 import { catchUpMessage, liveTick, runCatchUp } from '../game/simulation.ts';
-import { createNewGame, type ArtStyle, type Quality, type QualitySetting, type SaveData, type TimeOverride } from '../game/state.ts';
+import { createNewGame, type ArtStyle, type FpsSetting, type Quality, type QualitySetting, type SaveData, type TimeOverride } from '../game/state.ts';
 import { dayPhaseForHour, type DayPhase } from '../game/time.ts';
 import type { CustodeLook } from '../game/look.ts';
 import { areaForLevel, buildOccupancy, canPlaceAt, gateCells, nearestFreeSpot } from '../game/world.ts';
-import { applyStyleUniforms, cacheStats, clearAll, getModel, instantiate, LOWPOLY_MATERIALS, LOWPOLY_TERRAIN, MATERIALS } from '../render/modelCache.ts';
+import { applyStyleUniforms, cacheStats, clearAll, getModel, instantiate, LOWPOLY_MATERIALS, LOWPOLY_TERRAIN, MATERIALS, setLiteMaterials } from '../render/modelCache.ts';
 import '../render/lowpoly/index.ts';
 import { setVoxelResolution, voxelResolution, voxelsPerWorldUnit } from '../render/voxelMesher.ts';
 import { graveModel } from '../render/models/graves.ts';
@@ -28,7 +28,7 @@ import { ForestMist } from '../view/ForestMist.ts';
 import { PostFX } from '../view/PostFX.ts';
 import { cellCenter, HALF, worldToCell, WorldView } from '../view/WorldView.ts';
 import { WalkTarget } from '../view/walkTarget.ts';
-import { AUTO_STEPS, AutoGovernor, detectTier, TIER_LABELS, TIERS, type AutoProfile } from './AutoQuality.ts';
+import { AutoGovernor, detectTier, newAutoProfile, PROFILES, QUALITY_LABELS, type AutoProfile, type QualityProfile } from './AutoQuality.ts';
 import { Input } from './Input.ts';
 import { loadSave, persistenceOn, saveNow, scheduleSave } from './persistence.ts';
 import { closedCoffinLP } from '../render/lowpoly/memoryTree.ts';
@@ -120,8 +120,7 @@ export class Game {
     this.atmosphere = new Atmosphere(this.scene, q);
     this.effects = new Effects(this.scene, q);
     this.world = new WorldView(this.scene, this.atmosphere, this.state.settings.style);
-    this.world.staticShadows = !!this.auto && TIERS[this.auto.tier].staticShadows;
-    if (this.auto) { this.world.forestScale = TIERS[this.auto.tier].forest; this.world.decorLod = TIERS[this.auto.tier].decor; }
+    this.world.staticShadows = this.profile().shadows === 'still';
     this.world.quality = q;
     if (params.get('mist') !== '0') this.mist = new ForestMist(this.scene, q);
     const report = runCatchUp(this.state, now);
@@ -191,49 +190,50 @@ export class Game {
 
   // ── Frame al secondo (batteria) ──────────────────────────────────────
 
-  /** Tetto ai frame al secondo (null: quanti ne dà lo schermo). */
-  private frameCap: number | null = null;
-  /** Da fermo (nessun tocco da qualche secondo) o sotto un menù: frame al secondo ancora più bassi (null: no). */
-  private idleFps: number | null = null;
+  /**
+   * Meno frame = meno lavoro per GPU e CPU = meno batteria. Il tetto viene
+   * dalla fluidità scelta (Auto: 60 in Alta, 30 in Media e Bassa); da fermo
+   * (nessun tocco da IDLE_MS, il Custode fermo) si scende a IDLE_FPS e sotto
+   * i menù a MENU_FPS.
+   */
+  private frameCap = 60;
+  private idleSaver = true;
   private lastFrameAt = 0;
   private lastActiveAt = 0;
   /** Frame disegnati davvero (quelli saltati dal tetto non contano). */
   framesDrawn = 0;
   private readonly markActive = () => { this.lastActiveAt = performance.now(); };
 
-  /**
-   * Meno frame = meno lavoro per GPU e CPU = meno batteria. `cap` limita
-   * sempre; `idle` vale dopo IDLE_MS senza tocchi (e sotto i menù ne basta
-   * ancora meno), finché il Custode non si muove.
-   */
-  setFrameCap(cap: number | null, idle: number | null = null) {
-    this.frameCap = cap;
-    this.idleFps = idle;
-    this.lastActiveAt = performance.now();
+  /** Solo per la pagina di misura: senza rallentamento da fermo (la camera gira da sola, senza tocchi). */
+  setIdleSaver(on: boolean) { this.idleSaver = on; this.lastActiveAt = performance.now(); }
+
+  /** Frame al secondo attesi con la fluidità scelta. */
+  private targetFps(): 30 | 60 {
+    const f = this.state.settings.fps;
+    return f === '30' ? 30 : f === '60' ? 60 : this.profile().fps;
   }
 
-  private currentCap(now: number): number | null {
-    let cap = this.frameCap;
-    if (this.idleFps) {
-      const still = now - this.lastActiveAt > IDLE_MS && !this.actors.avatarMoving && !this.placement && !this.drag;
-      if (drawerOpen()) cap = Math.min(cap ?? 60, Math.min(this.idleFps, 10));
-      else if (still) cap = Math.min(cap ?? 60, this.idleFps);
-    }
-    return cap;
+  private currentCap(now: number): number {
+    if (!this.idleSaver) return this.frameCap;
+    if (drawerOpen()) return Math.min(this.frameCap, MENU_FPS);
+    const still = now - this.lastActiveAt > IDLE_MS && !this.actors.avatarMoving && !this.placement && !this.drag;
+    return still ? Math.min(this.frameCap, IDLE_FPS) : this.frameCap;
   }
 
   private readonly tick = () => {
     if (this.disposed) return;
     const now = performance.now();
     const cap = this.currentCap(now);
-    // frame saltato: niente lavoro (il tempo si accumula e il prossimo frame lo recupera)
-    if (cap && now - this.lastFrameAt < 1000 / cap - 2) return;
+    // frame saltato: niente lavoro (il tempo si accumula e il prossimo frame lo recupera); un po' di
+    // tolleranza perché sugli schermi a 120 Hz 60 FPS restino 60 e non scendano a 40
+    if (now - this.lastFrameAt < (1000 / cap) * 0.85) return;
     this.lastFrameAt = now;
     this.framesDrawn++;
     const raw = this.clock.getDelta();
     const dt = Math.min(0.05, raw);
     const t = this.clock.elapsedTime;
-    if (this.auto) this.autoFrame(raw);
+    // Auto giudica solo i frame al ritmo pieno (da fermo o sotto un menù il gioco rallenta apposta)
+    if (this.auto) { if (cap === this.frameCap) this.autoFrame(raw); else this.auto.hold(); }
 
     this.steerFromKeys(dt);
     // le posizioni delle tombe cambiano solo quando cambia la scena: niente array nuovi a ogni frame
@@ -1171,65 +1171,92 @@ export class Game {
     this.ui.refreshSettingsButtons();
   }
 
-  // ── Qualità Auto ─────────────────────────────────────────────────────
+  /** Fluidità: «auto» (60 in Alta, 30 in Media e Bassa), 30 o 60 FPS. */
+  setFps(f: FpsSetting) {
+    this.state.settings.fps = f;
+    this.applyFrameCap();
+    scheduleSave(this.state);
+    this.ui.refreshSettingsButtons();
+  }
+
+  // ── Livelli di qualità e Auto ────────────────────────────────────────
 
   /** Regolatore della qualità Auto (null con un livello fisso). */
   private auto: AutoGovernor | null = null;
   private spots: THREE.Vector3[] = [];
   private spotsVersion = -1;
   private shadowSig = '';
+  private materialSig = '';
 
-  /** Il livello di base da usare: quello scelto, o quello della fascia del dispositivo in Auto. */
-  private baseQuality(): Quality {
+  /** Il livello in uso: quello scelto, o quello a cui è arrivata Auto. */
+  private level(): Quality {
     const q = this.state.settings.quality;
-    return q === 'auto' ? TIERS[this.auto?.tier ?? 'mid'].bake : q;
+    return q === 'auto' ? this.auto?.tier ?? 'medium' : q;
   }
 
-  /** Applica la qualità scelta: un livello fisso (come sempre) o Auto (fascia + gradino). */
+  private profile(): QualityProfile { return PROFILES[this.level()]; }
+
+  /** Densità di bosco e prato, nebbia e particelle del livello in uso. */
+  private baseQuality(): Quality { return this.profile().bake; }
+
+  /** Applica il livello in uso (scelto o di Auto): mondo, luci, materiali, ombre, risoluzione, sfocatura, fluidità. */
   private applySettingQuality() {
-    const auto = this.auto;
-    const tier = auto ? TIERS[auto.tier] : null;
-    // ombre ferme e ombre a disco solo in Auto (fascia economica e media)
-    const still = !!tier?.staticShadows;
+    const p = this.profile();
+    // ombre ferme: ciò che si muove non proietta ombra (ce l'ha a disco), le altre si ridisegnano solo se cambia la vista
+    const still = p.shadows === 'still';
     if (this.world.staticShadows !== still) {
       this.world.staticShadows = still;
       this.world.setStyle(this.state.settings.style, this.state, true); // ricrea ciò che si muove senza ombra
     }
-    this.actors.setBlobShadows(still);
-    this.renderer.shadowMap.autoUpdate = !still;
+    this.actors.setBlobShadows(p.shadows !== 'live');
+    this.renderer.shadowMap.enabled = p.shadows !== 'off';
+    this.renderer.shadowMap.autoUpdate = p.shadows === 'live';
     this.renderer.shadowMap.needsUpdate = true;
-    this.atmosphere.setLightBudget(tier ? tier.lights : null);
-    // fase 2: bosco più fitto (media e top), prato a due versioni, oggetti fermi fusi per zona
-    this.world.forestScale = tier?.forest ?? 1;
-    this.world.decorLod = tier ? tier.decor : null;
-    this.world.setMergeStatic(!!tier);
-    // bar e orto: più zombie dove il dispositivo regge (fascia in Auto, livello scelto altrimenti)
-    const q = this.state.settings.quality;
-    this.actors.setPresenceTier(auto ? auto.tier : q === 'low' ? 'low' : q === 'medium' ? 'mid' : 'high');
+    this.world.setLite(p.lite, this.state); // rifà prato e bosco se cambia
+    this.world.setMergeStatic(true); // oggetti fermi fusi per zona: stesso aspetto, meno draw call
+    this.atmosphere.setFakeLights(p.fakeLights);
+    if (!p.fakeLights) this.atmosphere.setLightBudget(null);
+    this.actors.setPresenceTier(p.presences);
     this.actors.syncPresences(this.state, this.now());
-    if (!auto) this.postfx.setSamples(4);
-    this.applyQuality(this.baseQuality());
-    if (auto) this.applyAutoStep();
+    this.applyQuality(p.bake);
+    // dopo ogni ricostruzione: il materiale semplice vale anche per ciò che è appena nato
+    setLiteMaterials(p.liteMaterials, this.scene);
+    this.postfx.setSamples(p.msaa);
+    this.postfx.configure(this.state.settings.edgeBlur, p.blurRadius);
+    this.applyResolution();
+    this.applyFrameCap();
+    if (this.auto) saveAutoProfile(this.auto.profile());
+    this.prepareShaders();
   }
 
-  /** Gradino corrente della qualità Auto: pixel ratio, mappa ombre, sfocatura, MSAA. */
-  private applyAutoStep() {
-    const auto = this.auto;
-    if (!auto) return;
-    const st = AUTO_STEPS[auto.step];
-    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, st.dpr));
-    this.atmosphere.setShadowSize(st.shadow);
-    this.renderer.shadowMap.needsUpdate = true;
-    this.postfx.setSamples(st.msaa);
-    this.postfx.configure(st.blur && this.state.settings.edgeBlur, auto.tier === 'high' ? 5 : 3.5);
+  /** Risoluzione: il gradino di Auto, o la più alta del livello scelto. */
+  private applyResolution() {
+    const steps = this.profile().dpr;
+    const dpr = steps[this.auto ? Math.min(this.auto.step, steps.length - 1) : steps.length - 1];
+    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, dpr));
     this.resize();
-    saveAutoProfile(auto.profile());
+  }
+
+  private applyFrameCap() {
+    this.frameCap = this.targetFps();
+    this.lastActiveAt = performance.now();
+    this.auto?.hold();
+  }
+
+  /**
+   * Shader pronti prima di servire: dopo un cambio di livello (o al caricamento)
+   * si compilano tutti in una volta, invece che a pezzi nei frame successivi.
+   * (compileAsync di three si rompe dove manca KHR_parallel_shader_compile.)
+   */
+  private prepareShaders() {
+    try { this.renderer.compile(this.scene, this.rig.camera); } catch { /* si compileranno al primo disegno */ }
   }
 
   private autoFrame(raw: number) {
-    const d = this.auto!.frame(raw);
-    if (d === 'up' || d === 'down') this.applyAutoStep();
-    else if (d === 'tierDown') { this.applySettingQuality(); saveAutoProfile(this.auto!.profile()); }
+    const auto = this.auto!;
+    const d = auto.frame(raw, this.frameCap);
+    if (d === 'step') { this.applyResolution(); saveAutoProfile(auto.profile()); }
+    else if (d === 'tier') this.applySettingQuality();
   }
 
   /** Ombre ferme: si ridisegnano solo se si muove la camera o il sole, o se cambia la scena. */
@@ -1239,12 +1266,12 @@ export class Game {
     if (sig !== this.shadowSig) { this.shadowSig = sig; this.renderer.shadowMap.needsUpdate = true; }
   }
 
-  /** Per le statistiche tecniche: fascia e gradino della qualità Auto. */
-  autoInfo(): string | null {
-    const a = this.auto;
-    if (!a) return null;
-    const st = AUTO_STEPS[a.step];
-    return `auto · ${TIER_LABELS[a.tier]} · gradino ${a.step}/${a.ceiling} · dpr ${this.renderer.getPixelRatio()} · ombre ${st.shadow}${TIERS[a.tier].staticShadows ? ' ferme' : ''} · luci ${TIERS[a.tier].lights} · sfocatura ${st.blur && this.state.settings.edgeBlur ? 'sì' : 'no'}`;
+  /** Per le statistiche tecniche: livello, risoluzione, fluidità, ombre e luci. */
+  qualityInfo(): string {
+    const p = this.profile(), a = this.auto;
+    const level = a ? `auto · ${QUALITY_LABELS[a.tier]} (max ${QUALITY_LABELS[a.top]}) · gradino ${a.step + 1}/${p.dpr.length}` : QUALITY_LABELS[this.level()];
+    const shadows = p.shadows === 'off' ? 'no' : p.shadows === 'still' ? 'ferme' : 'vive';
+    return `qualità ${level} · dpr ${this.renderer.getPixelRatio()} · tetto ${this.currentCap(performance.now())}/${this.frameCap} FPS · ombre ${shadows} · luci ${p.fakeLights ? 'finte' : 'vere'}${p.liteMaterials ? ' · materiale semplice' : ''}${p.lite ? ' · mondo leggero' : ''}`;
   }
 
   /** La fascia nitida segue il Custode (o la selezione), senza scatti. */
@@ -1288,7 +1315,12 @@ export class Game {
     this.world.sync(this.state);
     this.resize();
     this.postfx.configure(q !== 'low' && this.state.settings.edgeBlur, q === 'high' ? 5 : 3.5);
-    for (const m of [...Object.values(MATERIALS), ...Object.values(LOWPOLY_MATERIALS), LOWPOLY_TERRAIN]) m.needsUpdate = true;
+    // ricompilare tutto costa secondi sui telefoni: solo se cambiano le ombre (accese/spente o tipo)
+    const sig = `${this.renderer.shadowMap.enabled}|${this.renderer.shadowMap.type}`;
+    if (sig !== this.materialSig) {
+      this.materialSig = sig;
+      for (const m of [...Object.values(MATERIALS), ...Object.values(LOWPOLY_MATERIALS), LOWPOLY_TERRAIN]) m.needsUpdate = true;
+    }
   }
 
   setTimeOverride(o: TimeOverride) {
@@ -1378,7 +1410,7 @@ export class Game {
     const cs = cacheStats();
     return [
       `FPS ${this.fps.value}`,
-      ...(this.autoInfo() ? [this.autoInfo()!] : []),
+      this.qualityInfo(),
       `draw calls ${info.calls} · tri ${info.triangles.toLocaleString('it-IT')}`,
       `stile ${this.state.settings.style} · camera ${this.state.settings.camera}`,
       `seed ${this.state.seed} · fase ${this.phase} · meteo ${this.state.world.weather}`,
@@ -1413,8 +1445,8 @@ export class Game {
 // ── Profilo della qualità Auto (per dispositivo: resta nel browser, non nel salvataggio) ──
 
 const AUTO_KEY = 'necro3d:auto-quality';
-/** Dopo quanto senza tocchi il gioco rallenta (se il rallentamento da fermo è acceso). */
-const IDLE_MS = 4000;
+/** Dopo quanto senza tocchi il gioco rallenta, e a quanti frame al secondo (sotto i menù ancora meno). */
+const IDLE_MS = 4000, IDLE_FPS = 15, MENU_FPS = 10;
 let gpuName: string | null = null;
 
 /** GPU e memoria del dispositivo (per stimare la fascia). */
@@ -1437,10 +1469,9 @@ function loadAutoProfile(): AutoProfile {
   const info = deviceInfo();
   try {
     const saved = JSON.parse(localStorage.getItem(AUTO_KEY) ?? 'null') as (AutoProfile & { gpu: string }) | null;
-    if (saved && saved.gpu === info.gpu && saved.tier in TIERS) return saved;
-  } catch { /* profilo illeggibile: si riparte */ }
-  const tier = detectTier(info);
-  return { tier, step: TIERS[tier].startStep, ceiling: TIERS[tier].maxStep };
+    if (saved && saved.gpu === info.gpu && saved.tier in PROFILES && saved.top in PROFILES) return saved;
+  } catch { /* profilo illeggibile (o della versione con le fasce): si riparte */ }
+  return newAutoProfile(detectTier(info));
 }
 
 function saveAutoProfile(p: AutoProfile) {

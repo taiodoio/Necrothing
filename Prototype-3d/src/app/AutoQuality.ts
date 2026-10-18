@@ -1,62 +1,52 @@
-// Qualità «Auto»: stima la fascia del dispositivo all'avvio e, mentre si
-// gioca, regola risoluzione, ombre, sfocatura e antialiasing guardando gli
-// FPS. Logica pura (niente three/DOM): Game applica i gradini.
+// Livelli di qualità (Bassa, Media, Alta) e qualità «Auto». Logica pura
+// (niente three/DOM): Game applica i profili.
 //
-// - fascia (economico / medio / top): fissa le scelte costose da cambiare
-//   (densità di bosco e prato, numero di luci reali: cambiarli ricostruisce
-//   la scena o ricompila gli shader), la densità del bosco, il prato a due
-//   versioni (ricco al centro, leggero nelle fasce sfocate) e il gradino di
-//   partenza; in tutte le fasce gli oggetti fermi sono fusi per zona;
-// - gradini: dal più leggero al più ricco, cambiano solo cose economiche da
-//   cambiare (pixel ratio, mappa ombre, sfocatura, MSAA);
-// - regolatore: scende subito se si resta sotto i 30 FPS per qualche
-//   secondo, risale solo dopo un lungo periodo con margine; un gradino che
-//   ha appena fatto crollare gli FPS non viene più ritentato (tetto).
+// - ogni livello è un profilo misurato sui telefoni (pagina bench.html):
+//   Bassa per i telefoni deboli (mondo alleggerito, luci finte, materiale
+//   semplice, niente ombre), Media per i medi (luci finte, materiale
+//   semplice, ombre ferme), Alta per i forti (luci vere, ombre vive);
+// - Auto sceglie il livello dal dispositivo (mai più su di quello stimato),
+//   dentro al livello regola solo la risoluzione, e se anche la risoluzione
+//   più bassa non regge scende di livello (cambiarlo ricostruisce parte
+//   della scena: mezzo secondo di blocco). Può risalire fino al livello
+//   stimato; un livello che appena raggiunto non ha retto non si ritenta.
+// - il regolatore giudica rispetto al ritmo atteso (30 o 60 FPS): scende
+//   subito se resta sotto per qualche secondo, risale solo dopo un lungo
+//   periodo pieno; un gradino che ha appena fatto crollare gli FPS non viene
+//   più ritentato (tetto).
 
 import type { Quality } from '../game/state.ts';
 
-export type Tier = 'low' | 'mid' | 'high';
-
-export interface AutoStep {
-  /** Pixel per punto (limitato dal dispositivo). */
-  dpr: number;
-  shadow: number;
-  blur: boolean;
-  /** Campioni MSAA della scena (con la sfocatura attiva). */
-  msaa: number;
-}
-
-export const AUTO_STEPS: readonly AutoStep[] = [
-  { dpr: 1, shadow: 1024, blur: false, msaa: 0 },
-  { dpr: 1, shadow: 1024, blur: true, msaa: 0 },
-  { dpr: 1.25, shadow: 1024, blur: true, msaa: 2 },
-  { dpr: 1.5, shadow: 1536, blur: true, msaa: 2 },
-  { dpr: 1.75, shadow: 2048, blur: true, msaa: 4 },
-  { dpr: 2, shadow: 2048, blur: true, msaa: 4 },
-];
-
-export interface TierSpec {
-  /** Densità di bosco e prato (come i livelli manuali). */
+export interface QualityProfile {
+  /** Livello «di costruzione»: densità di bosco e prato, nebbia, particelle, mappa delle ombre. */
   bake: Quality;
-  /** Luci puntiformi reali nella scena (le altre sorgenti hanno solo l'alone). */
-  lights: number;
-  startStep: number;
-  maxStep: number;
-  /** Ombre della scena ridisegnate solo quando cambia qualcosa; i personaggi hanno un'ombra a disco. */
-  staticShadows: boolean;
-  /** Densità del bosco attorno al recinto rispetto al livello `bake`. */
-  forest: number;
-  /** Prato [ricco nella fascia nitida, leggero in quelle sfocate]. */
-  decor: [Quality, Quality];
+  /** Mondo alleggerito: un terzo di prato e decorazioni, metà bosco con alberi semplici. */
+  lite: boolean;
+  /** Luci delle lanterne finte (chiazze di luce a terra) invece delle luci vere. */
+  fakeLights: boolean;
+  /** Materiale semplice (Lambert) invece del PBR. */
+  liteMaterials: boolean;
+  /** Ombre: nessuna (disco sotto i personaggi), ferme (ridisegnate solo se cambia la vista) o vive. */
+  shadows: 'off' | 'still' | 'live';
+  /** Risoluzioni (pixel per punto) che Auto può usare, dalla più bassa: un livello scelto a mano usa l'ultima. */
+  dpr: readonly number[];
+  /** Campioni di antialiasing della sfocatura ai bordi. */
+  msaa: number;
+  blurRadius: number;
+  /** Frame al secondo con la fluidità «Auto». */
+  fps: 30 | 60;
+  /** Quante presenze al bar e all'orto. */
+  presences: 'low' | 'mid' | 'high';
 }
 
-export const TIERS: Record<Tier, TierSpec> = {
-  low: { bake: 'low', lights: 4, startStep: 1, maxStep: 3, staticShadows: true, forest: 1, decor: ['medium', 'low'] },
-  mid: { bake: 'medium', lights: 7, startStep: 3, maxStep: 4, staticShadows: true, forest: 2, decor: ['medium', 'low'] },
-  high: { bake: 'high', lights: 10, startStep: 5, maxStep: 5, staticShadows: false, forest: 2, decor: ['high', 'medium'] },
+export const PROFILES: Record<Quality, QualityProfile> = {
+  low: { bake: 'medium', lite: true, fakeLights: true, liteMaterials: true, shadows: 'off', dpr: [0.85, 1], msaa: 0, blurRadius: 3.5, fps: 30, presences: 'mid' },
+  medium: { bake: 'medium', lite: false, fakeLights: true, liteMaterials: true, shadows: 'still', dpr: [1.25, 1.5], msaa: 2, blurRadius: 3.5, fps: 30, presences: 'mid' },
+  high: { bake: 'high', lite: false, fakeLights: false, liteMaterials: false, shadows: 'live', dpr: [1.5, 1.75, 2], msaa: 4, blurRadius: 5, fps: 60, presences: 'high' },
 };
 
-export const TIER_LABELS: Record<Tier, string> = { low: 'economico', mid: 'medio', high: 'top' };
+export const QUALITY_LABELS: Record<Quality, string> = { low: 'Bassa', medium: 'Media', high: 'Alta' };
+const ORDER: readonly Quality[] = ['low', 'medium', 'high'];
 
 export interface DeviceInfo {
   /** Stringa del renderer WebGL (UNMASKED_RENDERER_WEBGL se disponibile). */
@@ -67,42 +57,55 @@ export interface DeviceInfo {
   mobile: boolean;
 }
 
-/**
- * Fascia del dispositivo, a grandi linee: il regolatore poi corregge. Nel
- * dubbio si parte da «medio» (si sale o si scende in pochi secondi).
- */
-export function detectTier(d: DeviceInfo): Tier {
+/** Livello adatto al dispositivo, a grandi linee: il regolatore poi corregge. */
+export function detectTier(d: DeviceInfo): Quality {
   const g = d.gpu.toLowerCase();
   if (d.memory !== undefined && d.memory <= 3) return 'low';
   if (!d.mobile) return /swiftshader|llvmpipe|software|basic render/.test(g) ? 'low' : 'high';
   // Apple: Safari non dice quale chip; gli iPhone recenti reggono l'Alta
-  if (g.includes('apple')) return (d.cores ?? 6) >= 6 ? 'high' : 'mid';
+  if (g.includes('apple')) return (d.cores ?? 6) >= 6 ? 'high' : 'medium';
   const adreno = /adreno[^0-9]*(\d{3})/.exec(g);
   if (adreno) {
     const n = Number(adreno[1]);
-    return n >= 650 ? 'high' : n >= 616 ? 'mid' : 'low';
+    return n >= 650 ? 'high' : n >= 616 ? 'medium' : 'low';
   }
   const mali = /mali-?g(\d{2,3})/.exec(g);
   if (mali) {
     const n = Number(mali[1]);
-    if (n >= 700) return n >= 710 ? 'high' : 'mid'; // G710, G715, G720…
-    return n >= 76 ? 'mid' : 'low'; // G76/G77/G78 medio; G52/G57/G31… economico
+    if (n >= 700) return n >= 710 ? 'high' : 'medium'; // G710, G715, G720…
+    return n >= 76 ? 'medium' : 'low'; // G76/G77/G78 medio; G52/G57/G31… economico
   }
   if (/xclipse|immortalis/.test(g)) return 'high';
   if (/powervr|mali-t|mali-4/.test(g)) return 'low';
-  return (d.cores ?? 4) >= 8 && (d.memory ?? 4) >= 6 ? 'mid' : 'low';
+  return (d.cores ?? 4) >= 8 && (d.memory ?? 4) >= 6 ? 'medium' : 'low';
 }
 
-export interface AutoProfile { tier: Tier; step: number; ceiling: number }
-
-export type AutoDecision = 'up' | 'down' | 'tierDown' | null;
-
-/** Regolatore a finestre di un secondo, con isteresi e tetto per i gradini che non reggono. */
-export class AutoGovernor {
-  tier: Tier;
+/** Cosa ricorda Auto per un dispositivo (nel browser, non nel salvataggio). */
+export interface AutoProfile {
+  /** Livello in uso. */
+  tier: Quality;
+  /** Gradino di risoluzione dentro al livello (indice in `dpr`). */
   step: number;
-  /** Gradino massimo che ha dimostrato di reggere su questo dispositivo. */
+  /** Gradino più alto che ha retto. */
   ceiling: number;
+  /** Livello più alto a cui si può tornare (all'inizio quello stimato). */
+  top: Quality;
+}
+
+export function newAutoProfile(tier: Quality): AutoProfile {
+  const max = PROFILES[tier].dpr.length - 1;
+  return { tier, step: max, ceiling: max, top: tier };
+}
+
+/** Il livello cambia (si ricostruisce la scena) o solo la risoluzione. */
+export type AutoDecision = 'step' | 'tier' | null;
+
+/** Regolatore a finestre di un secondo, con isteresi e tetti per ciò che non regge. */
+export class AutoGovernor {
+  tier: Quality;
+  step: number;
+  ceiling: number;
+  top: Quality;
   private winFrames = 0;
   private winTime = 0;
   private history: number[] = [];
@@ -110,24 +113,38 @@ export class AutoGovernor {
   private settle = 3;
   /** Secondi prima di poter risalire. */
   private cooldown = 0;
-  /** Da quanto tempo si è saliti (per capire se la salita ha fatto crollare gli FPS). */
+  /** Da quanto si è saliti di gradino e di livello (per capire se la salita ha fatto crollare gli FPS). */
   private sinceUp = Infinity;
-
-  static readonly LOW_FPS = 28;
-  static readonly HIGH_FPS = 50;
+  private sinceTierUp = Infinity;
 
   constructor(p: AutoProfile) {
     this.tier = p.tier;
-    this.ceiling = Math.min(p.ceiling, TIERS[p.tier].maxStep);
+    this.top = ORDER.indexOf(p.top) >= ORDER.indexOf(p.tier) ? p.top : p.tier;
+    const max = PROFILES[p.tier].dpr.length - 1;
+    this.ceiling = Math.max(0, Math.min(p.ceiling, max));
     this.step = Math.max(0, Math.min(p.step, this.ceiling));
   }
 
-  profile(): AutoProfile { return { tier: this.tier, step: this.step, ceiling: this.ceiling }; }
+  profile(): AutoProfile { return { tier: this.tier, step: this.step, ceiling: this.ceiling, top: this.top }; }
 
-  /** Un frame; ritorna la decisione quando c'è da cambiare qualcosa. */
-  frame(dt: number): AutoDecision {
+  /** Sotto quanti FPS si scende: un po' sotto il ritmo atteso (a 60 basta restare sopra i 28). */
+  static low(target: number) { return Math.min(28, target * 0.8); }
+  /** Sopra quanti FPS c'è margine per salire. */
+  static high(target: number) { return target * 0.83; }
+
+  /** Niente giudizi per un po' (il gioco ha rallentato da solo, da fermo o sotto un menù). */
+  hold() {
+    this.winFrames = 0;
+    this.winTime = 0;
+    this.history = [];
+    this.settle = Math.max(this.settle, 1.5);
+  }
+
+  /** Un frame disegnato, col ritmo atteso; ritorna la decisione quando c'è da cambiare qualcosa. */
+  frame(dt: number, target: number): AutoDecision {
     if (dt <= 0 || dt > 0.25) return null; // pause, schede in background, caricamenti
     this.sinceUp += dt;
+    this.sinceTierUp += dt;
     if (this.cooldown > 0) this.cooldown -= dt;
     if (this.settle > 0) { this.settle -= dt; return null; }
     this.winFrames++;
@@ -137,29 +154,48 @@ export class AutoGovernor {
     this.winFrames = 0;
     this.winTime = 0;
     this.history.push(fps);
-    if (this.history.length > 10) this.history.shift();
-    const last = (n: number) => this.history.slice(-n);
-    // sotto i 30 per due secondi di fila: si scende subito
-    if (this.history.length >= 2 && last(2).every((f) => f < AutoGovernor.LOW_FPS)) {
+    if (this.history.length > 30) this.history.shift();
+    const last = (n: number) => this.history.length >= n && this.history.slice(-n);
+    const low = AutoGovernor.low(target), high = AutoGovernor.high(target);
+    // sotto il ritmo per due secondi di fila: si scende subito
+    const slow = last(2);
+    if (slow && slow.every((f) => f < low)) {
       if (this.step > 0) {
         // la salita di poco fa non ha retto: quel gradino non si ritenta più
         if (this.sinceUp < 12) this.ceiling = this.step - 1;
         this.change(this.step - 1, 30);
-        return 'down';
+        return 'step';
       }
-      if (this.history.length >= 5 && last(5).every((f) => f < AutoGovernor.LOW_FPS - 3) && this.tier !== 'low') {
-        this.tier = this.tier === 'high' ? 'mid' : 'low';
-        this.ceiling = TIERS[this.tier].maxStep;
-        this.change(Math.min(TIERS[this.tier].startStep, this.ceiling), 30);
-        return 'tierDown';
+      const slower = last(5);
+      const i = ORDER.indexOf(this.tier);
+      if (slower && slower.every((f) => f < low - 3) && i > 0) {
+        // il livello raggiunto da poco non regge: non ci si torna più
+        if (this.sinceTierUp < 40) this.top = ORDER[i - 1];
+        this.tier = ORDER[i - 1];
+        this.ceiling = this.step = PROFILES[this.tier].dpr.length - 1;
+        this.change(this.step, 40);
+        return 'tier';
       }
       return null;
     }
-    // con margine per otto secondi: si prova a salire di un gradino
-    if (this.cooldown <= 0 && this.step < this.ceiling && this.history.length >= 8 && last(8).every((f) => f >= AutoGovernor.HIGH_FPS)) {
+    if (this.cooldown > 0) return null;
+    // con margine per otto secondi: si prova il gradino sopra
+    const good = last(8);
+    if (this.step < this.ceiling && good && good.every((f) => f >= high)) {
       this.change(this.step + 1, 20);
       this.sinceUp = 0;
-      return 'up';
+      return 'step';
+    }
+    // al gradino più alto e pieno per mezzo minuto: si prova il livello sopra (fino a quello stimato)
+    const long = last(30);
+    const i = ORDER.indexOf(this.tier);
+    if (this.step === PROFILES[this.tier].dpr.length - 1 && i < ORDER.indexOf(this.top) && long && long.every((f) => f >= high)) {
+      this.tier = ORDER[i + 1];
+      this.step = 0;
+      this.ceiling = PROFILES[this.tier].dpr.length - 1;
+      this.change(0, 30);
+      this.sinceTierUp = 0;
+      return 'tier';
     }
     return null;
   }

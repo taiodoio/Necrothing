@@ -1,11 +1,10 @@
 // Pagina di misura (bench.html): il gioco vero su un cimitero pieno generato
-// al volo, senza leggere né scrivere il salvataggio. Si sceglie uno dei tre
-// profili che poi la qualità Auto userà da sola in base al telefono
-// (Leggera, Media, Piena) e le opzioni per la batteria (30 FPS, rallenta da
-// fermo); si può girare nel cimitero con le statistiche dal vivo, oppure
-// lanciare il test automatico che misura tutto e prepara i risultati da
-// copiare. Gli shader dei tre profili si preparano all'inizio, così cambiare
-// profilo non blocca il frame.
+// al volo, senza leggere né scrivere il salvataggio. Si sceglie il livello di
+// qualità (Bassa, Media, Alta: gli stessi del gioco) e la fluidità (30 o 60
+// FPS), col rallentamento da fermo acceso come nel gioco; si può girare nel
+// cimitero con le statistiche dal vivo, oppure lanciare il test automatico
+// che misura tutto e prepara i risultati da copiare. Gli shader dei tre
+// livelli si preparano all'inizio, così cambiare livello non blocca il frame.
 
 import '@fontsource/pixelify-sans/400.css';
 import '@fontsource/pixelify-sans/600.css';
@@ -14,45 +13,24 @@ import '@fontsource/jacquard-24/400.css';
 import './styles/main.css';
 import * as THREE from 'three';
 import { Game } from './app/Game.ts';
+import { PROFILES, QUALITY_LABELS } from './app/AutoQuality.ts';
 import { setPersistence } from './app/persistence.ts';
-import { setLiteMaterials } from './render/modelCache.ts';
-import type { Quality, SaveData } from './game/state.ts';
+import type { FpsSetting, Quality } from './game/state.ts';
 import { fullCemetery } from './game/fullCemetery.ts';
 import { areaForLevel } from './game/world.ts';
 import { cellCenter } from './view/WorldView.ts';
-import { setFlatTerrain } from './view/terrain.ts';
 
 setPersistence(false);
-// terreno piatto nel recinto: le colline confondono la lettura e sporcano le ombre (solo qui, non nel gioco)
-setFlatTerrain(true);
 
 interface Inner {
   renderer: THREE.WebGLRenderer;
   rig: { follow: THREE.Vector3 | null; camera: THREE.Camera; setView(h: number): void; jumpTo(p: THREE.Vector3): void };
-  atmosphere: { setLightBudget(n: number | null): void; setFakeLights(on: boolean): void };
-  actors: { setBlobShadows(on: boolean): void };
-  world: { setLite(on: boolean, state: SaveData): void; setMergeStatic(on: boolean): void; setStyle(style: SaveData['settings']['style'], state: SaveData, force: boolean): void; staticShadows: boolean };
-  postfx: { setSamples(n: number): void };
   tick(): void;
-  resize(): void;
 }
 
-/** I tre profili che la qualità Auto sceglierà da sola in base al telefono. */
-interface Profile {
-  id: string; label: string; note: string; quality: Quality;
-  /** Mondo con meno triangoli, luci finte a terra, materiale semplice (Lambert). */
-  lite: boolean; fake: boolean; liteMat: boolean;
-  /** Ombre: niente (disco sotto i piedi), ferme (ridisegnate solo se cambia la vista) o vive. */
-  shadows: 'off' | 'still' | 'live';
-  /** Tetto alla risoluzione e campioni di antialiasing della sfocatura. */
-  dpr: number; msaa: number;
-}
-const PROFILES: Profile[] = [
-  { id: 'light', label: 'Leggera', note: 'telefoni deboli', quality: 'medium', lite: true, fake: true, liteMat: true, shadows: 'off', dpr: 1, msaa: 0 },
-  { id: 'medium', label: 'Media', note: 'telefoni medi', quality: 'medium', lite: false, fake: true, liteMat: true, shadows: 'still', dpr: 1.5, msaa: 2 },
-  { id: 'full', label: 'Piena', note: 'telefoni forti', quality: 'high', lite: false, fake: false, liteMat: false, shadows: 'live', dpr: 2, msaa: 4 },
-];
-/** Frame al secondo da fermo (sotto i menù ne bastano ancora meno: lo decide il gioco). */
+const LEVELS: Quality[] = ['low', 'medium', 'high'];
+const NOTES: Record<Quality, string> = { low: 'telefoni deboli', medium: 'telefoni medi', high: 'telefoni forti' };
+/** Frame al secondo da fermo (come nel gioco). */
 const IDLE_FPS = 15;
 
 const panel = document.getElementById('bench')!;
@@ -79,6 +57,7 @@ say('<h1>Misura delle prestazioni</h1><p>Preparo il cimitero pieno…</p>');
 const t0 = performance.now();
 const state = fullCemetery(4242, new Date());
 state.settings.quality = 'high';
+state.settings.fps = 'auto';
 state.settings.edgeBlur = true;
 state.settings.timeOverride = 'night';
 state.settings.shopTutorialDone = true; // niente benvenuto sopra alla scena
@@ -109,41 +88,24 @@ const device = {
 const area = areaForLevel(state.world.expansionLevel);
 const center = cellCenter(area.x + area.w / 2, area.y + area.h / 2, [1, 1]);
 
-// ── Profili e batteria ──────────────────────────────────────────────────
+// ── Livello, fluidità, rallentamento ────────────────────────────────────
 
-let profile = PROFILES[2];
-let cap30 = false, idle = false;
+let level: Quality = 'high', fps: FpsSetting = 'auto', idle = true;
 
-function applyProfile(p: Profile) {
-  profile = p;
-  game.setQuality(p.quality);
-  game.setTimeOverride('night');
-  inner.world.setLite(p.lite, state); // rifà erba e bosco se cambia
-  inner.world.setMergeStatic(true); // oggetti fermi fusi per zona, come in Auto
-  const still = p.shadows === 'still';
-  if (inner.world.staticShadows !== still) { inner.world.staticShadows = still; inner.world.setStyle(state.settings.style, state, true); }
-  inner.actors.setBlobShadows(p.shadows !== 'live');
-  inner.renderer.shadowMap.enabled = p.shadows !== 'off';
-  inner.renderer.shadowMap.autoUpdate = p.shadows === 'live';
-  inner.renderer.shadowMap.needsUpdate = true;
-  inner.atmosphere.setFakeLights(p.fake);
-  if (!p.fake) inner.atmosphere.setLightBudget(null);
-  setLiteMaterials(p.liteMat, game.scene);
-  inner.renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, p.dpr));
-  inner.resize();
-  inner.postfx.setSamples(p.msaa);
-  applyBattery();
+function apply(q: Quality, f: FpsSetting, i: boolean) {
+  level = q; fps = f; idle = i;
+  if (game.state.settings.quality !== q) game.setQuality(q);
+  game.setFps(f);
+  game.setIdleSaver(i);
 }
-
-function applyBattery() { game.setFrameCap(cap30 ? 30 : null, idle ? IDLE_FPS : null); }
 
 const nextFrame = () => new Promise((r) => requestAnimationFrame(r));
 
-/** Prepara gli shader dei tre profili (come farebbe il gioco al caricamento). */
+/** Prepara gli shader dei tre livelli (dopo, passare dall'uno all'altro non ricompila niente). */
 async function prepare() {
-  for (const [i, p] of PROFILES.entries()) {
-    say(`<h1>Preparo gli shader ${i + 1}/${PROFILES.length}</h1><p class="muted">Una volta sola, come farebbe il gioco al caricamento.</p>`);
-    applyProfile(p);
+  for (const [i, q] of LEVELS.entries()) {
+    say(`<h1>Preparo gli shader ${i + 1}/${LEVELS.length}</h1><p class="muted">Una volta sola.</p>`);
+    apply(q, fps, idle);
     await nextFrame();
     inner.renderer.compile(game.scene, inner.rig.camera);
     await nextFrame();
@@ -169,10 +131,12 @@ setInterval(() => {
 // ── Pannello ────────────────────────────────────────────────────────────
 
 let mini = false, testing = false, results = '';
+const FPS_LABELS: Record<FpsSetting, string> = { auto: 'Auto', '30': '30 FPS', '60': '60 FPS' };
+const fpsOf = (q: Quality, f: FpsSetting) => (f === 'auto' ? PROFILES[q].fps : Number(f));
 
 function render() {
   if (testing) return;
-  const options = `${profile.label}${cap30 ? ' · 30 FPS' : ''}${idle ? ' · rallenta da fermo' : ''}`;
+  const options = `${QUALITY_LABELS[level]} · ${fpsOf(level, fps)} FPS${idle ? ' · rallenta da fermo' : ''}`;
   if (mini) {
     panel.className = 'bench mini';
     say(`<div class="live" id="live" style="margin:0">${liveText()}</div><div class="muted">${options}</div><button id="open">Apri il pannello</button>`);
@@ -182,14 +146,15 @@ function render() {
   panel.className = 'bench';
   say(`<h1>Misura delle prestazioni</h1>
     <div class="muted">Cimitero pieno: ${state.graves.length} tombe, ${state.placeables.length} oggetti · ${device.gpu} · dpr ${device.dpr}</div>
-    <div>${PROFILES.map((p) => `<button data-p="${p.id}" class="${p === profile ? 'on' : ''}">${p.label}<br><small>${p.note}</small></button>`).join('')}</div>
-    <div><button id="cap" class="${cap30 ? 'on' : ''}">30 FPS</button><button id="idle" class="${idle ? 'on' : ''}">Rallenta da fermo</button></div>
+    <div>${LEVELS.map((q) => `<button data-q="${q}" class="${q === level ? 'on' : ''}">${QUALITY_LABELS[q]}<br><small>${NOTES[q]}</small></button>`).join('')}</div>
+    <div>${(['auto', '30', '60'] as FpsSetting[]).map((f) => `<button data-f="${f}" class="${f === fps ? 'on' : ''}">${FPS_LABELS[f]}</button>`).join('')}<button id="idle" class="${idle ? 'on' : ''}">Rallenta da fermo</button></div>
+    <div class="muted">Fluidità Auto: 60 FPS in Alta, 30 in Media e Bassa.</div>
     <div class="live" id="live">${liveText()}</div>
     <div><button class="cta" id="go">Avvia il test</button><button id="hide">Nascondi e gira</button></div>
     ${results}`);
-  panel.querySelectorAll<HTMLButtonElement>('[data-p]').forEach((b) => { b.onclick = () => { applyProfile(PROFILES.find((p) => p.id === b.dataset.p)!); render(); }; });
-  document.getElementById('cap')!.onclick = () => { cap30 = !cap30; applyBattery(); render(); };
-  document.getElementById('idle')!.onclick = () => { idle = !idle; applyBattery(); render(); };
+  panel.querySelectorAll<HTMLButtonElement>('[data-q]').forEach((b) => { b.onclick = () => { apply(b.dataset.q as Quality, fps, idle); render(); }; });
+  panel.querySelectorAll<HTMLButtonElement>('[data-f]').forEach((b) => { b.onclick = () => { apply(level, b.dataset.f as FpsSetting, idle); render(); }; });
+  document.getElementById('idle')!.onclick = () => { apply(level, fps, !idle); render(); };
   document.getElementById('hide')!.onclick = () => { mini = true; render(); };
   document.getElementById('go')!.onclick = runTest;
   const copy = document.getElementById('copy');
@@ -200,27 +165,26 @@ function render() {
 
 // ── Test automatico ─────────────────────────────────────────────────────
 
-interface Run { label: string; p: Profile; cap: number | null; idle: boolean }
+interface Run { label: string; q: Quality; fps: FpsSetting; idle: boolean }
 interface Result { r: Run; fps: number; p95: number; slow: number; work: number; calls: number; tris: number }
-// ogni profilo: libero e a 30 FPS con la camera che gira, poi fermo senza tocchi (rallenta da fermo)
-const RUNS: Run[] = PROFILES.flatMap((p) => [
-  { label: `${p.label} · libero`, p, cap: null, idle: false },
-  { label: `${p.label} · 30 FPS`, p, cap: 30, idle: false },
-  { label: `${p.label} · da fermo`, p, cap: 30, idle: true },
+// ogni livello: a 30 e a 60 FPS con la camera che gira, poi fermo senza tocchi (con la sua fluidità)
+const RUNS: Run[] = LEVELS.flatMap((q) => [
+  { label: `${QUALITY_LABELS[q]} · 30 FPS`, q, fps: '30' as const, idle: false },
+  { label: `${QUALITY_LABELS[q]} · 60 FPS`, q, fps: '60' as const, idle: false },
+  { label: `${QUALITY_LABELS[q]} · da fermo`, q, fps: 'auto' as const, idle: true },
 ]);
 const WARM = 2000, MEASURE = 7000;
 /** Da fermo si comincia a misurare quando il gioco ha già rallentato (4 s senza tocchi). */
 const IDLE_WARM = 5000;
 
 function measure(r: Run): Promise<Result> {
-  applyProfile(r.p);
-  game.setFrameCap(r.cap, r.idle ? IDLE_FPS : null);
+  apply(r.q, r.fps, r.idle);
   inner.rig.follow = null;
   inner.rig.setView(18);
   inner.rig.jumpTo(center.clone());
   const warm = r.idle ? IDLE_WARM : WARM;
   // un frame è lento se arriva ben dopo il ritmo atteso
-  const late = 1000 / (r.idle ? IDLE_FPS : r.cap ?? 30) + 8;
+  const late = 1000 / (r.idle ? IDLE_FPS : fpsOf(r.q, r.fps)) + 8;
   return new Promise((resolve) => {
     const start = performance.now();
     let w0 = 0, f0 = 0, lastFrames = 0, lastAt = 0, calls = 0, tris = 0, n = 0;
@@ -256,15 +220,16 @@ let lastOut = '', prepMs = 0;
 async function runTest() {
   testing = true;
   panel.className = 'bench';
-  const keep = { profile, cap30, idle };
+  const keep = { level, fps, idle };
   const rs: Result[] = [];
+  const total = Math.round(RUNS.reduce((t, x) => t + (x.idle ? IDLE_WARM : WARM) + MEASURE, 0) / 60000 * 10) / 10;
   for (const [i, r] of RUNS.entries()) {
-    say(`<h1>Test ${i + 1}/${RUNS.length}</h1><p>${r.label}</p><p class="muted">Non toccare lo schermo: circa ${Math.round(RUNS.reduce((t, x) => t + (x.idle ? IDLE_WARM : WARM) + MEASURE, 0) / 60000 * 10) / 10} minuti in tutto.</p>${rs.length ? table(rs) : ''}`);
+    say(`<h1>Test ${i + 1}/${RUNS.length}</h1><p>${r.label}</p><p class="muted">Non toccare lo schermo: circa ${total} minuti in tutto.</p>${rs.length ? table(rs) : ''}`);
     rs.push(await measure(r));
   }
   testing = false;
   lastOut = [
-    'NECROTHING · misura prestazioni (profili)',
+    'NECROTHING · misura prestazioni (livelli)',
     `GPU: ${device.gpu}`,
     `UA: ${device.ua}`,
     `schermo ${device.screen} · dpr ${device.dpr} · core ${device.cores} · mem ${device.memory}`,
@@ -274,8 +239,7 @@ async function runTest() {
     ...rs.map((x) => `${x.r.label} | ${fmt(x.fps)} | ${fmt(x.p95)} | ${x.slow} | ${fmt(x.work, 0)} | ${x.calls} | ${x.tris}`),
   ].join('\n');
   (window as unknown as { benchResult: string }).benchResult = lastOut;
-  ({ cap30, idle } = keep);
-  applyProfile(keep.profile);
+  apply(keep.level, keep.fps, keep.idle);
   results = `${table(rs)}
     <p class="muted" style="margin:6px 0 0">«lavoro» = millisecondi al secondo spesi a preparare e mandare i frame: meno lavoro, meno batteria. «lenti» = frame arrivati in ritardo sul ritmo atteso.</p>
     <button class="cta" id="copy">Copia risultati</button>
@@ -292,9 +256,7 @@ setTimeout(async () => {
   const tp = performance.now();
   await prepare();
   prepMs = performance.now() - tp;
-  applyProfile(PROFILES[2]);
+  apply('high', 'auto', true);
   render();
   if (new URLSearchParams(location.search).has('auto')) runTest();
 }, 1200);
-// per le prove dalla console: benchProfile('light' | 'medium' | 'full')
-(window as unknown as { benchProfile: (id: string) => void }).benchProfile = (id) => { const p = PROFILES.find((x) => x.id === id); if (p) { applyProfile(p); render(); } };

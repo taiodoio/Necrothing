@@ -14,7 +14,8 @@ import * as R from '../game/rules.ts';
 import { createNewGame, type FpsSetting, type SaveData, type ThemeSetting, type TimeOverride } from '../game/state.ts';
 import { computePrestige, detectDistricts, DISTRICT_LABELS, expansionStatus } from '../game/world.ts';
 import { newId } from '../game/rng.ts';
-import { $, closeDrawer, confirmDialog, fmtDate, h, openDrawer, setDrawerBody, setDrawerFooter, toast } from './dom.ts';
+import { $, closeDrawer, confirmDialog, fmtDate, h, openDrawer, setDrawerBody, setDrawerFooter, setDrawerHero, toast } from './dom.ts';
+import { shopHeader } from './shopHeader.ts';
 import { graveThumb, placeableThumb } from './thumbs.ts';
 import { ACH_ICONS, icon } from './icons.ts';
 import { uiNext } from '../app/uiNext.ts';
@@ -251,6 +252,8 @@ export function openShop(ui: UI, cat: PlaceableCategory = 'light', selected: str
     ));
   };
   openDrawer('Bottega', h('div'));
+  // interfaccia nuova: in testa l'interno della bottega, con lo zombie al lavoro
+  if (uiNext()) setDrawerHero(shopHeader().el);
   render();
 }
 

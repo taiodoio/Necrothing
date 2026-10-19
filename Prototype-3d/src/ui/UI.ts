@@ -312,6 +312,26 @@ export class UI {
     if (!p) { this.placementBar?.remove(); this.placementBar = null; $('#bubble').classList.remove('hidden'); return; }
     this.closeContext();
     $('#bubble').classList.add('hidden');
+    const t = this.game.traceInfo();
+    if (t) {
+      const def = CATALOG[p.type!];
+      const hint = !t.segs && !t.ok && !t.busy
+        ? 'Trascina il dito sul terreno per tracciare; alza il dito e riparti per fare un angolo. Due dita spostano la vista.'
+        : [`${t.ok} da posare`, t.short ? `ne mancano ${t.short}` : '', t.busy ? `${t.busy} su spazi occupati` : ''].filter(Boolean).join(' · ');
+      const bar = h('div', { class: 'tutorial trace-bar' },
+        h('b', {}, icon(def.rotatable ? 'fence' : 'edit', 18), def.label, h('span', { class: 'trace-count' }, `${t.ok}/${t.have}`)),
+        h('span', { class: t.short ? 'muted warn' : 'muted' }, hint),
+        t.short ? h('button', { class: 'pill', onclick: () => this.game.buyTraceShortfall() }, `Compra i ${t.short} mancanti · ${t.short * def.cost}`, icon('wisp', 14)) : null,
+        h('div', { class: 'row' },
+          h('button', { class: 'pill exit', 'aria-label': 'Esci', title: 'Esci', onclick: () => this.game.cancelPlacement() }, icon('close', 18)),
+          h('button', { class: 'pill', disabled: !t.segs, onclick: () => this.game.undoTrace() }, 'Annulla ultimo tratto'),
+          h('button', { class: 'pill primary', disabled: !t.ok, onclick: () => this.game.confirmPlacement() }, 'Conferma'),
+        ),
+      );
+      if (this.placementBar) this.placementBar.replaceWith(bar); else $('#game').append(bar);
+      this.placementBar = bar;
+      return;
+    }
     const label = p.kind === 'grave' ? `Dove riposerà ${p.draft!.name}?` : CATALOG[p.type!].label;
     const rot = p.kind === 'item' && CATALOG[p.type!].rotatable;
     const bar = h('div', { class: 'tutorial' },

@@ -10,7 +10,7 @@ import { hashString, newId } from './rng.ts';
 import type { RoamerKind } from './spawn.ts';
 import type { Grave, MemoryType, Placed, SaveData } from './state.ts';
 import { isoDate } from './time.ts';
-import { areaForLevel, buildOccupancy, canPlaceAt, computePrestige } from './world.ts';
+import { areaForLevel, buildOccupancy, canPlaceAt, cellsOf, computePrestige } from './world.ts';
 
 export class GameError extends Error {}
 
@@ -423,6 +423,35 @@ export function placeFromInventory(s: SaveData, type: string, x: number, y: numb
   s.placeables.push(p);
   s.player.counters.decorationsPlaced++;
   return p;
+}
+
+/** Una cella di un tracciato (sentiero, recinto, muretto), col verso del tratto. */
+export interface TraceCell { x: number; y: number; rot: number }
+/** 'ok' si posa, 'busy' occupata o fuori dal recinto, 'short' oltre quelli che hai. */
+export type TraceStatus = 'ok' | 'busy' | 'short';
+
+/** Come andrebbe ogni cella del tracciato, in ordine: finiti quelli in inventario, il resto è 'short'. */
+export function traceStatus(s: SaveData, type: string, cells: TraceCell[]): TraceStatus[] {
+  const occ = buildOccupancy(s);
+  const area = areaForLevel(s.world.expansionLevel);
+  let left = ownedCount(s, type);
+  return cells.map((c) => {
+    const fp = rotatedFootprint(type, c.rot);
+    if (!canPlaceAt(c.x, c.y, fp, occ, area)) return 'busy';
+    if (left <= 0) return 'short';
+    left--;
+    for (const k of cellsOf(c.x, c.y, fp)) occ.owner.set(k, 'trace');
+    return 'ok';
+  });
+}
+
+/** Posa tutte le celle buone del tracciato prendendole dall'inventario. */
+export function placeTrace(s: SaveData, type: string, cells: TraceCell[], now: Date): ActionResult & { placed: number } {
+  const status = traceStatus(s, type, cells);
+  let placed = 0;
+  cells.forEach((c, i) => { if (status[i] === 'ok') { placeFromInventory(s, type, c.x, c.y, c.rot, now); placed++; } });
+  if (!placed) throw new GameError(ownedCount(s, type) ? 'Il tracciato passa solo su spazi occupati.' : 'Non ne hai in inventario.');
+  return { ...ok(`${placeableDef(type).label}: ${placed} posat${placed === 1 ? 'o' : 'i'}.`), placed };
 }
 
 export function moveEntity(s: SaveData, id: string, x: number, y: number, rot?: number): ActionResult {

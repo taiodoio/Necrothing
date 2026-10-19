@@ -1085,6 +1085,59 @@ export class WorldView {
     this.ghost = null;
     this.ghostKey = '';
     this.ghostFrame.visible = false;
+    this.hideTrace();
+  }
+
+  private traceModel: CachedModel | null = null;
+  private traceKey = '';
+  private traceGhosts: THREE.Group[] = [];
+  private traceTiles: THREE.InstancedMesh | null = null;
+
+  /** Anteprima del tracciato: un oggetto per cella, verde dove si posa, rosso dove no. */
+  showTrace(key: string, build: () => CachedModel, cells: { x: number; y: number; rot: number; ok: boolean }[]) {
+    if (this.ghost) { this.root.remove(this.ghost); this.ghost = null; this.ghostKey = ''; }
+    this.ghostFrame.visible = false;
+    if (this.traceKey !== key) { this.hideTrace(); this.traceKey = key; this.traceModel = build(); }
+    const gm = this.traceModel!;
+    while (this.traceGhosts.length < cells.length) {
+      const g = instantiate(gm, { castShadow: false });
+      this.root.add(g);
+      this.traceGhosts.push(g);
+    }
+    if (!this.traceTiles || this.traceTiles.instanceMatrix.count < cells.length) {
+      this.traceTiles?.removeFromParent();
+      this.traceTiles = new THREE.InstancedMesh(this.ghostFrame.geometry, new THREE.MeshBasicMaterial({ transparent: true, opacity: 0.4, depthWrite: false }), Math.max(64, cells.length * 2));
+      this.traceTiles.frustumCulled = false; // le celle cambiano a ogni tratto: niente sfera di ingombro
+      this.root.add(this.traceTiles);
+    }
+    const m = new THREE.Matrix4(), green = new THREE.Color('#7fd18b'), red = new THREE.Color('#e0564a');
+    this.traceGhosts.forEach((g, i) => {
+      const c = cells[i];
+      g.visible = !!c;
+      if (!c) return;
+      const at = cellCenter(c.x, c.y, [1, 1]);
+      at.y = this.heightAt(at.x, at.z);
+      g.position.copy(at);
+      g.rotation.y = -c.rot * Math.PI / 2;
+      g.traverse((o) => {
+        const mesh = o as THREE.Mesh;
+        if (mesh.isMesh && mesh.name === 'solid') mesh.material = c.ok ? gm.mats.selected : gm.mats.invalid;
+      });
+      this.traceTiles!.setMatrixAt(i, m.makeTranslation(at.x, at.y + 0.05, at.z));
+      this.traceTiles!.setColorAt(i, c.ok ? green : red);
+    });
+    this.traceTiles.count = cells.length;
+    this.traceTiles.instanceMatrix.needsUpdate = true;
+    if (this.traceTiles.instanceColor) this.traceTiles.instanceColor.needsUpdate = true;
+  }
+
+  hideTrace() {
+    for (const g of this.traceGhosts) this.root.remove(g);
+    this.traceGhosts = [];
+    this.traceTiles?.removeFromParent();
+    this.traceTiles = null;
+    this.traceKey = '';
+    this.traceModel = null;
   }
 
   ghostTop(): THREE.Vector3 | null {

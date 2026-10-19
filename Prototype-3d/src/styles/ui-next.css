@@ -184,3 +184,12 @@
 .ui-next .shop-detail-top .muted { margin: 4px 0 0; font-size: 13px; }
 .ui-next .shop-detail-close { position: absolute; top: 10px; right: 10px; }
 .ui-next .drawer-foot { position: relative; }
+
+/* ── Strumento a traccia ──────────────────────────────────────────── */
+.ui-next .trace-bar b { display: flex; align-items: center; gap: 6px; }
+.ui-next .trace-count { margin-left: auto; font: 800 15px var(--pixel); color: var(--spectral); }
+.ui-next .trace-bar .warn { color: var(--danger); }
+.ui-next .trace-bar > .pill { justify-self: start; display: inline-flex; align-items: center; gap: 5px; color: var(--spectral); }
+.ui-next .trace-bar .row { display: flex; gap: 8px; }
+.ui-next .trace-bar .row .pill { flex: 1; white-space: nowrap; }
+.ui-next .trace-bar .row .pill.exit { flex: none; width: 48px; }

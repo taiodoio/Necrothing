@@ -1,10 +1,11 @@
-// Interfaccia nuova, in prova: per ora si accende solo nella pagina di misura
-// (bench.html); quando convince si accende anche nel gioco. Comprende:
+// Interfaccia nuova, accesa sia nel gioco (main.ts) sia nella pagina di misura
+// (bench.ts); spegnendola torna l'interfaccia pixel di prima. Comprende:
 // - oggetti di contorno (sentieri, recinzioni, muretti, erba alta, fango,
 //   aiuole, cespugli) selezionabili solo in Modifica; fuori ci si cammina sopra;
 // - toccando un oggetto il Custode ci va e il menù compare quando arriva;
 // - menù contestuale di sole icone;
-// - menù di gioco verticale (icona a tre righe), con l'etichetta a destra.
+// - menù di gioco verticale (icona a tre righe), con l'etichetta a destra;
+// - stile low-poly con tema chiaro e scuro, strumento a traccia, Bottega animata.
 
 let on = false;
 

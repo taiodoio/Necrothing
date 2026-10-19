@@ -32,6 +32,10 @@ interface AnchorEntry {
   sprite: THREE.Sprite;
   flicker: FireFlicker;
   on: boolean;
+  /** Alone attenuato quando ci sono altre sorgenti vicine (dieci candele non fanno dieci aloni pieni). */
+  crowd: number;
+  /** Luce reale: quante sorgenti vicine rappresenta (una sola luce per gruppo, un po' più forte). */
+  boost: number;
 }
 
 export interface AnchorHandle { id: number }
@@ -62,6 +66,8 @@ function cloneMix(m: Mix): Mix {
 /** Durata indicativa dei passaggi di fase/meteo e delle accensioni delle luci (secondi). */
 const MIX_RATE = 1.3;
 const LIGHT_IN = 0.6, LIGHT_OUT = 0.45;
+/** Sorgenti più vicine di così contano come un gruppo (candele, lumini, fiamme dello stesso oggetto). */
+const CROWD_R = 0.9, CLUSTER_R = 1.3;
 
 let haloTexture: THREE.Texture | null = null;
 function getHaloTexture(): THREE.Texture {
@@ -89,6 +95,9 @@ export class Atmosphere {
   private flash = 0;
   private nextFlash = 6;
   private poolTimer = 0;
+  /** Le sorgenti sono cambiate: va ricalcolato quanto sono affollate. */
+  private crowdDirty = true;
+  private readonly toCamera = new THREE.Vector3();
   private readonly scene: THREE.Scene;
   /** Luci finte (telefoni deboli): niente luci vere, una pozza di luce dipinta a terra per ogni sorgente. */
   private fake: THREE.InstancedMesh | null = null;
@@ -258,7 +267,7 @@ export class Atmosphere {
       // a terra sotto la sorgente (l'ancora sta in alto sul modello: la sua quota nel modello è l'altezza da terra)
       p.set(e.pos.x, e.pos.y - lightWorldPos(e.anchor, lp).y + 0.04, e.pos.z);
       m.setMatrixAt(i, mat4.compose(p, q, sc.set(r, 1, r)));
-      m.setColorAt(i, c.set(e.anchor.color).multiplyScalar(Math.min(1, e.anchor.intensity) * 0.4 * pool * f));
+      m.setColorAt(i, c.set(e.anchor.color).multiplyScalar(Math.min(1, e.anchor.intensity) * 0.4 * pool * f * e.crowd));
       i++;
     }
     m.count = i;
@@ -275,7 +284,8 @@ export class Atmosphere {
     sprite.scale.set(s, s, s);
     sprite.renderOrder = 3;
     this.group.add(sprite);
-    this.anchors.set(id, { pos: pos.clone(), anchor, sprite, flicker: new FireFlicker(seedFromPosition(pos.x, pos.y, pos.z), anchor.flicker, 1, anchor.fault ?? 0), on });
+    this.anchors.set(id, { pos: pos.clone(), anchor, sprite, flicker: new FireFlicker(seedFromPosition(pos.x, pos.y, pos.z), anchor.flicker, 1, anchor.fault ?? 0), on, crowd: 1, boost: 1 });
+    this.crowdDirty = true;
     return { id };
   }
 
@@ -286,6 +296,7 @@ export class Atmosphere {
     this.group.remove(e.sprite);
     e.sprite.material.dispose();
     this.anchors.delete(h.id);
+    this.crowdDirty = true;
   }
 
   /**
@@ -300,6 +311,7 @@ export class Atmosphere {
     if (moved || (e.anchor.fault ?? 0) !== (anchor.fault ?? 0) || e.anchor.flicker !== anchor.flicker) {
       e.flicker = new FireFlicker(seedFromPosition(pos.x, pos.y, pos.z), anchor.flicker, 1, anchor.fault ?? 0);
     }
+    if (moved) this.crowdDirty = true;
     e.pos.copy(pos);
     e.sprite.position.copy(pos);
     if (e.anchor.color !== anchor.color) (e.sprite.material as THREE.SpriteMaterial).color.set(anchor.color);
@@ -312,6 +324,7 @@ export class Atmosphere {
   moveAnchor(h: AnchorHandle, pos: THREE.Vector3) {
     const e = this.anchors.get(h.id);
     if (!e) return;
+    if (e.pos.distanceToSquared(pos) > 0.04) this.crowdDirty = true;
     e.pos.copy(pos);
     e.sprite.position.copy(pos);
   }
@@ -320,9 +333,33 @@ export class Atmosphere {
     for (const id of [...this.anchors.keys()]) this.removeAnchor({ id });
   }
 
+  /**
+   * Quanto è affollata ogni sorgente: con altre vicine il suo alone si
+   * attenua, così un gruppo di candele fa un bagliore unico e non una
+   * macchia bianca. Griglia di celle di CROWD_R: solo le celle vicine.
+   */
+  private refreshCrowd() {
+    this.crowdDirty = false;
+    const grid = new Map<string, AnchorEntry[]>();
+    const key = (x: number, z: number) => `${Math.floor(x / CROWD_R)},${Math.floor(z / CROWD_R)}`;
+    const lit = [...this.anchors.values()].filter((e) => e.anchor.halo > 0.05);
+    for (const e of lit) { const k = key(e.pos.x, e.pos.z); const l = grid.get(k); if (l) l.push(e); else grid.set(k, [e]); }
+    for (const e of lit) {
+      const cx = Math.floor(e.pos.x / CROWD_R), cz = Math.floor(e.pos.z / CROWD_R);
+      let n = 0;
+      for (let dx = -1; dx <= 1; dx++) for (let dz = -1; dz <= 1; dz++) {
+        for (const o of grid.get(`${cx + dx},${cz + dz}`) ?? []) if (o !== e && o.pos.distanceToSquared(e.pos) < CROWD_R * CROWD_R) n++;
+      }
+      e.crowd = 1 / (1 + n * 0.55);
+    }
+  }
+
   update(dt: number, t: number, camera: THREE.Camera) {
-    void camera;
     if (!this.cur) this.cur = cloneMix(this.target);
+    if (this.crowdDirty) this.refreshCrowd();
+    // gli aloni si spostano verso la camera di mezzo alone: con la vista ortografica restano
+    // dove sono a schermo, ma non entrano più nel terreno o nei muri vicini (niente tagli dritti)
+    camera.getWorldDirection(this.toCamera).negate();
     if (this.mixing || this.flash > 0) {
       if (this.mixing && this.stepMix(dt)) this.mixing = false;
       this.applyMix();
@@ -331,8 +368,9 @@ export class Atmosphere {
     // Flicker degli aloni e delle luci.
     for (const e of this.anchors.values()) {
       const f = e.flicker.value(t);
-      (e.sprite.material as THREE.SpriteMaterial).opacity = e.on ? p.halo * Math.min(1, e.anchor.intensity * 1.4) * f : 0;
+      (e.sprite.material as THREE.SpriteMaterial).opacity = e.on ? p.halo * Math.min(1, e.anchor.intensity * 1.4) * f * e.crowd : 0;
       e.sprite.visible = e.on && p.halo > 0.02 && e.anchor.halo > 0.05; // alone 0: luce senza bagliore (riverbero diffuso)
+      if (e.sprite.visible) e.sprite.position.copy(e.pos).addScaledVector(this.toCamera, e.sprite.scale.x * 0.4);
     }
     if (this.fake) this.updateFake(t, p.pool);
     // Il pool di luci reali segue le sorgenti più vicine al centro della vista.
@@ -342,9 +380,17 @@ export class Atmosphere {
     if (this.poolTimer <= 0) {
       this.poolTimer = 0.3;
       const n = this.activePool();
-      const want = [...this.anchors.values()].filter((e) => e.on && e.anchor.intensity > 0.2)
-        .sort((a, b) => a.pos.distanceToSquared(this.focusPoint) - b.pos.distanceToSquared(this.focusPoint))
-        .slice(0, n);
+      // una luce per gruppo di sorgenti vicine (le candele di un oggetto): niente dieci luci sullo stesso
+      // punto, che bruciano i colori e lasciano al buio il resto; il capogruppo è un po' più forte
+      const want: AnchorEntry[] = [];
+      for (const e of [...this.anchors.values()].filter((x) => x.on && x.anchor.intensity > 0.2)
+        .sort((a, b) => a.pos.distanceToSquared(this.focusPoint) - b.pos.distanceToSquared(this.focusPoint))) {
+        const lead = want.find((w) => w.pos.distanceToSquared(e.pos) < CLUSTER_R * CLUSTER_R);
+        if (lead) { lead.boost = Math.min(1.8, lead.boost + 0.2); continue; }
+        if (want.length >= n) continue;
+        e.boost = 1;
+        want.push(e);
+      }
       const wanted = new Set(want);
       const assigned = new Set<AnchorEntry>();
       for (const light of this.pool) {
@@ -384,7 +430,7 @@ export class Atmosphere {
       light.userData.w = w;
       if (light.userData.leaving && w <= 0) { light.userData.entry = undefined; light.intensity = 0; continue; }
       light.position.copy(e.pos);
-      light.intensity = p.pool * e.anchor.intensity * 4.2 * e.flicker.value(t) * w;
+      light.intensity = p.pool * e.anchor.intensity * 4.2 * e.flicker.value(t) * w * e.boost;
     }
     // Temporale: lampi occasionali (solo col temporale).
     if (this.weather === 'storm') {

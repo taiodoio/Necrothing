@@ -214,7 +214,7 @@ function spec(kind: CharacterKind): Spec {
           { name: 'armL', pivot: [-3, 7, 0], build: (b) => b.box(-0.8, -3, -0.8, 0.8, 0, 0.8, c) },
           { name: 'armR', pivot: [3, 7, 0], build: (b) => b.box(-0.8, -3, -0.8, 0.8, 0, 0.8, c) },
         ],
-        lights: [{ part: 'body', anchor: { pos: [0, 6, 0], color: kind === 'ghostRare' ? '#ffcf8a' : P.spectral, intensity: 0.7, range: 3.5, flicker: 0.25, halo: 1.3 } }],
+        lights: [{ part: 'body', anchor: { pos: [0, 6, 0], color: kind === 'ghostRare' ? '#ffcf8a' : P.spectral, intensity: 0.7, range: 3.5, flicker: 0.25, halo: 0.75 } }],
       };
     }
     case 'cat':

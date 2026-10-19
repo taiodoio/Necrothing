@@ -6,7 +6,7 @@
 // delle presenze hanno carte che volano, un disco che gira con le note; lo
 // spaventapasseri gira la testa verso il Custode e ospita un corvo di
 // passaggio; pozze e buchi fanno bolle e
-// scintille. Le geometrie si costruiscono una volta sola e si condividono.
+// scintille; la fontana ha lo zampillo, la cascata dalla coppa e i cerchi nella vasca. Le geometrie si costruiscono una volta sola e si condividono.
 
 import * as THREE from 'three';
 import { LP } from './kit.ts';
@@ -408,6 +408,55 @@ function flyers(make: (i: number) => THREE.Group, n: number, spread: number, y: 
   };
 }
 
+// ── Fontana ─────────────────────────────────────────────────────────────
+
+const waterDrop = (lp: LP) => ball(lp, 0, 0, 0, 0.022, 0.034, 0.022, '#b9dcdc', { bucket: 'water' });
+const ripple = (lp: LP) => lp.push([0, 0, 0], 0, -Math.PI / 2).add(new THREE.RingGeometry(0.07, 0.095, 12), '#a9c6c6', { bucket: 'water', jitter: 0, ao: 0 }).pop();
+
+/**
+ * Fontana viva: uno zampillo sale dalla pigna in cima e ricade nella coppa,
+ * dall'orlo della coppa l'acqua scende a ventaglio nella vasca e dove cade
+ * si allargano i cerchi. Gocce piccole, tante, sfasate: sembra un getto continuo.
+ */
+function fountain(seed: number): Animated {
+  const root = new THREE.Group();
+  const r = createRng(`fountain:${seed}`);
+  const TOP = 1.47, BOWL = 1.18, BOWL_R = 0.5, POOL = 0.32;
+  const jet = Array.from({ length: 10 }, () => { const o = piece('fountainDrop', waterDrop); root.add(o); return { o, ph: r.next(), a: r.range(0, Math.PI * 2), sp: 0.9 + r.next() * 0.3 }; });
+  const falls = Array.from({ length: 32 }, (_, i) => {
+    const o = piece('fountainDrop', waterDrop); root.add(o);
+    return { o, ph: r.next(), a: (Math.floor(i / 4) / 8) * Math.PI * 2 + r.range(-0.12, 0.12), sp: 0.7 + r.next() * 0.3, out: r.range(0.28, 0.4) };
+  });
+  const rings = Array.from({ length: 8 }, (_, i) => {
+    const o = piece('ripple', ripple); root.add(o);
+    const a = (i / 8) * Math.PI * 2 + 0.2;
+    return { o, ph: r.next(), x: Math.cos(a) * 0.86, z: Math.sin(a) * 0.86, sp: 0.45 + r.next() * 0.2 };
+  });
+  return {
+    root, update: (t) => {
+      // zampillo: sale di 0.3 e ricade quasi nello stesso punto
+      for (const d of jet) {
+        const k = (t * d.sp + d.ph) % 1;
+        const rr = k * 0.12;
+        d.o.position.set(Math.cos(d.a) * rr, TOP + 4 * 0.3 * k * (1 - k) + (BOWL - TOP + 0.1) * k * k, Math.sin(d.a) * rr);
+      }
+      // cascata: dall'orlo della coppa giù nella vasca, con una piccola parabola verso fuori
+      for (const d of falls) {
+        const k = (t * d.sp + d.ph) % 1;
+        const rr = BOWL_R + d.out * k;
+        d.o.position.set(Math.cos(d.a) * rr, BOWL - (BOWL - POOL) * k * k, Math.sin(d.a) * rr);
+        d.o.scale.setScalar(k > 0.92 ? (1 - k) * 12 : 1);
+      }
+      for (const c of rings) {
+        const k = (t * c.sp + c.ph) % 1;
+        c.o.position.set(c.x, POOL + 0.012, c.z);
+        c.o.scale.setScalar(0.4 + k * 2.2);
+        c.o.visible = k < 0.9;
+      }
+    },
+  };
+}
+
 // ── Spaventapasseri ─────────────────────────────────────────────────────
 
 /** Corvo (verso +z): corpo, testa, becco, occhi rossi accesi, coda e zampette. Le ali sono a parte. */
@@ -480,6 +529,7 @@ function scarecrow(lit: boolean): Animated {
 export function createAnimated(v: PVis): Animated | null {
   switch (v.type) {
     case 'pond': return pond(v);
+    case 'fountain': return v.broken ? null : fountain(v.seed);
     case 'zombies_play': return zombiesPlay();
     case 'zombies_dance': return zombiesDance();
     case 'scarecrow': return scarecrow(v.lit);

@@ -113,7 +113,7 @@ export function bonfireLP(v: PVis): LPModel {
     lp.cyl(0, 0.12, 0, 0.26, 0, 0.45, 6, '#ff8a3c', { bucket: 'glow', jitter: 0.03 });
     lp.cyl(0.04, 0.18, 0, 0.17, 0, 0.62, 5, LPC.spectral, { bucket: 'glow', jitter: 0.03 });
     lp.cyl(-0.03, 0.22, 0.03, 0.09, 0, 0.78, 4, '#d8fff4', { bucket: 'glow', jitter: 0.02 });
-    lp.light(0, 0.55, 0, LPC.spectral, 1.4, 7, 0.55, 2);
+    lp.light(0, 0.55, 0, LPC.spectral, 1.15, 6, 0.55, 1.1); // alone contenuto: prima copriva tutto il falò
   } else lp.blob(0, 0.1, 0, 0.2, 0.06, 0.2, LPC.charcoal, {});
   // menhir con rune
   for (const [x, z] of [[-0.78, -0.78], [0.8, -0.7]]) {
@@ -158,7 +158,10 @@ export function shrineLP(v: PVis): LPModel {
   lp.box(0, 0, -D / 2 + 0.08, W, H, 0.16, LPC.stoneWarm, { bevel: 0.015, vary: 0.06, ao: 0.25 });
   quoins(lp, W, D, H, 0, LPC.stoneLight);
   // facciata con arco gotico (sagoma con foro)
-  const front = gothicArchShape(W, H + 0.4, 5);
+  // facciata rettangolare fino all'imposta del tetto (sopra c'è il frontone): con la sagoma ad arco
+  // gli angoli in alto restavano scoperti e si vedeva un buco sotto al tetto
+  const front = new THREE.Shape();
+  front.moveTo(-W / 2, 0); front.lineTo(W / 2, 0); front.lineTo(W / 2, H + 0.02); front.lineTo(-W / 2, H + 0.02); front.closePath();
   const hole = gothicArchShape(1.0, 1.25, 5);
   front.holes.push(new THREE.Path(hole.getPoints().reverse()));
   lp.push([0, 0, D / 2 - 0.08]).extrude(front, 0.16, LPC.stone, { bevel: 0.012, vary: 0.05, ...o }).pop();
@@ -194,24 +197,39 @@ export function shrineLP(v: PVis): LPModel {
 
 export function fountainLP(v: PVis): LPModel {
   const lp = new LP(`lp:fountain:${v.seed}:${v.dirty}${v.broken}`);
+  const r = lp.rng;
   const o = mossy(v);
   const water = v.dirty ? '#3a4a3a' : LPC.water;
+  // gradino ottagonale attorno alla vasca
+  lp.cyl(0, 0, 0, 1.52, 1.55, 0.06, 8, LPC.stoneDark, { vary: 0.06, ...o });
   // vasca ottagonale cava: parete esterna, bordo, parete interna fino all'acqua
-  lp.lathe(0, 0, 0, [[1.3, 0], [1.34, 0.36], [1.42, 0.4], [1.42, 0.48], [1.2, 0.48], [1.17, 0.4], [1.15, 0.12], [0.0, 0.12]], 8, LPC.stone, { vary: 0.06, ao: 0.3, ...o });
-  lp.cyl(0, 0.3, 0, 1.17, 1.17, 0.02, 8, water, { bucket: 'water', jitter: 0 });
-  // fusto tornito e coppa superiore concava
-  lp.lathe(0, 0.12, 0, [[0.25, 0], [0.2, 0.12], [0.14, 0.2], [0.13, 0.88], [0.2, 0.96], [0.5, 1.04], [0.56, 1.1], [0.48, 1.1], [0.44, 1.05], [0.0, 1.03]], 8, LPC.stoneLight, { vary: 0.05, ao: 0.25, ...o });
-  lp.cyl(0, 1.16, 0, 0.45, 0.45, 0.02, 8, v.broken ? LPC.stoneDark : water, { bucket: v.broken ? 'solid' : 'water', jitter: 0 });
-  // putto/ pigna in cima
-  lp.lathe(0, 1.15, 0, [[0.0, 0], [0.09, 0], [0.12, 0.1], [0.08, 0.22], [0.03, 0.3], [0, 0.32]], 7, LPC.stoneLight, { jitter: 0.005 });
-  if (!v.broken) {
-    for (let i = 0; i < 4; i++) {
-      const a = (i / 4) * Math.PI * 2 + 0.4;
-      lp.push([Math.cos(a) * 0.5, 0.31, Math.sin(a) * 0.5], 0, 0, 0).cyl(0, 0, 0, 0.03, 0.022, 0.86, 5, '#8fb3b4', { bucket: 'water', jitter: 0 }).pop();
-    }
-    for (let i = 0; i < 5; i++) lp.push([Math.cos(i) * 0.75, 0.33, Math.sin(i) * 0.75], 0, -Math.PI / 2).add(new THREE.RingGeometry(0.05, 0.08, 8), '#a9c6c6', { bucket: 'water', jitter: 0, ao: 0 }).pop();
+  lp.lathe(0, 0.06, 0, [[1.3, 0], [1.34, 0.32], [1.42, 0.36], [1.42, 0.44], [1.2, 0.44], [1.17, 0.36], [1.15, 0.08], [0.0, 0.08]], 8, LPC.stone, { vary: 0.06, ao: 0.3, ...o });
+  // pannelli scolpiti sui lati della vasca e borchie agli spigoli
+  for (let i = 0; i < 8; i++) {
+    const a = (i / 8) * Math.PI * 2 + Math.PI / 8;
+    lp.push([Math.cos(a) * 1.35, 0.14, Math.sin(a) * 1.35], -a + Math.PI / 2).box(0, 0, 0, 0.62, 0.18, 0.03, LPC.stoneLight, { jitter: 0, vary: 0.05, ao: 0.2 }).pop();
+    const b = (i / 8) * Math.PI * 2;
+    lp.blob(Math.cos(b) * 1.44, 0.52, Math.sin(b) * 1.44, 0.05, 0.04, 0.05, LPC.stoneLight, { jitter: 0 });
   }
-  for (let i = 0; i < 5; i++) moss(lp, Math.cos(i * 1.3) * 1.36, 0.25, Math.sin(i * 1.3) * 1.36, 0.08);
+  lp.cyl(0, 0.36, 0, 1.17, 1.17, 0.02, 8, water, { bucket: 'water', jitter: 0 });
+  // monete sul fondo e ninfee
+  if (!v.broken) for (let i = 0; i < 6; i++) { const a = r.range(0, 6.28), d = r.range(0.4, 1.0); lp.cyl(Math.cos(a) * d, 0.34, Math.sin(a) * d, 0.025, 0.025, 0.006, 6, LPC.gold, { jitter: 0 }); }
+  for (let i = 0; i < 3; i++) { const a = i * 2.2 + 0.7, d = 0.85; lp.cyl(Math.cos(a) * d, 0.385, Math.sin(a) * d, 0.12, 0.12, 0.008, 7, LPC.leaf, { jitter: 0.01 }); }
+  // fusto tornito con quattro mascheroni che sputano acqua, coppa superiore concava
+  lp.lathe(0, 0.18, 0, [[0.25, 0], [0.2, 0.12], [0.14, 0.2], [0.13, 0.88], [0.2, 0.96], [0.5, 1.04], [0.56, 1.1], [0.48, 1.1], [0.44, 1.05], [0.0, 1.03]], 8, LPC.stoneLight, { vary: 0.05, ao: 0.25, ...o });
+  for (let i = 0; i < 4; i++) {
+    const a = (i / 4) * Math.PI * 2 + Math.PI / 4;
+    lp.push([Math.cos(a) * 0.15, 0.62, Math.sin(a) * 0.15], -a + Math.PI / 2);
+    skull(lp, 0, 0, 0.02, 0.6, LPC.stoneLight);
+    lp.pop();
+  }
+  // decorazioni a goccia sotto l'orlo della coppa
+  for (let i = 0; i < 8; i++) { const a = (i / 8) * Math.PI * 2; lp.blob(Math.cos(a) * 0.5, 1.16, Math.sin(a) * 0.5, 0.035, 0.05, 0.035, LPC.stoneLight, { jitter: 0 }); }
+  lp.cyl(0, 1.22, 0, 0.45, 0.45, 0.02, 8, v.broken ? LPC.stoneDark : water, { bucket: v.broken ? 'solid' : 'water', jitter: 0 });
+  // pigna in cima, con l'ugello dello zampillo
+  lp.lathe(0, 1.21, 0, [[0.0, 0], [0.09, 0], [0.12, 0.1], [0.08, 0.22], [0.03, 0.3], [0, 0.32]], 7, LPC.stoneLight, { jitter: 0.005 });
+  lp.cyl(0, 1.5, 0, 0.018, 0.012, 0.04, 5, LPC.iron, { jitter: 0 });
+  for (let i = 0; i < 5; i++) moss(lp, Math.cos(i * 1.3) * 1.36, 0.31, Math.sin(i * 1.3) * 1.36, 0.08);
   decayLP(lp, v, 2.6, 2.6);
   return lp.build();
 }
@@ -315,21 +333,40 @@ export function fenceIronLP(v: PVis): LPModel {
 export function openGraveLP(v: PVis): LPModel {
   const lp = new LP(`lp:opengrave:${v.seed}:${v.dirty}`);
   const r = lp.rng;
-  // fossa: bordo di terra e fondo scuro
+  const cz = 0.12; // centro della fossa (la lapide sta dietro)
+  // bordo di terra smossa tutto attorno: la fossa sembra profonda anche col terreno piatto
+  for (const sx of [-1, 1]) lp.box(sx * 0.6, 0, cz, 0.3, 0.13, 1.5, LPC.soil, { bevel: 0.03, vary: 0.14, jitter: 0.02, topTint: LPC.soilDark, topAmount: 0.3 });
+  for (const sz of [-1, 1]) lp.box(0, 0, cz + sz * 0.72, 1.5, 0.11, 0.26, LPC.soil, { bevel: 0.03, vary: 0.14, jitter: 0.02 });
+  // pareti interne in pendenza, sempre più scure verso il fondo, con radici che spuntano
+  for (const sx of [-1, 1]) lp.push([sx * 0.43, 0.02, cz], 0, 0, sx * 0.42).box(0, 0, 0, 0.05, 0.16, 1.18, '#2c2018', { jitter: 0.01, vary: 0.1, ao: 0.4 }).pop();
+  for (const sz of [-1, 1]) lp.push([0, 0.02, cz + sz * 0.6], 0, sz * -0.42).box(0, 0, 0, 0.86, 0.15, 0.05, '#2c2018', { jitter: 0.01, vary: 0.1, ao: 0.4 }).pop();
+  for (let i = 0; i < 6; i++) {
+    const sx = i % 2 ? 1 : -1, z = cz + r.range(-0.45, 0.45);
+    lp.push([sx * 0.4, r.range(0.06, 0.12), z], r.range(-0.4, 0.4), 0, sx * r.range(1.1, 1.5)).cyl(0, 0, 0, 0.012, 0.004, r.range(0.1, 0.2), 3, '#5a3e2a', { jitter: 0 }).pop();
+  }
+  // fondo: la bara col coperchio scostato, ossa e un teschio
   const pit = new THREE.Shape();
-  pit.moveTo(-0.42, -0.62); pit.lineTo(0.42, -0.62); pit.lineTo(0.45, 0.55); pit.lineTo(-0.45, 0.58); pit.closePath();
-  lp.push([0, 0.012, 0.15], 0, -Math.PI / 2).plate(pit, 0.01, '#120d0a', { ao: 0 }).pop();
-  for (const sx of [-1, 1]) lp.push([sx * 0.47, 0.0, 0.15]).box(0, -0.02, 0, 0.06, 0.08, 1.2, LPC.soilDark, { jitter: 0.01 }).pop();
-  // cumuli di terra smossa
-  lp.blob(-0.78, 0.08, 0.2, 0.22, 0.2, 0.55, LPC.soil, { detail: 1, jitter: 0.04, vary: 0.12 });
-  lp.blob(0.78, 0.06, -0.2, 0.2, 0.16, 0.4, LPC.soilDark, { detail: 1, jitter: 0.04, vary: 0.12 });
-  // lapide inclinata, pala piantata, lanterna
-  lp.push([0, 0, -0.72], 0, 0.15, -0.25).extrude(roundTopShape(0.7, 0.95, 7), 0.13, LPC.stone, { bevel: 0.015, vary: 0.06, topTint: LPC.moss, topAmount: 0.4 }).pop();
-  lp.push([0.82, 0.25, 0.25], 0.3, 0.1, -0.3).cyl(0, 0, 0, 0.018, 0.018, 0.85, 4, LPC.wood, { jitter: 0 }).box(0, -0.05, 0, 0.16, 0.2, 0.02, LPC.ironLight, { jitter: 0 }).pop();
-  hangingLantern(lp, -0.8, 0.45, -0.6, true, 0.8);
-  lp.cyl(-0.8, 0, -0.6, 0.02, 0.02, 0.45, 4, LPC.woodDark, { jitter: 0 });
-  pebbles(lp, -0.9, -0.9, 0.9, 0.9, 7);
-  for (let i = 0; i < 3; i++) weeds(lp, r.range(-0.9, 0.9), r.pick([-0.85, 0.9]), 0.8);
+  pit.moveTo(-0.38, -0.55); pit.lineTo(0.38, -0.55); pit.lineTo(0.38, 0.55); pit.lineTo(-0.38, 0.55); pit.closePath();
+  lp.push([0, 0.012, cz], 0, -Math.PI / 2).plate(pit, 0.01, '#140e0b', { ao: 0 }).pop();
+  const coffin = new THREE.Shape();
+  coffin.moveTo(-0.16, -0.45); coffin.lineTo(0.16, -0.45); coffin.lineTo(0.22, 0.2); coffin.lineTo(0.15, 0.45); coffin.lineTo(-0.15, 0.45); coffin.lineTo(-0.22, 0.2); coffin.closePath();
+  lp.push([0, 0.022, cz], 0, -Math.PI / 2).plate(coffin, 0.07, '#3f2c22', { vary: 0.08, ao: 0.3 }).pop();
+  lp.push([0, 0.093, cz], 0, -Math.PI / 2, 0, [0.82, 0.88, 1]).plate(coffin, 0.006, '#0e0907', { ao: 0 }).pop();
+  lp.push([0.12, 0.1, cz + 0.08], 0, -Math.PI / 2 + 0.3, -0.12).plate(coffin, 0.03, '#4a3324', { vary: 0.08 }).pop();
+  skull(lp, -0.08, 0.1, cz - 0.28, 0.8);
+  for (const [x, z, a] of [[-0.05, cz + 0.05, 0.4], [0.02, cz + 0.22, -0.6]] as const) lp.push([x, 0.1, z], a, 0, Math.PI / 2).cyl(0, -0.08, 0, 0.012, 0.012, 0.16, 4, LPC.bone, { jitter: 0 }).blob(0, -0.08, 0, 0.022, 0.018, 0.022, LPC.bone, { jitter: 0 }).blob(0, 0.08, 0, 0.022, 0.018, 0.022, LPC.bone, { jitter: 0 }).pop();
+  // cumuli di terra, assi messe di traverso, corda arrotolata
+  lp.blob(-0.85, 0.06, 0.35, 0.18, 0.2, 0.42, LPC.soil, { detail: 1, jitter: 0.04, vary: 0.12 });
+  lp.blob(0.86, 0.05, -0.3, 0.16, 0.15, 0.32, LPC.soilDark, { detail: 1, jitter: 0.04, vary: 0.12 });
+  for (let i = 0; i < 2; i++) lp.push([0.05 + i * 0.22, 0.13, cz + 0.62], 0.25 - i * 0.12).box(0, 0, 0, 1.25, 0.035, 0.14, i ? LPC.wood : LPC.woodDark, { bevel: 0.005, vary: 0.12 }).pop();
+  lp.push([0.62, 0.14, cz - 0.45]).add(new THREE.TorusGeometry(0.11, 0.022, 4, 12).rotateX(Math.PI / 2), '#8a7350', { jitter: 0 }).add(new THREE.TorusGeometry(0.08, 0.02, 4, 10).rotateX(Math.PI / 2).translate(0, 0.03, 0), '#9a8360', { jitter: 0 }).pop();
+  // lapide inclinata, pala piantata nel cumulo, lanterna
+  lp.push([0, 0, -0.78], 0, 0.15, -0.25).extrude(roundTopShape(0.7, 0.95, 7), 0.13, LPC.stone, { bevel: 0.015, vary: 0.06, topTint: LPC.moss, topAmount: 0.4 }).pop();
+  lp.push([-0.85, 0.2, 0.35], 0.3, 0.1, 0.3).cyl(0, 0, 0, 0.018, 0.018, 0.85, 4, LPC.wood, { jitter: 0 }).box(0, -0.05, 0, 0.16, 0.2, 0.02, LPC.ironLight, { jitter: 0 }).pop();
+  hangingLantern(lp, 0.8, 0.45, -0.75, true, 0.8);
+  lp.cyl(0.8, 0, -0.75, 0.02, 0.02, 0.45, 4, LPC.woodDark, { jitter: 0 });
+  pebbles(lp, -0.95, -0.95, 0.95, 0.95, 9);
+  for (let i = 0; i < 3; i++) weeds(lp, r.range(-0.9, 0.9), r.pick([-0.92, 0.95]), 0.8);
   decayLP(lp, v, 1.8, 1.8);
   return lp.build();
 }
@@ -401,35 +438,73 @@ export function spectralTreeLP(v: PVis): LPModel {
   const lp = new LP(`lp:spectral:${v.seed}`);
   const r = lp.rng;
   const glow = v.lit;
-  const tips = gnarledTree(lp, 2.0, '#2b2a30', 7);
-  for (const [x, y, z] of tips) lp.blob(x, y + 0.05, z, 0.24 + r.next() * 0.1, 0.17, 0.24, glow ? r.pick([LPC.spectral, '#9fe0d0']) : '#3f6f63', { bucket: glow ? 'glow' : 'solid', vary: 0.1, jitter: 0.04 });
-  for (let i = 0; i < 8; i++) lp.blob(r.range(-1.1, 1.1), 0.03, r.range(-1.1, 1.1), 0.04, 0.03, 0.04, '#5fae98', { bucket: glow ? 'glow' : 'solid', jitter: 0 });
-  if (glow) lp.light(0, 1.9, 0, LPC.spectral, 1.2, 7, 0.2, 1.8);
+  const leaf = () => (glow ? r.pick([LPC.spectral, '#9fe0d0', '#c8fff0']) : '#3f6f63');
+  const o = (k: number) => ({ bucket: glow ? 'glow' as const : 'solid' as const, vary: 0.1, jitter: k });
+  const tips = gnarledTree(lp, 2.2, '#2b2a30', 11);
+  // chiome a grappolo di foglie che brillano, rami sottili che ne escono
+  for (const [x, y, z] of tips) {
+    lp.blob(x, y + 0.05, z, 0.2 + r.next() * 0.08, 0.14, 0.2, leaf(), o(0.04));
+    for (let k = 0; k < 3; k++) lp.blob(x + r.range(-0.22, 0.22), y + r.range(-0.08, 0.16), z + r.range(-0.22, 0.22), 0.08, 0.06, 0.08, leaf(), o(0.02));
+    lp.push([x, y, z], r.range(0, 6), 0, r.range(0.6, 1.1)).cyl(0, 0, 0, 0.018, 0.006, 0.28, 3, '#2b2a30', { jitter: 0 }).pop();
+  }
+  // filamenti che pendono da metà dei rami con una lanternina di luce in fondo
+  for (const [i, [x, y, z]] of tips.entries()) {
+    if (i % 2) continue;
+    const len = 0.35 + r.next() * 0.45;
+    lp.cyl(x, y - len, z, 0.006, 0.006, len, 3, glow ? '#8fd8c4' : '#3f5f55', o(0));
+    lp.blob(x, y - len - 0.04, z, 0.04, 0.05, 0.04, glow ? '#e8fff6' : '#4f6f65', o(0));
+  }
+  // anello di funghi luminosi tra le radici, foglie cadute e qualche lucciola ferma a mezz'aria
+  for (let i = 0; i < 7; i++) {
+    const a = (i / 7) * Math.PI * 2 + r.range(-0.2, 0.2), d = r.range(0.45, 0.7);
+    const x = Math.cos(a) * d, z = Math.sin(a) * d, h = r.range(0.05, 0.11);
+    lp.cyl(x, 0, z, 0.012, 0.012, h, 4, '#d8e8e0', { jitter: 0 });
+    lp.blob(x, h, z, 0.035, 0.02, 0.035, glow ? '#7ff0d0' : '#4f7f70', o(0));
+  }
+  for (let i = 0; i < 14; i++) lp.blob(r.range(-1.15, 1.15), 0.02, r.range(-1.15, 1.15), 0.04, 0.012, 0.03, '#5fae98', o(0));
+  for (let i = 0; i < 5; i++) lp.blob(r.range(-0.9, 0.9), r.range(0.5, 1.6), r.range(-0.9, 0.9), 0.018, 0.018, 0.018, glow ? '#e8fff6' : '#3f5f55', o(0));
+  if (glow) lp.light(0, 1.7, 0, LPC.spectral, 1.0, 6, 0.2, 1.1);
   return lp.build();
 }
 
-/** Albero di Natale "morto": pino secco con lucine, palline e stella. */
+/** Albero di Natale "morto": pino secco con una ghirlanda di lucine colorate, palline e stella. */
 export function xmasTreeLP(v: PVis): LPModel {
   const lp = new LP(`lp:xmas:${v.seed}:${v.lit}`);
   const r = lp.rng;
   const lit = v.lit;
   const h = 2.3;
+  const BULBS = ['#ff4a4a', '#ffd24a', '#4ac8ff', '#7dff7a', '#ff7ad8'];
   lp.cyl(0, 0, 0, 0.11, 0.05, h * 0.9, 6, LPC.woodDark, { vary: 0.1 });
+  let n = 0;
   for (let i = 0; i < 5; i++) {
     const t = i / 5, y = 0.35 + t * (h - 0.7), rad = 0.8 - t * 0.55;
     lp.push([0, y, 0], r.range(0, 1)).cyl(0, 0, 0, rad, rad * 0.12, 0.55 - t * 0.1, 7, r.pick([LPC.dryDark, '#6a5a3a', '#5e5434', '#4e4a30']), { vary: 0.12, ao: 0.35, jitter: 0.05 }).pop();
-    for (let k = 0; k < 6; k++) {
-      const a = (k / 6) * Math.PI * 2 + i;
-      const px = Math.cos(a) * rad * 0.85, pz = Math.sin(a) * rad * 0.85, py = y + 0.08;
-      if (k % 2) lp.blob(px, py, pz, 0.045, 0.045, 0.045, r.pick([LPC.red, LPC.gold, '#5a7590']), { jitter: 0 });
-      else lp.blob(px, py + 0.05, pz, 0.025, 0.025, 0.025, lit ? r.pick(['#ffd27a', '#ff9a5a', '#9fe0d0']) : '#3c3a35', { bucket: lit ? 'glow' : 'solid', jitter: 0 });
+    // palline appese
+    for (let k = 0; k < 3; k++) {
+      const a = (k / 3) * Math.PI * 2 + i * 0.9;
+      lp.blob(Math.cos(a) * rad * 0.82, y + 0.04, Math.sin(a) * rad * 0.82, 0.045, 0.045, 0.045, r.pick([LPC.red, LPC.gold, '#5a7590']), { jitter: 0 });
+    }
+    // ghirlanda a spirale: lucine di tutti i colori lungo il bordo del palco di rami
+    const m = 9 - i;
+    for (let k = 0; k < m; k++) {
+      const a = (k / m) * Math.PI * 2 + i * 0.7, yy = y + 0.1 + (k / m) * 0.28;
+      const rr = rad * (0.95 - (k / m) * 0.2);
+      lp.blob(Math.cos(a) * rr, yy, Math.sin(a) * rr, 0.03, 0.03, 0.03, lit ? BULBS[n++ % BULBS.length] : '#3c3a35', { bucket: lit ? 'glow' : 'solid', jitter: 0 });
     }
   }
   const star = new THREE.Shape();
   for (let i = 0; i < 10; i++) { const a = (i / 10) * Math.PI * 2 + Math.PI / 2, rr = i % 2 ? 0.05 : 0.12; if (i) star.lineTo(Math.cos(a) * rr, Math.sin(a) * rr); else star.moveTo(Math.cos(a) * rr, Math.sin(a) * rr); }
   star.closePath();
   lp.push([0, h - 0.05, 0]).extrude(star, 0.03, lit ? '#ffd27a' : LPC.gold, { bucket: lit ? 'glow' : 'solid', jitter: 0 }).pop();
-  if (lit) lp.light(0, h * 0.6, 0, '#ffd27a', 0.8, 4.5, 0.25, 1);
+  if (lit) {
+    // tante piccole luci colorate fuori dai rami (non una sola gialla dentro al tronco), più la stella
+    const cols = ['#ff5a5a', '#5ac8ff', '#ffd24a', '#7dff7a'];
+    for (let i = 0; i < 4; i++) {
+      const a = i * 1.7 + 0.5, y = 0.6 + i * 0.38, rr = 0.75 - i * 0.12;
+      lp.light(Math.cos(a) * rr, y, Math.sin(a) * rr, cols[i], 0.3, 2.2, 0.35, 0.3);
+    }
+    lp.light(0, h, 0, '#ffd27a', 0.25, 2, 0.2, 0.4);
+  }
   pumpkin(lp, 0.55, 0, 0.45, 0.1, false, false);
   return lp.build();
 }

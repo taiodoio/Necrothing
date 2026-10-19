@@ -109,7 +109,7 @@ function spec(kind: CharacterKind): Spec {
             b.box(-1.4, -11.3, -1.4, 1.4, -10.8, 1.4, P.iron);
           },
         }),
-        lights: [{ part: 'armL', anchor: { pos: [0, -9, 0], color: P.lantern, intensity: 1.1, range: 5.5, flicker: 0.2, halo: 1 } }],
+        lights: [{ part: 'armL', anchor: { pos: [0, -9, 0], color: P.lantern, intensity: 1.1, range: 5.5, flicker: 0.2, halo: 0.55 } }],
       };
     case 'gravedigger':
       return {

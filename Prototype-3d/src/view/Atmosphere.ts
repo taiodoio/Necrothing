@@ -70,8 +70,16 @@ const LIGHT_IN = 0.6, LIGHT_OUT = 0.45;
 const CROWD_R = 0.9, CLUSTER_R = 1.3;
 
 let haloTexture: THREE.Texture | null = null;
+/** Pozza di luce a terra (luci finte): qui il centro pieno va bene, sta sotto ai piedi e non davanti. */
+let poolTexture: THREE.Texture | null = null;
+function getPoolTexture(): THREE.Texture {
+  poolTexture ??= radialGlowTexture([[0, 0.7], [0.2, 0.42], [0.5, 0.13], [1, 0]]);
+  return poolTexture;
+}
 function getHaloTexture(): THREE.Texture {
-  haloTexture ??= radialGlowTexture([[0, 0.95], [0.18, 0.45], [0.5, 0.12], [1, 0]]);
+  // centro tenue e bagliore largo attorno: l'alone sta davanti alla fonte (vedi update), con un
+  // centro quasi bianco copriva la lanterna e chi ci stava vicino (il Custode non si vedeva)
+  haloTexture ??= radialGlowTexture([[0, 0.4], [0.2, 0.3], [0.5, 0.1], [1, 0]]);
   return haloTexture;
 }
 
@@ -248,7 +256,7 @@ export class Atmosphere {
     if (on === !!this.fake) return;
     this.setLightBudget(on ? 0 : null);
     if (!on) { this.group.remove(this.fake!); this.fake!.geometry.dispose(); (this.fake!.material as THREE.Material).dispose(); this.fake = null; return; }
-    const mat = new THREE.MeshBasicMaterial({ map: getHaloTexture(), transparent: true, blending: THREE.AdditiveBlending, depthWrite: false, fog: false });
+    const mat = new THREE.MeshBasicMaterial({ map: getPoolTexture(), transparent: true, blending: THREE.AdditiveBlending, depthWrite: false, fog: false });
     this.fake = new THREE.InstancedMesh(new THREE.PlaneGeometry(2, 2).rotateX(-Math.PI / 2), mat, 512);
     this.fake.count = 0;
     this.fake.frustumCulled = false;
@@ -267,7 +275,7 @@ export class Atmosphere {
       // a terra sotto la sorgente (l'ancora sta in alto sul modello: la sua quota nel modello è l'altezza da terra)
       p.set(e.pos.x, e.pos.y - lightWorldPos(e.anchor, lp).y + 0.04, e.pos.z);
       m.setMatrixAt(i, mat4.compose(p, q, sc.set(r, 1, r)));
-      m.setColorAt(i, c.set(e.anchor.color).multiplyScalar(Math.min(1, e.anchor.intensity) * 0.4 * pool * f * e.crowd));
+      m.setColorAt(i, c.set(e.anchor.color).multiplyScalar(Math.min(1, e.anchor.intensity) * 0.3 * pool * f * e.crowd));
       i++;
     }
     m.count = i;
@@ -370,7 +378,7 @@ export class Atmosphere {
       const f = e.flicker.value(t);
       (e.sprite.material as THREE.SpriteMaterial).opacity = e.on ? p.halo * Math.min(1, e.anchor.intensity * 1.4) * f * e.crowd : 0;
       e.sprite.visible = e.on && p.halo > 0.02 && e.anchor.halo > 0.05; // alone 0: luce senza bagliore (riverbero diffuso)
-      if (e.sprite.visible) e.sprite.position.copy(e.pos).addScaledVector(this.toCamera, e.sprite.scale.x * 0.4);
+      if (e.sprite.visible) e.sprite.position.copy(e.pos).addScaledVector(this.toCamera, e.sprite.scale.x * 0.3);
     }
     if (this.fake) this.updateFake(t, p.pool);
     // Il pool di luci reali segue le sorgenti più vicine al centro della vista.

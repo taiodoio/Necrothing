@@ -7,11 +7,13 @@
   color-scheme: dark;
   --r: 16px; /* l'arrotondamento di tutto: pannelli, pulsanti, schede */
   --r-s: 12px; /* elementi piccoli dentro un pannello (miniature, schede, campi) */
+  --hud: 60px; /* l'altezza di tutto ciò che sta sopra la scena: riquadri e pulsanti */
   --panel: #3a4150;
   --panel-2: #454d5e;
   --input: #2f3542;
   --thumb: #2f3542;
   --track: #262b35;
+  --sheet: #2b303a; /* il foglio che sale dal basso (dettaglio, pulsanti in fondo) */
   --paper: #f3ecdf;
   --muted: #bcb5a8;
   --gold-bright: #ffe2a8; /* titoli e accenti */
@@ -35,6 +37,7 @@
   --input: #fffaf0;
   --thumb: #e3d8c4;
   --track: #d8ccb6;
+  --sheet: #e0d5c1;
   --paper: #3b332b;
   --muted: #83786b;
   --gold-bright: #5c3f22;
@@ -79,23 +82,28 @@
 }
 
 /* ── HUD ──────────────────────────────────────────────────────────── */
-.ui-next .player-chip { padding: 6px 12px 6px 6px; min-height: 60px; max-width: calc(100vw - 172px); }
+.ui-next .hud-left { display: flex; flex-direction: column; align-items: flex-start; gap: 6px; flex: 0 1 auto; min-width: 0; }
+.ui-next .player-chip { padding: 6px 14px 6px 6px; height: var(--hud); min-height: 0; max-width: 100%; }
 .ui-next .chip-avatar { flex: none; width: 48px; height: 48px; border-radius: var(--r-s); background: var(--thumb); box-shadow: none; overflow: hidden; }
 .ui-next .chip-avatar img { width: 100%; height: 100%; object-fit: cover; display: block; }
 .ui-next .chip-body strong { font-size: 20px; line-height: 1; }
-.ui-next .chip-body small { font-size: 12px; }
+.ui-next .chip-body small { font-size: 12px; max-width: none; }
 .ui-next .xp-bar { height: 7px; border: 0; border-radius: 4px; background: var(--track); box-shadow: none; overflow: hidden; }
 .ui-next .xp-bar i { background: var(--primary); border-radius: 4px; transition: width 0.4s ease; }
-.ui-next .chip-body { overflow: hidden; }
-.ui-next .wisp-count { border-left: 0; padding-left: 4px; color: var(--spectral); font-weight: 800; font-size: 16px; flex: none; }
-.ui-next .wisp-icon { filter: none; animation: none; }
-.ui-next .clock-block { min-height: 60px; padding: 4px 12px; }
+.ui-next .chip-body { overflow: hidden; min-width: 96px; }
+/* i fuochi fatui hanno una targhetta loro, sotto il riquadro: il numero intero ci sta sempre */
+.ui-next .wisp-count { height: 36px; margin: 0; padding: 0 14px 0 9px; border: 0; border-radius: var(--r-s); background: var(--panel); box-shadow: var(--shadow), inset 0 1px 0 var(--line);
+  color: var(--spectral); font-weight: 800; font-size: 17px; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.ui-next .wisp-icon { --s: 20px; filter: none; animation: none; }
+.ui-next .clock-block { height: var(--hud); min-height: 0; padding: 4px 12px; }
 .ui-next .clock-block strong { font: 800 20px/1.1 var(--pixel); letter-spacing: 0; }
-.ui-next .icon-btn { width: 56px; height: 56px; }
+.ui-next .icon-btn { width: var(--hud); height: var(--hud); }
 .ui-next .icon-btn.small { width: 44px; height: 44px; border-radius: var(--r-s); background: var(--panel-2); box-shadow: none; }
+/* quello che compare in alto al centro sta sotto la targhetta dei fuochi fatui */
+.ui-next :is(.edit-banner, .area-banner, .toasts, .debug) { top: calc(118px + var(--safe-t)); }
 
 /* ── Menù di gioco verticale ──────────────────────────────────────── */
-.ui-next .fab { width: 62px; height: 62px; }
+.ui-next .fab { width: var(--hud); height: var(--hud); }
 .ui-next .slots { padding: 6px; gap: 2px; transition: transform 0.16s ease, opacity 0.16s ease; }
 .ui-next .slot { background: none; box-shadow: none; border-radius: var(--r-s); min-width: 170px; height: 46px; padding: 0 18px 0 6px; }
 .ui-next .slot small { font: 700 16px var(--pixel); color: var(--paper); }
@@ -118,7 +126,7 @@
 .ui-next .drawer-head { border-bottom: 1px solid var(--line); padding: 10px 12px 8px; }
 .ui-next .drawer-head h2 { font-size: 30px; line-height: 1; }
 .ui-next .drawer-body { padding: 12px 12px 18px; }
-.ui-next .drawer-foot { background: var(--panel-2); border-top: 0; border-radius: var(--r) var(--r) 0 0; box-shadow: 0 -6px 18px rgba(0, 0, 0, 0.22); padding: 12px 14px calc(14px + var(--safe-b)); gap: 10px; }
+.ui-next .drawer-foot { background: var(--sheet); border-top: 0; border-radius: var(--r) var(--r) 0 0; box-shadow: 0 -6px 18px rgba(0, 0, 0, 0.22); padding: 12px 14px calc(14px + var(--safe-b)); gap: 10px; }
 .ui-next .scrim { background: rgba(8, 10, 14, 0.4); }
 .ui-next .tabs { gap: 6px; padding-bottom: 10px; }
 .ui-next .tab { padding: 4px 12px; min-height: 38px; font-weight: 700; display: inline-flex; align-items: center; gap: 6px; }
@@ -139,7 +147,6 @@
 .ui-next .swipe-dots i.on { background: var(--primary); }
 .ui-next .qty button { width: 46px; height: 46px; border-radius: var(--r-s); }
 .ui-next .field :is(input, textarea, select) { border-radius: var(--r-s); }
-.ui-next .chip-body { min-width: 82px; }
 .ui-next .big-btn { min-height: 52px; font-weight: 800; }
 .ui-next .big-btn.ghost { color: var(--paper); }
 .ui-next .setting { border-bottom: 1px solid var(--line); }
@@ -172,7 +179,7 @@
 .ui-next .shop-detail { display: grid; gap: 10px; }
 .ui-next .drawer-foot :is(.big-btn.ghost, .qty button) { background: var(--panel); }
 .ui-next .shop-detail-top { display: flex; gap: 14px; align-items: center; }
-.ui-next .shop-detail-top img { width: 104px; height: 104px; object-fit: contain; border-radius: var(--r); background: var(--thumb); flex: none; }
+.ui-next .shop-detail-top img { width: 104px; height: 104px; object-fit: contain; border-radius: var(--r); background: var(--panel); flex: none; }
 .ui-next .shop-detail-top h3 { margin: 0; font: 700 25px/1.05 var(--gothic); color: var(--gold-bright); }
 .ui-next .shop-detail-top .muted { margin: 4px 0 0; font-size: 13px; }
 .ui-next .shop-detail-close { position: absolute; top: 10px; right: 10px; }

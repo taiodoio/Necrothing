@@ -38,7 +38,14 @@ export class UI {
     this.game = game;
     installFrames();
     hydrateIcons();
-    if (uiNext()) { $('#fab-icon').style.backgroundImage = iconUrl(fabIcon()); $('#fab').setAttribute('aria-label', 'Menù'); }
+    if (uiNext()) {
+      $('#fab-icon').style.backgroundImage = iconUrl(fabIcon());
+      $('#fab').setAttribute('aria-label', 'Menù');
+      // i fuochi fatui escono dal riquadro del Custode: una targhetta loro, sotto, col numero intero
+      const chip = $('#player-chip'), left = h('div', { class: 'hud-left' });
+      chip.before(left);
+      left.append(chip, $('.wisp-count'));
+    }
     $('#fab').addEventListener('click', () => this.toggleBubble());
     for (const b of document.querySelectorAll<HTMLButtonElement>('[data-act]')) {
       b.addEventListener('click', () => { this.closeBubble(); this.bubbleAction(b.dataset.act!); });
@@ -71,8 +78,8 @@ export class UI {
       const box = $('.chip-avatar');
       if (url && box.dataset.src !== url) { box.dataset.src = url; box.replaceChildren(h('img', { src: url, alt: '' })); }
     }
-    // interfaccia nuova: sopra i 10.000 in forma breve (12,5k), così il nome resta leggibile
-    $('#hud-wisps').textContent = uiNext() && p.wisps >= 10000 ? new Intl.NumberFormat('it-IT', { notation: 'compact', maximumFractionDigits: 1 }).format(p.wisps) : String(p.wisps);
+    // interfaccia nuova: la targhetta ha spazio, il numero intero coi punti delle migliaia
+    $('#hud-wisps').textContent = uiNext() ? p.wisps.toLocaleString('it-IT') : String(p.wisps);
     this.refreshClock();
   }
 

@@ -200,7 +200,7 @@ export function openShop(ui: UI, cat: PlaceableCategory = 'light', selected: str
       LOCK_LABEL[av] ? h('span', { class: 'lock' }, av === 'rank' || av === 'graves' || av === 'feat' ? icon('lock', 12) : null, lockText(s, d, av)) : null,
       (s.inventory[d.id] ?? 0) > 0 ? h('span', { class: 'badge' }, String(s.inventory[d.id])) : null);
     }));
-    setDrawerBody(h('div', {}, h('p', { class: 'muted' }, `Hai ${s.player.wisps} fuochi fatui. Gli oggetti grigi richiedono rango, stagione o più fuochi fatui.`), tabs, grid));
+    setDrawerBody(h('div', {}, h('p', { class: 'muted' }, `Hai ${s.player.wisps.toLocaleString('it-IT')} fuochi fatui. Gli oggetti grigi richiedono rango, stagione o più fuochi fatui.`), tabs, grid));
     if (!selected) { setDrawerFooter(null); return; }
     const d = CATALOG[selected];
     const av = R.shopAvailability(s, d.id, now);

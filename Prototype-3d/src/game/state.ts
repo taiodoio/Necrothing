@@ -19,6 +19,8 @@ export type Quality = 'low' | 'medium' | 'high';
 export type QualitySetting = Quality | 'auto';
 /** Frame al secondo: «auto» = 60 in Alta, 30 in Media e Bassa. */
 export type FpsSetting = 'auto' | '30' | '60';
+/** Tema dell'interfaccia (interfaccia nuova): «auto» segue il tema del telefono. */
+export type ThemeSetting = 'auto' | 'light' | 'dark';
 export type TimeOverride = 'auto' | DayPhase;
 export type Weather = 'clear' | 'fog' | 'rain' | 'storm';
 
@@ -147,6 +149,7 @@ export interface Settings {
   camera: CameraMode;
   quality: QualitySetting;
   fps: FpsSetting;
+  theme: ThemeSetting;
   timeOverride: TimeOverride;
   weatherEffects: boolean;
   /** Sfocatura tilt-shift ai bordi (media/alta qualità). */
@@ -179,6 +182,7 @@ export const DEFAULT_SETTINGS: Settings = {
   camera: 'angled',
   quality: 'auto',
   fps: 'auto',
+  theme: 'auto',
   timeOverride: 'auto',
   weatherEffects: true,
   edgeBlur: true,

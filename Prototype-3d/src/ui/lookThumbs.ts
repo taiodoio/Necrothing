@@ -58,11 +58,17 @@ function setup() {
   scene.add(key, rim, fill);
 }
 
+type Framing = { bare: boolean; parts: KPart[]; yaw: number; zoom?: number; dy?: number; pitch?: number };
+
 /** Disegna una miniatura e la restituisce come immagine (data URL). */
 function draw(kind: ThumbKind, value: string): string {
-  if (!renderer) setup();
   const k = KINDS[kind];
-  const spec = humanSpec({ ...NEUTRAL, ...k.look(value) }, { held: [], bare: k.bare });
+  return render({ ...NEUTRAL, ...k.look(value) } as CustodeLook, k);
+}
+
+function render(look: CustodeLook, k: Framing): string {
+  if (!renderer) setup();
+  const spec = humanSpec(look, { held: [], bare: k.bare });
   const g = new THREE.Group();
   for (const part of k.parts) {
     const lp = new LP(`miniatura:${part}`);
@@ -100,6 +106,20 @@ function pump() {
   waiting.delete(job.key);
   job.resolve(url);
   setTimeout(pump, 0); // una per volta: il pannello resta reattivo
+}
+
+/**
+ * Ritratto del Custode col suo aspetto vero (testa e spalle), per il riquadro
+ * in alto: si ridisegna solo quando l'aspetto cambia.
+ */
+let portrait: { key: string; url: string } | null = null;
+export function custodePortrait(look: CustodeLook): string {
+  const key = JSON.stringify(look);
+  if (portrait?.key === key) return portrait.url;
+  let url = '';
+  try { url = render(look, { bare: false, parts: ['head', 'body', 'armL', 'armR'], yaw: 0.32, zoom: 0.6, dy: 0.2, pitch: 0.12 }); } catch { url = ''; }
+  portrait = { key, url };
+  return url;
 }
 
 /** Miniatura di una scelta (subito se già pronta, altrimenti appena disegnata). */

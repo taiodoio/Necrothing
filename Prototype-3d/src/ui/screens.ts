@@ -11,12 +11,13 @@ import {
 } from '../game/graves.ts';
 import { ACHIEVEMENTS, achievementProgress, nextRank, rankForXp, rankProgress } from '../game/progression.ts';
 import * as R from '../game/rules.ts';
-import { createNewGame, type FpsSetting, type SaveData, type TimeOverride } from '../game/state.ts';
+import { createNewGame, type FpsSetting, type SaveData, type ThemeSetting, type TimeOverride } from '../game/state.ts';
 import { computePrestige, detectDistricts, DISTRICT_LABELS, expansionStatus } from '../game/world.ts';
 import { newId } from '../game/rng.ts';
 import { $, closeDrawer, confirmDialog, fmtDate, h, openDrawer, setDrawerBody, setDrawerFooter, toast } from './dom.ts';
 import { graveThumb, placeableThumb } from './thumbs.ts';
 import { ACH_ICONS, icon } from './icons.ts';
+import { uiNext } from '../app/uiNext.ts';
 import type { UI } from './UI.ts';
 import { openCustomize } from './customize.ts';
 import { BurialPhoto, loadImage, openPostcard, photoStep, portrait } from './memorial.ts';
@@ -205,8 +206,14 @@ export function openShop(ui: UI, cat: PlaceableCategory = 'light', selected: str
     const av = R.shopAvailability(s, d.id, now);
     const max = Math.max(1, R.maxBuyable(s, d.id));
     qty = Math.min(qty, max);
-    setDrawerFooter(h('div', { style: 'display:grid;gap:8px' },
-      h('div', { class: 'row' }, h('b', {}, d.label), h('span', { class: 'muted', style: 'text-align:right' }, d.unique ? 'Pezzo unico' : `Max ${R.maxBuyable(s, d.id)}`)),
+    // interfaccia nuova: il dettaglio sale dal basso con l'immagine grande, e si compra da lì
+    const next = uiNext();
+    const close = () => { selected = null; render(); };
+    setDrawerFooter(h('div', { class: next ? 'shop-detail' : '', style: next ? '' : 'display:grid;gap:8px' },
+      next
+        ? h('div', { class: 'shop-detail-top' }, h('img', { src: placeableThumb(d.id, s.settings.style), alt: '' }),
+          h('div', {}, h('h3', {}, d.label), h('p', { class: 'muted' }, `${PLACEABLE_CATEGORY_LABELS[d.category]} · ${d.unique ? 'pezzo unico' : `ne puoi comprare ${R.maxBuyable(s, d.id)}`}${(s.inventory[d.id] ?? 0) > 0 ? ` · ne hai ${s.inventory[d.id]}` : ''}`)))
+        : h('div', { class: 'row' }, h('b', {}, d.label), h('span', { class: 'muted', style: 'text-align:right' }, d.unique ? 'Pezzo unico' : `Max ${R.maxBuyable(s, d.id)}`)),
       h('p', { class: 'muted', style: 'margin:0' }, d.description),
       av === 'graves' ? h('div', { class: 'xp-bar', style: 'height:6px' }, h('i', { style: `width:${Math.round((R.graveTotal(s) / d.minGraves!) * 100)}%` })) : null,
       av === 'feat' ? h('div', { class: 'xp-bar', style: 'height:6px' }, h('i', { style: `width:${Math.round((R.featProgress(s, d.feat!)[0] / d.feat!.goal) * 100)}%` })) : null,
@@ -215,7 +222,7 @@ export function openShop(ui: UI, cat: PlaceableCategory = 'light', selected: str
         h('button', { onclick: () => { qty = Math.max(1, qty - 1); render(); } }, '−'),
         h('b', {}, String(qty)),
         h('button', { onclick: () => { qty = Math.min(max, qty + 1); render(); } }, '+')) : null,
-      h('button', {
+      (next ? (b: HTMLElement) => h('div', { class: 'row' }, h('button', { class: 'big-btn ghost', onclick: close }, 'Chiudi'), b) : (b: HTMLElement) => b)(h('button', {
         class: 'big-btn', disabled: av !== 'ok',
         onclick: () => {
           if (game.act((st, n) => R.buy(st, d.id, qty, n))) {
@@ -239,8 +246,8 @@ export function openShop(ui: UI, cat: PlaceableCategory = 'light', selected: str
             setDrawerBody(h('div', {}, h('div', { class: 'hero' }, h('img', { src: placeableThumb(d.id, s.settings.style), alt: '' }), h('h3', {}, d.label), h('p', { class: 'muted' }, 'Acquistato: è nell’inventario.'))));
           }
         },
-      }, buyText(s, d, av, qty)),
-      h('button', { class: 'big-btn ghost', onclick: () => { selected = null; render(); } }, 'Annulla'),
+      }, next && av === 'ok' && d.cost ? h('span', { style: 'display:inline-flex;align-items:center;gap:6px' }, `Compra · ${d.cost * qty}`, icon('wisp', 18)) : buyText(s, d, av, qty))),
+      next ? null : h('button', { class: 'big-btn ghost', onclick: close }, 'Annulla'),
     ));
   };
   openDrawer('Bottega', h('div'));
@@ -431,6 +438,7 @@ export function openSettings(ui: UI) {
     h('div', { class: 'section-title' }, 'Resa grafica'),
     h('div', { class: 'setting' }, 'Qualità', seg(s.quality, [['auto', 'Auto'], ['low', 'Bassa'], ['medium', 'Media'], ['high', 'Alta']], (v) => game.setQuality(v))),
     s.quality === 'auto' ? h('p', { class: 'muted', style: 'margin:-2px 0 4px;font-size:12px' }, 'Auto sceglie Bassa, Media o Alta in base al dispositivo, e scende di livello se il gioco rallenta.') : null,
+    uiNext() ? h('div', { class: 'setting' }, 'Tema', seg<ThemeSetting>(s.theme, [['auto', 'Auto'], ['light', 'Chiaro'], ['dark', 'Scuro']], (v) => game.setTheme(v))) : null,
     h('div', { class: 'setting' }, 'Fluidità', seg<FpsSetting>(s.fps, [['auto', 'Auto'], ['30', '30 FPS'], ['60', '60 FPS']], (v) => game.setFps(v))),
     h('p', { class: 'muted', style: 'margin:-2px 0 4px;font-size:12px' }, s.fps === 'auto' ? 'Auto: 60 FPS in Alta, 30 in Media e Bassa. A 30 il telefono consuma meno batteria.' : s.fps === '30' ? 'Consuma meno batteria e scalda meno il telefono.' : 'Più fluido, ma consuma più batteria.'),
     h('div', { class: 'setting' }, 'Ora del giorno', seg<TimeOverride>(s.timeOverride, [['auto', 'Reale'], ['day', 'Giorno'], ['dusk', 'Sera'], ['night', 'Notte']], (v) => game.setTimeOverride(v))),

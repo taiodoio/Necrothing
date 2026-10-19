@@ -15,6 +15,7 @@ import { DAY_PHASE_LABELS } from '../game/time.ts';
 import { $, closeDrawer, drawerOpen, h, toast } from './dom.ts';
 import { hydrateIcons, icon, iconUrl, installFrames } from './icons.ts';
 import { uiNext } from '../app/uiNext.ts';
+import { custodePortrait } from './lookThumbs.ts';
 import * as S from './screens.ts';
 import * as T from './memoryTree.ts';
 
@@ -64,7 +65,14 @@ export class UI {
     $('#hud-name').textContent = p.name;
     $('#hud-rank').textContent = `Rango ${rank.level} · ${rank.name}${next ? '' : ' ★'}`;
     ($('#hud-xp') as HTMLElement).style.width = `${Math.round(rankProgress(p.xp) * 100)}%`;
-    $('#hud-wisps').textContent = String(p.wisps);
+    // interfaccia nuova: nel riquadro il ritratto vero del Custode (col suo aspetto)
+    if (uiNext()) {
+      const url = custodePortrait(p.look);
+      const box = $('.chip-avatar');
+      if (url && box.dataset.src !== url) { box.dataset.src = url; box.replaceChildren(h('img', { src: url, alt: '' })); }
+    }
+    // interfaccia nuova: sopra i 10.000 in forma breve (12,5k), così il nome resta leggibile
+    $('#hud-wisps').textContent = uiNext() && p.wisps >= 10000 ? new Intl.NumberFormat('it-IT', { notation: 'compact', maximumFractionDigits: 1 }).format(p.wisps) : String(p.wisps);
     this.refreshClock();
   }
 

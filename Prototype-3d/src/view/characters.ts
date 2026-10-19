@@ -109,7 +109,9 @@ function spec(kind: CharacterKind): Spec {
             b.box(-1.4, -11.3, -1.4, 1.4, -10.8, 1.4, P.iron);
           },
         }),
-        lights: [{ part: 'armL', anchor: { pos: [0, -9, 0], color: P.lantern, intensity: 1.1, range: 5.5, flicker: 0.2, halo: 1 } }],
+        // lanterna del Custode: illumina il terreno attorno, ma con un alone piccolo e una luce più bassa, se no
+        // copre proprio lui (la luce gli sta attaccata e da lontano l'alone è grande quanto il personaggio)
+        lights: [{ part: 'armL', anchor: { pos: [0, -9, 0], color: P.lantern, intensity: 0.7, range: 5, flicker: 0.2, halo: 0.16 } }],
       };
     case 'gravedigger':
       return {

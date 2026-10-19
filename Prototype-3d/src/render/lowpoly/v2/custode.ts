@@ -1145,7 +1145,8 @@ function lantern(lp: LP, x: number) {
   }
   lp.add(new THREE.BoxGeometry(0.084, 0.1, 0.084).translate(x, by, z), '#ffb24a', { ...O, bucket: 'glow' }); // vetro acceso
   lp.blob(x, by - 0.01, z, 0.016, 0.024, 0.016, '#fff1c4', { ...O, bucket: 'glow' });
-  lp.light(x, by, z, '#f2ac58', 1.1, 5.5, 0.2, 1); // come la lanterna del gioco: di notte illumina il Custode
+  // illumina il terreno attorno; alone piccolo e luce più bassa, se no copre proprio il Custode (gli sta attaccata)
+  lp.light(x, by, z, '#f2ac58', 0.7, 5, 0.2, 0.16);
 }
 
 /** Zolla del concept: piccola, terra spessa, prato scuro, funghi a pois, fiorellini, sasso. */

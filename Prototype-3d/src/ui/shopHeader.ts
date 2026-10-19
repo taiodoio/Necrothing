@@ -78,6 +78,7 @@ function shopRoomModel(): LPModel {
   lp.box(1.75, 0, 0.05, 2.1, 0.6, 0.66, LPC.woodDark, { bevel: 0.02, vary: 0.08 });
   for (let i = 0; i < 4; i++) lp.box(0.95 + i * 0.53, 0.1, 0.39, 0.42, 0.4, 0.02, '#5a4433', { bevel: 0.01, vary: 0.1 });
   lp.box(1.75, 0.6, 0.05, 2.25, 0.07, 0.74, LPC.wood, { bevel: 0.015, vary: 0.08 });
+  lp.box(1.7, 0, -0.66, 2.0, 0.24, 0.6, LPC.woodDark, { bevel: 0.015, vary: 0.08 }); // gradino del bottegaio
   lp.push([0, -0.26, 0]); // la merce sul piano, più basso del bancone di prima
   // bilancia d'ottone
   lp.cyl(1.1, 0.93, 0.08, 0.1, 0.12, 0.05, 6, LPC.gold).cyl(1.1, 0.98, 0.08, 0.018, 0.018, 0.34, 4, LPC.gold).box(1.1, 1.31, 0.08, 0.5, 0.025, 0.025, LPC.gold);
@@ -151,12 +152,12 @@ function lanternModel(x: number, drop: number): LPModel {
 }
 
 /** Il giro dello zombie: dove va, cosa fa e verso dove guarda quando arriva. */
-const ROUTE: Array<{ x: number; z: number; pose: Pose; hold: number; face: number }> = [
+const ROUTE: Array<{ x: number; z: number; y?: number; pose: Pose; hold: number; face: number }> = [
   { x: -2.25, z: -0.45, pose: 'work', hold: 3.2, face: Math.PI }, // spolvera le mensole
   { x: -0.4, z: -0.1, pose: 'idle', hold: 1.6, face: 0 }, // si gira verso di noi
   { x: 0.42, z: -0.62, pose: 'idle', hold: 0, face: Math.PI / 2 }, // gira attorno al bancone
-  { x: 1.75, z: -0.62, pose: 'cheer', hold: 1.8, face: 0 }, // dietro al bancone saluta
-  { x: 1.75, z: -0.62, pose: 'idle', hold: 2.4, face: 0 },
+  { x: 1.75, z: -0.62, y: 0.24, pose: 'cheer', hold: 1.8, face: 0 }, // sale sul gradino dietro al bancone e saluta
+  { x: 1.75, z: -0.62, y: 0.24, pose: 'idle', hold: 2.4, face: 0 },
   { x: 0.42, z: -0.62, pose: 'idle', hold: 0, face: -Math.PI / 2 },
   { x: -0.35, z: -0.72, pose: 'idle', hold: 1.6, face: Math.PI }, // guarda fuori dalla finestra
 ];
@@ -253,6 +254,9 @@ export function shopHeader(): ShopHeader {
       phase += dt * 3.2;
       const v = Math.min(dist, dt * 0.62 * zombieLurch(phase) * 1.6);
       p.x += (dx / dist) * v; p.z += (dz / dist) * v;
+      // il gradino dietro al bancone: sale e scende mentre cammina
+      const dy = (target.y ?? 0) - p.y;
+      p.y += Math.sign(dy) * Math.min(Math.abs(dy), v * 0.4);
       facing = Math.atan2(dx, dz);
     } else {
       // arrivato: si gira piano verso dove deve guardare, poi aspetta

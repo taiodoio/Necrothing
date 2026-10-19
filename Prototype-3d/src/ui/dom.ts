@@ -54,6 +54,7 @@ let beforeCloseCb: (() => boolean | Promise<boolean>) | null = null;
 
 export function openDrawer(title: string, body: Node, opts: { footer?: Node; onClose?: () => void; beforeClose?: () => boolean | Promise<boolean> } = {}) {
   const drawer = $('#drawer');
+  dropHero();
   $('#drawer-title').textContent = title;
   const b = $('#drawer-body');
   b.replaceChildren(body);
@@ -73,6 +74,20 @@ export function setDrawerFooter(node: Node | null) {
   if (node) { f.hidden = false; f.replaceChildren(node); } else { f.hidden = true; f.replaceChildren(); }
 }
 
+/** Immagine in testa al drawer (la Bottega animata): resta finché non si apre un altro pannello. */
+export function setDrawerHero(el: HTMLElement) {
+  dropHero();
+  const drawer = $('#drawer');
+  drawer.prepend(el);
+  drawer.classList.add('with-hero');
+}
+
+function dropHero() {
+  const drawer = $('#drawer');
+  drawer.querySelector(':scope > .drawer-hero')?.remove(); // uscendo dal documento la testata si ferma da sola
+  drawer.classList.remove('with-hero');
+}
+
 export function setDrawerBody(node: Node) {
   $('#drawer-body').replaceChildren(node);
 }
@@ -90,6 +105,7 @@ export function closeDrawer(force = false) {
     if (!ok) return;
   }
   beforeCloseCb = null;
+  dropHero();
   $('#drawer').hidden = true;
   $('#scrim').hidden = true;
   document.body.classList.remove('drawer-open');

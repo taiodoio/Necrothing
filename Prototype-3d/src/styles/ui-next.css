@@ -1,0 +1,211 @@
+/* Interfaccia nuova (per ora solo nella pagina di misura, classe .ui-next su
+   <html>): pannelli piatti con un unico arrotondamento e un'ombra morbida,
+   niente cornici pixel né contorni; Baloo 2 per i titoli e Nunito per il
+   testo; icone low-poly (ui/lpIcons.ts); tema scuro e chiaro (data-theme). */
+
+.ui-next {
+  color-scheme: dark;
+  --r: 16px; /* l'arrotondamento di tutto: pannelli, pulsanti, schede */
+  --r-s: 12px; /* elementi piccoli dentro un pannello (miniature, schede, campi) */
+  --hud: 60px; /* l'altezza di tutto ciò che sta sopra la scena: riquadri e pulsanti */
+  --panel: #3a4150;
+  --panel-2: #454d5e;
+  --input: #2f3542;
+  --thumb: #2f3542;
+  --track: #262b35;
+  --sheet: #2b303a; /* il foglio che sale dal basso (dettaglio, pulsanti in fondo) */
+  --paper: #f3ecdf;
+  --muted: #bcb5a8;
+  --gold-bright: #ffe2a8; /* titoli e accenti */
+  --gold: #c99340;
+  --primary: #f0c46e;
+  --primary-deep: #c99340;
+  --on-primary: #2f230f;
+  --spectral: #9ff0d6;
+  --danger: #ff9a86;
+  --line: rgba(255, 255, 255, 0.07);
+  --edge: rgba(255, 255, 255, 0.14);
+  --shadow: 0 4px 14px rgba(0, 0, 0, 0.38);
+  --pixel: "Nunito", system-ui, sans-serif;
+  --gothic: "Baloo 2", "Nunito", sans-serif;
+  font-weight: 600;
+}
+.ui-next[data-theme="light"] {
+  color-scheme: light;
+  --panel: #f4ede0;
+  --panel-2: #e8dfce;
+  --input: #fffaf0;
+  --thumb: #e3d8c4;
+  --track: #d8ccb6;
+  --sheet: #e0d5c1;
+  --paper: #3b332b;
+  --muted: #83786b;
+  --gold-bright: #5c3f22;
+  --gold: #a87a36;
+  --spectral: #2f9a82;
+  --danger: #c4513f;
+  --line: rgba(0, 0, 0, 0.05);
+  --edge: rgba(0, 0, 0, 0.12);
+  --shadow: 0 4px 14px rgba(30, 22, 10, 0.28);
+}
+.ui-next, .ui-next body { font-family: var(--pixel); }
+.ui-next * { text-shadow: none !important; }
+.ui-next .pxi { image-rendering: auto; }
+.ui-next b, .ui-next strong { font-weight: 800; }
+
+/* ── Pannelli e pulsanti: tinta unita, angoli arrotondati, ombra morbida ── */
+.ui-next * { border-image: none !important; }
+.ui-next :where(.player-chip, .clock-block, .icon-btn, .slots, .slot, .ctx-actions button, .drawer, .tab, .card, .chip,
+  .field input, .field textarea, .field select, .qty button, .big-btn, .pill, .ach, .toast, .tutorial, .edit-banner,
+  .seg, .photo-grid button, .photo-view, .fab, .debug, .fatal, .hero img, .kv-box, .dialog, .area-banner) {
+  border: 0; border-image: none; border-radius: var(--r); background: var(--panel); filter: none;
+  box-shadow: var(--shadow), inset 0 1px 0 var(--line);
+}
+/* dentro a un pannello: un tono più chiaro, senza ombra */
+.ui-next :where(.tab, .card, .chip, .qty button, .pill, .big-btn.ghost, .photo-grid button, .seg, .ach, .field input, .field textarea, .field select) {
+  background: var(--panel-2); box-shadow: none; border-radius: var(--r-s);
+}
+.ui-next :is(.field input, .field textarea, .field select) { background: var(--input); box-shadow: inset 0 0 0 1.5px var(--edge); color: var(--paper); font-weight: 600; }
+.ui-next :is(.field input, .field textarea):focus { box-shadow: inset 0 0 0 2px var(--primary); }
+/* azioni principali: oro, con un filo di spessore sotto */
+.ui-next :is(.big-btn:not(.ghost):not(.danger), .pill.primary, .tab.active, .chip.active, .ctx-actions button.primary, .icon-btn.active, .seg button.active) {
+  background: var(--primary); color: var(--on-primary); box-shadow: 0 3px 0 var(--primary-deep), 0 4px 10px rgba(0, 0, 0, 0.18);
+}
+.ui-next .big-btn.danger, .ui-next .pill.danger, .ui-next .ctx-actions button.danger { color: var(--danger); background: var(--panel-2); box-shadow: none; }
+.ui-next .card.selected, .ui-next .ach.got { box-shadow: 0 0 0 2.5px var(--primary); }
+.ui-next .toast.ach { color: var(--gold-bright); box-shadow: var(--shadow), 0 0 0 2px var(--primary); }
+.ui-next :is(button.slot, .icon-btn, .ctx-actions button, .big-btn, .pill, .card, .chip, .tab, .fab):active { transform: translateY(1px); }
+
+/* titoli */
+.ui-next :is(.chip-body strong, .ctx-title, .drawer-head h2, .hero h3, .dialog h3, .section-title, .tutorial b, .filter-switch b) {
+  font-family: var(--gothic); font-weight: 700; color: var(--gold-bright); letter-spacing: 0;
+}
+
+/* ── HUD ──────────────────────────────────────────────────────────── */
+.ui-next .hud-left { display: flex; flex-direction: column; align-items: flex-start; gap: 6px; flex: 0 1 auto; min-width: 0; }
+.ui-next .player-chip { padding: 6px 14px 6px 6px; height: var(--hud); min-height: 0; max-width: 100%; }
+.ui-next .chip-avatar { flex: none; width: 48px; height: 48px; border-radius: var(--r-s); background: var(--thumb); box-shadow: none; overflow: hidden; }
+.ui-next .chip-avatar img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.ui-next .chip-body strong { font-size: 20px; line-height: 1; }
+.ui-next .chip-body small { font-size: 12px; max-width: none; }
+.ui-next .xp-bar { height: 7px; border: 0; border-radius: 4px; background: var(--track); box-shadow: none; overflow: hidden; }
+.ui-next .xp-bar i { background: var(--primary); border-radius: 4px; transition: width 0.4s ease; }
+.ui-next .chip-body { overflow: hidden; min-width: 96px; }
+/* i fuochi fatui hanno una targhetta loro, sotto il riquadro: il numero intero ci sta sempre */
+.ui-next .wisp-count { height: 36px; margin: 0; padding: 0 14px 0 9px; border: 0; border-radius: var(--r-s); background: var(--panel); box-shadow: var(--shadow), inset 0 1px 0 var(--line);
+  color: var(--spectral); font-weight: 800; font-size: 17px; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.ui-next .wisp-icon { --s: 20px; filter: none; animation: none; }
+.ui-next .clock-block { height: var(--hud); min-height: 0; padding: 4px 12px; }
+.ui-next .clock-block strong { font: 800 20px/1.1 var(--pixel); letter-spacing: 0; }
+.ui-next .icon-btn { width: var(--hud); height: var(--hud); }
+.ui-next .icon-btn.small { width: 44px; height: 44px; border-radius: var(--r-s); background: var(--panel-2); box-shadow: none; }
+/* quello che compare in alto al centro sta sotto la targhetta dei fuochi fatui */
+.ui-next :is(.edit-banner, .area-banner, .toasts, .debug) { top: calc(118px + var(--safe-t)); }
+
+/* ── Menù di gioco verticale ──────────────────────────────────────── */
+.ui-next .fab { width: var(--hud); height: var(--hud); }
+.ui-next .slots { padding: 6px; gap: 2px; transition: transform 0.16s ease, opacity 0.16s ease; }
+.ui-next .slot { background: none; box-shadow: none; border-radius: var(--r-s); min-width: 170px; height: 46px; padding: 0 18px 0 6px; }
+.ui-next .slot small { font: 700 16px var(--pixel); color: var(--paper); }
+.ui-next .slot.active { background: var(--panel-2); }
+.ui-next .slot.active small { color: var(--gold-bright); }
+
+/* ── Menù contestuale: pulsanti a icona che galleggiano sull'oggetto ── */
+.ui-next .ctx { background: none; box-shadow: none; border: 0; border-image: none; padding: 0; filter: none; }
+.ui-next .ctx::after { display: none; }
+.ui-next .ctx-actions { gap: 8px; }
+.ui-next .ctx-actions button { width: 56px; height: 56px; min-height: 56px; border-radius: var(--r); background: var(--panel); box-shadow: var(--shadow), inset 0 1px 0 var(--line); }
+.ui-next .ctx-actions button.primary { background: var(--primary); box-shadow: 0 3px 0 var(--primary-deep), 0 4px 10px rgba(0, 0, 0, 0.18); }
+.ui-next .ctx-actions button.danger { background: var(--panel); }
+/* elementi che il vecchio stile prende per tag (regola più specifica): arrotondati anche loro */
+.ui-next :is(.photo-grid button, .hero img, .photo-view) { border-radius: var(--r); }
+.ui-next .ctx-actions button em { color: var(--spectral); font-weight: 800; }
+
+/* ── Drawer ───────────────────────────────────────────────────────── */
+.ui-next .drawer { border-radius: var(--r) var(--r) 0 0; animation-timing-function: ease-out; }
+.ui-next .drawer-head { border-bottom: 1px solid var(--line); padding: 10px 12px 8px; }
+.ui-next .drawer-head h2 { font-size: 30px; line-height: 1; }
+.ui-next .drawer-body { padding: 12px 12px 18px; }
+.ui-next .drawer-foot { background: var(--sheet); border-top: 0; border-radius: var(--r) var(--r) 0 0; box-shadow: 0 -6px 18px rgba(0, 0, 0, 0.22); padding: 12px 14px calc(14px + var(--safe-b)); gap: 10px; }
+.ui-next .scrim { background: rgba(8, 10, 14, 0.4); }
+.ui-next .tabs { gap: 6px; padding-bottom: 10px; }
+.ui-next .tab { padding: 4px 12px; min-height: 38px; font-weight: 700; display: inline-flex; align-items: center; gap: 6px; }
+.ui-next .grid { grid-template-columns: repeat(auto-fill, minmax(104px, 1fr)); gap: 8px; }
+.ui-next .card { padding: 8px 6px; gap: 4px; min-height: 0; }
+.ui-next .card img { width: 74px; height: 66px; object-fit: contain; border-radius: var(--r-s); background: var(--thumb); }
+.ui-next .card b { font-size: 13px; font-weight: 800; }
+.ui-next .card .price { color: var(--spectral); font-weight: 800; }
+.ui-next .card .badge { top: 4px; right: 4px; border-radius: 8px; background: var(--primary); color: var(--on-primary); box-shadow: none; font-weight: 800; }
+.ui-next .card .lock { top: 6px; left: 6px; }
+.ui-next .muted { color: var(--muted); }
+.ui-next .field label { letter-spacing: 0.02em; font-weight: 700; }
+.ui-next .steps i { border-radius: 3px; background: var(--track); box-shadow: none; }
+.ui-next .steps i.on { background: var(--primary); }
+.ui-next .hero img { border-radius: var(--r); background: var(--thumb); box-shadow: none; }
+.ui-next .portrait > .pic { border: 0; border-image: none; border-radius: var(--r); padding: 0; background: var(--thumb); box-shadow: var(--shadow); filter: none; }
+.ui-next .swipe-dots i { border-radius: 4px; background: var(--track); box-shadow: none; }
+.ui-next .swipe-dots i.on { background: var(--primary); }
+.ui-next .qty button { width: 46px; height: 46px; border-radius: var(--r-s); }
+.ui-next .field :is(input, textarea, select) { border-radius: var(--r-s); }
+.ui-next .big-btn { min-height: 52px; font-weight: 800; }
+.ui-next .big-btn.ghost { color: var(--paper); }
+.ui-next .setting { border-bottom: 1px solid var(--line); }
+.ui-next .setting input[type="checkbox"] { width: 30px; height: 30px; border-radius: 9px; background: var(--input); box-shadow: inset 0 0 0 1.5px var(--edge); }
+.ui-next .setting input[type="checkbox"]:checked { background: var(--primary) content-box; padding: 7px; box-shadow: inset 0 0 0 1.5px var(--edge), inset 0 0 0 7px var(--input); }
+.ui-next .terrain { border-bottom: 1px solid var(--line); }
+.ui-next .terrain-slider::-webkit-slider-runnable-track { border-radius: 5px; box-shadow: none; background: linear-gradient(to right, var(--primary) 0 var(--open), var(--track) var(--open) 100%); }
+.ui-next .terrain-slider::-moz-range-track { border-radius: 5px; box-shadow: none; background: linear-gradient(to right, var(--primary) 0 var(--open), var(--track) var(--open) 100%); }
+.ui-next .terrain-slider::-webkit-slider-thumb { border-radius: 8px; background: var(--primary); box-shadow: 0 2px 0 var(--primary-deep); }
+.ui-next .terrain-slider::-moz-range-thumb { border-radius: 8px; background: var(--primary); box-shadow: 0 2px 0 var(--primary-deep); }
+.ui-next .terrain-ticks span.current { color: var(--gold-bright); }
+.ui-next .seg { padding: 3px; gap: 3px; display: inline-flex; }
+.ui-next .seg button { border: 0; border-radius: 9px; min-height: 34px; padding: 3px 10px; font-weight: 700; }
+.ui-next .ach .bar { border-radius: 3px; background: var(--track); box-shadow: none; }
+.ui-next .ach .bar i { background: var(--primary); border-radius: 3px; }
+.ui-next .timeline li { color: var(--paper); }
+.ui-next .hero .epitaph { color: var(--paper); }
+.ui-next .photo-rect i { border-color: var(--primary); }
+.ui-next .floater { text-shadow: 0 1px 3px rgba(0, 0, 0, 0.7) !important; }
+.ui-next .look-stage { background: var(--panel); border-bottom: 1px solid var(--line); box-shadow: none; }
+.ui-next .look-tile { border: 0; border-radius: var(--r-s); background: var(--panel-2); }
+.ui-next .look-tile.active { background: var(--panel-2); color: var(--gold-bright); box-shadow: 0 0 0 2.5px var(--primary); }
+.ui-next .look-thumb { border-radius: 10px; background: var(--thumb); overflow: hidden; }
+.ui-next .swatch { border: 0; border-radius: 10px; box-shadow: inset 0 0 0 1.5px var(--edge); }
+.ui-next .swatch.active { box-shadow: 0 0 0 2.5px var(--primary); }
+.ui-next .dialog-scrim { background: rgba(8, 10, 14, 0.5); }
+.ui-next .postcard-view { border-radius: var(--r-s); box-shadow: var(--shadow); }
+
+/* ── Bottega: il dettaglio sale dal basso con l'immagine grande ───── */
+.ui-next .shop-detail { display: grid; gap: 10px; }
+.ui-next .drawer-foot :is(.big-btn.ghost, .qty button) { background: var(--panel); }
+.ui-next .shop-detail-top { display: flex; gap: 14px; align-items: center; }
+.ui-next .shop-detail-top img { width: 104px; height: 104px; object-fit: contain; border-radius: var(--r); background: var(--panel); flex: none; }
+.ui-next .shop-detail-top h3 { margin: 0; font: 700 25px/1.05 var(--gothic); color: var(--gold-bright); }
+.ui-next .shop-detail-top .muted { margin: 4px 0 0; font-size: 13px; }
+.ui-next .shop-detail-close { position: absolute; top: 10px; right: 10px; }
+.ui-next .drawer-foot { position: relative; }
+
+/* ── Strumento a traccia ──────────────────────────────────────────── */
+.ui-next .trace-bar b { display: flex; align-items: center; gap: 6px; }
+.ui-next .trace-count { margin-left: auto; font: 800 15px var(--pixel); color: var(--spectral); }
+.ui-next .trace-bar .warn { color: var(--danger); }
+.ui-next .trace-bar > .pill { justify-self: start; display: inline-flex; align-items: center; gap: 5px; color: var(--spectral); }
+.ui-next .trace-bar .row { display: flex; gap: 8px; }
+.ui-next .trace-bar .row .pill { flex: 1; white-space: nowrap; }
+.ui-next .trace-bar .row .pill.exit { flex: none; width: 48px; }
+
+/* ── Testata animata della Bottega ────────────────────────────────── */
+.ui-next .drawer.with-hero { overflow: hidden; }
+.ui-next .drawer-hero { position: relative; flex: none; height: 168px; background: #1b1618 linear-gradient(#2a2126, #1b1618); }
+.ui-next .drawer-hero canvas { display: block; width: 100%; height: 100%; }
+/* bordi più scuri e appena sfocati: la luce viene dalle lanterne e dalle candele al centro */
+.ui-next .shop-hero::before, .ui-next .shop-hero::after { content: ''; position: absolute; inset: 0; pointer-events: none; }
+.ui-next .shop-hero::before { -webkit-backdrop-filter: blur(2.5px); backdrop-filter: blur(2.5px);
+  -webkit-mask-image: radial-gradient(ellipse 70% 85% at 55% 55%, transparent 55%, #000 100%); mask-image: radial-gradient(ellipse 70% 85% at 55% 55%, transparent 55%, #000 100%); }
+.ui-next .shop-hero::after { background: radial-gradient(ellipse 75% 90% at 55% 58%, rgba(12, 9, 11, 0) 45%, rgba(12, 9, 11, 0.7) 100%); }
+/* titolo e chiusura sopra l'immagine, con una sfumatura per leggerli */
+.ui-next .drawer.with-hero .drawer-head { position: absolute; z-index: 1; top: 0; left: 0; right: 0; height: 168px; align-items: flex-start; padding: 12px 14px; border: 0;
+  background: linear-gradient(to bottom, rgba(18, 14, 16, 0.72), rgba(18, 14, 16, 0) 42%); pointer-events: none; }
+.ui-next .drawer.with-hero .drawer-head > * { pointer-events: auto; }
+.ui-next .drawer.with-hero .drawer-head h2 { color: #ffe2a8; line-height: 44px; text-shadow: 0 2px 8px rgba(0, 0, 0, 0.5) !important; }
+.ui-next .drawer.with-hero #drawer-close { position: absolute; top: 12px; right: 12px; background: rgba(28, 23, 26, 0.6); color: #f3ecdf; backdrop-filter: blur(4px); }

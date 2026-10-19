@@ -231,6 +231,15 @@ export function repairCost(def: PlaceableDef): number {
   return Math.max(2, Math.round(def.cost * DECAY.placeableRepairFraction));
 }
 
+/**
+ * Oggetti di contorno: non ci si fa niente (niente pulire, accendere...), si
+ * spostano e basta. Con l'interfaccia nuova si selezionano solo in Modifica:
+ * fuori, toccandoli il Custode ci cammina sopra.
+ */
+export const EDIT_ONLY = new Set(['path_stone', 'path_dirt', 'fence_wood', 'fence_iron', 'wall_stone', 'tall_grass', 'mud', 'flowerbed', 'bushes']);
+/** Oggetti che si posano a tratti, trascinando il dito lungo un percorso. */
+export const TRACEABLE = new Set(['path_stone', 'path_dirt', 'fence_wood', 'fence_iron', 'wall_stone']);
+
 /** Oggetti che contano come "tombe dissotterrate" per lo spawn degli zombie. */
 export const ZOMBIE_ATTRACTORS = new Set(['open_grave', 'open_coffin']);
 

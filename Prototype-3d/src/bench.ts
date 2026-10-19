@@ -10,17 +10,26 @@ import '@fontsource/pixelify-sans/400.css';
 import '@fontsource/pixelify-sans/600.css';
 import '@fontsource/pixelify-sans/700.css';
 import '@fontsource/jacquard-24/400.css';
+import '@fontsource/baloo-2/600.css';
+import '@fontsource/baloo-2/700.css';
+import '@fontsource/nunito/600.css';
+import '@fontsource/nunito/700.css';
+import '@fontsource/nunito/800.css';
 import './styles/main.css';
+import './styles/ui-next.css';
 import * as THREE from 'three';
 import { Game } from './app/Game.ts';
 import { PROFILES, QUALITY_LABELS } from './app/AutoQuality.ts';
 import { setPersistence } from './app/persistence.ts';
+import { setUiNext } from './app/uiNext.ts';
 import type { FpsSetting, Quality } from './game/state.ts';
 import { fullCemetery } from './game/fullCemetery.ts';
 import { areaForLevel } from './game/world.ts';
 import { cellCenter } from './view/WorldView.ts';
 
 setPersistence(false);
+// interfaccia nuova in prova (interazioni, menù a icone, menù verticale): per ora solo qui
+setUiNext(true);
 
 interface Inner {
   renderer: THREE.WebGLRenderer;
@@ -38,7 +47,9 @@ const style = document.createElement('style');
 style.textContent = `
   .bench { position: fixed; z-index: 50; left: 8px; right: 8px; top: calc(8px + env(safe-area-inset-top)); max-height: 72vh; overflow: auto;
     background: rgba(10,12,16,0.93); color: #e8dcc4; font: 13px/1.35 system-ui, sans-serif; padding: 10px 12px; border: 2px solid #d8b26a; }
-  .bench.mini { left: 8px; right: auto; top: auto; bottom: calc(96px + env(safe-area-inset-bottom)); padding: 6px 8px; }
+  .bench.mini { left: auto; right: 8px; top: calc(84px + env(safe-area-inset-top)); bottom: auto; padding: 4px 6px; max-width: 62vw; font-size: 11px; }
+  .bench.mini .live { font-size: 11px; }
+  .bench.mini button { padding: 5px 8px; font-size: 12px; }
   .bench h1 { margin: 0 0 6px; font: 600 16px system-ui, sans-serif; color: #f1d39c; }
   .bench button { font: 600 14px system-ui, sans-serif; padding: 9px 12px; margin: 6px 6px 0 0; background: #2a2e36; color: #e8dcc4; border: 0; }
   .bench button.on, .bench button.cta { background: #d8b26a; color: #1a140b; }

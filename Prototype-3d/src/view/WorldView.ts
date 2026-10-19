@@ -23,6 +23,7 @@ import { createAnimated, type Animated } from '../render/lowpoly/animated.ts';
 import { createWispVisual, type WispVisual } from '../render/lowpoly/wisp.ts';
 import { P } from '../render/palette.ts';
 import { drawIcon } from '../ui/icons.ts';
+import { uiNext } from '../app/uiNext.ts';
 import type { Atmosphere, AnchorHandle } from './Atmosphere.ts';
 import { buildChunk, CHUNK, groundType, lowNoise, naturalHeight, surfaceHeight, WORLD_MAX, WORLD_MIN, type Ground, type GroundInput } from './terrain.ts';
 import { ChunkBaker, chunkOf } from './baker.ts';
@@ -95,6 +96,12 @@ interface WispView { group: THREE.Group; hitbox: THREE.Mesh; anchor: AnchorHandl
 
 const hitMaterial = new THREE.MeshBasicMaterial({ visible: false });
 
+/** Targhetta dell'interfaccia nuova: rettangolo arrotondato scuro con un filo colorato attorno. */
+function softPlate(g: CanvasRenderingContext2D, w: number, h: number, ring: string) {
+  g.beginPath(); g.roundRect(3, 3, w - 6, h - 6, 22); g.fillStyle = ring; g.fill();
+  g.beginPath(); g.roundRect(9, 9, w - 18, h - 18, 17); g.fillStyle = '#3a4150'; g.fill();
+}
+
 const badgeMaterials = new Map<string, THREE.SpriteMaterial>();
 function badgeMaterial(icon: string, ring: string): THREE.SpriteMaterial {
   const key = icon + ring;
@@ -110,13 +117,19 @@ function badgeMaterial(icon: string, ring: string): THREE.SpriteMaterial {
     g.fillRect(inset + step, inset, 96 - 2 * (inset + step), 96 - 2 * inset);
     g.fillRect(inset, inset + step, 96 - 2 * inset, 96 - 2 * (inset + step));
   };
-  plate(0, '#07080b');
-  plate(step, ring);
-  plate(step * 2, '#161920');
-  drawIcon(g, icon, 18, 18, 60);
+  if (uiNext()) {
+    // interfaccia nuova: targhetta arrotondata, il colore dello stato in un filo attorno
+    softPlate(g, 96, 96, ring);
+    drawIcon(g, icon, 20, 20, 56);
+  } else {
+    plate(0, '#07080b');
+    plate(step, ring);
+    plate(step * 2, '#161920');
+    drawIcon(g, icon, 18, 18, 60);
+  }
   const tex = new THREE.CanvasTexture(c);
   tex.colorSpace = THREE.SRGBColorSpace;
-  tex.magFilter = THREE.NearestFilter;
+  if (!uiNext()) tex.magFilter = THREE.NearestFilter;
   m = new THREE.SpriteMaterial({ map: tex, depthTest: false, transparent: true });
   badgeMaterials.set(key, m);
   return m;
@@ -136,12 +149,11 @@ function earnMaterial(n: number): THREE.SpriteMaterial {
     g.fillRect(inset + step, inset, 192 - 2 * (inset + step), 96 - 2 * inset);
     g.fillRect(inset, inset + step, 192 - 2 * inset, 96 - 2 * (inset + step));
   };
-  plate(0, '#07080b');
-  plate(step, '#c9a25c');
-  plate(step * 2, '#161920');
+  if (uiNext()) softPlate(g, 192, 96, '#f0c46e');
+  else { plate(0, '#07080b'); plate(step, '#c9a25c'); plate(step * 2, '#161920'); }
   drawIcon(g, 'wisp', 20, 20, 56);
-  g.fillStyle = '#f1d39c';
-  g.font = 'bold 46px "Pixelify Sans", system-ui, sans-serif';
+  g.fillStyle = uiNext() ? '#ffe2a8' : '#f1d39c';
+  g.font = uiNext() ? '800 46px "Nunito", system-ui, sans-serif' : 'bold 46px "Pixelify Sans", system-ui, sans-serif';
   g.textBaseline = 'middle';
   g.fillText(`+${n}`, 84, 50);
   const tex = new THREE.CanvasTexture(c);
@@ -1073,6 +1085,59 @@ export class WorldView {
     this.ghost = null;
     this.ghostKey = '';
     this.ghostFrame.visible = false;
+    this.hideTrace();
+  }
+
+  private traceModel: CachedModel | null = null;
+  private traceKey = '';
+  private traceGhosts: THREE.Group[] = [];
+  private traceTiles: THREE.InstancedMesh | null = null;
+
+  /** Anteprima del tracciato: un oggetto per cella, verde dove si posa, rosso dove no. */
+  showTrace(key: string, build: () => CachedModel, cells: { x: number; y: number; rot: number; ok: boolean }[]) {
+    if (this.ghost) { this.root.remove(this.ghost); this.ghost = null; this.ghostKey = ''; }
+    this.ghostFrame.visible = false;
+    if (this.traceKey !== key) { this.hideTrace(); this.traceKey = key; this.traceModel = build(); }
+    const gm = this.traceModel!;
+    while (this.traceGhosts.length < cells.length) {
+      const g = instantiate(gm, { castShadow: false });
+      this.root.add(g);
+      this.traceGhosts.push(g);
+    }
+    if (!this.traceTiles || this.traceTiles.instanceMatrix.count < cells.length) {
+      this.traceTiles?.removeFromParent();
+      this.traceTiles = new THREE.InstancedMesh(this.ghostFrame.geometry, new THREE.MeshBasicMaterial({ transparent: true, opacity: 0.4, depthWrite: false }), Math.max(64, cells.length * 2));
+      this.traceTiles.frustumCulled = false; // le celle cambiano a ogni tratto: niente sfera di ingombro
+      this.root.add(this.traceTiles);
+    }
+    const m = new THREE.Matrix4(), green = new THREE.Color('#7fd18b'), red = new THREE.Color('#e0564a');
+    this.traceGhosts.forEach((g, i) => {
+      const c = cells[i];
+      g.visible = !!c;
+      if (!c) return;
+      const at = cellCenter(c.x, c.y, [1, 1]);
+      at.y = this.heightAt(at.x, at.z);
+      g.position.copy(at);
+      g.rotation.y = -c.rot * Math.PI / 2;
+      g.traverse((o) => {
+        const mesh = o as THREE.Mesh;
+        if (mesh.isMesh && mesh.name === 'solid') mesh.material = c.ok ? gm.mats.selected : gm.mats.invalid;
+      });
+      this.traceTiles!.setMatrixAt(i, m.makeTranslation(at.x, at.y + 0.05, at.z));
+      this.traceTiles!.setColorAt(i, c.ok ? green : red);
+    });
+    this.traceTiles.count = cells.length;
+    this.traceTiles.instanceMatrix.needsUpdate = true;
+    if (this.traceTiles.instanceColor) this.traceTiles.instanceColor.needsUpdate = true;
+  }
+
+  hideTrace() {
+    for (const g of this.traceGhosts) this.root.remove(g);
+    this.traceGhosts = [];
+    this.traceTiles?.removeFromParent();
+    this.traceTiles = null;
+    this.traceKey = '';
+    this.traceModel = null;
   }
 
   ghostTop(): THREE.Vector3 | null {

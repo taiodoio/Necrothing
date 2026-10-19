@@ -2,6 +2,9 @@
 // in SVG (rettangoli a bordi netti): restano nitide a qualsiasi scala e si
 // sposano con i voxel della scena. Nessun file esterno, nessuna emoji.
 
+import { uiNext } from '../app/uiNext.ts';
+import { drawLpIcon, hasLpIcon, lpIconUrl } from './lpIcons.ts';
+
 const PAL: Record<string, string> = {
   k: '#0d0b0a', // contorno
   d: '#3a3f4a', // ardesia
@@ -543,6 +546,35 @@ const ICONS: Record<string, string[]> = {
     'kkkkkkkkkkkk',
   ],
 };
+// menù a tre righe (interfaccia nuova) e lucchetto aperto («Libera» l'animale)
+ICONS.menu = [
+  '............',
+  '.kkkkkkkkkk.',
+  '.kGGGGGGGGk.',
+  '.kkkkkkkkkk.',
+  '............',
+  '.kkkkkkkkkk.',
+  '.kGGGGGGGGk.',
+  '.kkkkkkkkkk.',
+  '............',
+  '.kkkkkkkkkk.',
+  '.kGGGGGGGGk.',
+  '.kkkkkkkkkk.',
+];
+ICONS.unlock = [
+  '.....kkkk...',
+  '....kSSSSk..',
+  '....kSkkSk..',
+  '....kSk.kk..',
+  '....kSk.....',
+  '..kkkkkkkk..',
+  '..kGGGGGGk..',
+  '..kGgkkgGk..',
+  '..kGgkkgGk..',
+  '..kGGggGGk..',
+  '..kkkkkkkk..',
+  '............',
+];
 // varianti per sostituzione di palette
 ICONS.lightOff = ICONS.lightOn.map((r) => r.replace(/y/g, 's').replace(/G/g, 'd'));
 ICONS.dawn = ICONS.dusk.map((r) => r.replace(/o/g, 'R'));
@@ -552,8 +584,9 @@ export type IconName = keyof typeof ICONS;
 
 const urls = new Map<string, string>();
 
-/** Data-URI SVG dell'icona (righe fuse in rettangoli per pixel adiacenti). */
+/** Data-URI SVG dell'icona (righe fuse in rettangoli per pixel adiacenti); low-poly con l'interfaccia nuova. */
 export function iconUrl(name: string): string {
+  if (uiNext() && hasLpIcon(name)) return lpIconUrl(name);
   let u = urls.get(name);
   if (u) return u;
   const rows = ICONS[name] ?? ICONS.wisp;
@@ -576,6 +609,7 @@ export function iconUrl(name: string): string {
 
 /** Disegna l'icona su un canvas 2D (badge nel mondo 3D). */
 export function drawIcon(g: CanvasRenderingContext2D, name: string, x: number, y: number, size: number) {
+  if (uiNext() && hasLpIcon(name)) { drawLpIcon(g, name, x, y, size); return; }
   const rows = ICONS[name] ?? ICONS.wisp;
   const px = size / 12;
   rows.forEach((row, j) => {

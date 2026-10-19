@@ -4,12 +4,13 @@
 
 import * as THREE from 'three';
 import { BUSINESS, FOREST_MARGIN, GRAVE_FOOTPRINT, KEEPER_LAMP, LIVE_TICK_MS, SOUL_BELL, STAFF, ZOMBIE_MUD } from '../game/balance.ts';
-import { CATALOG, CATALOG_LIST, rotatedFootprint } from '../game/catalog.ts';
+import { CATALOG, CATALOG_LIST, EDIT_ONLY, rotatedFootprint, TRACEABLE } from '../game/catalog.ts';
+import { applyTheme, uiNext } from './uiNext.ts';
 import type { GraveVisualState } from '../game/graves.ts';
 import { graveVisualState } from '../game/graves.ts';
 import * as R from '../game/rules.ts';
 import { catchUpMessage, liveTick, runCatchUp } from '../game/simulation.ts';
-import { createNewGame, type FpsSetting, type Quality, type QualitySetting, type SaveData, type TimeOverride } from '../game/state.ts';
+import { createNewGame, type FpsSetting, type ThemeSetting, type Quality, type QualitySetting, type SaveData, type TimeOverride } from '../game/state.ts';
 import { dayPhaseForHour, type DayPhase } from '../game/time.ts';
 import type { CustodeLook } from '../game/look.ts';
 import { areaForLevel, buildOccupancy, canPlaceAt, gateCells, nearestFreeSpot } from '../game/world.ts';
@@ -48,6 +49,8 @@ export interface Placement {
   y: number;
   rot: number;
   valid: boolean;
+  /** Strumento a traccia (interfaccia nuova): i tratti già tirati e quello sotto il dito. */
+  trace?: { segs: R.TraceCell[][]; live: R.TraceCell[] | null };
 }
 
 
@@ -67,6 +70,8 @@ export class Game {
   readonly input: Input;
   readonly raycaster = new THREE.Raycaster();
   selection: Selection = null;
+  /** Interfaccia nuova: il menù dell'oggetto toccato compare solo quando il Custode ci è arrivato. */
+  ctxReady = true;
   editMode = false;
   placement: Placement | null = null;
   /** Tomba affidata e albero mentre il corteo del rito è in scena: non si spostano né si tolgono. */
@@ -136,6 +141,7 @@ export class Game {
     this.rig.jumpTo(start);
     this.rig.follow = this.actors.avatar.pos;
     this.rig.snap();
+    if (uiNext()) applyTheme(this.state.settings.theme);
     this.ui = new UI(this);
     this.input = new Input(canvas, {
       tap: (x, y) => this.onTap(x, y),
@@ -573,6 +579,8 @@ export class Game {
   }
 
   startItemPlacement(type: string) {
+    // interfaccia nuova: sentieri, recinti e muretti si tracciano col dito
+    if (uiNext() && TRACEABLE.has(type)) { this.startTrace(type); return; }
     const fp = rotatedFootprint(type, 0);
     const occ = buildOccupancy(this.state);
     const c = this.viewCenterCell();
@@ -585,6 +593,55 @@ export class Game {
     this.refreshPlacement();
   }
 
+  private startTrace(type: string) {
+    const c = this.viewCenterCell();
+    this.select(null);
+    this.placement = { kind: 'item', type, x: c.x, y: c.y, rot: 0, valid: false, trace: { segs: [], live: null } };
+    this.rig.follow = null;
+    this.refreshPlacement();
+  }
+
+  /** Celle del tracciato in ordine, senza doppioni (gli angoli li hanno due tratti). */
+  private traceCells(): R.TraceCell[] {
+    const t = this.placement!.trace!;
+    const seen = new Set<string>();
+    return [...t.segs.flat(), ...(t.live ?? [])].filter((c) => {
+      const k = `${c.x},${c.y}`;
+      return !seen.has(k) && !!seen.add(k);
+    });
+  }
+
+  /** Tratto dritto da a verso b, sull'asse dove il dito si è mosso di più. */
+  private traceLine(a: { x: number; y: number }, b: { x: number; y: number }): R.TraceCell[] {
+    const dx = b.x - a.x, dy = b.y - a.y;
+    const alongX = Math.abs(dx) >= Math.abs(dy);
+    const n = alongX ? Math.abs(dx) : Math.abs(dy);
+    return Array.from({ length: n + 1 }, (_, i) => ({ x: a.x + (alongX ? Math.sign(dx) * i : 0), y: a.y + (alongX ? 0 : Math.sign(dy) * i), rot: alongX ? 0 : 1 }));
+  }
+
+  /** Per la barra in basso: quanti se ne posano, quanti mancano, quanti cadono su spazi occupati. */
+  traceInfo() {
+    const p = this.placement;
+    if (!p?.trace) return null;
+    const status = R.traceStatus(this.state, p.type!, this.traceCells());
+    const count = (k: R.TraceStatus) => status.filter((x) => x === k).length;
+    return { have: R.ownedCount(this.state, p.type!), ok: count('ok'), busy: count('busy'), short: count('short'), segs: p.trace.segs.length };
+  }
+
+  undoTrace() {
+    const t = this.placement?.trace;
+    if (!t?.segs.length) return;
+    t.segs.pop();
+    this.refreshPlacement();
+  }
+
+  /** Compra in Bottega quelli che mancano per finire il tracciato. */
+  buyTraceShortfall() {
+    const p = this.placement, info = this.traceInfo();
+    if (!p || !info?.short) return;
+    if (this.act((s, n) => R.buy(s, p.type!, info.short, n))) { this.ui.refreshHud(); this.refreshPlacement(); }
+  }
+
   private placementFp(): [number, number] {
     const p = this.placement!;
     return p.kind === 'grave' ? GRAVE_FOOTPRINT : rotatedFootprint(p.type!, p.rot);
@@ -594,9 +651,20 @@ export class Game {
     const p = this.placement;
     this.refreshKeeperArea();
     if (!p) { this.world.hideGhost(); this.ui.refreshPlacementBar(); return; }
+    const style = this.state.settings.style;
+    if (p.trace) {
+      const cells = this.traceCells();
+      const status = R.traceStatus(this.state, p.type!, cells);
+      const turn = !!CATALOG[p.type!].rotatable;
+      const v: PVis = { type: p.type!, variant: 0, dirty: false, broken: false, lit: true, seed: 0 };
+      this.world.showTrace(`${style}|${placeableKey(v)}`, () => getModel(placeableKey(v), style, () => placeableModel(v), 0),
+        cells.map((c, i) => ({ x: c.x, y: c.y, rot: turn ? c.rot : 0, ok: status[i] === 'ok' })));
+      p.valid = status.includes('ok');
+      this.ui.refreshPlacementBar();
+      return;
+    }
     const fp = this.placementFp();
     p.valid = canPlaceAt(p.x, p.y, fp, buildOccupancy(this.state), areaForLevel(this.state.world.expansionLevel));
-    const style = this.state.settings.style;
     if (p.kind === 'grave') {
       const type = p.draft!.graveType!;
       const key = `g:${type}:clean:0`;
@@ -625,6 +693,14 @@ export class Game {
   confirmPlacement() {
     const p = this.placement;
     if (!p) return;
+    if (p.trace) {
+      const type = p.type!, cells = this.traceCells();
+      if (this.act((s, n) => R.placeTrace(s, type, cells, n))) {
+        this.placement = null;
+        this.refreshPlacement();
+      }
+      return;
+    }
     if (!p.valid) { toast('Spazio occupato: scegli un punto libero.'); return; }
     const now = this.now();
     if (p.kind === 'grave') {
@@ -696,6 +772,14 @@ export class Game {
   private onTap(x: number, y: number) {
     this.ui.closeBubble();
     this.ui.closeActorMenu();
+    if (this.placement?.trace) {
+      // un tocco posa una cella sola, nel verso dell'ultimo tratto
+      const g = this.groundCell(x, y), t = this.placement.trace;
+      if (!g) return;
+      t.segs.push([{ x: g.cell.x, y: g.cell.y, rot: t.segs.at(-1)?.at(-1)?.rot ?? 0 }]);
+      this.refreshPlacement();
+      return;
+    }
     if (this.placement) {
       const g = this.groundCell(x, y);
       if (!g) return;
@@ -713,14 +797,22 @@ export class Game {
       if (w && !this.editMode && this.actors.walkTo({ x: w.x, y: w.y })) { this.markWalk(); this.rig.follow = this.actors.avatar.pos; }
       return;
     }
-    if (hit?.entityId) {
+    // interfaccia nuova: sentieri, recinzioni, erba alta & co. si toccano solo in Modifica, fuori ci si cammina sopra
+    const background = hit?.entityId && !this.editMode && uiNext() && EDIT_ONLY.has(this.state.placeables.find((p) => p.id === hit.entityId)?.type ?? '');
+    if (hit?.entityId && !background) {
       const id = hit.entityId;
       // bar e orto con l'incasso pronto: toccandoli si riscuote
       if (!this.editMode && R.businessPending(this.state, id, this.now()) > 0) { this.collectBusiness(id); return; }
+      // interfaccia nuova: l'oggetto si evidenzia subito, il menù compare quando il Custode arriva
+      const later = uiNext() && !this.editMode;
+      this.ctxReady = !later;
       this.select({ kind: this.kindOf(id), id });
       if (!this.editMode) {
         const c = this.entityCells(id)!;
-        this.actors.walkNextTo(c.x, c.y, c.fp, () => undefined);
+        const arrived = () => { if (later && this.selection?.id === id && !this.ctxReady) { this.ctxReady = true; this.ui.refreshContext(); } };
+        const going = this.actors.walkNextTo(c.x, c.y, c.fp, arrived);
+        if (!going) arrived(); // non ci si arriva: il menù compare subito
+        else if (later && !this.ctxReady) this.markWalk();
         this.rig.follow = this.actors.avatar.pos;
       }
       return;
@@ -745,7 +837,7 @@ export class Game {
     const off = p.broken;
     return [
       { label: 'Raggiungi il Custode', icon: 'paw', disabled: off || p.mode === 'follow', run: () => this.petCommand(id, this.actors.callPet(id)) },
-      { label: 'Libera', icon: 'sun', disabled: off || p.mode === 'free', run: () => this.petCommand(id, this.actors.freePet(id)) },
+      { label: 'Libera', icon: uiNext() ? 'unlock' : 'sun', disabled: off || p.mode === 'free', run: () => this.petCommand(id, this.actors.freePet(id)) },
       { label: 'A cuccia', icon: 'kennel', disabled: off || p.mode === 'home', run: () => this.petCommand(id, this.actors.sendPetHome(id)) },
       { label: 'Accarezza', icon: 'heart', cls: 'primary', disabled: off || p.sleeping, run: () => this.actors.petPet(id) },
       { label: 'Lancia l’osso', icon: 'bone', disabled: off || p.sleeping, run: () => { if (!this.actors.throwBone(id)) toast('Qui non c’è spazio per lanciare l’osso.'); } },
@@ -946,6 +1038,14 @@ export class Game {
     this.ui.closeBubble();
     const g = this.groundCell(x, y);
     if (!g) return false;
+    if (this.placement?.trace) {
+      // un dito traccia (due dita spostano la vista); vicino alla fine dell'ultimo tratto, riparte da lì
+      const t = this.placement.trace, end = t.segs.at(-1)?.at(-1);
+      const from = end && Math.max(Math.abs(end.x - g.cell.x), Math.abs(end.y - g.cell.y)) <= 1 ? end : g.cell;
+      t.live = this.traceLine(from, from);
+      this.refreshPlacement();
+      return true;
+    }
     if (this.placement) {
       const fp = this.placementFp();
       const p = this.placement;
@@ -966,6 +1066,14 @@ export class Game {
   }
 
   private onDragMove(x: number, y: number, dx: number, dy: number, owned: boolean) {
+    const t = this.placement?.trace;
+    if (owned && t?.live) {
+      const g = this.groundCell(x, y);
+      if (!g) return;
+      t.live = this.traceLine(t.live[0], g.cell);
+      this.refreshPlacement();
+      return;
+    }
     if (!owned || !this.drag) { this.rig.panPixels(dx, dy); return; }
     const g = this.groundCell(x, y);
     if (!g) return;
@@ -985,6 +1093,14 @@ export class Game {
   }
 
   private onDragEnd(_x: number, _y: number, owned: boolean) {
+    const t = this.placement?.trace;
+    if (owned && t?.live) {
+      // alzando il dito il tratto resta (un tratto di una cella sola è il dito che si posa per il pizzico)
+      if (t.live.length > 1) t.segs.push(t.live);
+      t.live = null;
+      this.refreshPlacement();
+      return;
+    }
     const d = this.drag;
     this.drag = null;
     if (!owned || !d) return;
@@ -1071,6 +1187,7 @@ export class Game {
     this.state.player.look = look;
     this.actors.setAvatarLook(look);
     scheduleSave(this.state);
+    this.ui.refreshHud(); // il ritratto nel riquadro segue l'aspetto
   }
 
   // ── Bicicletta ───────────────────────────────────────────────────────
@@ -1158,6 +1275,14 @@ export class Game {
     this.state.settings.quality = q;
     this.auto = q === 'auto' ? new AutoGovernor(loadAutoProfile()) : null;
     this.applySettingQuality();
+    scheduleSave(this.state);
+    this.ui.refreshSettingsButtons();
+  }
+
+  /** Tema dell'interfaccia nuova: chiaro, scuro o quello del telefono. */
+  setTheme(t: ThemeSetting) {
+    this.state.settings.theme = t;
+    applyTheme(t);
     scheduleSave(this.state);
     this.ui.refreshSettingsButtons();
   }

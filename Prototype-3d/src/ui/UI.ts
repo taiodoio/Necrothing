@@ -14,8 +14,13 @@ import type { BurialDraft } from '../game/rules.ts';
 import { DAY_PHASE_LABELS } from '../game/time.ts';
 import { $, closeDrawer, drawerOpen, h, toast } from './dom.ts';
 import { hydrateIcons, icon, iconUrl, installFrames } from './icons.ts';
+import { uiNext } from '../app/uiNext.ts';
+import { custodePortrait } from './lookThumbs.ts';
 import * as S from './screens.ts';
 import * as T from './memoryTree.ts';
+
+/** Icona del pulsante del menù di gioco: la pala, o le tre righe con l'interfaccia nuova. */
+const fabIcon = () => (uiNext() ? 'menu' : 'shovel');
 
 const WEATHER_LABELS = { clear: 'Sereno', fog: 'Nebbia', rain: 'Pioggia', storm: 'Temporale' } as const;
 const PHASE_ICONS = { dawn: 'dawn', day: 'sun', dusk: 'dusk', night: 'moon' } as const;
@@ -33,6 +38,14 @@ export class UI {
     this.game = game;
     installFrames();
     hydrateIcons();
+    if (uiNext()) {
+      $('#fab-icon').style.backgroundImage = iconUrl(fabIcon());
+      $('#fab').setAttribute('aria-label', 'Menù');
+      // i fuochi fatui escono dal riquadro del Custode: una targhetta loro, sotto, col numero intero
+      const chip = $('#player-chip'), left = h('div', { class: 'hud-left' });
+      chip.before(left);
+      left.append(chip, $('.wisp-count'));
+    }
     $('#fab').addEventListener('click', () => this.toggleBubble());
     for (const b of document.querySelectorAll<HTMLButtonElement>('[data-act]')) {
       b.addEventListener('click', () => { this.closeBubble(); this.bubbleAction(b.dataset.act!); });
@@ -59,7 +72,14 @@ export class UI {
     $('#hud-name').textContent = p.name;
     $('#hud-rank').textContent = `Rango ${rank.level} · ${rank.name}${next ? '' : ' ★'}`;
     ($('#hud-xp') as HTMLElement).style.width = `${Math.round(rankProgress(p.xp) * 100)}%`;
-    $('#hud-wisps').textContent = String(p.wisps);
+    // interfaccia nuova: nel riquadro il ritratto vero del Custode (col suo aspetto)
+    if (uiNext()) {
+      const url = custodePortrait(p.look);
+      const box = $('.chip-avatar');
+      if (url && box.dataset.src !== url) { box.dataset.src = url; box.replaceChildren(h('img', { src: url, alt: '' })); }
+    }
+    // interfaccia nuova: la targhetta ha spazio, il numero intero coi punti delle migliaia
+    $('#hud-wisps').textContent = uiNext() ? p.wisps.toLocaleString('it-IT') : String(p.wisps);
     this.refreshClock();
   }
 
@@ -117,14 +137,14 @@ export class UI {
     const open = !b.classList.contains('open');
     b.classList.toggle('open', open);
     $('#fab').setAttribute('aria-expanded', String(open));
-    $('#fab-icon').style.backgroundImage = iconUrl(open ? 'close' : 'shovel');
+    $('#fab-icon').style.backgroundImage = iconUrl(open ? 'close' : fabIcon());
     for (const s of document.querySelectorAll<HTMLElement>('.slot')) s.classList.toggle('active', s.dataset.act === 'edit' && this.game.editMode);
   }
 
   closeBubble() {
     $('#bubble').classList.remove('open');
     $('#fab').setAttribute('aria-expanded', 'false');
-    $('#fab-icon').style.backgroundImage = iconUrl('shovel');
+    $('#fab-icon').style.backgroundImage = iconUrl(fabIcon());
   }
 
   private bubbleAction(act: string) {
@@ -197,13 +217,18 @@ export class UI {
   }
 
   private runButton(a: { label: string; icon: string; cls?: string; disabled?: boolean; run: () => void }) {
-    return h('button', { class: a.cls ?? '', disabled: !!a.disabled, onclick: () => { this.closeContext(); this.game.select(null); a.run(); } }, icon(a.icon, 20), a.label);
+    const run = () => { this.closeContext(); this.game.select(null); a.run(); };
+    if (uiNext()) return h('button', { class: a.cls ?? '', disabled: !!a.disabled, 'aria-label': a.label, title: a.label, onclick: run }, icon(a.icon, 28));
+    return h('button', { class: a.cls ?? '', disabled: !!a.disabled, onclick: run }, icon(a.icon, 20), a.label);
   }
 
   refreshContext() {
     const sel = this.game.selection;
     if (!sel && this.ctxAnchor) return; // resta aperto il menù del personaggio
     if (!sel || this.game.placement || drawerOpen()) { this.closeContext(); return; }
+    // interfaccia nuova: l'oggetto è evidenziato, il menù aspetta che il Custode ci arrivi
+    if (uiNext() && !this.game.editMode && !this.game.ctxReady) { this.closeContext(); return; }
+    const icons = uiNext();
     const s = this.game.state;
     const actions: Array<{ act: EntityAction; label: string; icon: string; cls?: string; cost?: number }> = [];
     let petActions: ReturnType<Game['petMenu']> = [];
@@ -219,7 +244,8 @@ export class UI {
         actions.push({ act: 'detail', label: 'Dettagli', icon: 'search' }, { act: 'exhume', label: 'Esuma', icon: 'shovel', cls: 'danger' }, { act: 'confirm', label: 'Fatto', icon: 'check', cls: 'primary' });
       } else {
         actions.push({ act: 'detail', label: 'Dettagli', icon: 'search' });
-        if (s.placeables.some((p) => p.type === 'memory_tree')) actions.push({ act: 'entrust', label: 'Affida all’albero', icon: 'tree' });
+        // interfaccia nuova: «Affida all'albero» resta solo nel dettaglio della tomba
+        if (!icons && s.placeables.some((p) => p.type === 'memory_tree')) actions.push({ act: 'entrust', label: 'Affida all’albero', icon: 'tree' });
         if (g.broken) actions.push({ act: 'repair', label: 'Ripara', icon: 'hammer', cls: 'primary', cost: DECAY.graveRepairCost });
         else if (g.dirty || g.weeds) actions.push({ act: 'clean', label: 'Pulisci', icon: 'broom', cls: 'primary' });
         else actions.push({ act: 'flowers', label: g.hasFlowers ? 'Rinnova fiori' : 'Porta fiori', icon: 'flower', cls: 'primary' });
@@ -252,10 +278,14 @@ export class UI {
     }
     this.ctxId = sel.id;
     $('#ctx-title').replaceChildren(document.createTextNode(title), h('small', {}, sub));
-    $('#ctx-actions').replaceChildren(...actions.map((a) => h('button', {
-      class: a.cls ?? '',
-      onclick: () => this.game.performEntityAction(sel.id, a.act),
-    }, icon(a.icon, 20), a.label, a.cost ? h('em', {}, ` −${a.cost}`, icon('wisp', 12)) : null)), ...petActions.map((a) => this.runButton(a)));
+    $('#ctx-actions').replaceChildren(...actions.map((a) => icons
+      // solo l'icona (il nome resta per i lettori di schermo); il costo in un angolino
+      ? h('button', { class: a.cls ?? '', 'aria-label': a.cost ? `${a.label} (${a.cost} fuochi fatui)` : a.label, title: a.label, onclick: () => this.game.performEntityAction(sel.id, a.act) },
+        icon(a.icon, 28), a.cost ? h('em', {}, String(a.cost)) : null)
+      : h('button', {
+        class: a.cls ?? '',
+        onclick: () => this.game.performEntityAction(sel.id, a.act),
+      }, icon(a.icon, 20), a.label, a.cost ? h('em', {}, ` −${a.cost}`, icon('wisp', 12)) : null)), ...petActions.map((a) => this.runButton(a)));
     $('#ctx').hidden = false;
     this.positionContext();
   }
@@ -282,6 +312,26 @@ export class UI {
     if (!p) { this.placementBar?.remove(); this.placementBar = null; $('#bubble').classList.remove('hidden'); return; }
     this.closeContext();
     $('#bubble').classList.add('hidden');
+    const t = this.game.traceInfo();
+    if (t) {
+      const def = CATALOG[p.type!];
+      const hint = !t.segs && !t.ok && !t.busy
+        ? 'Trascina il dito sul terreno per tracciare; alza il dito e riparti per fare un angolo. Due dita spostano la vista.'
+        : [`${t.ok} da posare`, t.short ? `ne mancano ${t.short}` : '', t.busy ? `${t.busy} su spazi occupati` : ''].filter(Boolean).join(' · ');
+      const bar = h('div', { class: 'tutorial trace-bar' },
+        h('b', {}, icon(def.rotatable ? 'fence' : 'edit', 18), def.label, h('span', { class: 'trace-count' }, `${t.ok}/${t.have}`)),
+        h('span', { class: t.short ? 'muted warn' : 'muted' }, hint),
+        t.short ? h('button', { class: 'pill', onclick: () => this.game.buyTraceShortfall() }, `Compra i ${t.short} mancanti · ${t.short * def.cost}`, icon('wisp', 14)) : null,
+        h('div', { class: 'row' },
+          h('button', { class: 'pill exit', 'aria-label': 'Esci', title: 'Esci', onclick: () => this.game.cancelPlacement() }, icon('close', 18)),
+          h('button', { class: 'pill', disabled: !t.segs, onclick: () => this.game.undoTrace() }, 'Annulla ultimo tratto'),
+          h('button', { class: 'pill primary', disabled: !t.ok, onclick: () => this.game.confirmPlacement() }, 'Conferma'),
+        ),
+      );
+      if (this.placementBar) this.placementBar.replaceWith(bar); else $('#game').append(bar);
+      this.placementBar = bar;
+      return;
+    }
     const label = p.kind === 'grave' ? `Dove riposerà ${p.draft!.name}?` : CATALOG[p.type!].label;
     const rot = p.kind === 'item' && CATALOG[p.type!].rotatable;
     const bar = h('div', { class: 'tutorial' },

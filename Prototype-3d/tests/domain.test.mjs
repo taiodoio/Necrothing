@@ -757,3 +757,25 @@ test('cimitero pieno per le misure: tante tombe, tutte le presenze, niente sovra
   const again = fullCemetery(4242, NOW);
   assert.deepEqual(again.graves.map((g) => [g.x, g.y, g.graveType]), s.graves.map((g) => [g.x, g.y, g.graveType]));
 });
+
+test('tracciato: posa in fila dall\'inventario, salta le celle occupate, oltre la scorta resta fuori', () => {
+  const s = createNewGame(NOW, 6);
+  const area = areaForLevel(s.world.expansionLevel);
+  // una fila libera di 6 celle
+  let row = null;
+  for (let y = area.y + 1; y < area.y + area.h - 1 && !row; y++) {
+    for (let x = area.x + 1; x + 6 < area.x + area.w; x++) {
+      const cells = Array.from({ length: 6 }, (_, i) => ({ x: x + i, y, rot: 0 }));
+      if (cells.every((c) => canPlaceAt(c.x, c.y, [1, 1], buildOccupancy(s), area))) { row = cells; break; }
+    }
+  }
+  assert.ok(row);
+  s.inventory.fence_wood = 4;
+  R.placeFromInventory(s, 'fence_wood', row[1].x, row[1].y, 0, NOW); // una già al suo posto
+  assert.deepEqual(R.traceStatus(s, 'fence_wood', row), ['ok', 'busy', 'ok', 'ok', 'short', 'short']);
+  const r = R.placeTrace(s, 'fence_wood', row, NOW);
+  assert.equal(r.placed, 3);
+  assert.equal(s.inventory.fence_wood, undefined);
+  assert.equal(s.placeables.filter((p) => p.type === 'fence_wood').length, 4);
+  assert.throws(() => R.placeTrace(s, 'fence_wood', row, NOW), /inventario/);
+});

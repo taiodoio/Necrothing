@@ -193,7 +193,11 @@ export function pumpkin(lp: LP, x: number, y: number, z: number, r = 0.14, carve
   lp.pop();
 }
 
-/** Lanterna appesa a un braccio (catenella, gabbia, vetro acceso). */
+/**
+ * Lanterna appesa a un braccio (catenella, gabbia, vetro acceso). Quasi sempre
+ * sta sotto un tetto o una tettoia: l'alone resta piccolo, se no attraversa il
+ * tetto lì sopra e ci si vede una macchia di luce tagliata netta.
+ */
 export function hangingLantern(lp: LP, x: number, y: number, z: number, lit = true, s = 1) {
   lp.box(x, y - 0.14 * s, z, 0.01, 0.14 * s, 0.01, LPC.iron, { jitter: 0 });
   lp.box(x, y - 0.17 * s, z, 0.12 * s, 0.03, 0.12 * s, LPC.iron, { bevel: 0.004 });
@@ -201,5 +205,5 @@ export function hangingLantern(lp: LP, x: number, y: number, z: number, lit = tr
   for (const [dx, dz] of [[-1, -1], [1, -1], [-1, 1], [1, 1]]) lp.box(x + dx * 0.05 * s, y - 0.36 * s, z + dz * 0.05 * s, 0.014, 0.2 * s, 0.014, LPC.iron, { jitter: 0 });
   lp.push([x, y - 0.17 * s, z], Math.PI / 4).cyl(0, 0, 0, 0.1 * s, 0.015, 0.07 * s, 4, LPC.iron, { jitter: 0 }).pop();
   lp.box(x, y - 0.38 * s, z, 0.12 * s, 0.025, 0.12 * s, LPC.iron, { bevel: 0.004 });
-  if (lit) lp.light(x, y - 0.26 * s, z, LPC.lantern, 0.7, 4, 0.2, 0.8);
+  if (lit) lp.light(x, y - 0.26 * s, z, LPC.lantern, 0.7, 4, 0.2, 0.18);
 }

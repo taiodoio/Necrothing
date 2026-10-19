@@ -374,7 +374,7 @@ export function gravediggerHouseLP(v: PVis): LPModel {
   pumpkin(lp, 1.6, 0, 0.75, 0.13, false, false);
   ivy(lp, -1.62, 0.0, 0.42, 1.0, 0.1);
   // la finestra illumina il portico e il davanti della casa (prima la luce stava contro il muro: casa buia)
-  lp.light(-0.6, 0.8, 0.95, LPC.window, lit ? 0.95 : 0, 5, 0.1, 0.6);
+  lp.light(-0.6, 0.8, 0.95, LPC.window, lit ? 0.95 : 0, 5, 0.1, 0); // senza alone: sta sotto la tettoia (la finestra brilla già da sé)
   grassTuft(lp, 1.8, 1.2, 1.2); grassTuft(lp, -1.8, -1.2, 1.1);
   decayLP(lp, v, 3.6, 2.6);
   return lp.build();

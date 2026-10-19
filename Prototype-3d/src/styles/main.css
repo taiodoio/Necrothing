@@ -111,6 +111,17 @@ button.slot:active, .icon-btn:active, .ctx-actions button:active, .big-btn:activ
 .slot small { font-size: 10.5px; color: var(--muted); letter-spacing: 0.01em; white-space: nowrap; }
 .slot.active small { color: var(--gold-bright); }
 
+/* Interfaccia nuova (per ora solo nella pagina di misura): il menù sale in verticale
+   sopra il pulsante a tre righe, una voce per riga con l'icona e l'etichetta a destra */
+.ui-next .bubble { flex-direction: column-reverse; align-items: flex-start; max-width: none; pointer-events: none; }
+.ui-next .bubble .fab, .ui-next .bubble.open .slots { pointer-events: auto; } /* chiuso, il menù non deve rubare i tocchi alla scena */
+.ui-next .slots { flex-direction: column-reverse; overflow: visible; transform-origin: center bottom; transform: scaleY(0.2); padding: 3px; gap: 2px; }
+.ui-next .bubble.open .slots { transform: scaleY(1); }
+.ui-next .slot { width: auto; min-width: 176px; height: 50px; display: flex; align-items: center; justify-content: flex-start; gap: 10px; padding: 0 12px 0 8px; }
+.ui-next .slot .pxi { --s: 28px; }
+.ui-next .slot small { font-size: 15px; color: var(--paper); }
+.ui-next .slot.active small { color: var(--gold-bright); }
+
 /* ── Banner modifica ─────────────────────────────────────────────── */
 .edit-banner {
   position: absolute; z-index: 5; left: 50%; transform: translateX(-50%); top: calc(76px + var(--safe-t));
@@ -136,6 +147,13 @@ button.slot:active, .icon-btn:active, .ctx-actions button:active, .big-btn:activ
 .ctx-actions button.danger { color: var(--danger); }
 .ctx-actions button:disabled { opacity: 0.42; filter: grayscale(0.7); pointer-events: none; }
 .ctx-actions button em { display: inline-flex; align-items: center; gap: 2px; font-style: normal; font-size: 12px; color: var(--spectral); }
+
+/* Interfaccia nuova: menù contestuale di sole icone affiancate */
+.ui-next .ctx { min-width: 0; padding: 4px; }
+.ui-next .ctx-title { display: none; }
+.ui-next .ctx-actions { flex-wrap: nowrap; }
+.ui-next .ctx-actions button { flex: none; width: 52px; min-height: 52px; height: 52px; padding: 0; position: relative; }
+.ui-next .ctx-actions button em { position: absolute; right: 3px; bottom: 1px; font-size: 11px; line-height: 1; text-shadow: 0 1px 0 #000; }
 
 /* ── Drawer dal basso ────────────────────────────────────────────── */
 .scrim { position: absolute; inset: 0; z-index: 8; background: rgba(4, 5, 8, 0.5); }

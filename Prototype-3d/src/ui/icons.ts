@@ -543,6 +543,35 @@ const ICONS: Record<string, string[]> = {
     'kkkkkkkkkkkk',
   ],
 };
+// menù a tre righe (interfaccia nuova) e lucchetto aperto («Libera» l'animale)
+ICONS.menu = [
+  '............',
+  '.kkkkkkkkkk.',
+  '.kGGGGGGGGk.',
+  '.kkkkkkkkkk.',
+  '............',
+  '.kkkkkkkkkk.',
+  '.kGGGGGGGGk.',
+  '.kkkkkkkkkk.',
+  '............',
+  '.kkkkkkkkkk.',
+  '.kGGGGGGGGk.',
+  '.kkkkkkkkkk.',
+];
+ICONS.unlock = [
+  '.....kkkk...',
+  '....kSSSSk..',
+  '....kSkkSk..',
+  '....kSk.kk..',
+  '....kSk.....',
+  '..kkkkkkkk..',
+  '..kGGGGGGk..',
+  '..kGgkkgGk..',
+  '..kGgkkgGk..',
+  '..kGGggGGk..',
+  '..kkkkkkkk..',
+  '............',
+];
 // varianti per sostituzione di palette
 ICONS.lightOff = ICONS.lightOn.map((r) => r.replace(/y/g, 's').replace(/G/g, 'd'));
 ICONS.dawn = ICONS.dusk.map((r) => r.replace(/o/g, 'R'));

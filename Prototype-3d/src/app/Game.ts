@@ -4,7 +4,8 @@
 
 import * as THREE from 'three';
 import { BUSINESS, FOREST_MARGIN, GRAVE_FOOTPRINT, KEEPER_LAMP, LIVE_TICK_MS, SOUL_BELL, STAFF, ZOMBIE_MUD } from '../game/balance.ts';
-import { CATALOG, CATALOG_LIST, rotatedFootprint } from '../game/catalog.ts';
+import { CATALOG, CATALOG_LIST, EDIT_ONLY, rotatedFootprint } from '../game/catalog.ts';
+import { uiNext } from './uiNext.ts';
 import type { GraveVisualState } from '../game/graves.ts';
 import { graveVisualState } from '../game/graves.ts';
 import * as R from '../game/rules.ts';
@@ -67,6 +68,8 @@ export class Game {
   readonly input: Input;
   readonly raycaster = new THREE.Raycaster();
   selection: Selection = null;
+  /** Interfaccia nuova: il menù dell'oggetto toccato compare solo quando il Custode ci è arrivato. */
+  ctxReady = true;
   editMode = false;
   placement: Placement | null = null;
   /** Tomba affidata e albero mentre il corteo del rito è in scena: non si spostano né si tolgono. */
@@ -713,14 +716,22 @@ export class Game {
       if (w && !this.editMode && this.actors.walkTo({ x: w.x, y: w.y })) { this.markWalk(); this.rig.follow = this.actors.avatar.pos; }
       return;
     }
-    if (hit?.entityId) {
+    // interfaccia nuova: sentieri, recinzioni, erba alta & co. si toccano solo in Modifica, fuori ci si cammina sopra
+    const background = hit?.entityId && !this.editMode && uiNext() && EDIT_ONLY.has(this.state.placeables.find((p) => p.id === hit.entityId)?.type ?? '');
+    if (hit?.entityId && !background) {
       const id = hit.entityId;
       // bar e orto con l'incasso pronto: toccandoli si riscuote
       if (!this.editMode && R.businessPending(this.state, id, this.now()) > 0) { this.collectBusiness(id); return; }
+      // interfaccia nuova: l'oggetto si evidenzia subito, il menù compare quando il Custode arriva
+      const later = uiNext() && !this.editMode;
+      this.ctxReady = !later;
       this.select({ kind: this.kindOf(id), id });
       if (!this.editMode) {
         const c = this.entityCells(id)!;
-        this.actors.walkNextTo(c.x, c.y, c.fp, () => undefined);
+        const arrived = () => { if (later && this.selection?.id === id && !this.ctxReady) { this.ctxReady = true; this.ui.refreshContext(); } };
+        const going = this.actors.walkNextTo(c.x, c.y, c.fp, arrived);
+        if (!going) arrived(); // non ci si arriva: il menù compare subito
+        else if (later && !this.ctxReady) this.markWalk();
         this.rig.follow = this.actors.avatar.pos;
       }
       return;
@@ -745,7 +756,7 @@ export class Game {
     const off = p.broken;
     return [
       { label: 'Raggiungi il Custode', icon: 'paw', disabled: off || p.mode === 'follow', run: () => this.petCommand(id, this.actors.callPet(id)) },
-      { label: 'Libera', icon: 'sun', disabled: off || p.mode === 'free', run: () => this.petCommand(id, this.actors.freePet(id)) },
+      { label: 'Libera', icon: uiNext() ? 'unlock' : 'sun', disabled: off || p.mode === 'free', run: () => this.petCommand(id, this.actors.freePet(id)) },
       { label: 'A cuccia', icon: 'kennel', disabled: off || p.mode === 'home', run: () => this.petCommand(id, this.actors.sendPetHome(id)) },
       { label: 'Accarezza', icon: 'heart', cls: 'primary', disabled: off || p.sleeping, run: () => this.actors.petPet(id) },
       { label: 'Lancia l’osso', icon: 'bone', disabled: off || p.sleeping, run: () => { if (!this.actors.throwBone(id)) toast('Qui non c’è spazio per lanciare l’osso.'); } },

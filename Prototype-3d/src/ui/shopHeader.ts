@@ -143,10 +143,12 @@ function lanternModel(x: number, drop: number): LPModel {
 /** Il giro dello zombie: dove va, cosa fa e verso dove guarda quando arriva. */
 const ROUTE: Array<{ x: number; z: number; pose: Pose; hold: number; face: number }> = [
   { x: -2.25, z: -0.45, pose: 'work', hold: 3.2, face: Math.PI }, // spolvera le mensole
-  { x: -0.35, z: 0.35, pose: 'idle', hold: 1.6, face: 0 }, // si gira verso di noi
-  { x: 1.75, z: -0.55, pose: 'cheer', hold: 1.8, face: 0 }, // dietro al bancone saluta
-  { x: 1.75, z: -0.55, pose: 'idle', hold: 2.4, face: 0 },
-  { x: 0.4, z: -0.6, pose: 'idle', hold: 1.4, face: Math.PI }, // guarda fuori dalla finestra
+  { x: -0.4, z: -0.1, pose: 'idle', hold: 1.6, face: 0 }, // si gira verso di noi
+  { x: 0.42, z: -0.62, pose: 'idle', hold: 0, face: Math.PI / 2 }, // gira attorno al bancone
+  { x: 1.75, z: -0.62, pose: 'cheer', hold: 1.8, face: 0 }, // dietro al bancone saluta
+  { x: 1.75, z: -0.62, pose: 'idle', hold: 2.4, face: 0 },
+  { x: 0.42, z: -0.62, pose: 'idle', hold: 0, face: -Math.PI / 2 },
+  { x: -0.35, z: -0.72, pose: 'idle', hold: 1.6, face: Math.PI }, // guarda fuori dalla finestra
 ];
 
 export interface ShopHeader { el: HTMLElement; stop: () => void }
@@ -205,8 +207,8 @@ export function shopHeader(): ShopHeader {
   } catch { rig = null; }
 
   const camera = new THREE.PerspectiveCamera(27, 2.4, 0.1, 30);
-  camera.position.set(-0.1, 1.45, 6.4);
-  camera.lookAt(-0.1, 1.15, -0.4);
+  camera.position.set(-0.15, 1.58, 6.4);
+  camera.lookAt(-0.15, 1.4, -0.4);
 
   // stato del giro
   let leg = 0, hold = ROUTE[0].hold, phase = 0, facing = ROUTE[0].face;
@@ -219,7 +221,7 @@ export function shopHeader(): ShopHeader {
     renderer.setSize(w, h, false);
     camera.aspect = w / h;
     // sullo schermo stretto si allarga l'inquadratura, così mensole e bancone restano dentro
-    camera.fov = THREE.MathUtils.clamp(27 * (2.4 / camera.aspect), 24, 40);
+    camera.fov = THREE.MathUtils.clamp(20 * (2.4 / camera.aspect), 18, 32);
     camera.updateProjectionMatrix();
   };
 

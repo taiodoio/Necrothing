@@ -116,8 +116,11 @@ export class CameraRig {
   private clampTarget() {
     const [ex, ez] = this.footprint(this.viewHeight);
     const room = this.worldHalf - 2.5;
-    const bx = Math.max(0, Math.min(this.scrollHalf, room - ex));
-    const bz = Math.max(0, Math.min(this.scrollHalf, room - ez));
+    // da lontano il bordo del terreno può entrare nell'inquadratura (oltre c'è il sottobosco piatto):
+    // conta di più poter portare la vista su tutto il cimitero, angoli compresi
+    const reach = Math.max(0, this.scrollHalf - 3);
+    const bx = Math.max(0, Math.min(this.scrollHalf, Math.max(reach, room - ex)));
+    const bz = Math.max(0, Math.min(this.scrollHalf, Math.max(reach, room - ez)));
     this.target.x = THREE.MathUtils.clamp(this.target.x, -bx, bx);
     this.target.z = THREE.MathUtils.clamp(this.target.z, -bz, bz);
     this.target.y = 0;

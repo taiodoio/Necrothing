@@ -162,7 +162,7 @@ const defs: PlaceableDef[] = [
   { id: 'cat_shelter', label: 'Rifugio dei gatti', category: 'npc', footprint: [2, 2], cost: 25, minRank: 2, unique: true, description: 'Una cassetta, una coperta e tre gatti neri. Uno dorme sempre.' },
   { id: 'ghost_picnic', label: 'Picnic dei fantasmi', category: 'npc', footprint: [2, 2], cost: 40, minRank: 3, unique: true, description: 'Tovaglia a quadri, tè freddo (molto freddo) e tre fantasmi in gita.' },
   { id: 'witch_corner', label: 'Angolo della strega', category: 'npc', footprint: [2, 2], cost: 55, minRank: 4, unique: true, decays: true, light: true, description: 'Una strega vende pozioni dal suo calderone e incassa qualche fuoco fatuo al giorno.' },
-  { id: 'skeleton_band', label: 'Banda di scheletri', category: 'npc', footprint: [3, 3], cost: 65, minRank: 4, unique: true, light: true, description: 'Violino, tamburo e tromba, e due fantasmini che ballano davanti al palco. Suonano a orecchio: non ne hanno.' },
+  { id: 'skeleton_band', label: 'Banda di scheletri', category: 'npc', footprint: [3, 3], cost: 65, minRank: 4, unique: true, light: true, description: 'Chitarra, batteria e tromba, e due fantasmini che ballano davanti al palco. Suonano a orecchio: non ne hanno.' },
   { id: 'vampire_crypt', label: 'Cripta del vampiro', category: 'npc', footprint: [2, 2], cost: 90, minRank: 5, unique: true, decays: true, light: true, description: 'Di giorno dorme nella bara. Di notte esce a fare due passi tra le tombe.' },
 
   // ── Stagionali ────────────────────────────────────────────────────────

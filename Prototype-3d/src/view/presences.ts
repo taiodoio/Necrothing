@@ -15,7 +15,7 @@ import { LP, type LPModel } from '../render/lowpoly/kit.ts';
 import { instantiate, LOWPOLY_MATERIALS } from '../render/modelCache.ts';
 import type { CharacterKind, Pose, Rig } from './characters.ts';
 
-export type Instrument = 'violin' | 'sticks' | 'trumpet';
+export type Instrument = 'guitar' | 'sticks' | 'trumpet';
 export type PropKind = 'mug' | 'hoe' | 'rake' | Instrument;
 export type PresenceRole = 'sit' | 'dance' | 'wander' | 'circle' | 'goalie' | 'still';
 
@@ -123,8 +123,9 @@ export function presenceLayout(p: Pick<Placed, 'type' | 'broken'>, opts: { night
       break;
     case 'skeleton_band': {
       // il palco sta dietro (3×3): davanti, sul prato, due fantasmini ballano; sopra salgono le note
-      still('idle', -0.75, BAND_BACK + 0.15, 0.25, 0.12, 'violin', 'skeleton');
-      const drummer = still('idle', 0, BAND_BACK - 0.15, 0, 0.12, 'sticks', 'skeleton');
+      still('idle', -0.75, BAND_BACK + 0.15, 0.25, 0.12, 'guitar', 'skeleton');
+      // il batterista dietro alla sua batteria (sul palco, davanti a lui)
+      const drummer = still('idle', 0, BAND_BACK - 0.55, 0, 0.12, 'sticks', 'skeleton');
       still('idle', 0.75, BAND_BACK + 0.15, -0.25, 0.12, 'trumpet', 'skeleton');
       for (const [a, k] of [[0, 'ghost'], [Math.PI, 'ghostRare']] as const) cast.push({ kind: k, role: 'dance', x: Math.cos(a) * 0.38, z: 0.95 + Math.sin(a) * 0.38, around: [0, 0.95], radius: 0.38, angle: a, size: 0.62, speed: 1.6 });
       props.push({ kind: 'notes', x: 0, y: 1.1, z: BAND_BACK, yaw: 0, owner: drummer });
@@ -175,7 +176,6 @@ function instrumentMeshes(kind: Instrument): Array<{ side: number; mesh: THREE.O
     mesh.name = 'prop';
     return { side, mesh };
   };
-  if (kind === 'violin') return [at(-1, lpMesh(instrumentLP('violin')), [0, 0.05, 0.05], [0.4, 0, 1.2])];
   if (kind === 'trumpet') return [at(1, lpMesh(instrumentLP('trumpet')), [-0.06, 0.05, 0.05], [0, 0, 0])];
   return [at(1, lpMesh(instrumentLP('sticks')), [0, 0, 0], [-0.6, 0, 0]), at(-1, lpMesh(instrumentLP('sticks')), [0, 0, 0], [-0.3, 0, 0])];
 }
@@ -266,6 +266,16 @@ export function dimGhosts(root: THREE.Object3D, k: number | undefined) {
 export function attachProp(rig: Rig, prop: PropKind | undefined) {
   if (!prop || !rig.parts.armR) return;
   if (prop === 'mug' || prop === 'hoe') { rig.parts.armR.add(propMesh(prop)); return; }
+  if (prop === 'guitar') {
+    // la chitarra sta sul petto (parte del corpo), il manico in alto a sinistra
+    const g = lpMesh(instrumentLP('guitar'));
+    g.name = 'prop';
+    const pv = HUMAN_PIVOTS.body;
+    g.position.set(0.03 - pv[0], 0.27 - pv[1], 0.14 - pv[2]);
+    g.rotation.set(0.15, 0, -0.42);
+    (rig.parts.body ?? rig.parts.armR).add(g);
+    return;
+  }
   if (prop === 'rake') { rig.parts.armR.parent?.add(rakeMesh()); return; }
   for (const { side, mesh } of instrumentMeshes(prop)) (side > 0 ? rig.parts.armR : rig.parts.armL)?.add(mesh);
 }
@@ -274,7 +284,8 @@ export function attachProp(rig: Rig, prop: PropKind | undefined) {
 export function playPose(rig: Rig, prop: Instrument, k: number) {
   const L = rig.parts.armL, R = rig.parts.armR, H = rig.parts.head;
   if (!L || !R) return;
-  if (prop === 'violin') { L.rotation.x = -1.2; R.rotation.x = -0.6; R.rotation.z = 0.5 + Math.sin(k * 6) * 0.25; if (H) H.rotation.z = 0.15; }
+  // chitarra: la sinistra sul manico, la destra pizzica le corde; la testa segue il ritmo
+  if (prop === 'guitar') { L.rotation.x = -1.0; L.rotation.z = -0.55; R.rotation.x = -0.75 + Math.sin(k * 8) * 0.18; R.rotation.z = 0.35; if (H) H.rotation.x = 0.1 + Math.sin(k * 4) * 0.08; }
   else if (prop === 'sticks') { L.rotation.x = -0.9 + Math.sin(k * 9) * 0.3; R.rotation.x = -0.9 - Math.sin(k * 9) * 0.3; }
   else { L.rotation.x = -1.4 + Math.sin(k * 2) * 0.08; R.rotation.x = -1.4 + Math.sin(k * 2) * 0.08; if (H) H.rotation.x = -0.2 + Math.sin(k * 2) * 0.08; }
 }

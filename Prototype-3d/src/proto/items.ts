@@ -112,7 +112,7 @@ const group = (...o: THREE.Object3D[]) => { const g = new THREE.Group(); g.add(.
 
 function band(): THREE.Group {
   const g = group(inst(N.bandStageLP()));
-  g.add(char('skeleton', 'idle', [-0.75, 0.12, 0.15], 0.25, 0.4, (p) => { p.armL.rotation.x = -1.2; p.armR.rotation.x = -0.6; p.armR.rotation.z = 0.5; holdIn(p.armL, N.instrumentLP('violin'), -1, [0, 0.05, 0.05], [0.4, 0, 1.2]); }));
+  g.add(char('skeleton', 'idle', [-0.75, 0.12, 0.15], 0.25, 0.4, (p) => { p.armL.rotation.x = -1.2; p.armR.rotation.x = -0.6; p.armR.rotation.z = 0.5; holdIn(p.armL, N.instrumentLP('guitar'), -1, [0, 0.05, 0.05], [0.4, 0, 1.2]); }));
   g.add(char('skeleton', 'idle', [0, 0.12, -0.15], 0, 1.1, (p) => { p.armL.rotation.x = -0.9; p.armR.rotation.x = -0.9; holdIn(p.armR, N.instrumentLP('sticks'), 1, [0, 0, 0], [-0.6, 0, 0]); holdIn(p.armL, N.instrumentLP('sticks'), -1, [0, 0, 0], [-0.3, 0, 0]); }));
   g.add(char('skeleton', 'idle', [0.75, 0.12, 0.15], -0.25, 2.0, (p) => { p.armL.rotation.x = -1.4; p.armR.rotation.x = -1.4; p.head.rotation.x = -0.2; holdIn(p.armR, N.instrumentLP('trumpet'), 1, [-0.06, 0.05, 0.05], [0, 0, 0]); }));
   return g;

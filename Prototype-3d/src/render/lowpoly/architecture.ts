@@ -373,7 +373,8 @@ export function gravediggerHouseLP(v: PVis): LPModel {
   pumpkin(lp, -0.2, 0, 0.75, 0.12, true, lit, 0.2);
   pumpkin(lp, 1.6, 0, 0.75, 0.13, false, false);
   ivy(lp, -1.62, 0.0, 0.42, 1.0, 0.1);
-  lp.light(-0.5, 0.75, 0.5, LPC.window, lit ? 0.6 : 0, 4, 0.1, 0.7);
+  // la finestra illumina il portico e il davanti della casa (prima la luce stava contro il muro: casa buia)
+  lp.light(-0.6, 0.8, 0.95, LPC.window, lit ? 0.95 : 0, 5, 0.1, 0.6);
   grassTuft(lp, 1.8, 1.2, 1.2); grassTuft(lp, -1.8, -1.2, 1.1);
   decayLP(lp, v, 3.6, 2.6);
   return lp.build();
@@ -413,10 +414,11 @@ export function mausoleumLP(v: PVis): LPModel {
   // portale: cancello in ferro su un interno che brilla appena
   lp.push([0, 0, 0.73]);
   lp.plate(gothicArchShape(0.78, 1.15, 5), 0.04, LPC.stoneLight, { ao: 0.1 });
-  lp.push([0, 0.02, 0.02]).plate(gothicArchShape(0.64, 1.05, 5), 0.02, lit ? '#1f3a35' : '#14171c', { bucket: lit ? 'glow' : 'solid', ao: 0 }).pop();
-  for (let i = 0; i < 6; i++) lp.cyl(-0.27 + i * 0.108, 0.02, 0.05, 0.012, 0.012, 0.9, 4, LPC.iron, { jitter: 0 });
-  for (const y of [0.25, 0.7]) lp.box(0, y, 0.05, 0.62, 0.025, 0.02, LPC.iron, { jitter: 0 });
-  lp.add(new THREE.TorusGeometry(0.08, 0.012, 3, 8).translate(0, 0.5, 0.06), LPC.iron, { jitter: 0 });
+  // l'interno che brilla sta un po' davanti alla cornice: alla stessa profondità i due piani si contendevano i pixel (sfarfallio)
+  lp.push([0, 0.02, 0.03]).plate(gothicArchShape(0.64, 1.05, 5), 0.02, lit ? '#1f3a35' : '#14171c', { bucket: lit ? 'glow' : 'solid', ao: 0 }).pop();
+  for (let i = 0; i < 6; i++) lp.cyl(-0.27 + i * 0.108, 0.02, 0.075, 0.012, 0.012, 0.9, 4, LPC.iron, { jitter: 0 });
+  for (const y of [0.25, 0.7]) lp.box(0, y, 0.075, 0.62, 0.025, 0.02, LPC.iron, { jitter: 0 });
+  lp.add(new THREE.TorusGeometry(0.08, 0.012, 3, 8).translate(0, 0.5, 0.09), LPC.iron, { jitter: 0 });
   lp.pop();
   lp.box(0, y0 + 1.18, 0.75, 1.1, 0.14, 0.02, LPC.charcoal, { jitter: 0, ao: 0 });
   // edera sulle colonne e sui fianchi, candele e corona

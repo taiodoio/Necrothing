@@ -7,7 +7,7 @@
 
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
-import { GRAVE_FOOTPRINT, MAP_SIZE } from '../game/balance.ts';
+import { FOREST_MARGIN, GRAVE_FOOTPRINT, MAP_SIZE } from '../game/balance.ts';
 import { CATALOG, rotatedFootprint, visualOf } from '../game/catalog.ts';
 import { graveVisualState } from '../game/graves.ts';
 import { hash3, hashString, createRng } from '../game/rng.ts';
@@ -29,6 +29,23 @@ import { ChunkBaker, chunkOf } from './baker.ts';
 
 
 export const HALF = MAP_SIZE / 2;
+
+/**
+ * Sottobosco oltre il bordo del terreno: una cornice piatta e scura, una
+ * sola mesh, che continua il bosco fin dove arriva la nebbia. Così, da
+ * lontano e con la vista spostata sugli angoli del cimitero, il bordo del
+ * mondo non si vede come un vuoto.
+ */
+function outerGround(): THREE.Mesh {
+  const inner = HALF + FOREST_MARGIN - 0.6, outer = 400;
+  const s = new THREE.Shape([new THREE.Vector2(-outer, -outer), new THREE.Vector2(outer, -outer), new THREE.Vector2(outer, outer), new THREE.Vector2(-outer, outer)]);
+  s.holes.push(new THREE.Path([new THREE.Vector2(-inner, -inner), new THREE.Vector2(-inner, inner), new THREE.Vector2(inner, inner), new THREE.Vector2(inner, -inner)]));
+  const m = new THREE.Mesh(new THREE.ShapeGeometry(s).rotateX(-Math.PI / 2), new THREE.MeshLambertMaterial({ color: '#25301f' }));
+  m.position.y = 0.3;
+  m.name = 'sottobosco';
+  m.receiveShadow = false;
+  return m;
+}
 /** Lato (in celle) delle zone in cui si fondono gli oggetti fermi. */
 const ZONE = 8;
 
@@ -164,6 +181,7 @@ export class WorldView {
     this.style = style;
     this.root.name = 'cimitero';
     this.root.add(this.terrain, this.scenery, this.decorLayer, this.decorLight, this.mergedLayer);
+    this.root.add(outerGround());
     const frameGeo = new THREE.EdgesGeometry(new THREE.BoxGeometry(1, 0.02, 1));
     this.selectionFrame = new THREE.LineSegments(frameGeo, new THREE.LineBasicMaterial({ color: '#f2c27a', transparent: true, opacity: 0.95 }));
     this.selectionFrame.visible = false;

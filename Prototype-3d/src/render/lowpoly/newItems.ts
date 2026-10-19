@@ -474,26 +474,44 @@ export function willowLP(): LPModel {
   return lp.build();
 }
 
-/** Crepa infernale (3×2): spaccatura nel terreno con la lava che pulsa e qualche roccia. */
+/**
+ * Crepa infernale (3×2): il prato si spacca, le zolle si sollevano ai lati
+ * della fessura e la lava pulsa sotto; attorno l'erba è bruciata a chiazze
+ * che sfumano nel prato (niente piastra scura appoggiata sopra).
+ */
 export function hellCrackLP(lit = true): LPModel {
   const lp = new LP('new:crack');
   const r = lp.rng;
-  // zolla scura attorno e la fessura a zig-zag (lava = glow)
-  lp.blob(0, 0.0, 0, 1.4, 0.06, 0.9, '#2e2a28', { vary: 0.1 });
+  // erba bruciata: chiazze piatte che vanno dal nero al verde scuro del prato, più chiare verso fuori
+  for (let i = 0; i < 16; i++) {
+    const k = i / 16, a = r.range(0, Math.PI * 2), d = 0.15 + k * 0.85;
+    const x = Math.cos(a) * d * 1.25, z = Math.sin(a) * d * 0.7;
+    lp.blob(x, 0.0, z, r.range(0.2, 0.34) * (1 - k * 0.4), 0.008, r.range(0.14, 0.24), k < 0.4 ? '#1e1814' : k < 0.75 ? '#2b2a1e' : '#2f3a24', { vary: 0.12, jitter: 0.02 });
+  }
   const pts: Array<[number, number]> = [[-1.3, -0.1], [-0.8, 0.15], [-0.4, -0.05], [0, 0.2], [0.45, -0.1], [0.85, 0.12], [1.3, -0.05]];
   for (let i = 0; i < pts.length - 1; i++) {
     const [x0, z0] = pts[i], [x1, z1] = pts[i + 1];
-    const w = 0.18 - Math.abs(i - 2.5) * 0.03;
-    lp.push([(x0 + x1) / 2, 0.035, (z0 + z1) / 2], Math.atan2(x1 - x0, z1 - z0));
-    lp.box(0, 0, 0, w, 0.02, Math.hypot(x1 - x0, z1 - z0) + 0.05, lit ? '#ff6a2a' : '#4a2a20', lit ? { bucket: 'glow', jitter: 0 } : { jitter: 0 });
-    for (const s of [-1, 1]) lp.box(s * (w / 2 + 0.05), 0, 0, 0.1, 0.07, Math.hypot(x1 - x0, z1 - z0) + 0.05, '#3a2a24', { jitter: 0.01, vary: 0.15 });
+    const len = Math.hypot(x1 - x0, z1 - z0) + 0.05;
+    const w = 0.16 - Math.abs(i - 2.5) * 0.025;
+    lp.push([(x0 + x1) / 2, 0, (z0 + z1) / 2], Math.atan2(x1 - x0, z1 - z0));
+    // fondo della fessura: lava (sotto il livello del prato, appena visibile tra le zolle)
+    lp.box(0, 0.004, 0, w, 0.012, len, lit ? '#ff6a2a' : '#4a2a20', lit ? { bucket: 'glow', jitter: 0 } : { jitter: 0 });
+    if (lit) lp.box(0, 0.012, 0, w * 0.45, 0.008, len * 0.9, '#ffc35a', { bucket: 'glow', jitter: 0 });
+    // zolle di prato sollevate e inclinate verso la fessura: sopra erba, sotto terra
+    for (const s of [-1, 1]) {
+      lp.push([s * (w / 2 + 0.11), -0.01, 0], 0, 0, s * -r.range(0.1, 0.18));
+      lp.box(0, 0, 0, 0.22, 0.04, len * r.range(0.85, 1), LPC.soil, { bevel: 0.012, jitter: 0.012, vary: 0.12, topTint: LPC.grass, topAmount: 1 });
+      lp.pop();
+    }
     lp.pop();
   }
-  // rocce annerite ai bordi e braci che salgono (in gioco animate)
-  for (let i = 0; i < 7; i++) lp.blob(r.range(-1.2, 1.2), 0.06, r.range(-0.7, 0.7) * (i % 2 ? 1 : -1), r.range(0.08, 0.16), r.range(0.06, 0.12), r.range(0.08, 0.14), i % 3 ? '#2a2422' : '#4a2a24', { vary: 0.12 });
+  // sassi anneriti e qualche zolla staccata, mezzi affondati nel prato
+  for (let i = 0; i < 9; i++) lp.blob(r.range(-1.2, 1.2), -0.02, r.range(-0.7, 0.7) * (i % 2 ? 1 : -1), r.range(0.06, 0.13), r.range(0.05, 0.1), r.range(0.06, 0.12), i % 3 ? '#2a2422' : '#4a2a24', { vary: 0.12 });
+  for (let i = 0; i < 4; i++) lp.push([r.range(-1, 1), -0.01, r.range(-0.55, 0.55)], r.range(0, 3), r.range(-0.2, 0.2)).box(0, 0, 0, 0.12, 0.035, 0.1, LPC.soil, { jitter: 0.01, topTint: LPC.grass, topAmount: 1 }).pop();
+  for (let i = 0; i < 6; i++) weeds(lp, r.range(-1.3, 1.3), r.pick([-0.85, 0.85]), 0.7);
   if (lit) {
     for (let i = 0; i < 6; i++) lp.blob(r.range(-1, 1), r.range(0.2, 0.7), r.range(-0.1, 0.15), 0.02, 0.02, 0.02, '#ffb347', { bucket: 'glow', jitter: 0 });
-    // la luce sale dalla fessura, bassa e raccolta: niente alone, solo il riverbero sui bordi
+    // la luce sale dalla fessura, bassa e raccolta: niente alone, solo il riverbero sulle zolle
     lp.light(-0.55, 0.08, 0.05, '#ff6a2a', 0.6, 2.4, 0.5, 0.12);
     lp.light(0.65, 0.08, 0, '#ff6a2a', 0.6, 2.4, 0.5, 0.12);
   }
@@ -670,10 +688,23 @@ export function bandStageLP(lit = true, back = 0): LPModel {
     lp.push([x, 0.86, -0.22], 0, -0.6).box(0, 0, 0, 0.3, 0.2, 0.015, LPC.iron, { jitter: 0 }).pop();
     lp.push([x, 0.87, -0.21], 0, -0.6).box(0, 0, 0.01, 0.24, 0.16, 0.005, '#e2d6bb', { jitter: 0 }).pop();
   }
-  // grancassa con un teschio dipinto
-  lp.push([0, 0.12, -0.55], 0, Math.PI / 2).cyl(0, -0.12, 0, 0.3, 0.3, 0.24, 14, '#8e2f2a', { jitter: 0 }).pop();
-  lp.push([0, 0.42, -0.42], 0, Math.PI / 2).cyl(0, 0, 0, 0.27, 0.27, 0.01, 14, '#e8dcc0', { jitter: 0 }).pop();
-  skull(lp, 0, 0.3, -0.42, 0.9);
+  // batteria davanti al batterista (che sta dietro, al centro): grancassa col teschio dipinto
+  // rivolta al pubblico, rullante, tom, charleston e piatto
+  const kz = -0.12;
+  lp.push([0, 0.29, kz], Math.PI / 2).cyl(0, -0.09, 0, 0.17, 0.17, 0.18, 14, '#8e2f2a', { jitter: 0 }).pop();
+  lp.push([0, 0.29, kz + 0.095], Math.PI / 2).cyl(0, 0, 0, 0.155, 0.155, 0.01, 14, '#e8dcc0', { jitter: 0 }).pop();
+  skull(lp, 0, 0.26, kz + 0.1, 0.55);
+  for (const s of [-1, 1]) lp.push([s * 0.17, 0.12, kz + 0.08], 0, 0, s * 0.5).cyl(0, 0, 0, 0.012, 0.012, 0.12, 4, LPC.iron, { jitter: 0 }).pop();
+  lp.cyl(0.05, 0.47, kz - 0.05, 0.08, 0.08, 0.08, 10, '#8e2f2a', { jitter: 0 }); // tom sulla grancassa
+  lp.cyl(0.05, 0.55, kz - 0.05, 0.075, 0.075, 0.006, 10, '#e8dcc0', { jitter: 0 });
+  lp.cyl(-0.3, 0.12, kz - 0.18, 0.012, 0.012, 0.42, 4, LPC.iron, { jitter: 0 }); // rullante sul suo treppiede
+  lp.cyl(-0.3, 0.52, kz - 0.18, 0.11, 0.11, 0.08, 10, '#c8c2b4', { jitter: 0 });
+  lp.cyl(-0.3, 0.6, kz - 0.18, 0.105, 0.105, 0.006, 10, '#efe8da', { jitter: 0 });
+  for (const [x, z, h, r] of [[0.34, kz - 0.22, 0.62, 0.13], [-0.18, kz - 0.42, 0.82, 0.16]] as const) {
+    lp.cyl(x, 0.12, z, 0.01, 0.01, h, 4, LPC.iron, { jitter: 0 });
+    lp.push([x, 0.12 + h, z], 0, 0, x > 0 ? 0.2 : -0.15).cyl(0, 0, 0, r, 0.02, 0.025, 12, LPC.gold, { jitter: 0 }).pop();
+  }
+  lp.cyl(0, 0.12, kz - 0.55, 0.12, 0.1, 0.32, 8, LPC.woodDark, { jitter: 0 }); // sgabello
   // lanterne agli angoli del palco
   for (const s of [-1, 1]) {
     lp.cyl(s * 1.3, 0.12, 0.6, 0.02, 0.02, 1.0, 5, LPC.woodDark, { jitter: 0 });
@@ -685,14 +716,20 @@ export function bandStageLP(lit = true, back = 0): LPModel {
   return lp.build();
 }
 
-/** Strumenti in mano agli scheletri: violino, tromba, bacchette. */
-export function instrumentLP(kind: 'violin' | 'trumpet' | 'sticks'): LPModel {
+/** Strumenti in mano agli scheletri: chitarra (manico verso sinistra), tromba, bacchette. */
+export function instrumentLP(kind: 'guitar' | 'trumpet' | 'sticks'): LPModel {
   const lp = new LP(`new:instr:${kind}`);
   lp.push([0, 0, 0], 0, 0, 0, 2);
-  if (kind === 'violin') {
-    lp.blob(0, 0, 0, 0.06, 0.1, 0.025, '#8a4a2a', { jitter: 0 });
-    lp.box(0, 0.08, 0, 0.025, 0.14, 0.02, '#2a1a10', { jitter: 0 });
-    tube(lp, [-0.12, -0.05, 0.04], [0.12, 0.12, 0.04], 0.005, '#d8c8a0', 3);
+  if (kind === 'guitar') {
+    // cassa a otto (due lobi), buca, ponticello, manico lungo con la paletta e le meccaniche
+    lp.blob(0.03, 0, 0, 0.075, 0.068, 0.028, '#b0662e', { jitter: 0 });
+    lp.blob(-0.05, 0, 0, 0.058, 0.054, 0.028, '#b0662e', { jitter: 0 });
+    lp.push([-0.035, 0, 0.026], Math.PI / 2).cyl(0, 0, 0, 0.022, 0.022, 0.004, 10, '#2a1a10', { jitter: 0 }).pop();
+    lp.box(0.05, 0, 0.027, 0.012, 0.05, 0.006, '#2a1a10', { jitter: 0 });
+    lp.box(-0.2, 0, 0.012, 0.2, 0.024, 0.014, '#5a3a22', { jitter: 0 });
+    lp.box(-0.32, 0, 0.012, 0.05, 0.034, 0.016, '#2a1a10', { jitter: 0 });
+    for (const s of [-1, 1]) for (const x of [-0.335, -0.31]) lp.box(x, s * 0.022, 0.012, 0.008, 0.01, 0.008, LPC.ironLight, { jitter: 0 });
+    for (const y of [-0.008, 0, 0.008]) lp.box(-0.13, y, 0.031, 0.36, 0.002, 0.002, '#e8e2d0', { jitter: 0 });
   } else if (kind === 'trumpet') {
     tube(lp, [0, 0, 0], [0, 0, 0.22], 0.015, LPC.gold);
     lp.push([0, 0, 0.22], 0, Math.PI / 2).cyl(0, 0, 0, 0.02, 0.06, 0.08, 9, LPC.gold, { jitter: 0, open: true }).pop();

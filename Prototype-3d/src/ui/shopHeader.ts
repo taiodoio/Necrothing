@@ -100,6 +100,16 @@ function shopRoomModel(): LPModel {
   lp.blob(1.1, 2.25, -1.24, 0.07, 0.11, 0.02, SPECTRAL, { bucket: 'glow', detail: 0 });
   for (const x of [0.8, 1.4]) lp.cyl(x, 2.48, -1.27, 0.01, 0.01, 0.28, 3, LPC.iron);
 
+  // sotto la finestra un calderone che ribolle di verde spettrale
+  lp.cyl(0.32, 0.02, -0.95, 0.24, 0.3, 0.34, 7, LPC.iron, { vary: 0.08 }).cyl(0.32, 0.34, -0.95, 0.27, 0.25, 0.05, 7, LPC.ironLight);
+  for (const a of [0.5, 2.6, 4.7]) lp.cyl(0.32 + Math.cos(a) * 0.2, 0, -0.95 + Math.sin(a) * 0.2, 0.03, 0.03, 0.06, 4, LPC.iron);
+  lp.cyl(0.32, 0.36, -0.95, 0.22, 0.22, 0.02, 7, '#7fe0b8', { bucket: 'glow' });
+  for (const [dx, dz, r0] of [[-0.06, 0.02, 0.05], [0.08, -0.05, 0.035], [0.02, 0.08, 0.03]] as const) lp.blob(0.32 + dx, 0.4, -0.95 + dz, r0, r0, r0, '#b6f5da', { bucket: 'glow', detail: 0 });
+  // casse e un sacco accanto alla mensola, con una zucca sopra
+  lp.push([-1.32, 0, -0.95], 0.12).box(0, 0, 0, 0.42, 0.36, 0.38, LPC.wood, { bevel: 0.015, vary: 0.12 }).box(0, 0.12, 0.195, 0.4, 0.04, 0.01, LPC.woodDark).pop();
+  lp.push([-1.28, 0.36, -0.98], -0.2).box(0, 0, 0, 0.32, 0.26, 0.3, LPC.woodLight, { bevel: 0.012, vary: 0.12 }).pop();
+  lp.blob(-1.26, 0.72, -0.98, 0.11, 0.09, 0.11, '#d9772f', { detail: 1 }).cyl(-1.26, 0.79, -0.98, 0.012, 0.012, 0.05, 4, LPC.leaf);
+  lp.blob(-0.95, 0.16, -1.0, 0.17, 0.17, 0.15, LPC.dry, { detail: 1 }).cyl(-0.95, 0.3, -1.0, 0.05, 0.03, 0.08, 5, LPC.dryDark);
   // bara in piedi appoggiata alla parete, a sinistra in fondo
   lp.push([-3.75, 0, -1.0], 0.15, -0.08).extrude(coffinShape(), 0.26, LPC.woodDark, { bevel: 0.015 }).pop();
   // pala e scopa appoggiate al bancone, una ragnatela nell'angolo
@@ -256,8 +266,9 @@ export function shopHeader(): ShopHeader {
     animateRig(rig, pose, t, phase);
   };
 
-  const frame = (now: number) => {
+  const frame = () => {
     if (stopped) return;
+    const now = performance.now();
     if (!el.isConnected) { stop(); return; }
     raf = requestAnimationFrame(frame);
     if (document.hidden || now - last < 1000 / FPS - 2) return;
@@ -278,6 +289,6 @@ export function shopHeader(): ShopHeader {
   }
 
   // la prima immagine subito, poi l'animazione
-  requestAnimationFrame((n) => { resize(); step(0); renderer.render(scene, camera); last = n; raf = requestAnimationFrame(frame); });
+  requestAnimationFrame(() => { resize(); step(0); renderer.render(scene, camera); last = performance.now(); raf = requestAnimationFrame(frame); });
   return { el, stop };
 }

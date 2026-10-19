@@ -114,7 +114,8 @@ const gravedigger = () => humanSpec(
       for (const s of [-1, 1]) onSkin(lp, headFront(s * 0.1, 0.775), 0.006, -s * 0.15, (q) => q.add(rbox(0.08, 0.018, 0.012, 0.006, 1), '#6b4a33', O)); // sopracciglia
     },
     chest: (lp) => { lp.add(rbox(0.07, 0.07, 0.012, 0.01, 1).translate(0.07, 0.3, 0.212).rotateX(-0.32), '#8a7a55', O); }, // toppa
-    held: [{ side: 1, build: shovel }],
+    // impugnata come il bastone del Custode: inclinata di ~25° in fuori e appena in avanti, non dritta lungo il corpo
+    held: [{ side: 1, build: (lp: LP) => { lp.push([0, 0, 0.02], 0, 0.12, -0.42); shovel(lp); lp.pop(); } }],
   },
 );
 

@@ -829,15 +829,15 @@ export class Game {
   /**
    * Menù dell'animale (ognuno il suo, così se ne gestiscono più d'uno):
    * raggiungere il Custode, liberarlo, mandarlo a cuccia, coccolarlo, giocarci.
-   * Le voci che ora non hanno senso restano visibili ma disattivate.
+   * Le voci che ora non hanno senso restano visibili ma disattivate (nell'interfaccia nuova non si mostrano).
    */
   petMenu(id: string): Array<{ label: string; icon: string; cls?: string; disabled?: boolean; run: () => void }> {
     const p = this.actors.petAt(id);
     if (!p) return [];
     const off = p.broken;
     return [
-      { label: 'Raggiungi il Custode', icon: 'paw', disabled: off || p.mode === 'follow', run: () => this.petCommand(id, this.actors.callPet(id)) },
-      { label: 'Libera', icon: uiNext() ? 'unlock' : 'sun', disabled: off || p.mode === 'free', run: () => this.petCommand(id, this.actors.freePet(id)) },
+      { label: 'Raggiungi il Custode', icon: uiNext() ? 'whistle' : 'paw', disabled: off || p.mode === 'follow', run: () => this.petCommand(id, this.actors.callPet(id)) },
+      { label: uiNext() ? 'Lascialo girare' : 'Libera', icon: uiNext() ? 'paw' : 'sun', disabled: off || p.mode === 'free', run: () => this.petCommand(id, this.actors.freePet(id)) },
       { label: 'A cuccia', icon: 'kennel', disabled: off || p.mode === 'home', run: () => this.petCommand(id, this.actors.sendPetHome(id)) },
       { label: 'Accarezza', icon: 'heart', cls: 'primary', disabled: off || p.sleeping, run: () => this.actors.petPet(id) },
       { label: 'Lancia l’osso', icon: 'bone', disabled: off || p.sleeping, run: () => { if (!this.actors.throwBone(id)) toast('Qui non c’è spazio per lanciare l’osso.'); } },
@@ -1039,10 +1039,10 @@ export class Game {
     const g = this.groundCell(x, y);
     if (!g) return false;
     if (this.placement?.trace) {
-      // un dito traccia (due dita spostano la vista); vicino alla fine dell'ultimo tratto, riparte da lì
-      const t = this.placement.trace, end = t.segs.at(-1)?.at(-1);
-      const from = end && Math.max(Math.abs(end.x - g.cell.x), Math.abs(end.y - g.cell.y)) <= 1 ? end : g.cell;
-      t.live = this.traceLine(from, from);
+      // un dito traccia (due dita spostano la vista): il tratto parte dalla casella toccata (toccando
+      // la fine del tratto prima l'angolo è in comune, toccando quella accanto si parte da lì)
+      const t = this.placement.trace;
+      t.live = this.traceLine(g.cell, g.cell);
       this.refreshPlacement();
       return true;
     }

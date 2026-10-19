@@ -1038,7 +1038,10 @@ export class WorldView {
     c.y = this.heightAt(c.x, c.z);
     e.group.position.copy(c);
     e.group.updateMatrix();
-    this.version++;
+    // la versione fa ridisegnare le ombre ferme (e ricalcolare i posti delle tombe): mentre si
+    // trascina basta farlo ogni tanto, non a ogni movimento del dito (in Alta crollavano gli FPS)
+    const now = performance.now();
+    if (now - this.dragVersionAt > 250) { this.dragVersionAt = now; this.version++; }
     if (this.dragging !== id) { this.dragging = id; this.markZone(e); this.flushZones(); }
     this.ghostFrame.visible = true;
     this.ghostFrame.position.set(c.x, c.y + 0.05, c.z);
@@ -1048,8 +1051,11 @@ export class WorldView {
     this.selectionFrame.position.set(c.x, c.y + 0.06, c.z);
   }
 
+  private dragVersionAt = 0;
+
   endPreview() {
     this.ghostFrame.visible = false;
+    if (this.dragging) this.version++;
     if (this.dragging) { this.markZone(this.entities.get(this.dragging)); this.dragging = null; this.flushZones(); }
   }
 

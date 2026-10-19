@@ -1192,7 +1192,7 @@ export class Actors {
     p.mode = 'free';
     if (p.act === 'sleep') { p.timer = 1.5; return `${p.label} esce a fare un giro.`; }
     if (p.act === 'follow') { p.act = 'rest'; p.timer = 0.5; p.path = []; }
-    return `${p.label} è libero di girare.`;
+    return `${p.label} va a zonzo per il cimitero.`;
   }
 
   /** Coccole: il Custode si avvicina, l'animale aspetta e poi scodinzola. */

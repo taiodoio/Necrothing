@@ -28,7 +28,7 @@ export function setUiNext(v: boolean) {
 }
 
 /**
- * Interfaccia «viva», in prova solo nel bench: carte e voci un po' storte,
+ * Interfaccia «viva», accesa nel gioco e nel bench: carte e voci un po' storte,
  * decorazioni sui riquadri, pattern tono su tono, tema scuro marrone, icone
  * sulle schede, angoli automatici di staccionate e muretti.
  */

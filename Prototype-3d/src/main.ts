@@ -10,13 +10,18 @@ import '@fontsource/nunito/700.css';
 import '@fontsource/nunito/800.css';
 import './styles/main.css';
 import './styles/ui-next.css';
-import { setUiNext } from './app/uiNext.ts';
+import './styles/ui-play.css';
+import { setUiNext, setUiPlay } from './app/uiNext.ts';
+import { installPlayDecor } from './ui/playDecor.ts';
 
 const canvas = document.querySelector<HTMLCanvasElement>('#world');
 if (!canvas) throw new Error('Canvas di gioco non trovato.');
 
 // interfaccia nuova (stile low-poly, temi, menù a icone, strumento a traccia, Bottega animata)
 setUiNext(true);
+// interfaccia «viva» (tema marrone, pattern, menù a riquadri, angoli dei recinti, Custode fuori dal riquadro)
+setUiPlay(true);
+installPlayDecor();
 
 try {
   const game = new Game(canvas);

@@ -2,7 +2,7 @@
 // grafico e dalla camera: cambiare resa non tocca mai questi dati.
 
 import { DEFAULT_LOOK, normalizeLook, type CustodeLook } from './look.ts';
-import type { Category, DeathCause, GraveType } from './graves.ts';
+import type { CauseChoice, Category, DeathCause, GraveType } from './graves.ts';
 import type { DayPhase } from './time.ts';
 import { MAP_SIZE, WISPS } from './balance.ts';
 import { CATALOG, FAMILY_MEMBERS, rotatedFootprint } from './catalog.ts';
@@ -31,7 +31,9 @@ export interface Grave {
   category: Category;
   birthDate: string | null;
   deathDate: string;
-  deathCause: DeathCause;
+  deathCause: CauseChoice;
+  /** Causa scritta a mano (solo con deathCause 'custom'). */
+  deathCauseText?: string | null;
   epitaph: string | null;
   photoId: string | null;
   graveType: GraveType;

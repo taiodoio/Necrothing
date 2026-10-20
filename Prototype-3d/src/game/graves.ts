@@ -32,6 +32,10 @@ export const DEATH_CAUSES = [
   'eternal_black_screen',
 ] as const;
 export type DeathCause = (typeof DEATH_CAUSES)[number];
+/** Causa scelta: una di quelle pronte o «personalizza» (testo libero, in Grave.deathCauseText). */
+export type CauseChoice = DeathCause | 'custom';
+/** Lunghezza massima della causa scritta a mano. */
+export const CUSTOM_CAUSE_MAX = 60;
 
 export const DEATH_CAUSE_LABELS: Record<DeathCause, string> = {
   planned_obsolescence: 'Obsolescenza programmata',
@@ -48,6 +52,12 @@ export const DEATH_CAUSE_LABELS: Record<DeathCause, string> = {
   broken_cable: 'Cavo spezzato',
   eternal_black_screen: 'Schermo nero eterno',
 };
+
+/** Etichetta della causa (quella scritta a mano, se personalizzata). */
+export function deathCauseLabel(cause: CauseChoice | null | undefined, text?: string | null): string {
+  if (!cause) return '—';
+  return cause === 'custom' ? (text?.trim() || '—') : DEATH_CAUSE_LABELS[cause];
+}
 
 export const GRAVE_TYPES = [
   'stone_simple', 'rectangular', 'gothic', 'celtic_cross', 'marble_cross',

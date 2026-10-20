@@ -4,7 +4,7 @@
 
 import { BUSINESS, DECAY, EARLY_ACCESS, ECONOMY, HAT_FEATS, RELEASE_LOCKS, EXPANSION, GRAVE_FOOTPRINT, GRAVEDIGGER, WISP_SPAWN, WISPS, XP, ZOMBIE_MUD } from './balance.ts';
 import { CATALOG, isSeasonallyAvailable, placeableDef, repairCost, rotatedFootprint, type PlaceableDef } from './catalog.ts';
-import { CATEGORIES, DEATH_CAUSES, GRAVE_TYPE_MIN_RANK, GRAVE_TYPES, type Category, type DeathCause, type GraveType } from './graves.ts';
+import { CATEGORIES, CUSTOM_CAUSE_MAX, DEATH_CAUSES, GRAVE_TYPE_MIN_RANK, GRAVE_TYPES, type CauseChoice, type Category, type DeathCause, type GraveType } from './graves.ts';
 import { evaluateAchievements, rankForXp, type AchievementDef } from './progression.ts';
 import { hashString, newId } from './rng.ts';
 import type { RoamerKind } from './spawn.ts';
@@ -100,7 +100,9 @@ export interface BurialDraft {
   category: Category | null;
   birthDate: string | null;
   deathDate: string | null;
-  deathCause: DeathCause | null;
+  deathCause: CauseChoice | null;
+  /** Causa scritta a mano, quando deathCause è 'custom'. */
+  deathCauseText: string;
   epitaph: string;
   graveType: GraveType | null;
   photoId: string | null;
@@ -108,7 +110,7 @@ export interface BurialDraft {
 
 export function emptyDraft(now: Date): BurialDraft {
   return {
-    name: '', category: null, birthDate: null, deathDate: isoDate(now), deathCause: null,
+    name: '', category: null, birthDate: null, deathDate: isoDate(now), deathCause: null, deathCauseText: '',
     epitaph: '', graveType: 'stone_simple', photoId: null,
   };
 }
@@ -122,7 +124,11 @@ export function validateDraft(d: BurialDraft, now: Date): Record<string, string>
   if (!d.deathDate) e.deathDate = 'Indica la data del trapasso.';
   else if (d.deathDate > isoDate(now)) e.deathDate = 'Non si seppellisce il futuro.';
   if (d.birthDate && d.deathDate && d.birthDate > d.deathDate) e.birthDate = 'Nato dopo essere morto? Sospetto.';
-  if (!d.deathCause || !DEATH_CAUSES.includes(d.deathCause)) e.deathCause = 'Scegli una causa.';
+  if (d.deathCause === 'custom') {
+    const t = (d.deathCauseText ?? '').trim();
+    if (!t) e.deathCause = 'Scrivi la causa del decesso.';
+    else if (t.length > CUSTOM_CAUSE_MAX) e.deathCause = `Massimo ${CUSTOM_CAUSE_MAX} caratteri.`;
+  } else if (!d.deathCause || !DEATH_CAUSES.includes(d.deathCause)) e.deathCause = 'Scegli una causa.';
   if (d.epitaph.length > 240) e.epitaph = 'Massimo 240 caratteri.';
   if (!d.graveType || !GRAVE_TYPES.includes(d.graveType)) e.graveType = 'Scegli una lapide.';
   return e;
@@ -155,6 +161,7 @@ export function bury(s: SaveData, d: BurialDraft, x: number, y: number, now: Dat
     birthDate: d.birthDate,
     deathDate: d.deathDate!,
     deathCause: d.deathCause!,
+    ...(d.deathCause === 'custom' ? { deathCauseText: d.deathCauseText.trim() } : {}),
     epitaph: d.epitaph.trim() || null,
     photoId: d.photoId,
     graveType: d.graveType!,

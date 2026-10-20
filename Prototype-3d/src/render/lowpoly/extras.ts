@@ -274,18 +274,33 @@ export function archLP(v: PVis): LPModel {
   return lp.build();
 }
 
+/**
+ * Pezzi d'angolo (interfaccia «viva»): due tratti a L, uno verso ovest (−x) e
+ * uno verso sud (+z), che si incontrano al centro della cella; la scena li gira
+ * verso i due vicini. `span` disegna un tratto dritto da x0 a x1 lungo x.
+ */
+function cornered(lp: LP, v: PVis, span: (x0: number, x1: number, first: boolean, last: boolean) => void, overlap = 0) {
+  if (!v.corner) { span(-0.5, 0.5, true, true); return; }
+  span(-0.5, overlap, true, true);
+  lp.push([0, 0, 0], -Math.PI / 2); span(overlap, 0.5, false, true); lp.pop();
+}
+
 export function wallStoneLP(v: PVis): LPModel {
-  const lp = new LP(`lp:wallstone:${v.seed}:${v.dirty}${v.broken}`);
+  const lp = new LP(`lp:wallstone:${v.seed}:${v.dirty}${v.broken}:${v.corner ? 'L' : ''}`);
   const r = lp.rng;
-  for (let row = 0; row < 3; row++) {
-    let x = -0.5 + (row % 2 ? 0.12 : 0);
-    while (x < 0.5) {
-      const w = Math.min(0.5 - x, 0.22 + r.next() * 0.16);
-      if (!(v.broken && row === 2 && r.chance(0.6))) lp.box(x + w / 2, row * 0.19, 0, w - 0.015, 0.18, 0.36, r.pick([LPC.stone, LPC.stoneDark, LPC.stoneWarm, '#5d6168']), { bevel: 0.025, vary: 0.08, ao: 0.25 });
-      x += w;
+  cornered(lp, v, (x0, x1) => {
+    for (let row = 0; row < 3; row++) {
+      let x = x0 + (row % 2 ? 0.12 : 0);
+      while (x < x1 - 0.01) {
+        const w = Math.min(x1 - x, 0.22 + r.next() * 0.16);
+        if (!(v.broken && row === 2 && r.chance(0.6))) lp.box(x + w / 2, row * 0.19, 0, w - 0.015, 0.18, 0.36, r.pick([LPC.stone, LPC.stoneDark, LPC.stoneWarm, '#5d6168']), { bevel: 0.025, vary: 0.08, ao: 0.25 });
+        x += w;
+      }
+      // la fila sfalsata comincia con un mezzo sasso, così il bordo resta pieno
+      if (row % 2) lp.box(x0 + 0.06, row * 0.19, 0, 0.105, 0.18, 0.36, r.pick([LPC.stone, LPC.stoneDark]), { bevel: 0.02, vary: 0.08, ao: 0.25 });
     }
-  }
-  if (!v.broken) lp.box(0, 0.57, 0, 1.02, 0.07, 0.42, LPC.stoneLight, { bevel: 0.015, topTint: LPC.moss, topAmount: v.dirty ? 0.6 : 0.25 });
+    if (!v.broken) lp.box((x0 + x1) / 2, 0.57, 0, x1 - x0 + 0.02, 0.07, 0.42, LPC.stoneLight, { bevel: 0.015, topTint: LPC.moss, topAmount: v.dirty ? 0.6 : 0.25 });
+  }, 0.18); // il secondo braccio parte dal dorso del primo (il muro è spesso)
   if (r.chance(0.6)) moss(lp, r.range(-0.3, 0.3), 0.2, 0.19, 0.08);
   grassTuft(lp, r.range(-0.4, 0.4), 0.24, 1);
   decayLP(lp, v, 1, 0.5);
@@ -293,39 +308,50 @@ export function wallStoneLP(v: PVis): LPModel {
 }
 
 export function fenceWoodLP(v: PVis): LPModel {
-  const lp = new LP(`lp:fencewood:${v.seed}:${v.dirty}${v.broken}`);
+  const lp = new LP(`lp:fencewood:${v.seed}:${v.dirty}${v.broken}:${v.corner ? 'L' : ''}`);
   const r = lp.rng;
-  for (const x of [-0.46, 0.46]) lp.push([x, 0, 0], 0, 0, r.range(-0.05, 0.05)).box(0, 0, 0, 0.09, 0.85, 0.09, LPC.woodDark, { bevel: 0.01, vary: 0.12 }).cyl(0, 0.85, 0, 0.06, 0, 0.06, 4, LPC.woodDark, { jitter: 0 }).pop();
-  for (const y of [0.25, 0.62]) lp.push([0, y, -0.06], 0, 0, r.range(-0.05, 0.05)).box(0, 0, 0, 1.0, 0.07, 0.04, LPC.wood, { bevel: 0.006, vary: 0.12 }).pop();
-  for (let i = 0; i < 6; i++) {
-    if (v.broken && r.chance(0.4)) continue;
-    const x = -0.34 + i * 0.136;
-    const h = 0.68 + r.next() * 0.1;
-    lp.push([x, 0, 0], 0, 0, r.range(-0.07, 0.07));
-    lp.box(0, 0, 0, 0.09, h, 0.025, r.pick([LPC.woodLight, LPC.wood, '#8a6c50']), { bevel: 0.006, vary: 0.1 });
-    const tip = new THREE.Shape(); tip.moveTo(-0.045, 0); tip.lineTo(0.045, 0); tip.lineTo(0, 0.07); tip.closePath();
-    lp.push([0, h, -0.0125]).plate(tip, 0.025, LPC.woodLight, { ao: 0 }).pop();
-    lp.pop();
-  }
+  cornered(lp, v, (x0, x1, first, last) => {
+    const posts = [first ? x0 + 0.04 : null, last ? x1 - 0.04 : null].filter((x): x is number => x !== null);
+    for (const x of posts) lp.push([x, 0, 0], 0, 0, r.range(-0.05, 0.05)).box(0, 0, 0, 0.09, 0.85, 0.09, LPC.woodDark, { bevel: 0.01, vary: 0.12 }).cyl(0, 0.85, 0, 0.06, 0, 0.06, 4, LPC.woodDark, { jitter: 0 }).pop();
+    for (const y of [0.25, 0.62]) lp.push([(x0 + x1) / 2, y, -0.06], 0, 0, r.range(-0.05, 0.05)).box(0, 0, 0, x1 - x0, 0.07, 0.04, LPC.wood, { bevel: 0.006, vary: 0.12 }).pop();
+    // assi a passo fisso (0,136) tra i pali
+    const n = Math.max(1, Math.round((x1 - x0 - 0.32) / 0.136) + 1);
+    const step = (x1 - x0 - 0.32) / Math.max(1, n - 1);
+    for (let i = 0; i < n; i++) {
+      if (v.broken && r.chance(0.4)) continue;
+      const x = n === 1 ? (x0 + x1) / 2 : x0 + 0.16 + i * step;
+      const h = 0.68 + r.next() * 0.1;
+      lp.push([x, 0, 0], 0, 0, r.range(-0.07, 0.07));
+      lp.box(0, 0, 0, 0.09, h, 0.025, r.pick([LPC.woodLight, LPC.wood, '#8a6c50']), { bevel: 0.006, vary: 0.1 });
+      const tip = new THREE.Shape(); tip.moveTo(-0.045, 0); tip.lineTo(0.045, 0); tip.lineTo(0, 0.07); tip.closePath();
+      lp.push([0, h, -0.0125]).plate(tip, 0.025, LPC.woodLight, { ao: 0 }).pop();
+      lp.pop();
+    }
+  }, 0.06); // le traverse dei due bracci si incontrano dietro il palo d'angolo
   grassTuft(lp, r.range(-0.4, 0.4), 0.1, 1.1);
   decayLP(lp, v, 1, 0.4);
   return lp.build();
 }
 
 export function fenceIronLP(v: PVis): LPModel {
-  const lp = new LP(`lp:fenceiron:${v.seed}:${v.dirty}${v.broken}`);
-  lp.box(0, 0, 0, 1.02, 0.15, 0.24, LPC.stoneDark, { bevel: 0.02, vary: 0.08, ...mossy(v) });
-  for (const x of [-0.46, 0.46]) {
-    lp.box(x, 0.15, 0, 0.08, 1.15, 0.08, LPC.iron, { bevel: 0.008 });
-    lp.blob(x, 1.36, 0, 0.055, 0.055, 0.055, LPC.iron, { jitter: 0 });
-  }
-  for (const y of [0.4, 1.05]) lp.box(0, y, 0, 0.92, 0.035, 0.035, LPC.iron, { jitter: 0 });
-  for (let i = 0; i < 6; i++) {
-    const x = -0.33 + i * 0.132;
-    const bent = v.broken && x > 0 ? 0.35 : 0;
-    lp.push([x, 0.15, 0], 0, 0, bent).cyl(0, 0, 0, 0.014, 0.014, 1.0, 4, LPC.iron, { jitter: 0 }).cyl(0, 1.0, 0, 0.035, 0, 0.1, 4, LPC.iron, { jitter: 0 }).pop();
-    if (i % 2 === 0) lp.add(new THREE.TorusGeometry(0.055, 0.008, 3, 8, Math.PI).translate(x + 0.066, 0.42, 0), LPC.iron, { jitter: 0 });
-  }
+  const lp = new LP(`lp:fenceiron:${v.seed}:${v.dirty}${v.broken}:${v.corner ? 'L' : ''}`);
+  cornered(lp, v, (x0, x1, first, last) => {
+    lp.box((x0 + x1) / 2, 0, 0, x1 - x0 + 0.02, 0.15, 0.24, LPC.stoneDark, { bevel: 0.02, vary: 0.08, ...mossy(v) });
+    const posts = [first ? x0 + 0.04 : null, last ? x1 - 0.04 : null].filter((x): x is number => x !== null);
+    for (const x of posts) {
+      lp.box(x, 0.15, 0, 0.08, 1.15, 0.08, LPC.iron, { bevel: 0.008 });
+      lp.blob(x, 1.36, 0, 0.055, 0.055, 0.055, LPC.iron, { jitter: 0 });
+    }
+    for (const y of [0.4, 1.05]) lp.box((x0 + x1) / 2, y, 0, x1 - x0 - 0.08, 0.035, 0.035, LPC.iron, { jitter: 0 });
+    const n = Math.max(1, Math.round((x1 - x0 - 0.34) / 0.132) + 1);
+    const step = (x1 - x0 - 0.34) / Math.max(1, n - 1);
+    for (let i = 0; i < n; i++) {
+      const x = n === 1 ? (x0 + x1) / 2 : x0 + 0.17 + i * step;
+      const bent = v.broken && x > 0 ? 0.35 : 0;
+      lp.push([x, 0.15, 0], 0, 0, bent).cyl(0, 0, 0, 0.014, 0.014, 1.0, 4, LPC.iron, { jitter: 0 }).cyl(0, 1.0, 0, 0.035, 0, 0.1, 4, LPC.iron, { jitter: 0 }).pop();
+      if (i % 2 === 0 && i < n - 1) lp.add(new THREE.TorusGeometry(0.055, 0.008, 3, 8, Math.PI).translate(x + 0.066, 0.42, 0), LPC.iron, { jitter: 0 });
+    }
+  });
   decayLP(lp, v, 1, 0.4);
   return lp.build();
 }

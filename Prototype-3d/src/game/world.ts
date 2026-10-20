@@ -158,3 +158,28 @@ export function computePrestige(state: Pick<SaveData, 'graves' | 'placeables'>):
   const brokenPenalty = state.placeables.filter((p) => p.broken).length;
   return Math.max(0, graves.length * 2 + flowerScore + decorative.length * 2 + cleanScore + variety + mausoleum + districts - brokenPenalty);
 }
+
+/** Staccionate, inferriate e muretti: dove due tratti si incontrano nasce un pezzo d'angolo. */
+export const CORNERED = new Set(['fence_wood', 'fence_iron', 'wall_stone']);
+
+/**
+ * Pezzi d'angolo e loro rotazione: un pezzo con un solo vicino orizzontale
+ * (rot pari) a ovest o a est e un solo vicino verticale (rot dispari) a nord o
+ * a sud, dello stesso tipo, diventa una L girata verso i due vicini.
+ * Rotazione 0 = ovest+sud, 1 = nord+ovest, 2 = est+nord, 3 = sud+est (y cresce verso sud).
+ */
+export function fenceCorners(placeables: readonly Placed[]): Map<string, number> {
+  const at = new Map<string, Placed>();
+  for (const p of placeables) if (CORNERED.has(p.type)) at.set(`${p.x},${p.y}`, p);
+  const out = new Map<string, number>();
+  for (const p of at.values()) {
+    const along = (dx: number, dy: number, odd: boolean) => {
+      const q = at.get(`${p.x + dx},${p.y + dy}`);
+      return !!q && q.type === p.type && (q.rot % 2 === 1) === odd;
+    };
+    const w = along(-1, 0, false), e = along(1, 0, false), n = along(0, -1, true), s = along(0, 1, true);
+    if (+w + +e !== 1 || +n + +s !== 1) continue;
+    out.set(p.id, w && s ? 0 : n && w ? 1 : e && n ? 2 : 3);
+  }
+  return out;
+}

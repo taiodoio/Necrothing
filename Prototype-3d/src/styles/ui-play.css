@@ -1,0 +1,77 @@
+/* Interfaccia «viva» (per ora solo nella pagina di misura, classe .ui-play su
+   <html>, sopra .ui-next): tema scuro marrone, pattern tono su tono sui
+   pannelli, carte e voci del menù un po' storte, decorazioni negli angoli
+   dell'HUD, testata della Bottega sfumata nello sfondo. Le immagini arrivano
+   da ui/playDecor.ts come variabili (--deco-*, --pattern-*). */
+
+/* ── Tema scuro marrone, più in tono col gioco ────────────────────── */
+.ui-next.ui-play:not([data-theme="light"]) {
+  --panel: #3d3029;
+  --panel-2: #4b3b32;
+  --input: #30251f;
+  --thumb: #2e241e;
+  --track: #251c17;
+  --sheet: #2b211c;
+  --muted: #c4b4a2;
+  --line: rgba(255, 235, 210, 0.07);
+  --edge: rgba(255, 235, 210, 0.14);
+  --shadow: 0 4px 14px rgba(10, 5, 2, 0.45);
+}
+.ui-play { --pattern: var(--pattern-dark); }
+.ui-play[data-theme="light"] { --pattern: var(--pattern-light); }
+
+/* ── Pattern tono su tono (zucche, foglie, teschi, bare) ──────────── */
+.ui-next.ui-play :is(.drawer, .drawer-foot, .player-chip, .clock-block, .slot, .tutorial, .dialog, .wisp-count, .edit-banner) {
+  background-image: var(--pattern);
+  background-size: 180px 180px;
+}
+.ui-next.ui-play .drawer-foot { background-position: 40px 20px; }
+
+/* ── Decorazioni negli angoli dell'HUD ────────────────────────────── */
+.ui-next.ui-play :is(.player-chip, .clock-block) { position: relative; overflow: visible; }
+.ui-next.ui-play .player-chip::after,
+.ui-next.ui-play .clock-block::before {
+  content: ''; position: absolute; pointer-events: none; background: no-repeat center / contain;
+  filter: drop-shadow(0 2px 2px rgba(0, 0, 0, 0.3));
+}
+.ui-next.ui-play .player-chip::after { right: -9px; bottom: -11px; width: 30px; height: 30px; background-image: var(--deco-pumpkin); rotate: 14deg; }
+.ui-next.ui-play .clock-block::before { left: -8px; top: -9px; width: 22px; height: 22px; background-image: var(--deco-skull); rotate: -16deg; }
+
+/* ── Menù di gioco: ogni voce nel suo riquadro, icone grandi e un po' storte ── */
+.ui-next.ui-play .slots { background: none; box-shadow: none; padding: 0 4px; gap: 9px; }
+.ui-next.ui-play .slot {
+  background-color: var(--panel); box-shadow: var(--shadow), inset 0 1px 0 var(--line); border-radius: var(--r);
+  height: 58px; min-width: 188px; padding: 0 18px 0 8px; gap: 12px;
+}
+.ui-next.ui-play .slot.active { background-color: var(--panel-2); }
+.ui-next.ui-play .slot .pxi { --s: 40px; }
+.ui-next.ui-play .slot small { font-size: 17px; }
+.ui-next.ui-play .slot:nth-child(1) { rotate: -1.4deg; }
+.ui-next.ui-play .slot:nth-child(2) { rotate: 1.1deg; translate: 6px 0; }
+.ui-next.ui-play .slot:nth-child(3) { rotate: -0.6deg; translate: 2px 0; }
+.ui-next.ui-play .slot:nth-child(4) { rotate: 1.6deg; translate: 8px 0; }
+.ui-next.ui-play .slot:nth-child(5) { rotate: -1.8deg; }
+.ui-next.ui-play .slot:nth-child(6) { rotate: 0.8deg; translate: 4px 0; }
+.ui-next.ui-play .slot:nth-child(3n + 1) .pxi { rotate: -9deg; }
+.ui-next.ui-play .slot:nth-child(3n + 2) .pxi { rotate: 7deg; }
+.ui-next.ui-play .slot:nth-child(3n) .pxi { rotate: -3deg; }
+
+/* ── Carte degli oggetti appena storte, non tutte allo stesso modo ── */
+.ui-next.ui-play .grid > .card:nth-child(5n + 1) { rotate: -1.3deg; }
+.ui-next.ui-play .grid > .card:nth-child(5n + 2) { rotate: 0.9deg; }
+.ui-next.ui-play .grid > .card:nth-child(5n + 3) { rotate: -0.5deg; }
+.ui-next.ui-play .grid > .card:nth-child(5n + 4) { rotate: 1.5deg; }
+.ui-next.ui-play .grid > .card:nth-child(5n) { rotate: -0.9deg; }
+.ui-next.ui-play .grid > .card img { rotate: 1deg; }
+.ui-next.ui-play .grid > .card:nth-child(even) img { rotate: -1.5deg; }
+
+/* ── Schede con l'icona ───────────────────────────────────────────── */
+.ui-next.ui-play .tab .pxi { --s: 20px; }
+.ui-next.ui-play .tab { gap: 6px; }
+
+/* ── Testata della Bottega: il bordo in basso sfuma nel pannello ──── */
+.ui-next.ui-play .drawer-hero {
+  background: none;
+  -webkit-mask-image: linear-gradient(to bottom, #000 58%, transparent 100%);
+  mask-image: linear-gradient(to bottom, #000 58%, transparent 100%);
+}

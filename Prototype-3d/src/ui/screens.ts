@@ -18,7 +18,11 @@ import { $, closeDrawer, confirmDialog, fmtDate, h, openDrawer, setDrawerBody, s
 import { shopHeader } from './shopHeader.ts';
 import { graveThumb, placeableThumb } from './thumbs.ts';
 import { ACH_ICONS, icon } from './icons.ts';
-import { uiNext } from '../app/uiNext.ts';
+import { uiNext, uiPlay } from '../app/uiNext.ts';
+
+/** Interfaccia «viva»: un'icona per ogni scheda delle categorie. */
+const CAT_ICON: Record<PlaceableCategory | 'all', string> = { all: 'bag', light: 'lightOn', decoration: 'flower', structure: 'fence', ambient: 'tree', npc: 'ghost', extra: 'bike' };
+const tabIcon = (c: PlaceableCategory | 'all') => (uiPlay() ? icon(CAT_ICON[c], 20) : null);
 import type { UI } from './UI.ts';
 import { openCustomize } from './customize.ts';
 import { BurialPhoto, loadImage, openPostcard, photoStep, portrait } from './memorial.ts';
@@ -187,7 +191,7 @@ export function openShop(ui: UI, cat: PlaceableCategory = 'light', selected: str
   const now = game.now();
   let qty = 1;
   const render = () => {
-    const tabs = h('div', { class: 'tabs' }, ...CATEGORY_ORDER.map((c) => h('button', { class: `tab ${c === cat ? 'active' : ''}`, onclick: () => { cat = c; selected = null; render(); } }, PLACEABLE_CATEGORY_LABELS[c])));
+    const tabs = h('div', { class: 'tabs' }, ...CATEGORY_ORDER.map((c) => h('button', { class: `tab ${c === cat ? 'active' : ''}`, onclick: () => { cat = c; selected = null; render(); } }, tabIcon(c), PLACEABLE_CATEGORY_LABELS[c])));
     const items = CATALOG_LIST.filter((d) => d.category === cat && !d.permanent);
     const grid = h('div', { class: 'grid' }, ...items.map((d) => {
       const av = R.shopAvailability(s, d.id, now);
@@ -285,8 +289,8 @@ export function openInventory(ui: UI, cat: PlaceableCategory | 'all' = 'all') {
   let selected: string | null = null;
   const render = () => {
     const tabs = h('div', { class: 'tabs' },
-      h('button', { class: `tab ${cat === 'all' ? 'active' : ''}`, onclick: () => { cat = 'all'; render(); } }, 'Tutto'),
-      ...CATEGORY_ORDER.map((c) => h('button', { class: `tab ${c === cat ? 'active' : ''}`, onclick: () => { cat = c; selected = null; render(); } }, PLACEABLE_CATEGORY_LABELS[c])));
+      h('button', { class: `tab ${cat === 'all' ? 'active' : ''}`, onclick: () => { cat = 'all'; render(); } }, tabIcon('all'), 'Tutto'),
+      ...CATEGORY_ORDER.map((c) => h('button', { class: `tab ${c === cat ? 'active' : ''}`, onclick: () => { cat = c; selected = null; render(); } }, tabIcon(c), PLACEABLE_CATEGORY_LABELS[c])));
     const types = CATALOG_LIST.filter((d) => (cat === 'all' || d.category === cat) && ((s.inventory[d.id] ?? 0) > 0 || s.placeables.some((p) => p.type === d.id)));
     const grid = types.length ? h('div', { class: 'grid' }, ...types.map((d) => {
       const owned = s.inventory[d.id] ?? 0;

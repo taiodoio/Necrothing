@@ -11,6 +11,8 @@ export interface PVis {
   broken: boolean;
   lit: boolean;
   seed: number;
+  /** Pezzo d'angolo a L (staccionate, inferriate, muretti con due vicini su lati diversi). */
+  corner?: boolean;
 }
 
 export function builder(v: PVis): ModelBuilder {

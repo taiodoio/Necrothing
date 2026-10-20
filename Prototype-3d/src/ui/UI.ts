@@ -41,6 +41,9 @@ export class UI {
     if (uiNext()) {
       $('#fab-icon').style.backgroundImage = iconUrl(fabIcon());
       $('#fab').setAttribute('aria-label', 'Menù');
+      // banner di Modifica: testo breve (intero anche sul telefono) e «Fine» come azione principale
+      $('#edit-banner span').textContent = 'Tocca un elemento e trascinalo';
+      $('#edit-done').classList.add('primary');
       // i fuochi fatui escono dal riquadro del Custode: una targhetta loro, sotto, col numero intero
       const chip = $('#player-chip'), left = h('div', { class: 'hud-left' });
       chip.before(left);
@@ -211,7 +214,8 @@ export class UI {
     this.ctxId = null;
     this.ctxAnchor = anchor;
     $('#ctx-title').replaceChildren(document.createTextNode(title), h('small', {}, sub));
-    $('#ctx-actions').replaceChildren(...actions.map((a) => this.runButton(a)));
+    // interfaccia nuova: solo le azioni che ora si possono fare (niente icone spente)
+    $('#ctx-actions').replaceChildren(...actions.filter((a) => !uiNext() || !a.disabled).map((a) => this.runButton(a)));
     $('#ctx').hidden = false;
     this.positionContext();
   }
@@ -257,6 +261,8 @@ export class UI {
       title = def.label;
       sub = p.broken ? 'Rotto' : p.dirty ? 'Sporco' : def.light ? (p.lit ? 'Acceso' : 'Spento') : def.category === 'npc' ? 'Presenza' : 'In ordine';
       if (this.game.editMode) {
+        // anche in Modifica si vedono i dettagli (sentieri, aiuole & co. si toccano solo qui)
+        if (icons) actions.push({ act: 'detail', label: 'Dettagli', icon: 'search' });
         if (def.rotatable) actions.push({ act: 'rotate', label: 'Ruota', icon: 'variant' });
         if (!def.permanent) actions.push({ act: 'store', label: 'Riponi', icon: 'bag', cls: 'danger' });
         actions.push({ act: 'confirm', label: 'Fatto', icon: 'check', cls: 'primary' });
@@ -285,7 +291,7 @@ export class UI {
       : h('button', {
         class: a.cls ?? '',
         onclick: () => this.game.performEntityAction(sel.id, a.act),
-      }, icon(a.icon, 20), a.label, a.cost ? h('em', {}, ` −${a.cost}`, icon('wisp', 12)) : null)), ...petActions.map((a) => this.runButton(a)));
+      }, icon(a.icon, 20), a.label, a.cost ? h('em', {}, ` −${a.cost}`, icon('wisp', 12)) : null)), ...petActions.filter((a) => !icons || !a.disabled).map((a) => this.runButton(a)));
     $('#ctx').hidden = false;
     this.positionContext();
   }

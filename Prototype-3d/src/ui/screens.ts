@@ -191,6 +191,23 @@ export function openShop(ui: UI, cat: PlaceableCategory = 'light', selected: str
     const items = CATALOG_LIST.filter((d) => d.category === cat && !d.permanent);
     const grid = h('div', { class: 'grid' }, ...items.map((d) => {
       const av = R.shopAvailability(s, d.id, now);
+      if (uiNext()) {
+        // interfaccia nuova: bloccati col lucchetto sopra (e il perché sotto), non comprabili spenti, i tuoi con la spunta
+        const locked = av === 'rank' || av === 'season' || av === 'feat' || av === 'graves';
+        const owned = av === 'owned';
+        return h('button', {
+          class: `card ${selected === d.id ? 'selected' : ''} ${locked ? 'locked' : ''} ${av === 'funds' ? 'dim' : ''} ${owned ? 'owned' : ''}`,
+          onclick: () => { selected = d.id; qty = 1; render(); },
+        },
+        h('span', { class: 'thumb' }, h('img', { src: placeableThumb(d.id, s.settings.style), alt: '' }),
+          locked ? h('span', { class: 'lock-over' }, icon('lock', 30)) : null,
+          owned ? h('span', { class: 'owned-tick' }, icon('check', 15)) : null),
+        h('b', {}, d.label),
+        locked ? h('span', { class: 'lock-why' }, av === 'rank' ? `Rango ${d.minRank}` : lockText(s, d, av))
+          : owned ? h('span', { class: 'price owned' }, 'Tuo')
+            : h('span', { class: 'price' }, String(d.cost), icon('wisp', 12)),
+        (s.inventory[d.id] ?? 0) > 0 ? h('span', { class: 'badge' }, String(s.inventory[d.id])) : null);
+      }
       return h('button', {
         class: `card ${selected === d.id ? 'selected' : ''} ${av !== 'ok' ? 'dim' : ''}`,
         onclick: () => { selected = d.id; qty = 1; render(); },
@@ -202,6 +219,9 @@ export function openShop(ui: UI, cat: PlaceableCategory = 'light', selected: str
       (s.inventory[d.id] ?? 0) > 0 ? h('span', { class: 'badge' }, String(s.inventory[d.id])) : null);
     }));
     setDrawerBody(h('div', {}, h('p', { class: 'muted' }, `Hai ${s.player.wisps.toLocaleString('it-IT')} fuochi fatui. Gli oggetti grigi richiedono rango, stagione o più fuochi fatui.`), tabs, grid));
+    // la scheda scelta resta in vista (al centro, se si può), anche dopo aver toccato un oggetto
+    const active = tabs.querySelector<HTMLElement>('.tab.active');
+    if (active) tabs.scrollLeft = active.offsetLeft - (tabs.clientWidth - active.offsetWidth) / 2;
     if (!selected) { setDrawerFooter(null); return; }
     const d = CATALOG[selected];
     const av = R.shopAvailability(s, d.id, now);

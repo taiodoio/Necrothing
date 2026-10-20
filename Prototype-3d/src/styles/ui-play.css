@@ -1,23 +1,27 @@
 /* Interfaccia «viva» (nel gioco e nella pagina di misura, classe .ui-play su
-   <html>, sopra .ui-next): tema scuro marrone, pattern tono su tono sui
+   <html>, sopra .ui-next): titoli in Grenze Gotisch, tema scuro grigio
+   violastro, pattern tono su tono sui
    pannelli, carte e voci del menù un po' storte, decorazioni negli angoli
-   dell'HUD, testata della Bottega sfumata nello sfondo. Le immagini arrivano
+   dell'HUD, testata della Bottega con il bordo netto. Le immagini arrivano
    da ui/playDecor.ts come variabili (--deco-*, --pattern-*). */
 
-/* ── Tema scuro marrone, più in tono col gioco ────────────────────── */
+/* ── Titoli in Grenze Gotisch: gotico ma leggibile, da cimitero ─────── */
+.ui-next.ui-play { --gothic: "Grenze Gotisch", "Nunito", serif; }
+
+/* ── Tema scuro grigio violastro, da cimitero ─────────────────────── */
 .ui-next.ui-play:not([data-theme="light"]) {
-  --panel: #3d3029;
-  --panel-2: #4b3b32;
-  --input: #30251f;
-  --thumb: #2e241e;
-  --track: #251c17;
-  --sheet: #2b211c;
-  --muted: #c4b4a2;
-  --line: rgba(255, 235, 210, 0.07);
-  --edge: rgba(255, 235, 210, 0.14);
-  --shadow: 0 4px 14px rgba(10, 5, 2, 0.45);
+  --panel: #3a3545;
+  --panel-2: #474154;
+  --input: #2e2a38;
+  --thumb: #2c2836;
+  --track: #231f2c;
+  --sheet: #2a2633;
+  --muted: #bdb5c8;
+  --line: rgba(235, 225, 255, 0.07);
+  --edge: rgba(235, 225, 255, 0.14);
+  --shadow: 0 4px 14px rgba(8, 5, 14, 0.45);
 }
-.ui-play { --pattern: var(--pattern-dark); --plate: #3d3029; /* targhette nella scena */ }
+.ui-play { --pattern: var(--pattern-dark); --plate: #3a3545; /* targhette nella scena */ }
 .ui-play[data-theme="light"] { --pattern: var(--pattern-light); }
 
 /* ── Pattern tono su tono (zucche, foglie, teschi, bare) ──────────── */
@@ -73,7 +77,7 @@
 .ui-next.ui-play .drawer-hero { z-index: 1; box-shadow: 0 8px 14px -8px rgba(10, 5, 2, 0.55); }
 
 /* ── Sotto i pannelli il gioco si scurisce di più: il pannello non si confonde con l'HUD ── */
-.ui-next.ui-play .scrim { background: rgba(14, 8, 4, 0.62); }
+.ui-next.ui-play .scrim { background: rgba(12, 9, 18, 0.62); }
 
 /* ── Il Custode esce dal suo riquadro: testa e cappello interi, sopra il bordo ── */
 .ui-next.ui-play .chip-avatar { position: relative; overflow: visible; clip-path: inset(-40px -6px 0 -6px round 0 0 var(--r-s) var(--r-s)); }

@@ -1,0 +1,20 @@
+/* Prove dell'interfaccia, per ora solo nella pagina di misura (caricato da
+   bench.ts, mai dal gioco): titoli in Grenze Gotisch e tema scuro grigio
+   violastro, più da cimitero del marrone. */
+
+.ui-next { --gothic: "Grenze Gotisch", "Nunito", serif; }
+
+.ui-next.ui-play:not([data-theme="light"]) {
+  --panel: #3a3545;
+  --panel-2: #474154;
+  --input: #2e2a38;
+  --thumb: #2c2836;
+  --track: #231f2c;
+  --sheet: #2a2633;
+  --muted: #bdb5c8;
+  --line: rgba(235, 225, 255, 0.07);
+  --edge: rgba(235, 225, 255, 0.14);
+  --shadow: 0 4px 14px rgba(8, 5, 14, 0.45);
+}
+.ui-next.ui-play { --plate: #3a3545; }
+.ui-next.ui-play .scrim { background: rgba(12, 9, 18, 0.62); }

@@ -6,7 +6,7 @@ import { exportBackup, gallery, importBackup, type PhotoRecord } from '../app/pe
 import { BUSINESS, DECAY, EXPANSION } from '../game/balance.ts';
 import { CATALOG, CATALOG_LIST, CATEGORY_ORDER, PLACEABLE_CATEGORY_LABELS, repairCost, seasonLabel, type PlaceableCategory, type PlaceableDef } from '../game/catalog.ts';
 import {
-  CATEGORIES, CATEGORY_LABELS, DEATH_CAUSE_LABELS, DEATH_CAUSES, GRAVE_STATE_LABELS,
+  CATEGORIES, CATEGORY_LABELS, CUSTOM_CAUSE_MAX, DEATH_CAUSE_LABELS, deathCauseLabel, DEATH_CAUSES, GRAVE_STATE_LABELS,
   GRAVE_TYPE_LABELS, GRAVE_TYPE_MIN_RANK, GRAVE_TYPES, graveVisualState,
 } from '../game/graves.ts';
 import { ACHIEVEMENTS, achievementProgress, nextRank, rankForXp, rankProgress } from '../game/progression.ts';
@@ -44,12 +44,12 @@ const EPITAPHS = [
 let burialPhoto = new BurialPhoto();
 
 /** Dati della cartolina per una tomba (o una bozza): date, etichette, lapide in miniatura e foto. */
-export async function postcardData(g: { name: string; birthDate: string | null; deathDate: string | null; deathCause: R.BurialDraft['deathCause']; category: R.BurialDraft['category']; epitaph: string | null; graveType: NonNullable<R.BurialDraft['graveType']> }, photo: string | null, ui: UI, seed = 1): Promise<PostcardData> {
+export async function postcardData(g: { name: string; birthDate: string | null; deathDate: string | null; deathCause: R.BurialDraft['deathCause']; deathCauseText?: string | null; category: R.BurialDraft['category']; epitaph: string | null; graveType: NonNullable<R.BurialDraft['graveType']> }, photo: string | null, ui: UI, seed = 1): Promise<PostcardData> {
   const style = ui.game.state.settings.style;
   return {
     name: g.name,
     dates: g.birthDate ? `${fmtDate(g.birthDate)} — ${fmtDate(g.deathDate)}` : `† ${fmtDate(g.deathDate)}`,
-    cause: g.deathCause ? DEATH_CAUSE_LABELS[g.deathCause] : '—',
+    cause: deathCauseLabel(g.deathCause, g.deathCauseText),
     category: g.category ? CATEGORY_LABELS[g.category] : '—',
     epitaph: g.epitaph || null,
     photo: photo ? await loadImage(photo) : null,
@@ -85,15 +85,23 @@ export function openBurial(ui: UI, initial?: R.BurialDraft, startStep = 0) {
       body.append(photoStep(photo, render));
     } else if (step === 2) {
       body.append(
-        h('div', { class: 'row' },
+        // una data per riga: affiancate sul telefono non si leggevano
+        h('div', { class: 'dates' },
           field('Nato il (facoltativo)', h('input', { type: 'date', value: d.birthDate ?? '', max: d.deathDate ?? undefined, onchange: (e: Event) => { d.birthDate = (e.target as HTMLInputElement).value || null; render(); } }), errors.birthDate),
           field('Morto il', h('input', { type: 'date', value: d.deathDate ?? '', max: now.toISOString().slice(0, 10), onchange: (e: Event) => { d.deathDate = (e.target as HTMLInputElement).value || null; render(); } }), errors.deathDate),
         ),
         field('Causa del decesso', h('div', { class: 'chips' }, ...DEATH_CAUSES.map((c) => h('button', {
           class: `chip ${d.deathCause === c ? 'active' : ''}`,
           onclick: () => { d.deathCause = c; render(); },
-        }, DEATH_CAUSE_LABELS[c])))),
+        }, DEATH_CAUSE_LABELS[c])),
+        // oppure la si scrive a mano
+        h('button', { class: `chip custom ${d.deathCause === 'custom' ? 'active' : ''}`, onclick: () => { d.deathCause = 'custom'; render(); } }, icon('edit', 16), 'Personalizza…'))),
       );
+      if (d.deathCause === 'custom') {
+        const inp = h('input', { value: d.deathCauseText, maxLength: CUSTOM_CAUSE_MAX, placeholder: 'es. Morso dal criceto', oninput: (e: Event) => { d.deathCauseText = (e.target as HTMLInputElement).value; } });
+        body.append(field('La tua causa', inp));
+        setTimeout(() => { if (!d.deathCauseText) inp.focus(); }, 0);
+      }
     } else if (step === 3) {
       const ta = h('textarea', { maxLength: 240, placeholder: 'Un ultimo pensiero…', oninput: (e: Event) => { d.epitaph = (e.target as HTMLTextAreaElement).value; } });
       ta.value = d.epitaph;
@@ -120,27 +128,31 @@ export function openBurial(ui: UI, initial?: R.BurialDraft, startStep = 0) {
       ), h('dl', { class: 'kv' },
         h('dt', {}, 'Categoria'), h('dd', {}, d.category ? CATEGORY_LABELS[d.category] : '—'),
         h('dt', {}, 'Vissuto'), h('dd', {}, `${fmtDate(d.birthDate)} → ${fmtDate(d.deathDate)}`),
-        h('dt', {}, 'Causa'), h('dd', {}, d.deathCause ? DEATH_CAUSE_LABELS[d.deathCause] : '—'),
+        h('dt', {}, 'Causa'), h('dd', {}, deathCauseLabel(d.deathCause, d.deathCauseText)),
         h('dt', {}, 'Lapide'), h('dd', {}, d.graveType ? GRAVE_TYPE_LABELS[d.graveType] : '—'),
       ), h('p', { class: 'muted' }, 'Dopo la conferma scegli il posto nel cimitero: arriverà il corteo funebre.'));
     }
     setDrawerBody(body);
 
-    const stepValid = step === 0 ? !errors.name && !errors.category && !(d.category === 'abstract' && !R.canBuryAbstractToday(game.state, now))
-      : step === 2 ? !errors.deathDate && !errors.birthDate && !errors.deathCause
-        : step === 4 ? !errors.graveType : step === 5 ? Object.keys(errors).length === 0 : true;
+    // la validità si guarda al tocco, non al disegno: i campi di testo cambiano senza ridisegnare il passo
+    const stepValid = () => {
+      const errors = R.validateDraft(d, now);
+      return step === 0 ? !errors.name && !errors.category && !(d.category === 'abstract' && !R.canBuryAbstractToday(game.state, now))
+        : step === 2 ? !errors.deathDate && !errors.birthDate && !errors.deathCause
+          : step === 4 ? !errors.graveType : step === 5 ? Object.keys(errors).length === 0 : true;
+    };
     const last = step === total - 1;
     const back = step > 0
       ? h('button', { class: 'big-btn ghost', onclick: () => { step--; render(); } }, 'Indietro')
       : h('button', { class: 'big-btn ghost', onclick: () => closeDrawer() }, 'Annulla');
     if (!last) {
       setDrawerFooter(h('div', { class: 'row' }, back,
-        h('button', { class: 'big-btn', onclick: () => { if (!stepValid) { toast(Object.values(R.validateDraft(d, now))[0] ?? 'Completa i campi.'); return; } step++; render(); } }, step === 1 && !photo.has ? 'Salta' : 'Avanti')));
+        h('button', { class: 'big-btn', onclick: () => { if (!stepValid()) { toast(Object.values(R.validateDraft(d, now))[0] ?? 'Completa i campi.'); return; } step++; render(); } }, step === 1 && !photo.has ? 'Salta' : 'Avanti')));
     } else {
       // nel riepilogo la cartolina si può già mandare, prima di scegliere il posto
       setDrawerFooter(h('div', { style: 'display:grid;gap:6px' },
         h('div', { class: 'row' }, back, h('button', { class: 'big-btn ghost', onclick: async () => openPostcard(await postcardData({ ...d, graveType: d.graveType! }, photo.url(), ui)) }, 'Cartolina')),
-        h('button', { class: 'big-btn', disabled: !stepValid, onclick: async () => { d.photoId = await photo.store(); closeDrawer(); game.startGravePlacement(d); } }, 'Scegli il posto')));
+        h('button', { class: 'big-btn', disabled: !stepValid(), onclick: async () => { d.photoId = await photo.store(); closeDrawer(); game.startGravePlacement(d); } }, 'Scegli il posto')));
     }
   };
   openDrawer('Seppellisci', h('div'));
@@ -355,7 +367,7 @@ export function openDetail(ui: UI, id: string) {
       h('dl', { class: 'kv' },
         h('dt', {}, 'Categoria'), h('dd', {}, CATEGORY_LABELS[g.category]),
         h('dt', {}, 'Vissuto'), h('dd', {}, `${fmtDate(g.birthDate)} → ${fmtDate(g.deathDate)}`),
-        h('dt', {}, 'Causa'), h('dd', {}, DEATH_CAUSE_LABELS[g.deathCause]),
+        h('dt', {}, 'Causa'), h('dd', {}, deathCauseLabel(g.deathCause, g.deathCauseText)),
         h('dt', {}, 'Lapide'), h('dd', {}, GRAVE_TYPE_LABELS[g.graveType]),
         h('dt', {}, 'Stato'), h('dd', {}, GRAVE_STATE_LABELS[vs] + (g.broken ? ` (riparare costa ${DECAY.graveRepairCost} fuochi fatui)` : '')),
       ),

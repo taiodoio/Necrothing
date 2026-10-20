@@ -97,9 +97,14 @@ interface WispView { group: THREE.Group; hitbox: THREE.Mesh; anchor: AnchorHandl
 const hitMaterial = new THREE.MeshBasicMaterial({ visible: false });
 
 /** Targhetta dell'interfaccia nuova: rettangolo arrotondato scuro con un filo colorato attorno. */
+/** Tono delle targhette nella scena (interfaccia «viva»): lo stesso dei riquadri dell'HUD. */
+function plateColor(): string {
+  return getComputedStyle(document.documentElement).getPropertyValue('--plate').trim() || '#3d3029';
+}
+
 function softPlate(g: CanvasRenderingContext2D, w: number, h: number, ring: string) {
   g.beginPath(); g.roundRect(3, 3, w - 6, h - 6, 22); g.fillStyle = ring; g.fill();
-  g.beginPath(); g.roundRect(9, 9, w - 18, h - 18, 17); g.fillStyle = uiPlay() ? '#3d3029' : '#3a4150'; g.fill(); // «viva»: marrone come i riquadri
+  g.beginPath(); g.roundRect(9, 9, w - 18, h - 18, 17); g.fillStyle = uiPlay() ? plateColor() : '#3a4150'; g.fill(); // «viva»: lo stesso tono dei riquadri
 }
 
 const badgeMaterials = new Map<string, THREE.SpriteMaterial>();

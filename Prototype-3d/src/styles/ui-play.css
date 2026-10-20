@@ -17,7 +17,7 @@
   --edge: rgba(255, 235, 210, 0.14);
   --shadow: 0 4px 14px rgba(10, 5, 2, 0.45);
 }
-.ui-play { --pattern: var(--pattern-dark); }
+.ui-play { --pattern: var(--pattern-dark); --plate: #3d3029; /* targhette nella scena */ }
 .ui-play[data-theme="light"] { --pattern: var(--pattern-light); }
 
 /* ── Pattern tono su tono (zucche, foglie, teschi, bare) ──────────── */

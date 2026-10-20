@@ -18,6 +18,9 @@ import '@fontsource/nunito/800.css';
 import './styles/main.css';
 import './styles/ui-next.css';
 import './styles/ui-play.css';
+import '@fontsource/grenze-gotisch/600.css';
+import '@fontsource/grenze-gotisch/700.css';
+import './styles/ui-try.css'; // prove solo qui: Grenze Gotisch e tema scuro grigio violastro
 import * as THREE from 'three';
 import { Game } from './app/Game.ts';
 import { PROFILES, QUALITY_LABELS } from './app/AutoQuality.ts';

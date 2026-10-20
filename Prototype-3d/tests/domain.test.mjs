@@ -795,3 +795,21 @@ test('angoli dei recinti: la L nasce dove un tratto orizzontale incontra uno ver
   // spostato via, l'angolo torna un pezzo dritto
   assert.equal(fenceCorners([f('a', 0, 0, 0), f('b', 1, 0, 0), f('d', 5, 5, 1)]).size, 0);
 });
+
+test('causa del decesso personalizzata: testo obbligatorio, max 60, salvato sulla tomba', () => {
+  const s = createNewGame(NOW, 7);
+  const d = draft({ deathCause: 'custom', deathCauseText: '   ' });
+  assert.match(R.validateDraft(d, NOW).deathCause, /Scrivi/);
+  d.deathCauseText = 'x'.repeat(61);
+  assert.match(R.validateDraft(d, NOW).deathCause, /60/);
+  d.deathCauseText = '  Morso dal criceto ';
+  assert.equal(R.validateDraft(d, NOW).deathCause, undefined);
+  const at = spot(s);
+  const { grave } = R.bury(s, d, at.x, at.y, NOW);
+  assert.equal(grave.deathCause, 'custom');
+  assert.equal(grave.deathCauseText, 'Morso dal criceto');
+  // le cause pronte non si portano dietro il testo
+  const at2 = spot(s);
+  const { grave: g2 } = R.bury(s, draft({ name: 'Mouse', deathCauseText: 'ignorato' }), at2.x, at2.y, NOW);
+  assert.equal(g2.deathCauseText, undefined);
+});

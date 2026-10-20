@@ -3,7 +3,7 @@
 // al posto della lapide c'è il frutto luminoso, e la storia continua).
 
 import { WISPS, XP } from '../game/balance.ts';
-import { CATEGORY_LABELS, DEATH_CAUSE_LABELS, GRAVE_TYPE_LABELS } from '../game/graves.ts';
+import { CATEGORY_LABELS, deathCauseLabel, GRAVE_TYPE_LABELS } from '../game/graves.ts';
 import * as R from '../game/rules.ts';
 import type { EntrustedMemory } from '../game/state.ts';
 import { memoryFruitLP, memoryTreeLP } from '../render/lowpoly/memoryTree.ts';
@@ -78,7 +78,7 @@ export function openMemory(ui: UI, id: string, visit?: R.ActionResult) {
     h('dl', { class: 'kv' },
       h('dt', {}, 'Categoria'), h('dd', {}, CATEGORY_LABELS[g.category]),
       h('dt', {}, 'Vissuto'), h('dd', {}, `${fmtDate(g.birthDate)} → ${fmtDate(g.deathDate)}`),
-      h('dt', {}, 'Causa'), h('dd', {}, DEATH_CAUSE_LABELS[g.deathCause]),
+      h('dt', {}, 'Causa'), h('dd', {}, deathCauseLabel(g.deathCause, g.deathCauseText)),
       h('dt', {}, 'Lapide'), h('dd', {}, `${GRAVE_TYPE_LABELS[g.graveType]} (nel cimitero fino al ${fmtDate(e.entrustedAt)})`),
       h('dt', {}, 'Apparizioni'), h('dd', {}, visits ? `Il suo fantasma è passato ${visits === 1 ? 'una volta' : `${visits} volte`}` : 'Il suo fantasma non si è ancora visto'),
     ),

@@ -121,11 +121,11 @@ export function resolveLowpoly(key: string): Builder | null {
     const v: PVis = { type: `grave_${type}`, variant: 0, seed: Number(seed), dirty, broken, lit: false };
     return () => weathered(lowpolyGrave(type as GraveType, state as GraveVisualState, Number(seed)), v, GRAVE_FOOTPRINT, 'decoration');
   }
-  m = key.match(/^p:([a-z_]+):(\d+):(\d+):([01])([01])([01])$/);
+  m = key.match(/^p:([a-z_]+):(\d+):(\d+):([01])([01])([01])(:L)?$/);
   if (m) {
     const gen = LP_PLACEABLES[m[1]];
     if (!gen) return null;
-    const v: PVis = { type: m[1], variant: Number(m[2]), seed: Number(m[3]), dirty: m[4] === '1', broken: m[5] === '1', lit: m[6] === '1' };
+    const v: PVis = { type: m[1], variant: Number(m[2]), seed: Number(m[3]), dirty: m[4] === '1', broken: m[5] === '1', lit: m[6] === '1', corner: !!m[7] };
     // chi si sporca e si rompe riceve anche il degrado comune (leggibile su tutti gli oggetti)
     const def = CATALOG[v.type];
     return def?.decays ? () => weathered(gen(v), v, def.footprint, def.category) : () => gen(v);

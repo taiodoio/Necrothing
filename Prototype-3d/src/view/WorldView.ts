@@ -12,7 +12,7 @@ import { CATALOG, rotatedFootprint, visualOf } from '../game/catalog.ts';
 import { graveVisualState } from '../game/graves.ts';
 import { hash3, hashString, createRng } from '../game/rng.ts';
 import type { ArtStyle, Grave, Placed, SaveData } from '../game/state.ts';
-import { areaForLevel, buildOccupancy, gateCells, type Rect } from '../game/world.ts';
+import { areaForLevel, buildOccupancy, fenceCorners, gateCells, type Rect } from '../game/world.ts';
 import { getModel, instantiate, LOWPOLY_MATERIALS, LOWPOLY_TERRAIN, lightWorldPos, type CachedModel } from '../render/modelCache.ts';
 import { keeperAreaLP, mudTracksLP } from '../render/lowpoly/newItems2.ts';
 import { fencePillar, fenceSegment, gate } from '../render/models/fence.ts';
@@ -23,7 +23,7 @@ import { createAnimated, type Animated } from '../render/lowpoly/animated.ts';
 import { createWispVisual, type WispVisual } from '../render/lowpoly/wisp.ts';
 import { P } from '../render/palette.ts';
 import { drawIcon } from '../ui/icons.ts';
-import { uiNext } from '../app/uiNext.ts';
+import { uiNext, uiPlay } from '../app/uiNext.ts';
 import type { Atmosphere, AnchorHandle } from './Atmosphere.ts';
 import { buildChunk, CHUNK, groundType, lowNoise, naturalHeight, surfaceHeight, WORLD_MAX, WORLD_MIN, type Ground, type GroundInput } from './terrain.ts';
 import { ChunkBaker, chunkOf } from './baker.ts';
@@ -99,7 +99,7 @@ const hitMaterial = new THREE.MeshBasicMaterial({ visible: false });
 /** Targhetta dell'interfaccia nuova: rettangolo arrotondato scuro con un filo colorato attorno. */
 function softPlate(g: CanvasRenderingContext2D, w: number, h: number, ring: string) {
   g.beginPath(); g.roundRect(3, 3, w - 6, h - 6, 22); g.fillStyle = ring; g.fill();
-  g.beginPath(); g.roundRect(9, 9, w - 18, h - 18, 17); g.fillStyle = '#3a4150'; g.fill();
+  g.beginPath(); g.roundRect(9, 9, w - 18, h - 18, 17); g.fillStyle = uiPlay() ? '#3d3029' : '#3a4150'; g.fill(); // «viva»: marrone come i riquadri
 }
 
 const badgeMaterials = new Map<string, THREE.SpriteMaterial>();
@@ -253,7 +253,9 @@ export class WorldView {
     this.syncDecor(state);
     const alive = new Set<string>();
     for (const g of state.graves) { alive.add(g.id); this.syncGrave(g); }
-    for (const p of state.placeables) { alive.add(p.id); this.syncPlaceable(p); }
+    // interfaccia «viva»: dove due tratti di recinto si incontrano, il pezzo d'angolo diventa una L
+    const corners = uiPlay() && this.style === 'lowpoly' ? fenceCorners(state.placeables) : null;
+    for (const p of state.placeables) { alive.add(p.id); this.syncPlaceable(p, corners?.get(p.id)); }
     for (const id of [...this.entities.keys()]) if (!alive.has(id)) this.removeEntity(id);
     for (const id of [...this.hidden]) if (!alive.has(id)) this.hidden.delete(id);
     for (const id of [...this.marked]) if (!alive.has(id)) this.marked.delete(id); else if (id !== this.selectedId) this.setHighlight(id, null);
@@ -646,8 +648,9 @@ export class WorldView {
     return { type: vis.type, variant: vis.variant, dirty: p.dirty, broken: p.broken, lit: p.lit, seed: placeableSeed(vis.type, hashString(p.id)) };
   }
 
-  private syncPlaceable(p: Placed) {
+  private syncPlaceable(p: Placed, corner?: number) {
     const v = this.pvis(p);
+    if (corner !== undefined) v.corner = true;
     const key = placeableKey(v) + (p.type === 'sign' ? `:${p.text ?? ''}` : '');
     const fp = rotatedFootprint(p.type, p.rot);
     let e = this.entities.get(p.id);
@@ -665,7 +668,7 @@ export class WorldView {
     e.fp = fp;
     const at = cellCenter(p.x, p.y, fp);
     at.y = this.baseHeight(p.x, p.y);
-    this.placeEntity(e, at, p.rot);
+    this.placeEntity(e, at, corner ?? p.rot);
     const decays = CATALOG[p.type].decays && !['path_stone', 'path_dirt'].includes(p.type);
     this.setBadge(e, decays ? (p.broken ? 'broken' : p.dirty ? 'dirty' : null) : null);
     if (p.type in EARN_AT) this.applyEarnings(e, p.type);

@@ -18,6 +18,8 @@ import { mushroom } from '../render/lowpoly/nature.ts';
 import { instantiate, LOWPOLY_MATERIALS, type CachedModel } from '../render/modelCache.ts';
 import { closeDrawer, confirmDialog, h, openDrawer, toast } from './dom.ts';
 import type { UI } from './UI.ts';
+import { icon } from './icons.ts';
+import { uiPlay } from '../app/uiNext.ts';
 
 let groundModel: CachedModel | null = null;
 
@@ -217,7 +219,9 @@ export function openCustomize(ui: UI) {
     for (const b of Array.from(tabs.children)) { const on = (b as HTMLElement).dataset.tab === id; b.classList.toggle('active', on); b.setAttribute('aria-selected', String(on)); }
     if (toTop) content.parentElement?.parentElement?.scrollTo?.({ top: 0 });
   };
-  for (const [id, label] of panes) tabs.append(h('button', { class: 'tab', role: 'tab', 'data-tab': id, onclick: () => show(id) }, label));
+  // interfaccia «viva»: ogni scheda con la sua icona
+  const TAB_ICON: Record<LookTab, string> = { aspetto: 'face', capelli: 'comb', vestiti: 'shirt' };
+  for (const [id, label] of panes) tabs.append(h('button', { class: 'tab', role: 'tab', 'data-tab': id, onclick: () => show(id) }, uiPlay() ? icon(TAB_ICON[id], 20) : null, label));
   const body = h('div', { class: 'look' },
     h('div', { class: 'look-stage' }, preview.canvas, tabs),
     lowpoly ? null : h('p', { class: 'muted' }, 'L’aspetto personalizzato si vede nello stile Low-Poly (Impostazioni → Stile).'),

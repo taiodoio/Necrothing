@@ -5,7 +5,7 @@ import * as R from '../src/game/rules.ts';
 import { runCatchUp, liveTick } from '../src/game/simulation.ts';
 import { computeSpawns, countBuildings } from '../src/game/spawn.ts';
 import { createRng } from '../src/game/rng.ts';
-import { areaForLevel, buildOccupancy, canPlaceAt, computePrestige, detectDistricts, nearestFreeSpot } from '../src/game/world.ts';
+import { areaForLevel, buildOccupancy, canPlaceAt, computePrestige, detectDistricts, fenceCorners, nearestFreeSpot } from '../src/game/world.ts';
 import { CATALOG_LIST, rotatedFootprint } from '../src/game/catalog.ts';
 import { evaluateAchievements, rankForXp } from '../src/game/progression.ts';
 import { DECAY, EXPANSION, RELEASE_LOCKS, WISPS, XP } from '../src/game/balance.ts';
@@ -778,4 +778,20 @@ test('tracciato: posa in fila dall\'inventario, salta le celle occupate, oltre l
   assert.equal(s.inventory.fence_wood, undefined);
   assert.equal(s.placeables.filter((p) => p.type === 'fence_wood').length, 4);
   assert.throws(() => R.placeTrace(s, 'fence_wood', row, NOW), /inventario/);
+});
+
+test('angoli dei recinti: la L nasce dove un tratto orizzontale incontra uno verticale', () => {
+  const f = (id, x, y, rot, type = 'fence_wood') => ({ id, type, x, y, rot });
+  // tratto orizzontale A-B-C, poi verticale D-E sotto C: C è l'angolo (ovest + sud)
+  const row = [f('a', 0, 0, 0), f('b', 1, 0, 0), f('c', 2, 0, 0), f('d', 2, 1, 1), f('e', 2, 2, 1)];
+  assert.deepEqual([...fenceCorners(row)], [['c', 0]]);
+  // verticale che sale da C: nord + ovest
+  assert.deepEqual([...fenceCorners([f('a', 0, 5, 0), f('b', 1, 5, 0), f('d', 1, 4, 1)])], [['b', 1]]);
+  // est + sud (il tratto orizzontale parte da destra)
+  assert.deepEqual([...fenceCorners([f('c', 3, 0, 0), f('x', 4, 0, 0), f('d', 3, 1, 1)])], [['c', 3]]);
+  // a T (due vicini orizzontali) resta dritto; tipi diversi non si uniscono
+  assert.equal(fenceCorners([f('a', 0, 0, 0), f('b', 1, 0, 0), f('c', 2, 0, 0), f('d', 1, 1, 1)]).size, 0);
+  assert.equal(fenceCorners([f('a', 0, 0, 0), f('b', 1, 0, 0), f('d', 1, 1, 1, 'wall_stone')]).size, 0);
+  // spostato via, l'angolo torna un pezzo dritto
+  assert.equal(fenceCorners([f('a', 0, 0, 0), f('b', 1, 0, 0), f('d', 5, 5, 1)]).size, 0);
 });

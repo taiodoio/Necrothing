@@ -26,3 +26,15 @@ export function setUiNext(v: boolean) {
   on = v;
   document.documentElement.classList.toggle('ui-next', v);
 }
+
+/**
+ * Interfaccia «viva», in prova solo nel bench: carte e voci un po' storte,
+ * decorazioni sui riquadri, pattern tono su tono, tema scuro marrone, icone
+ * sulle schede, angoli automatici di staccionate e muretti.
+ */
+let play = false;
+export const uiPlay = () => play;
+export function setUiPlay(v: boolean) {
+  play = v;
+  document.documentElement.classList.toggle('ui-play', v);
+}

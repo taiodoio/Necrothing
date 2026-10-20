@@ -137,7 +137,7 @@ function canonical(v: PVis): PVis {
 
 export function placeableKey(v: PVis): string {
   v = canonical(v);
-  return `p:${v.type}:${v.variant}:${v.seed}:${+v.dirty}${+v.broken}${+v.lit}`;
+  return `p:${v.type}:${v.variant}:${v.seed}:${+v.dirty}${+v.broken}${+v.lit}${v.corner ? ':L' : ''}`;
 }
 
 export interface GalleryItem {

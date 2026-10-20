@@ -113,11 +113,13 @@ function pump() {
  * in alto: si ridisegna solo quando l'aspetto cambia.
  */
 let portrait: { key: string; url: string } | null = null;
-export function custodePortrait(look: CustodeLook): string {
-  const key = JSON.stringify(look);
+export function custodePortrait(look: CustodeLook, popOut = false): string {
+  const key = JSON.stringify(look) + (popOut ? ':fuori' : '');
   if (portrait?.key === key) return portrait.url;
   let url = '';
-  try { url = render(look, { bare: false, parts: ['head', 'body', 'armL', 'armR'], yaw: 0.32, zoom: 0.6, dy: 0.2, pitch: 0.12 }); } catch { url = ''; }
+  // «fuori»: testa e cappello interi con le spalle, per la figura che esce dal riquadro (interfaccia «viva»)
+  const framing = popOut ? { zoom: 0.78, dy: 0.12 } : { zoom: 0.6, dy: 0.2 };
+  try { url = render(look, { bare: false, parts: ['head', 'body', 'armL', 'armR'], yaw: 0.32, pitch: 0.12, ...framing }); } catch { url = ''; }
   portrait = { key, url };
   return url;
 }

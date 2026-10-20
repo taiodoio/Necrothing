@@ -14,7 +14,7 @@ import type { BurialDraft } from '../game/rules.ts';
 import { DAY_PHASE_LABELS } from '../game/time.ts';
 import { $, closeDrawer, drawerOpen, h, toast } from './dom.ts';
 import { hydrateIcons, icon, iconUrl, installFrames } from './icons.ts';
-import { uiNext } from '../app/uiNext.ts';
+import { uiNext, uiPlay } from '../app/uiNext.ts';
 import { custodePortrait } from './lookThumbs.ts';
 import * as S from './screens.ts';
 import * as T from './memoryTree.ts';
@@ -77,7 +77,7 @@ export class UI {
     ($('#hud-xp') as HTMLElement).style.width = `${Math.round(rankProgress(p.xp) * 100)}%`;
     // interfaccia nuova: nel riquadro il ritratto vero del Custode (col suo aspetto)
     if (uiNext()) {
-      const url = custodePortrait(p.look);
+      const url = custodePortrait(p.look, uiPlay());
       const box = $('.chip-avatar');
       if (url && box.dataset.src !== url) { box.dataset.src = url; box.replaceChildren(h('img', { src: url, alt: '' })); }
     }

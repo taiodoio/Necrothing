@@ -734,20 +734,24 @@ const HAT_PH: Record<HatStyle, number> = { none: 89, wide: 40, top: 42, beanie: 
 const hatPh = () => X.hatPh ?? HAT_PH[L.hat];
 
 /** Riccioli: palline schiacciate distribuite a file regolari sulla superficie dei capelli. */
-function curls(lp: LP, tone: (k: number) => string, top: number) {
+function curls(lp: LP, tone: (k: number) => string, top: number, hat = false) {
   const rnd = prng(17);
   // file fitte di riccioli grandi che si toccano: coprono tutto il casco (niente parti lisce in vista)
   const ROWS = HAIR_HANG ? 12 : 8;
+  // sotto un cappello le file si fermano più in basso della tesa e i riccioli in alto sono più piccoli e
+  // più aderenti: spinti in fuori lungo la normale (che lì punta in su) bucavano la tesa e la calotta
+  const stop = hat ? 18 : 8;
   for (let r = 0; r < ROWS; r++) {
     const v = r / (ROWS - 1); // 0 orlo, 1 cima
     const count = Math.round(lerp(24, 8, v));
+    const shrink = hat ? lerp(1, 0.62, v) : 1;
     for (let i = 0; i < count; i++) {
       const th = ((i + 0.5 * (r % 2) + (rnd() - 0.5) * 0.4) / count) * 360;
-      const ph = lerp(hairTip(th * DEG) + 4, top - 8, v);
+      const ph = lerp(hairTip(th * DEG) + 4, top - stop, v);
       const { p, n } = hairPoint(th * DEG, ph);
       if (absDeg(th * DEG) < 40 && ph < 10) continue; // non sul viso
-      const rr = 0.05 + rnd() * 0.016;
-      const c = p.addScaledVector(n, 0.045);
+      const rr = (0.05 + rnd() * 0.016) * shrink;
+      const c = p.addScaledVector(n, 0.045 * shrink);
       lp.blob(c.x, c.y, c.z, rr, rr * 0.9, rr, tone([0.03, -0.02, 0.05, 0][(r + i) % 4]), { ...O, detail: 1 } as LPOpts);
     }
   }
@@ -794,7 +798,7 @@ function hair(lp: LP) {
     hairLayer(lp, { locks: messy ? 12 : wavy || swept ? 11 : 16, hem: (t) => tip(t) + 26, depth: depth + 2, lift: 0.04, thick: 0.065, phase: 0.5, swirl: messy ? 18 : 8, seed: 7, tone, ...sw2 });
     hairLayer(lp, { locks: messy ? 9 : 12, hem: (t) => tip(t) + 48, depth: depth + 3, lift: 0.05, thick: 0.08, phase: 0.2, swirl: messy ? 22 : 10, seed: 11, tone, ...sw3 });
   }
-  if (curly) curls(lp, tone, hat ? top : 86);
+  if (curly) curls(lp, tone, hat ? top : 86, hat);
   if (style === 'bun' && !hat) {
     const { p, n } = headAt(Math.PI, 40 * DEG); // crocchia più bassa, sulla nuca
     const c = p.addScaledVector(n, 0.1);

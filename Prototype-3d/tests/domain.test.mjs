@@ -924,5 +924,10 @@ test('casa del Custode: la soglia resta dentro il recinto anche nel cimitero pie
     assert.ok(h.y + 6 <= area.y + area.h, `porta a ${h.y + 4}, recinto fino a ${area.y + area.h}`);
     const occ = buildOccupancy(s);
     assert.equal(occ.blocked.has(`${h.x + 1},${h.y + 4}`), false);
+    // nel cortile si entra: il vialetto (due colonne centrali, due file davanti) si percorre, la casetta no
+    for (const [dx, dy] of [[1, 2], [2, 2], [1, 3], [2, 3]]) assert.equal(occ.blocked.has(`${h.x + dx},${h.y + dy}`), false, `vialetto ${dx},${dy}`);
+    for (const [dx, dy] of [[0, 0], [1, 1], [3, 1], [0, 3], [3, 2]]) assert.equal(occ.blocked.has(`${h.x + dx},${h.y + dy}`), true, `pieno ${dx},${dy}`);
+    // e resta occupato per chi vuole posare qualcosa
+    assert.equal(occ.owner.get(`${h.x + 1},${h.y + 3}`), h.id);
   }
 });

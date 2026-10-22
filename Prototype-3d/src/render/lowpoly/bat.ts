@@ -5,6 +5,7 @@
 import * as THREE from 'three';
 import { LP, type LPModel } from './kit.ts';
 import { LPC } from './palette.ts';
+import { hangingLantern } from './details.ts';
 
 const FUR = '#4a3d55', FUR_LIGHT = '#6a5a78', WING = '#5e4a70', BONE = '#33293d';
 
@@ -40,3 +41,22 @@ export function batWingLP(): LPModel {
   }
   return lp.build();
 }
+
+/**
+ * La lanterna del Custode, stretta tra le zampe del pipistrello: le zampette
+ * chiuse sull'anello e la lanterna accesa che penzola sotto. L'origine è il
+ * punto di presa (lì si appende al corpo e da lì oscilla).
+ */
+export function batLanternLP(): LPModel {
+  const lp = new LP('bat:lantern');
+  for (const s of [-1, 1]) {
+    lp.push([s * 0.035, 0.05, 0], 0, 0, s * 0.35).cyl(0, -0.05, 0, 0.012, 0.016, 0.07, 4, BONE, { jitter: 0 }).pop();
+    for (const k of [-1, 0, 1]) lp.blob(s * 0.018 + k * 0.006, -0.005, k * 0.01, 0.007, 0.007, 0.007, BONE, { jitter: 0, detail: 0 }); // artigli
+  }
+  lp.cyl(0, -0.012, 0, 0.03, 0.03, 0.012, 6, LPC.iron, { jitter: 0 }); // l'anello
+  hangingLantern(lp, 0, 0.01, 0, true, 0.75);
+  return lp.build();
+}
+
+/** Dove sta la fiamma, rispetto al punto di presa (per farci seguire la luce). */
+export const BAT_LANTERN_FLAME = new THREE.Vector3(0, 0.01 - 0.26 * 0.75, 0);

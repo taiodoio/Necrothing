@@ -857,7 +857,8 @@ export class Game {
   private homeSpot(s: SaveData): THREE.Vector3 {
     const house = uiPreview() ? s.placeables.find((p) => p.type === 'keeper_house') : undefined;
     const shop = s.placeables.find((p) => p.type === 'shop');
-    const door = house ? { x: house.x + 1, y: house.y + 4 } : shop ? { x: shop.x + 1, y: shop.y + 4 } : null;
+    // la casa: nel cortile, davanti alla porta (il vialetto si percorre); la Bottega: davanti all'ingresso
+    const door = house ? { x: house.x + 1, y: house.y + 2 } : shop ? { x: shop.x + 1, y: shop.y + 4 } : null;
     if (!door) return new THREE.Vector3();
     // davanti alla porta, se lì si può stare (dentro il recinto, niente sopra); se no la cella libera più vicina:
     // con la casa contro il recinto la soglia cadrebbe fuori, e il Custode non potrebbe più muoversi

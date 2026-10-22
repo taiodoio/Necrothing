@@ -3,7 +3,7 @@
 // «Casa» della Bottega, dove tetti e aggiunte si comprano salendo di rango.
 
 import { RANKS } from '../game/balance.ts';
-import { CATEGORY_LABELS, graveVisualState } from '../game/graves.ts';
+import { CATEGORY_LABELS, deathCauseLabel, GRAVE_TYPE_LABELS, graveVisualState } from '../game/graves.ts';
 import { HOUSE_PARTS, HOUSE_ROOFS, houseItem, houseRoof, houseShown, houseVariant, type HousePart, type HouseRoof } from '../game/house.ts';
 import { rankForXp } from '../game/progression.ts';
 import * as R from '../game/rules.ts';
@@ -14,7 +14,8 @@ import type { LPModel } from '../render/lowpoly/kit.ts';
 import { LOWPOLY_MATERIALS } from '../render/modelCache.ts';
 import { closeDrawer, confirmDialog, fmtDate, h, openDrawer, setDrawerBody, setDrawerHero, toast } from './dom.ts';
 import { icon } from './icons.ts';
-import { openMemory } from './memoryTree.ts';
+import { memorials } from '../app/persistence.ts';
+import { portrait } from './memorial.ts';
 import { registryHeader } from './registryHeader.ts';
 import { needChip, needRows, type UnlockNeed } from './screens.ts';
 import { graveThumb, modelThumb, placeableThumb } from './thumbs.ts';
@@ -48,7 +49,7 @@ function houseNeeds(s: SaveData, it: HouseRoof | HousePart): UnlockNeed[] {
 type RegFilter = 'all' | 'graves' | 'tree';
 
 /** Dalla casa: tutte le sepolture, nel cimitero e affidate all'albero, con «Localizza». */
-export function openRegistry(ui: UI, filter: RegFilter = 'all') {
+export function openRegistry(ui: UI, filter: RegFilter = 'all', settled = false) {
   const game = ui.game;
   const s = game.state;
   const go = async (id: string, tree: boolean) => {
@@ -74,7 +75,7 @@ export function openRegistry(ui: UI, filter: RegFilter = 'all') {
       h('p', { class: 'muted' }, 'Ogni nome che il Custode ha scritto nel libro: dove riposa e da quando.'),
       tabs,
       rows.length ? h('div', { class: 'reg-list' }, ...rows.map((r) => h('div', { class: 'reg-row' },
-        h('button', { class: 'reg-open', onclick: () => (r.tree ? openMemory(ui, r.id) : ui.openDetail(r.id)) },
+        h('button', { class: 'reg-open', onclick: () => openRegistryEntry(ui, r.id, filter) },
           h('span', { class: 'reg-thumb' }, h('img', { src: r.img, alt: '' })),
           h('span', { class: 'reg-text' }, h('b', {}, r.name),
             h('small', {}, `${r.legacy ? 'lascito del vecchio custode' : `sepolto il ${fmtDate(r.at)}`} · ${r.sub}`))),
@@ -83,8 +84,39 @@ export function openRegistry(ui: UI, filter: RegFilter = 'all') {
     ));
   };
   openDrawer('Registro delle sepolture', h('div'));
-  setDrawerHero(registryHeader().el);
+  setDrawerHero(registryHeader({ settled }).el);
   render();
+}
+
+/**
+ * La scheda di una sepoltura aperta dal registro: si legge e basta. L'unica
+ * azione è andarci (le cure si fanno sul posto, camminando per il cimitero);
+ * chiudendo si torna all'elenco.
+ */
+function openRegistryEntry(ui: UI, id: string, filter: RegFilter) {
+  const game = ui.game;
+  const s = game.state;
+  const kept = R.entrustedById(s, id);
+  const g = kept?.grave ?? s.graves.find((x) => x.id === id);
+  if (!g) return;
+  const stone = kept ? fruitImg() : graveThumb(g.graveType, s.settings.style, graveVisualState(g), g.seed % 4);
+  const head = h('img', { src: stone, alt: '' }) as HTMLElement;
+  // la foto dell'oggetto, se c'è, come nella scheda della tomba
+  if (g.photoId) void memorials.get(g.photoId).then((m) => { if (m && head.isConnected) head.replaceWith(portrait(m.dataUrl, stone)); }).catch(() => undefined);
+  openDrawer(g.name, h('div', {},
+    h('div', { class: 'hero' }, head, h('h3', {}, g.name),
+      g.epitaph ? h('div', { class: 'epitaph' }, `“${g.epitaph}”`) : null),
+    h('dl', { class: 'kv' },
+      h('dt', {}, 'Categoria'), h('dd', {}, CATEGORY_LABELS[g.category]),
+      h('dt', {}, 'Vissuto'), h('dd', {}, `${fmtDate(g.birthDate)} → ${fmtDate(g.deathDate)}`),
+      h('dt', {}, 'Causa'), h('dd', {}, deathCauseLabel(g.deathCause, g.deathCauseText)),
+      h('dt', {}, 'Sepolto'), h('dd', {}, g.legacy ? 'Lascito del vecchio custode' : fmtDate(g.createdAt)),
+      h('dt', {}, 'Riposa'), h('dd', {}, kept ? `Nell’Albero dei ricordi, dal ${fmtDate(kept.entrustedAt)}` : `${GRAVE_TYPE_LABELS[g.graveType]}, nel cimitero`)),
+  ), {
+    // la X (e il tocco fuori) riportano all'elenco, col filtro di prima
+    beforeClose: () => { openRegistry(ui, filter, true); return false; },
+    footer: h('button', { class: 'big-btn', onclick: () => { closeDrawer(true); game.locate(id); } }, icon('pin', 22), kept ? 'Vai all’albero' : 'Vai alla tomba'),
+  });
 }
 
 // ── Personalizza la casa ──────────────────────────────────────────────
@@ -101,36 +133,31 @@ export function openHouse(ui: UI) {
   const game = ui.game;
   const s = game.state;
   const render = () => {
-    const owned = (id: string) => s.house.owned.includes(id);
-    const card = (it: HouseRoof | HousePart, active: boolean, onclick: () => void) => {
-      const has = owned(it.id);
-      const needs = has ? [] : houseNeeds(s, it);
-      return h('button', { class: `card ${active ? 'selected' : ''} ${!has ? 'locked' : ''}`, onclick },
+    // solo quello che si ha: il resto si vede (e si compra) in Bottega, scheda «Casa»
+    const roofs = HOUSE_ROOFS.filter((r) => s.house.owned.includes(r.id));
+    const parts = HOUSE_PARTS.filter((p) => s.house.owned.includes(p.id));
+    const card = (it: HouseRoof | HousePart, active: boolean, onclick: () => void) =>
+      h('button', { class: `card ${active ? 'selected' : ''}`, onclick },
         h('span', { class: 'thumb' }, h('img', { src: houseItemImg(s, it.id), alt: '' }),
-          !has && needs.some((n) => n.icon === 'lock') ? h('span', { class: 'lock-over' }, icon('lock', 26)) : null,
-          has && active ? h('span', { class: 'owned-tick' }, icon('check', 15)) : null),
+          active ? h('span', { class: 'owned-tick' }, icon('check', 15)) : null),
         h('b', {}, it.label),
-        has ? h('span', { class: 'price owned' }, active ? 'In vista' : 'Tolto')
-          : needs.length ? needChip(needs[0]) : h('span', { class: 'price' }, String(it.cost), icon('wisp', 12)));
-    };
-    const toShop = (id: string) => openHouseShop(ui, id);
+        h('span', { class: 'price owned' }, active ? 'In vista' : 'Tolto'));
     setDrawerBody(h('div', {},
       h('div', { class: 'hero house-hero' }, h('img', { src: houseImg(s), alt: '' }),
-        h('p', { class: 'muted', style: 'margin:0' }, 'Tocca un tetto per cambiarlo, un’aggiunta per toglierla o rimetterla. I vantaggi valgono solo per le aggiunte in vista; quelle che non hai si comprano in Bottega.')),
+        h('p', { class: 'muted', style: 'margin:0' }, 'Tocca un tetto per cambiarlo, un’aggiunta per toglierla o rimetterla. I vantaggi valgono solo per le aggiunte in vista.')),
       perksBox(s),
-      h('div', { class: 'section-title' }, 'Tetto'),
-      h('div', { class: 'grid' }, ...HOUSE_ROOFS.map((r) => card(r, s.house.roof === r.id, () => {
-        if (!owned(r.id)) { toShop(r.id); return; }
-        if (game.act((st) => R.setHouseRoof(st, r.id))) render();
-      }))),
+      roofs.length > 1 ? h('div', {}, h('div', { class: 'section-title' }, 'Tetto'),
+        h('div', { class: 'grid' }, ...roofs.map((r) => card(r, s.house.roof === r.id, () => {
+          if (game.act((st) => R.setHouseRoof(st, r.id))) render();
+        })))) : null,
       h('div', { class: 'section-title' }, 'Cortile e casa'),
-      h('div', { class: 'grid' }, ...HOUSE_PARTS.map((p) => card(p, owned(p.id) && !s.house.hidden.includes(p.id), () => {
-        if (!owned(p.id)) { toShop(p.id); return; }
+      parts.length ? h('div', { class: 'grid' }, ...parts.map((p) => card(p, !s.house.hidden.includes(p.id), () => {
         if (game.act((st, n) => { R.toggleHousePart(st, p.id, n); })) {
           toast(s.house.hidden.includes(p.id) ? `${p.label} tolta: il suo vantaggio si ferma finché non la rimetti.` : `${p.label} di nuovo in vista. ${p.perk}`);
           render();
         }
-      }))),
+      })))
+        : h('p', { class: 'muted' }, roofs.length > 1 ? 'Nessuna aggiunta ancora: lanterne, fioriere, orto e il resto li trovi in Bottega, nella scheda «Casa».' : 'Per ora c’è solo la casa: tetti, lanterne, fioriere, orto e il resto li trovi in Bottega, nella scheda «Casa».'),
     ));
   };
   openDrawer('Casa del Custode', h('div'), {

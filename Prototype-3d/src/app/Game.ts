@@ -3,7 +3,7 @@
 // espansione/achievement → salvataggio → sincronizzazione della vista.
 
 import * as THREE from 'three';
-import { BUSINESS, FOREST_MARGIN, GRAVE_FOOTPRINT, KEEPER_LAMP, LIVE_TICK_MS, SOUL_BELL, STAFF, ZOMBIE_MUD } from '../game/balance.ts';
+import { BAT, BUSINESS, FOREST_MARGIN, GRAVE_FOOTPRINT, KEEPER_LAMP, LIVE_TICK_MS, SOUL_BELL, STAFF, ZOMBIE_MUD } from '../game/balance.ts';
 import { CATALOG, CATALOG_LIST, EDIT_ONLY, rotatedFootprint, TRACEABLE } from '../game/catalog.ts';
 import { applyTheme, uiNext, uiPreview } from './uiNext.ts';
 import type { GraveVisualState } from '../game/graves.ts';
@@ -138,6 +138,7 @@ export class Game {
     this.actors.syncPresences(this.state, now);
     this.actors.zombieStep = (r, cell) => this.zombieStep(r, cell);
     this.actors.setStaff(this.staffOn);
+    this.actors.setPace(R.keeperPace(this.state));
     this.rig.setMode(this.state.settings.camera);
     this.rig.jumpTo(start);
     this.rig.follow = this.actors.avatar.pos;
@@ -247,6 +248,7 @@ export class Game {
     // le posizioni delle tombe cambiano solo quando cambia la scena: niente array nuovi a ogni frame
     if (this.spotsVersion !== this.world.version) { this.spots = graveSpots(this.state); this.spotsVersion = this.world.version; }
     this.actors.update(dt, t, this.spots, (p) => this.groundAt(p));
+    if (this.batUntil) this.stepBat(now);
     this.collectNearbyWisps();
     this.stepWalkMark(dt, t);
     this.world.watch(this.actors.avatar.pos);
@@ -380,6 +382,7 @@ export class Game {
     if (area.w !== this.world.area.w) this.updateCameraWorld();
     this.refreshWalkable();
     this.actors.syncPresences(this.state, now);
+    this.actors.setPace(R.keeperPace(this.state));
     this.ui.refreshHud();
     this.ui.refreshContext();
     this.refreshShrink();
@@ -744,16 +747,19 @@ export class Game {
     return new THREE.Vector2(((x - r.left) / r.width) * 2 - 1, -((y - r.top) / r.height) * 2 + 1);
   }
 
-  private pick(x: number, y: number): { entityId?: string; wispId?: string; roamerId?: string; petId?: string } | null {
+  private pick(x: number, y: number): { entityId?: string; wispId?: string; roamerId?: string; petId?: string; vampireId?: string } | null {
     this.raycaster.setFromCamera(this.ndc(x, y), this.rig.camera);
     // la tomba affidata, mentre la sua bara è in viaggio, non c'è più
-    const hits = this.raycaster.intersectObjects([...this.actors.pickables(), ...this.world.hitboxes], false).filter((h) => !h.object.userData.entityId || !this.world.isHidden(h.object.userData.entityId));
+    const hits = this.raycaster.intersectObjects([...this.actors.pickables(), ...this.world.hitboxes], false)
+      .filter((h) => !h.object.userData.entityId || !this.world.isHidden(h.object.userData.entityId))
+      // il vampiro si tocca solo nell'anteprima (il morso)
+      .filter((h) => !h.object.userData.vampireId || uiPreview());
     if (!hits.length) return null;
     // priorità: presenze erranti e animali > fuochi fatui > entità
-    const order = (o: THREE.Object3D) => (o.userData.roamerId || o.userData.petId ? 0 : o.userData.wispId ? 1 : 2);
+    const order = (o: THREE.Object3D) => (o.userData.roamerId || o.userData.petId || o.userData.vampireId ? 0 : o.userData.wispId ? 1 : 2);
     hits.sort((a, b) => order(a.object) - order(b.object) || a.distance - b.distance);
     const u = hits[0].object.userData;
-    return { entityId: u.entityId, wispId: u.wispId, roamerId: u.roamerId, petId: u.petId };
+    return { entityId: u.entityId, wispId: u.wispId, roamerId: u.roamerId, petId: u.petId, vampireId: u.vampireId };
   }
 
   groundCell(x: number, y: number) {
@@ -795,6 +801,7 @@ export class Game {
     const hit = this.pick(x, y);
     if (hit?.roamerId) { this.tapRoamer(hit.roamerId); return; }
     if (hit?.petId && !this.editMode) { this.tapPet(hit.petId); return; }
+    if (hit?.vampireId && !this.editMode) { this.tapVampire(hit.vampireId); return; }
     if (hit?.wispId) {
       const w = this.state.world.looseWisps.find((q) => q.id === hit.wispId);
       if (w && !this.editMode && this.actors.walkTo({ x: w.x, y: w.y })) { this.markWalk(); this.rig.follow = this.actors.avatar.pos; }
@@ -896,6 +903,68 @@ export class Game {
     this.ui.openActorMenu(pet.label, this.petStatus(id), this.petMenu(id), () => this.actors.petTop(id));
   }
 
+  // ── Il morso del vampiro (anteprima) ─────────────────────────────────
+
+  /** Fine del volo da pipistrello (performance.now()), o null se si è Custode. */
+  private batUntil: number | null = null;
+  get isBat(): boolean { return this.actors.isBat; }
+  /** Secondi di volo che restano (arrotondati per eccesso). */
+  batSecondsLeft(): number { return this.batUntil ? Math.max(0, Math.ceil((this.batUntil - performance.now()) / 1000)) : 0; }
+
+  /** Toccando il vampiro: il suo menù, con «Fatti mordere». */
+  private tapVampire(cryptId: string) {
+    if (!this.actors.vampire(cryptId)) return;
+    this.ui.openActorMenu('Vampiro', this.isBat ? 'Sei già un pipistrello' : 'Ha sete, ma è un gentiluomo', [
+      { label: 'Fatti mordere', icon: 'bat', cls: 'primary', disabled: this.isBat, run: () => this.getBitten(cryptId) },
+    ], () => this.actors.vampire(cryptId)?.top ?? null);
+  }
+
+  /** Il Custode va dal vampiro (che intanto passeggia), si fa mordere e diventa pipistrello. */
+  private getBitten(cryptId: string, tries = 3) {
+    const v = this.actors.vampire(cryptId);
+    if (!v || this.isBat) return;
+    const near = () => this.actors.avatar.pos.distanceTo(v.pos) < 1.6;
+    const bite = () => {
+      if (!near()) { if (tries > 0) this.getBitten(cryptId, tries - 1); else toast('Il vampiro si è allontanato. Riprova.'); return; }
+      this.actors.holdVampire(cryptId, 1.8, this.actors.avatar.pos);
+      this.actors.face(v.pos);
+      toast('Il vampiro si china sul tuo collo… con garbo.');
+      setTimeout(() => {
+        if (this.disposed || this.isBat) return;
+        this.effects.puff(this.actors.avatar.pos.clone().setY(this.groundAt(this.actors.avatar.pos) + 0.9), '#6a4a7a');
+        this.actors.setBat(true);
+        this.batUntil = performance.now() + BAT.seconds * 1000;
+        this.rig.follow = this.actors.avatar.pos;
+        toast(`Sei un pipistrello! Per ${BAT.seconds} secondi voli sopra tombe e recinti, più veloce.`);
+        this.ui.refreshSettingsButtons();
+      }, 900);
+    };
+    this.rig.follow = this.actors.avatar.pos;
+    if (near()) { bite(); return; }
+    if (this.actors.walkTo(worldToCell(v.pos), bite)) this.markWalk();
+    else bite();
+  }
+
+  /** Torna Custode: allo scadere del minuto o quando lo si sceglie (poi serve un altro morso). */
+  endBat(message = 'Torni Custode. Per volare ancora serve un altro morso.') {
+    if (!this.isBat && !this.batUntil) return;
+    const at = this.actors.batPos();
+    if (at) this.effects.puff(at, '#6a4a7a');
+    this.actors.setBat(false);
+    this.batUntil = null;
+    toast(message);
+    this.ui.refreshSettingsButtons();
+  }
+
+  private lastBatSecond = -1;
+  private stepBat(now: number) {
+    // sceso per salire in bici o sulla scopa: il volo finisce lì
+    if (!this.actors.isBat) { this.batUntil = null; this.ui.refreshSettingsButtons(); return; }
+    if (now >= this.batUntil!) { this.endBat('Il minuto è passato: torni Custode.'); return; }
+    const left = this.batSecondsLeft();
+    if (left !== this.lastBatSecond) { this.lastBatSecond = left; this.ui.refreshBatButton(); }
+  }
+
   private tapRoamer(id: string) {
     const r = this.actors.roamerAt(id);
     if (!r || r.dying > 0) return;
@@ -957,7 +1026,7 @@ export class Game {
     r.tried ??= new Set();
     for (const g of near) {
       r.tried.add(g.id);
-      if (Math.random() >= ZOMBIE_MUD.chance) continue;
+      if (Math.random() >= R.zombieMudChance(this.state)) continue;
       const now = this.now();
       if (!R.zombieTrample(this.state, g.id, now)) continue;
       r.muddied = true;

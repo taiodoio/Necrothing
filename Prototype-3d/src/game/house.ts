@@ -5,7 +5,11 @@
 // zombie e l'orto dei cervelli.
 
 export interface HouseRoof { id: string; label: string; cost: number; minRank: number; description: string }
-export interface HousePart { id: string; label: string; cost: number; minRank: number; description: string }
+export interface HousePart {
+  id: string; label: string; cost: number; minRank: number; description: string;
+  /** Il vantaggio nel gioco (attivo solo con l'aggiunta in vista): vedi HOUSE_PERKS. */
+  perk: string;
+}
 
 /** Tetti (se ne vede uno alla volta): il primo c'è già. */
 export const HOUSE_ROOFS: HouseRoof[] = [
@@ -17,16 +21,16 @@ export const HOUSE_ROOFS: HouseRoof[] = [
 
 /** Aggiunte del cortile e della casa (si accendono e spengono quando si vuole). */
 export const HOUSE_PARTS: HousePart[] = [
-  { id: 'lantern', label: 'Lanterna al portico', cost: 6, minRank: 1, description: 'Una luce calda per chi torna tardi.' },
-  { id: 'flowerbox', label: 'Fioriere alle finestre', cost: 8, minRank: 1, description: 'Gerani e qualche fiore che non dovrebbe esistere.' },
-  { id: 'mailbox', label: 'Cassetta delle lettere', cost: 5, minRank: 1, description: 'Ci arrivano solo condoglianze.' },
-  { id: 'smoke', label: 'Camino acceso', cost: 12, minRank: 2, description: 'Il fumo dice che c’è qualcuno in casa.' },
-  { id: 'picket', label: 'Staccionata del cortile', cost: 15, minRank: 2, description: 'Bassa e bianca, con il cancelletto.' },
-  { id: 'pumpkins', label: 'Zucche sul portico', cost: 10, minRank: 2, description: 'Intagliate dal Custode, una per stagione.' },
-  { id: 'garden', label: 'Giardinetto', cost: 30, minRank: 2, description: 'Fiori, un vialetto di pietre e una panchina.' },
-  { id: 'beehive', label: 'Arnia', cost: 20, minRank: 3, description: 'Le api fanno un miele scuro e misterioso.' },
-  { id: 'fruit', label: 'Alberi da frutto', cost: 45, minRank: 3, description: 'Un melo e un pero storti, carichi di frutti.' },
-  { id: 'veggie', label: 'Orto', cost: 60, minRank: 3, description: 'Zucche, cavoli e rape: ogni giorno rende fuochi fatui da raccogliere.' },
+  { id: 'lantern', label: 'Lanterna al portico', cost: 6, minRank: 1, description: 'Una luce calda per chi torna tardi.', perk: 'Di notte i fuochi fatui compaiono il 20% più spesso.' },
+  { id: 'flowerbox', label: 'Fioriere alle finestre', cost: 8, minRank: 1, description: 'Gerani e qualche fiore che non dovrebbe esistere.', perk: 'Portare fiori a una tomba rende 2 fuochi fatui invece di 1.' },
+  { id: 'toolbench', label: 'Banco degli attrezzi', cost: 8, minRank: 1, description: 'Pala, rastrello e martello appesi al muro, sempre a portata di mano.', perk: 'Riparare tombe e oggetti costa il 25% in meno.' },
+  { id: 'smoke', label: 'Camino acceso', cost: 12, minRank: 2, description: 'Il fumo dice che c’è qualcuno in casa.', perk: 'Caldo e riposato, il Custode cammina il 10% più veloce.' },
+  { id: 'picket', label: 'Staccionata del cortile', cost: 15, minRank: 2, description: 'Bassa e bianca, con il cancelletto.', perk: 'Gli zombie esitano: sporcano le tombe meno spesso (25% invece di 35%).' },
+  { id: 'pumpkins', label: 'Zucche sul portico', cost: 10, minRank: 2, description: 'Intagliate dal Custode, una per stagione.', perk: 'Di notte i fantasmi passano il 25% più spesso (il 50% a ottobre).' },
+  { id: 'garden', label: 'Giardinetto', cost: 30, minRank: 2, description: 'Fiori, un vialetto di pietre e una panchina.', perk: 'Le erbacce sulle tombe crescono il 25% più piano.' },
+  { id: 'beehive', label: 'Arnia', cost: 20, minRank: 3, description: 'Le api fanno un miele scuro e misterioso.', perk: 'Le api impollinano: i fiori sulle tombe durano 5 giorni invece di 3.' },
+  { id: 'fruit', label: 'Alberi da frutto', cost: 45, minRank: 3, description: 'Un melo e un pero storti, carichi di frutti.', perk: 'La frutta attira gatti e corvi: passano il 50% più spesso.' },
+  { id: 'veggie', label: 'Orto', cost: 60, minRank: 3, description: 'Zucche, cavoli e rape.', perk: 'Ogni giorno rende 2–4 fuochi fatui da raccogliere (fino a 10).' },
 ];
 
 export interface HouseState {
@@ -51,6 +55,14 @@ export function houseShown(h: HouseState): string[] {
 
 /** L'orto rende solo se c'è (comprato e in vista). */
 export const houseHasVeggie = (h: HouseState) => houseShown(h).includes('veggie');
+
+/**
+ * Il vantaggio di un'aggiunta vale solo se la casa c'è e l'aggiunta è in
+ * vista: tolta per gusto, smette di aiutare.
+ */
+export function housePerk(s: { house?: HouseState; placeables: ReadonlyArray<{ type: string }> }, id: string): boolean {
+  return !!s.house && houseShown(s.house).includes(id) && s.placeables.some((p) => p.type === 'keeper_house');
+}
 
 /**
  * Variante del modello: i due bit bassi sono il tetto, gli altri le aggiunte

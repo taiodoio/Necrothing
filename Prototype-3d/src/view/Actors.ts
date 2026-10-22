@@ -15,6 +15,7 @@ import { animateRig, buildRig, rigLightPos, type CharacterKind, type Pose, type 
 import { DEFAULT_LOOK, lookKey, type CustodeLook } from '../game/look.ts';
 import { handPos, HUMAN_PIVOTS } from '../render/lowpoly/v2/custode.ts';
 import { broom2LP, mysticStaffLP } from '../render/lowpoly/newItems2.ts';
+import { batBodyLP, batWingLP } from '../render/lowpoly/bat.ts';
 import { animateNotes, attachProp, dimGhosts, lpMesh, presenceLayout, propPose, scenePropObject, type PresenceRole, type PresenceTier, type PropKind } from './presences.ts';
 export { BUSINESS_PRESENCES, type PresenceTier } from './presences.ts';
 import { instantiate, lightWorldPos, LOWPOLY_MATERIALS } from '../render/modelCache.ts';
@@ -105,6 +106,9 @@ interface Presence extends Walker {
   still?: Pose;
   /** Cosa tiene in mano (si riattacca quando si ricostruisce il rig). */
   prop?: PropKind;
+  /** Fermo per un po' (il vampiro che morde), girato verso qualcuno. */
+  hold?: number;
+  faceTo?: THREE.Vector3;
   /** Grandezza (fantasmi del picnic e della panchina più piccoli). */
   size?: number;
   /** Fantasmi più tenui (vedi CastMember.dim). */
@@ -306,7 +310,7 @@ export class Actors {
     this.remount();
     for (const r of this.roamers.values()) { rebuild(r); r.rig.root.add(r.hitbox); }
     for (const p of this.pets.values()) { rebuild(p); p.rig.root.add(p.hitbox); p.rig.root.visible = p.act !== 'sleep'; }
-    for (const p of this.presences) { rebuild(p); this.attachProp(p); dimGhosts(p.rig.root, p.dim); if (p.size) p.rig.root.scale.setScalar(p.size); p.rig.root.visible = !p.hidden; }
+    for (const p of this.presences) { rebuild(p); this.presenceHits.filter((h) => h.userData.vampireId === p.placeId && p.rig.kind === 'vampire').forEach((h) => p.rig.root.add(h)); this.attachProp(p); dimGhosts(p.rig.root, p.dim); if (p.size) p.rig.root.scale.setScalar(p.size); p.rig.root.visible = !p.hidden; }
     if (this.funeral) for (const m of this.funeral.members) rebuild(m);
     if (this.rite) for (const m of this.rite.members) rebuild(m);
     for (const d of this.departing) rebuild(d);
@@ -320,9 +324,9 @@ export class Actors {
   private walkable = (x: number, y: number) =>
     x >= this.area.x && y >= this.area.y && x < this.area.x + this.area.w && y < this.area.y + this.area.h && !this.blocked(x, y);
 
-  /** Dove può andare il Custode: sulla scopa vola sopra tombe e oggetti (ma resta nel recinto). */
+  /** Dove può andare il Custode: sulla scopa e da pipistrello vola sopra tombe e oggetti (ma resta nel recinto). */
   private canGo = (x: number, y: number) =>
-    this.broom ? x >= this.area.x && y >= this.area.y && x < this.area.x + this.area.w && y < this.area.y + this.area.h : this.walkable(x, y);
+    this.broom || this.bat ? x >= this.area.x && y >= this.area.y && x < this.area.x + this.area.w && y < this.area.y + this.area.h : this.walkable(x, y);
 
   // ── Custode ──────────────────────────────────────────────────────────
 
@@ -422,9 +426,17 @@ export class Actors {
   /** In sella (velocità doppia) o a piedi: la bici compare sotto il Custode e sparisce quando scende. */
   setRiding(on: boolean) {
     if (on === this.riding) return;
-    if (on) { this.setFlying(false); this.mount(); }
+    if (on) { this.setFlying(false); this.setBat(false); this.mount(); }
     else this.dismount();
-    this.avatar.speed = CUSTODE_SPEED.walk * (on ? CUSTODE_SPEED.bike : 1);
+    this.updateSpeed();
+  }
+
+  /** Passo a piedi (il camino acceso della casa lo allunga un po'): vale anche in bici, sulla scopa e da pipistrello. */
+  private pace = 1;
+  setPace(k: number) { if (k !== this.pace) { this.pace = k; this.updateSpeed(); } }
+  private updateSpeed() {
+    const mult = this.bat ? CUSTODE_SPEED.bat : this.broom ? CUSTODE_SPEED.broom : this.ride ? CUSTODE_SPEED.bike : 1;
+    this.avatar.speed = CUSTODE_SPEED.walk * this.pace * mult;
   }
 
   // ── Scopa volante e bastone mistico ─────────────────────────────────
@@ -435,9 +447,9 @@ export class Actors {
   /** A cavalcioni della scopa: vola sopra tombe e oggetti, più veloce della bici. */
   setFlying(on: boolean) {
     if (on === this.flying) return;
-    if (on) { this.setRiding(false); this.mountBroom(); }
+    if (on) { this.setRiding(false); this.setBat(false); this.mountBroom(); }
     else this.dismountBroom();
-    this.avatar.speed = CUSTODE_SPEED.walk * (on ? CUSTODE_SPEED.broom : 1);
+    this.updateSpeed();
   }
 
   private mountBroom() {
@@ -472,13 +484,90 @@ export class Actors {
     if (a.rig.parts.body) a.rig.parts.body.rotation.x = 0;
     a.lift = 0;
     this.broom = null;
-    // si atterra su una cella libera (in volo poteva essere sopra una tomba)
+    this.land();
+  }
+
+  /** Si atterra su una cella libera (in volo si poteva essere sopra una tomba). */
+  private land() {
+    const a = this.avatar;
     const c = worldToCell(a.pos);
     if (!this.walkable(c.x, c.y)) {
       const free = this.nearestWalkable(c, c);
       if (free) { a.pos.copy(cellCenter(free.x, free.y, [1, 1])); a.path = []; }
     }
   }
+
+  // ── Pipistrello (il morso del vampiro) ────────────────────────────────
+
+  private bat: { group: THREE.Group; body: THREE.Group; wings: THREE.Group[]; shadow: THREE.Mesh; flap: number } | null = null;
+  get isBat() { return !!this.bat; }
+
+  /**
+   * Il Custode diventa un pipistrello: il suo corpo sparisce, al suo posto
+   * vola un pipistrello che sbatte le ali, sopra tombe e oggetti, più veloce.
+   * Tornando Custode si atterra su una cella libera.
+   */
+  setBat(on: boolean) {
+    if (on === this.isBat) return;
+    const a = this.avatar;
+    if (on) {
+      this.setRiding(false); this.setFlying(false);
+      const group = new THREE.Group();
+      group.name = 'pipistrello';
+      const body = new THREE.Group();
+      body.add(lpMesh(batModels().body));
+      const wings = [1, -1].map((side) => {
+        const pivot = new THREE.Group();
+        pivot.position.set(side * 0.1, 0.03, 0.02);
+        const m = lpMesh(batModels().wing);
+        if (side < 0) m.scale.x = -1;
+        pivot.add(m);
+        body.add(pivot);
+        return pivot;
+      });
+      body.scale.setScalar(1.15);
+      group.add(body);
+      const shadow = new THREE.Mesh(this.blobGeo, this.blobMat);
+      shadow.renderOrder = 1;
+      this.group.add(group, shadow);
+      a.rig.root.visible = false;
+      if (a.blob) a.blob.visible = false;
+      this.bat = { group, body, wings, shadow, flap: 0 };
+    } else {
+      const b = this.bat!;
+      b.group.removeFromParent(); b.shadow.removeFromParent();
+      a.rig.root.visible = true;
+      this.bat = null;
+      this.land();
+    }
+    this.updateSpeed();
+  }
+
+  /** In volo: ondeggia, sbatte le ali (più forte quando si sposta), l'ombra resta a terra. */
+  private poseBat(dt: number, t: number, ground: (p: THREE.Vector3) => number) {
+    const b = this.bat!, a = this.avatar;
+    const gy = ground(a.pos);
+    b.flap += dt * (this.avatarMoving ? 16 : 10);
+    const y = gy + 0.85 + Math.sin(t * 2.3) * 0.1;
+    b.group.position.set(a.pos.x, y, a.pos.z);
+    b.group.rotation.y = a.rig.root.rotation.y;
+    b.body.rotation.x = this.avatarMoving ? 0.18 : 0;
+    const k = Math.sin(b.flap);
+    b.wings[0].rotation.z = 0.15 + k * 0.75;
+    b.wings[1].rotation.z = -(0.15 + k * 0.75);
+    b.body.position.y = -k * 0.04;
+    b.shadow.position.set(a.pos.x, gy + 0.03, a.pos.z);
+    b.shadow.scale.setScalar(0.5 + Math.sin(t * 2.3) * 0.04);
+  }
+
+  /** Il Custode si gira verso un punto (il vampiro che lo morde). */
+  face(p: THREE.Vector3) {
+    const a = this.avatar;
+    a.facing = Math.atan2(p.x - a.pos.x, p.z - a.pos.z);
+  }
+
+  /** Dove sta adesso (in aria): per lo sbuffo di fumo quando ci si trasforma. */
+  batPos(): THREE.Vector3 | null { return this.bat ? this.bat.group.position.clone() : null; }
 
   /** A cavalcioni: gambe ai lati del manico, mani avanti, busto chino; si ondeggia in volo. */
   private poseBroom(t: number) {
@@ -570,6 +659,7 @@ export class Actors {
   /** Il rig del Custode è stato ricostruito (stile, aspetto): bici, scopa e bastone tornano con lui. */
   private remount() {
     if (this.staff) { this.staff = null; this.setStaff(true); }
+    if (this.bat) this.avatar.rig.root.visible = false; // da pipistrello il Custode resta nascosto
     if (this.broom) { this.broom = null; this.mountBroom(); }
     const r = this.ride;
     if (!r) return;
@@ -806,7 +896,24 @@ export class Actors {
     this.presenceSig = sig;
     for (const p of this.presences) { this.disposeWalker(p); if (p.extra) this.group.remove(p.extra); }
     this.presences = [];
+    this.presenceHits = [];
     for (const p of homes) this.addPresences(p, now);
+  }
+
+  /** Presenze che si toccano (per ora il vampiro). */
+  private presenceHits: THREE.Mesh[] = [];
+
+  /** Il vampiro della cripta, se è fuori (di notte). */
+  vampire(cryptId: string): { pos: THREE.Vector3; top: THREE.Vector3 } | null {
+    const v = this.presences.find((p) => p.placeId === cryptId && p.rig.kind === 'vampire');
+    return v ? { pos: v.pos, top: v.pos.clone().setY(v.rig.root.position.y + 2.1) } : null;
+  }
+
+  /** Il vampiro si ferma, si gira verso il Custode e lo morde. */
+  holdVampire(cryptId: string, seconds: number, faceTo: THREE.Vector3) {
+    const v = this.presences.find((p) => p.placeId === cryptId && p.rig.kind === 'vampire');
+    if (!v) return;
+    v.path = []; v.hold = seconds; v.faceTo = faceTo.clone();
   }
 
   /** Fascia del dispositivo: quante presenze animano bar e orto. */
@@ -837,6 +944,14 @@ export class Actors {
       dimGhosts(pr.rig.root, c.dim);
       if (c.hidden) pr.rig.root.visible = false;
       this.attachProp(pr);
+      // il vampiro si tocca: ci si può far mordere
+      if (c.kind === 'vampire') {
+        const hit = new THREE.Mesh(new THREE.BoxGeometry(1.1, 1.8, 1.1), hitMat);
+        hit.position.y = 0.8;
+        hit.userData.vampireId = p.id;
+        pr.rig.root.add(hit);
+        this.presenceHits.push(hit);
+      }
       this.presences.push(pr);
       return pr;
     });
@@ -893,6 +1008,13 @@ export class Actors {
         break;
       }
       case 'wander':
+        if (pr.hold && pr.hold > 0) {
+          // fermo (il morso): girato verso chi ha davanti, si china su di lui
+          pr.hold -= dt;
+          if (pr.faceTo) pr.facing = Math.atan2(pr.faceTo.x - pr.pos.x, pr.faceTo.z - pr.pos.z);
+          pr.pose = 'work';
+          break;
+        }
         if (!pr.path.length) {
           if (Math.random() < dt * 0.5) {
             const a = Math.random() * Math.PI * 2, d = Math.random() * pr.radius;
@@ -1566,6 +1688,7 @@ export class Actors {
       }
     };
     apply(a);
+    if (this.bat) this.poseBat(dt, t, ground);
     for (const r of this.roamers.values()) apply(r);
     for (const p of this.presences) {
       if (!p.hidden) apply(p);
@@ -1582,7 +1705,7 @@ export class Actors {
 
   /** Oggetti toccabili: presenze erranti e animali fuori dalla tana. */
   pickables(): THREE.Object3D[] {
-    return [...this.hitboxes, ...[...this.pets.values()].filter((p) => p.rig.root.visible).map((p) => p.hitbox)];
+    return [...this.hitboxes, ...this.presenceHits, ...[...this.pets.values()].filter((p) => p.rig.root.visible).map((p) => p.hitbox)];
   }
 
   avatarCell(): Cell { return worldToCell(this.avatar.pos); }
@@ -1591,6 +1714,10 @@ export class Actors {
 
   stats() { return { roamers: this.roamers.size, presences: this.presences.length, pets: this.pets.size }; }
 }
+
+// il pipistrello si costruisce una volta e si riusa a ogni morso
+let batCache: { body: LPModel; wing: LPModel } | null = null;
+const batModels = () => (batCache ??= { body: batBodyLP(), wing: batWingLP() });
 
 export function graveSpots(state: SaveData): THREE.Vector3[] {
   return state.graves.map((g) => cellCenter(g.x, g.y, [2, 2]).add(new THREE.Vector3(0, 0, -0.6)));

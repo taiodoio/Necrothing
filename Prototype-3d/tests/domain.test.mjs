@@ -856,3 +856,60 @@ test('casa del Custode: accanto alla Bottega, una sola, tetti e aggiunte, orto c
   assert.deepEqual(odd.house.owned.sort(), ['moss', 'slate']);
   assert.equal(odd.house.roof, 'slate');
 });
+
+test('vantaggi della casa: valgono solo con la casa e l’aggiunta in vista', async () => {
+  const { HOUSE_PERKS, DECAY: D, WISPS: W, SPAWN_CHANCE } = await import('../src/game/balance.ts');
+  const { computeSpawns, liveWispChance } = await import('../src/game/spawn.ts');
+  const { housePerk } = await import('../src/game/house.ts');
+  const s = createNewGame(NOW, 21);
+  s.player.wisps = 999; s.player.xp = 5000;
+  // comprata ma senza casa: niente
+  s.house.owned.push('toolbench', 'flowerbox', 'picket', 'smoke', 'lantern', 'pumpkins', 'fruit');
+  assert.equal(housePerk(s, 'toolbench'), false);
+  assert.equal(R.graveRepairPrice(s), D.graveRepairCost);
+  R.ensureKeeperHouse(s, NOW);
+  assert.equal(housePerk(s, 'toolbench'), true);
+  // banco degli attrezzi: riparare costa un quarto in meno
+  assert.equal(R.graveRepairPrice(s), Math.round(D.graveRepairCost * HOUSE_PERKS.toolbenchRepair));
+  // tolta per gusto, smette di aiutare
+  R.toggleHousePart(s, 'toolbench', NOW);
+  assert.equal(R.graveRepairPrice(s), D.graveRepairCost);
+  // camino, staccionata
+  assert.equal(R.keeperPace(s), HOUSE_PERKS.smokeSpeed);
+  assert.equal(R.zombieMudChance(s), HOUSE_PERKS.picketZombieMud);
+  // fioriere: due fuochi fatui per mazzo
+  const at = spot(s);
+  const { grave } = R.bury(s, draft(), at.x, at.y, NOW);
+  const before = s.player.wisps;
+  R.bringFlowers(s, grave.id, NOW);
+  assert.equal(s.player.wisps - before, HOUSE_PERKS.flowerboxWisps);
+  assert.ok(HOUSE_PERKS.flowerboxWisps > W.flowers);
+  // lanterna: più fuochi fatui di notte, uguali di giorno
+  const base = { ...s, house: { owned: ['slate'], roof: 'slate', hidden: [] } };
+  assert.ok(liveWispChance(s, NOW, true) > liveWispChance(base, NOW, true));
+  assert.equal(liveWispChance(s, NOW, false), liveWispChance(base, NOW, false));
+  // zucche e frutta: con una rng che dice sempre «sì appena sotto la soglia» si vede la soglia più alta
+  const edge = (p) => ({ next: () => p, int: () => 0, range: (a) => a, chance: (q) => p < q, pick: (xs) => xs[0] });
+  const kinds = (st, p) => computeSpawns(st, true, edge(p), NOW).map((r) => r.kind);
+  const catEdge = SPAWN_CHANCE.cat * 1.2;
+  assert.ok(kinds(s, catEdge).includes('cat') && !kinds(base, catEdge).includes('cat'));
+});
+
+test('arnia e giardinetto: fiori che durano di più, meno erbacce', async () => {
+  const { HOUSE_PERKS, SIM } = await import('../src/game/balance.ts');
+  const make = (parts) => {
+    const s = createNewGame(NOW, 33);
+    s.house.owned.push(...parts);
+    R.ensureKeeperHouse(s, NOW);
+    const at = spot(s);
+    const { grave } = R.bury(s, draft(), at.x, at.y, NOW);
+    R.bringFlowers(s, grave.id, NOW);
+    return { s, grave };
+  };
+  const days = SIM.flowerWitherDays + 1;
+  assert.ok(days < HOUSE_PERKS.beehiveFlowerDays);
+  const plain = make([]), bees = make(['beehive']);
+  runCatchUp(plain.s, later(days)); runCatchUp(bees.s, later(days));
+  assert.equal(plain.s.graves.find((g) => g.id === plain.grave.id).hasFlowers, false);
+  assert.equal(bees.s.graves.find((g) => g.id === bees.grave.id).hasFlowers, true, 'con l’arnia i fiori durano');
+});

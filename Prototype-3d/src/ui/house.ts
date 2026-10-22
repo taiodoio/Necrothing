@@ -4,7 +4,7 @@
 
 import { RANKS } from '../game/balance.ts';
 import { CATEGORY_LABELS, graveVisualState } from '../game/graves.ts';
-import { HOUSE_PARTS, HOUSE_ROOFS, houseItem, houseRoof, houseVariant, type HousePart, type HouseRoof } from '../game/house.ts';
+import { HOUSE_PARTS, HOUSE_ROOFS, houseItem, houseRoof, houseShown, houseVariant, type HousePart, type HouseRoof } from '../game/house.ts';
 import { rankForXp } from '../game/progression.ts';
 import * as R from '../game/rules.ts';
 import type { SaveData } from '../game/state.ts';
@@ -12,7 +12,7 @@ import { housePartLP } from '../render/lowpoly/architecture.ts';
 import { memoryFruitLP } from '../render/lowpoly/memoryTree.ts';
 import type { LPModel } from '../render/lowpoly/kit.ts';
 import { LOWPOLY_MATERIALS } from '../render/modelCache.ts';
-import { closeDrawer, confirmDialog, fmtDate, h, openDrawer, setDrawerBody, setDrawerHero } from './dom.ts';
+import { closeDrawer, confirmDialog, fmtDate, h, openDrawer, setDrawerBody, setDrawerHero, toast } from './dom.ts';
 import { icon } from './icons.ts';
 import { openMemory } from './memoryTree.ts';
 import { registryHeader } from './registryHeader.ts';
@@ -89,6 +89,14 @@ export function openRegistry(ui: UI, filter: RegFilter = 'all') {
 
 // ── Personalizza la casa ──────────────────────────────────────────────
 
+/** I vantaggi che la casa dà adesso (le aggiunte in vista), uno per riga. */
+function perksBox(s: SaveData): HTMLElement {
+  const on = HOUSE_PARTS.filter((p) => houseShown(s.house).includes(p.id));
+  return h('div', { class: 'perks' }, h('div', { class: 'needs-title' }, icon('unlock', 14), on.length ? 'Vantaggi attivi' : 'Nessun vantaggio attivo'),
+    on.length ? h('ul', {}, ...on.map((p) => h('li', {}, h('b', {}, p.label), ' · ', p.perk)))
+      : h('p', { class: 'muted', style: 'margin:0;font-size:13px' }, 'Ogni aggiunta del cortile aiuta un po’ nel gioco: fiori che durano, meno erbacce, riparazioni che costano meno…'));
+}
+
 export function openHouse(ui: UI) {
   const game = ui.game;
   const s = game.state;
@@ -108,7 +116,8 @@ export function openHouse(ui: UI) {
     const toShop = (id: string) => openHouseShop(ui, id);
     setDrawerBody(h('div', {},
       h('div', { class: 'hero house-hero' }, h('img', { src: houseImg(s), alt: '' }),
-        h('p', { class: 'muted', style: 'margin:0' }, 'Tocca un tetto per cambiarlo, un’aggiunta per toglierla o rimetterla. Quelle che non hai si comprano in Bottega.')),
+        h('p', { class: 'muted', style: 'margin:0' }, 'Tocca un tetto per cambiarlo, un’aggiunta per toglierla o rimetterla. I vantaggi valgono solo per le aggiunte in vista; quelle che non hai si comprano in Bottega.')),
+      perksBox(s),
       h('div', { class: 'section-title' }, 'Tetto'),
       h('div', { class: 'grid' }, ...HOUSE_ROOFS.map((r) => card(r, s.house.roof === r.id, () => {
         if (!owned(r.id)) { toShop(r.id); return; }
@@ -117,7 +126,10 @@ export function openHouse(ui: UI) {
       h('div', { class: 'section-title' }, 'Cortile e casa'),
       h('div', { class: 'grid' }, ...HOUSE_PARTS.map((p) => card(p, owned(p.id) && !s.house.hidden.includes(p.id), () => {
         if (!owned(p.id)) { toShop(p.id); return; }
-        if (game.act((st, n) => { R.toggleHousePart(st, p.id, n); })) render();
+        if (game.act((st, n) => { R.toggleHousePart(st, p.id, n); })) {
+          toast(s.house.hidden.includes(p.id) ? `${p.label} tolta: il suo vantaggio si ferma finché non la rimetti.` : `${p.label} di nuovo in vista. ${p.perk}`);
+          render();
+        }
       }))),
     ));
   };
@@ -159,6 +171,7 @@ export function houseShopDetail(ui: UI, id: string, close: () => void, bought: (
     h('div', { class: 'shop-detail-top' }, h('img', { src: houseItemImg(s, id), alt: '' }),
       h('div', {}, h('h3', {}, it.label), h('p', { class: 'muted' }, `${kind} · rango ${it.minRank}${id === 'veggie' ? ' · rende fuochi fatui ogni giorno' : ''}`))),
     h('p', { class: 'muted', style: 'margin:0' }, it.description),
+    'perk' in it ? h('div', { class: 'perk-row' }, icon('unlock', 18), h('p', {}, h('b', {}, 'Vantaggio: '), it.perk, ' Vale finché l’aggiunta è in vista.')) : h('p', { class: 'muted', style: 'margin:0;font-size:12px' }, 'Solo estetico: cambia l’aspetto della casa.'),
     needRows(needs),
     h('div', { class: 'row' },
       h('button', { class: 'big-btn ghost', onclick: close }, 'Chiudi'),

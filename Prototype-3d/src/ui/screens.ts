@@ -410,7 +410,7 @@ export function openDetail(ui: UI, id: string) {
     let photoUrl: string | null = null;
     if (g.photoId) void memorials.get(g.photoId).then((m) => { if (m && head.isConnected) { photoUrl = m.dataUrl; head.replaceWith(portrait(m.dataUrl, stone)); } }).catch(() => undefined);
     // l'azione principale è quella che serve adesso (come nel menù sulla mappa)
-    const main: { act: 'repair' | 'clean' | 'flowers'; label: string; ic: string } = g.broken ? { act: 'repair', label: `Ripara (${DECAY.graveRepairCost})`, ic: 'hammer' }
+    const main: { act: 'repair' | 'clean' | 'flowers'; label: string; ic: string } = g.broken ? { act: 'repair', label: `Ripara (${R.graveRepairPrice(s)})`, ic: 'hammer' }
       : g.dirty || g.weeds ? { act: 'clean', label: 'Pulisci', ic: 'broom' }
         : { act: 'flowers', label: g.hasFlowers ? 'Rinnova fiori' : 'Porta fiori', ic: 'flower' };
     openDrawer(g.legacy ? 'Lascito del vecchio custode' : 'Memoria', h('div', {},
@@ -423,7 +423,7 @@ export function openDetail(ui: UI, id: string) {
         h('dt', {}, 'Vissuto'), h('dd', {}, `${fmtDate(g.birthDate)} → ${fmtDate(g.deathDate)}`),
         h('dt', {}, 'Causa'), h('dd', {}, deathCauseLabel(g.deathCause, g.deathCauseText)),
         h('dt', {}, 'Lapide'), h('dd', {}, GRAVE_TYPE_LABELS[g.graveType]),
-        h('dt', {}, 'Stato'), h('dd', {}, GRAVE_STATE_LABELS[vs] + (g.broken ? ` (riparare costa ${DECAY.graveRepairCost} fuochi fatui)` : '')),
+        h('dt', {}, 'Stato'), h('dd', {}, GRAVE_STATE_LABELS[vs] + (g.broken ? ` (riparare costa ${R.graveRepairPrice(s)} fuochi fatui)` : '')),
       ),
       mem.length ? h('div', {}, h('div', { class: 'section-title' }, 'Ricordi'), h('ul', { class: 'timeline' }, ...mem.map((m) => h('li', {}, h('time', {}, fmtDate(m.at)), MEMORY_LABELS[m.type])))) : null,
     ), { footer: h('div', { style: 'display:grid;gap:6px' },
@@ -440,7 +440,7 @@ export function openDetail(ui: UI, id: string) {
     h('div', { class: 'hero' }, h('img', { src: placeableThumb(p.type, style, p.variant), alt: '' }), h('h3', {}, d.label), h('p', { class: 'muted' }, d.description)),
     h('dl', { class: 'kv' },
       h('dt', {}, 'Categoria'), h('dd', {}, PLACEABLE_CATEGORY_LABELS[d.category]),
-      d.decays ? h('dt', {}, 'Condizione') : null, d.decays ? h('dd', {}, p.broken ? `Rotto (riparare: ${repairCost(d)} fuochi fatui)` : p.dirty ? 'Sporco: va pulito' : 'In ordine — prima o poi avrà bisogno di una pulita') : null,
+      d.decays ? h('dt', {}, 'Condizione') : null, d.decays ? h('dd', {}, p.broken ? `Rotto (riparare: ${R.placeableRepairPrice(s, p.type)} fuochi fatui)` : p.dirty ? 'Sporco: va pulito' : 'In ordine — prima o poi avrà bisogno di una pulita') : null,
       d.light ? h('dt', {}, 'Luce') : null, d.light ? h('dd', {}, p.broken ? 'Guasta' : p.lit ? 'Accesa' : 'Spenta') : null,
       BUSINESS[p.type] ? h('dt', {}, 'Incasso') : null, BUSINESS[p.type] ? h('dd', {}, businessLine(s, p.id, p.type, game.now())) : null,
     ),

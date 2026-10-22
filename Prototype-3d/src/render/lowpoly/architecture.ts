@@ -641,13 +641,23 @@ function fruitTree(lp: LP, x: number, zz: number, fruit: string, s: number) {
 function housePartsLP(lp: LP, parts: Set<string>) {
   const r = lp.rng;
   if (parts.has('pumpkins')) { pumpkin(lp, -0.95, 0, 0.02, 0.14, true, true, 0.3); pumpkin(lp, -1.15, 0, 0.2, 0.1, true, false, -0.5); pumpkin(lp, 0.1, 0, -0.05, 0.09, false, false); }
-  if (parts.has('mailbox')) {
-    // accanto al cancelletto, girata verso la strada
-    lp.push([0.5, 0, 1.78]);
-    lp.cyl(0, 0, 0, 0.03, 0.03, 0.7, 5, LPC.woodDark);
-    lp.box(0, 0.7, 0, 0.2, 0.16, 0.3, '#4a5470', { bevel: 0.02, vary: 0.08 });
-    lp.push([0, 0.78, 0], 0, Math.PI / 2).cyl(0, 0, 0, 0.1, 0.1, 0.2, 6, '#4a5470', { jitter: 0 }).pop();
-    lp.box(0.12, 0.78, 0.08, 0.015, 0.16, 0.015, LPC.iron, { jitter: 0 }).box(0.12, 0.9, 0.04, 0.015, 0.06, 0.1, LPC.red, { jitter: 0 });
+  if (parts.has('toolbench')) {
+    // banco da lavoro accanto alla casa, con la rastrelliera degli attrezzi appesi
+    lp.push([1.55, 0, -0.45], 0.08);
+    for (const [x, z] of [[-0.32, -0.1], [0.32, -0.1], [-0.32, 0.1], [0.32, 0.1]]) lp.box(x, 0, z, 0.05, 0.42, 0.05, LPC.woodDark, { jitter: 0 });
+    lp.box(0, 0.42, 0, 0.78, 0.05, 0.32, LPC.wood, { bevel: 0.01, vary: 0.1 });
+    lp.box(0, 0.12, 0, 0.7, 0.03, 0.26, LPC.woodDark, { jitter: 0 });
+    lp.box(0, 0.47, -0.15, 0.8, 0.6, 0.03, '#6a5040', { bevel: 0.008, vary: 0.08 });
+    // pala, rastrello, martello e sega appesi
+    lp.cyl(-0.27, 0.62, -0.12, 0.012, 0.012, 0.42, 4, LPC.woodLight).push([-0.27, 0.56, -0.12]).box(0, 0, 0, 0.1, 0.12, 0.012, LPC.iron, { bevel: 0.004 }).pop();
+    lp.cyl(-0.08, 0.6, -0.12, 0.012, 0.012, 0.44, 4, LPC.woodLight).box(-0.08, 1.02, -0.12, 0.16, 0.025, 0.02, LPC.iron, { jitter: 0 });
+    for (let i = 0; i < 5; i++) lp.box(-0.15 + i * 0.035, 0.98, -0.12, 0.008, 0.04, 0.008, LPC.iron, { jitter: 0 });
+    lp.box(0.12, 0.72, -0.12, 0.025, 0.2, 0.02, LPC.woodLight, { jitter: 0 }).box(0.12, 0.92, -0.12, 0.1, 0.04, 0.04, LPC.iron, { bevel: 0.005 });
+    lp.push([0.29, 0.8, -0.12], 0, 0, 0.1).box(0, -0.12, 0, 0.12, 0.24, 0.008, LPC.ironLight, { jitter: 0 }).box(0, 0.11, 0, 0.05, 0.07, 0.02, LPC.woodDark, { jitter: 0 }).pop();
+    // sul piano: un martello, chiodi in una scatola, una lanterna spenta; sotto un secchio
+    lp.push([0.05, 0.47, 0.05], 0.4).box(0, 0, 0, 0.2, 0.025, 0.025, LPC.woodLight, { jitter: 0 }).box(0.1, 0, 0, 0.03, 0.05, 0.07, LPC.iron, { jitter: 0 }).pop();
+    lp.box(-0.22, 0.47, 0.04, 0.14, 0.06, 0.1, '#8a6a4a', { bevel: 0.006 });
+    lp.cyl(0.25, 0.15, 0.02, 0.08, 0.1, 0.16, 7, '#7f8a95');
     lp.pop();
   }
   if (parts.has('picket')) {

@@ -5,7 +5,7 @@
 import * as THREE from 'three';
 import { BUSINESS, FOREST_MARGIN, GRAVE_FOOTPRINT, KEEPER_LAMP, LIVE_TICK_MS, SOUL_BELL, STAFF, ZOMBIE_MUD } from '../game/balance.ts';
 import { CATALOG, CATALOG_LIST, EDIT_ONLY, rotatedFootprint, TRACEABLE } from '../game/catalog.ts';
-import { applyTheme, uiNext } from './uiNext.ts';
+import { applyTheme, uiNext, uiPreview } from './uiNext.ts';
 import type { GraveVisualState } from '../game/graves.ts';
 import { graveVisualState } from '../game/graves.ts';
 import * as R from '../game/rules.ts';
@@ -37,7 +37,7 @@ import { closedCoffinLP } from '../render/lowpoly/memoryTree.ts';
 export type Selection = { kind: 'grave' | 'placeable'; id: string } | null;
 
 export type EntityAction =
-  | 'detail' | 'clean' | 'repair' | 'flowers' | 'light' | 'shop' | 'rotate' | 'store' | 'confirm' | 'exhume' | 'move' | 'entrust' | 'memories' | 'ring';
+  | 'detail' | 'clean' | 'repair' | 'flowers' | 'light' | 'shop' | 'rotate' | 'store' | 'confirm' | 'exhume' | 'move' | 'entrust' | 'memories' | 'ring' | 'registry' | 'house';
 
 const PET_STATUS: Record<PetMode, string> = { free: 'Gira libero', follow: 'Ti segue', home: 'A cuccia' };
 
@@ -125,11 +125,12 @@ export class Game {
     this.world.staticShadows = this.profile().shadows === 'still';
     this.world.quality = q;
     if (params.get('mist') !== '0') this.mist = new ForestMist(this.scene, q);
+    // anteprima: la Casa del Custode c'è sempre, accanto alla Bottega
+    if (uiPreview()) R.ensureKeeperHouse(this.state, now);
     const report = runCatchUp(this.state, now);
     R.afterAction(this.state, now);
     this.world.sync(this.state);
-    const shop = this.state.placeables.find((p) => p.type === 'shop');
-    const start = shop ? cellCenter(shop.x + 1, shop.y + 4, [1, 1]) : new THREE.Vector3();
+    const start = this.homeSpot(this.state);
     this.actors = new Actors(this.scene, this.atmosphere, this.state.settings.style, start, this.state.player.look);
     this.scene.add(this.walkMark.group);
     this.refreshWalkable();
@@ -526,8 +527,8 @@ export class Game {
     const center = cellCenter(cells.x, cells.y, cells.fp).setY(1.2);
     const grave = this.state.graves.find((g) => g.id === id);
     // durante il rito la tomba affidata e l'albero restano dove sono finché il corteo non ha finito
-    if (this.riteIds?.includes(id) && !['detail', 'memories', 'shop'].includes(action)) { toast('Aspetta che il corteo finisca il rito.'); return; }
-    const instant: EntityAction[] = ['detail', 'shop', 'rotate', 'store', 'confirm', 'exhume', 'move', 'entrust', 'memories'];
+    if (this.riteIds?.includes(id) && !['detail', 'memories', 'shop', 'registry', 'house'].includes(action)) { toast('Aspetta che il corteo finisca il rito.'); return; }
+    const instant: EntityAction[] = ['detail', 'shop', 'rotate', 'store', 'confirm', 'exhume', 'move', 'entrust', 'memories', 'registry', 'house'];
     const run = () => {
       switch (action) {
         case 'clean': this.actors.work(); this.act((s, n) => (grave ? R.cleanGrave(s, id, n) : R.cleanPlaceable(s, id, n)), center); break;
@@ -544,6 +545,8 @@ export class Game {
         case 'entrust': this.select(null); this.ui.openEntrust(id); break;
         case 'memories': this.select(null); this.ui.openMemoryTree(); break;
         case 'ring': this.ringBell(id); break;
+        case 'registry': this.ui.openRegistry(); break;
+        case 'house': this.ui.openHouse(); break;
       }
     };
     if (instant.includes(action)) { run(); return; }
@@ -803,18 +806,7 @@ export class Game {
       const id = hit.entityId;
       // bar e orto con l'incasso pronto: toccandoli si riscuote
       if (!this.editMode && R.businessPending(this.state, id, this.now()) > 0) { this.collectBusiness(id); return; }
-      // interfaccia nuova: l'oggetto si evidenzia subito, il menù compare quando il Custode arriva
-      const later = uiNext() && !this.editMode;
-      this.ctxReady = !later;
-      this.select({ kind: this.kindOf(id), id });
-      if (!this.editMode) {
-        const c = this.entityCells(id)!;
-        const arrived = () => { if (later && this.selection?.id === id && !this.ctxReady) { this.ctxReady = true; this.ui.refreshContext(); } };
-        const going = this.actors.walkNextTo(c.x, c.y, c.fp, arrived);
-        if (!going) arrived(); // non ci si arriva: il menù compare subito
-        else if (later && !this.ctxReady) this.markWalk();
-        this.rig.follow = this.actors.avatar.pos;
-      }
+      this.goTo(id);
       return;
     }
     // tap sul terreno: il Custode cammina lì
@@ -824,6 +816,42 @@ export class Game {
       if (this.actors.walkTo(g.cell)) this.markWalk();
       this.rig.follow = this.actors.avatar.pos;
     }
+  }
+
+  /** Seleziona una tomba o un oggetto e ci manda il Custode (il menù compare quando arriva). */
+  goTo(id: string) {
+    // interfaccia nuova: l'oggetto si evidenzia subito, il menù compare quando il Custode arriva
+    const later = uiNext() && !this.editMode;
+    this.ctxReady = !later;
+    this.select({ kind: this.kindOf(id), id });
+    if (this.editMode) return;
+    const c = this.entityCells(id)!;
+    const arrived = () => { if (later && this.selection?.id === id && !this.ctxReady) { this.ctxReady = true; this.ui.refreshContext(); } };
+    const going = this.actors.walkNextTo(c.x, c.y, c.fp, arrived);
+    if (!going) arrived(); // non ci si arriva: il menù compare subito
+    else if (later && !this.ctxReady) this.markWalk();
+    this.rig.follow = this.actors.avatar.pos;
+  }
+
+  /**
+   * Dal registro: la camera va sulla tomba (o sull'Albero dei ricordi, per
+   * chi gli è stato affidato), la seleziona e il Custode si incammina.
+   */
+  locate(id: string) {
+    const target = this.state.graves.some((g) => g.id === id) ? id : R.memoryTree(this.state)?.id;
+    if (!target || !this.entityCells(target)) { toast('Non si trova più sulla mappa.'); return; }
+    if (this.editMode) this.setEditMode(false);
+    this.goTo(target);
+    // la camera resta sulla tomba: il Custode arriva nell'inquadratura
+    this.focusEntity(target);
+  }
+
+  /** Dove il Custode comincia: sulla soglia di casa (anteprima) o davanti alla Bottega. */
+  private homeSpot(s: SaveData): THREE.Vector3 {
+    const house = uiPreview() ? s.placeables.find((p) => p.type === 'keeper_house') : undefined;
+    if (house) return cellCenter(house.x + 1, house.y + 4, [1, 1]);
+    const shop = s.placeables.find((p) => p.type === 'shop');
+    return shop ? cellCenter(shop.x + 1, shop.y + 4, [1, 1]) : new THREE.Vector3();
   }
 
   /**
@@ -1470,6 +1498,14 @@ export class Game {
     this.select({ kind: 'placeable', id: shop.id });
   }
 
+  /** Camera sulla Casa del Custode, selezionata (dopo un acquisto in Bottega). */
+  focusHouse() {
+    const house = this.state.placeables.find((p) => p.type === 'keeper_house');
+    if (!house) return;
+    this.focusEntity(house.id);
+    this.select({ kind: 'placeable', id: house.id });
+  }
+
   focusEntity(id: string) {
     const c = this.entityCells(id);
     if (!c) return;
@@ -1506,8 +1542,8 @@ export class Game {
     this.world.setStyle(next.settings.style, next, true);
     this.actors.setStyle(next.settings.style);
     this.actors.setAvatarLook(next.player.look);
-    const shop = next.placeables.find((p) => p.type === 'shop');
-    if (shop) this.actors.teleport(cellCenter(shop.x + 1, shop.y + 4, [1, 1]));
+    if (uiPreview()) R.ensureKeeperHouse(next, this.now());
+    this.actors.teleport(this.homeSpot(next));
     this.rig.setMode(next.settings.camera);
     this.auto = next.settings.quality === 'auto' ? new AutoGovernor(loadAutoProfile()) : null;
     this.applySettingQuality();

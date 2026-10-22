@@ -3,8 +3,8 @@
 
 import { terrainSection } from './expansion.ts';
 import { exportBackup, gallery, importBackup, type PhotoRecord } from '../app/persistence.ts';
-import { BUSINESS, DECAY, EXPANSION } from '../game/balance.ts';
-import { CATALOG, CATALOG_LIST, CATEGORY_ORDER, PLACEABLE_CATEGORY_LABELS, repairCost, seasonLabel, type PlaceableCategory, type PlaceableDef } from '../game/catalog.ts';
+import { BUSINESS, DECAY, EARLY_ACCESS, EXPANSION, RANKS, RELEASE_LOCKS } from '../game/balance.ts';
+import { CATALOG, CATALOG_LIST, CATEGORY_ORDER, isSeasonallyAvailable, PLACEABLE_CATEGORY_LABELS, repairCost, seasonLabel, type PlaceableCategory, type PlaceableDef } from '../game/catalog.ts';
 import {
   CATEGORIES, CATEGORY_LABELS, CUSTOM_CAUSE_MAX, DEATH_CAUSE_LABELS, deathCauseLabel, DEATH_CAUSES, GRAVE_STATE_LABELS,
   GRAVE_TYPE_LABELS, GRAVE_TYPE_MIN_RANK, GRAVE_TYPES, graveVisualState,
@@ -16,9 +16,10 @@ import { computePrestige, detectDistricts, DISTRICT_LABELS, expansionStatus } fr
 import { newId } from '../game/rng.ts';
 import { $, closeDrawer, confirmDialog, fmtDate, h, openDrawer, setDrawerBody, setDrawerFooter, setDrawerHero, toast } from './dom.ts';
 import { shopHeader } from './shopHeader.ts';
+import { houseBoughtFooter, houseShopDetail, houseShopGrid } from './house.ts';
 import { graveThumb, placeableThumb } from './thumbs.ts';
 import { ACH_ICONS, icon } from './icons.ts';
-import { uiNext, uiPlay } from '../app/uiNext.ts';
+import { uiNext, uiPlay, uiPreview } from '../app/uiNext.ts';
 
 /** Interfaccia «viva»: un'icona per ogni scheda delle categorie. */
 const CAT_ICON: Record<PlaceableCategory | 'all', string> = { all: 'bag', light: 'lightOn', decoration: 'flower', structure: 'fence', ambient: 'tree', npc: 'ghost', extra: 'bike' };
@@ -184,6 +185,43 @@ function lockText(s: SaveData, d: PlaceableDef, av: R.ShopAvailability): string 
   return LOCK_LABEL[av];
 }
 
+/**
+ * Cosa manca per sbloccare un oggetto, tutto insieme (rango, stagione,
+ * traguardo, tombe, fuochi fatui): sulla carta il primo, nel dettaglio tutti,
+ * con quanto manca e la barra quando si può contare.
+ */
+export interface UnlockNeed { icon: string; short: string; long: string; progress?: [number, number] }
+export function unlockNeeds(s: SaveData, d: PlaceableDef, now: Date): UnlockNeed[] {
+  const out: UnlockNeed[] = [];
+  const early = !RELEASE_LOCKS.earlyRank && EARLY_ACCESS.has(d.id);
+  if (!early && !isSeasonallyAvailable(d, now.getMonth(), now.getDate())) {
+    const when = seasonLabel(d);
+    const at = /\d|–/.test(when) ? when : `a ${when}`;
+    out.push({ icon: 'calendar', short: `Solo ${at}`, long: `Si compra solo ${at}: poi resta tuo per sempre.` });
+  }
+  const rank = rankForXp(s.player.xp);
+  if (!early && d.minRank > rank.level) {
+    const need = RANKS.find((r) => r.level === d.minRank)!;
+    out.push({ icon: 'lock', short: `Rango ${d.minRank}`, long: `Si sblocca al rango ${d.minRank}, «${need.name}». Sei al rango ${rank.level}: mancano ${(need.minXp - s.player.xp).toLocaleString('it-IT')} punti Necro.`, progress: [s.player.xp, need.minXp] });
+  }
+  if (!early && d.feat) {
+    const [n, goal] = R.featProgress(s, d.feat);
+    if (n < goal) out.push({ icon: 'trophy', short: `${d.feat.label} · ${n}/${goal}`, long: `Traguardo: ${d.feat.label.toLowerCase()} (${n} su ${goal}).`, progress: [n, goal] });
+  }
+  if (RELEASE_LOCKS.minGraves && d.minGraves && R.graveTotal(s) < d.minGraves) {
+    const n = R.graveTotal(s);
+    out.push({ icon: 'coffin', short: `Seppellisci ${d.minGraves} · ${n}/${d.minGraves}`, long: `Si sblocca con ${d.minGraves} sepolture (contano anche quelle affidate all’albero): ne hai ${n}.`, progress: [n, d.minGraves] });
+  }
+  if (s.player.wisps < d.cost) out.push({ icon: 'wisp', short: `Mancano ${d.cost - s.player.wisps}`, long: `Costa ${d.cost} fuochi fatui: te ne mancano ${d.cost - s.player.wisps}.`, progress: [s.player.wisps, d.cost] });
+  return out;
+}
+
+/** Il requisito come pillola (icona e testo breve) e come riga del dettaglio, con la barra. */
+export const needChip = (n: UnlockNeed) => h('span', { class: `need need-${n.icon}` }, icon(n.icon, 13), n.short);
+export const needRows = (needs: UnlockNeed[]) => needs.length ? h('div', { class: 'needs' }, h('div', { class: 'needs-title' }, icon('lock', 14), needs.length > 1 ? 'Per sbloccarlo serve:' : 'Per sbloccarlo'),
+  ...needs.map((n) => h('div', { class: 'need-row' }, icon(n.icon, 18), h('div', {}, h('p', {}, n.long),
+    n.progress ? h('div', { class: 'xp-bar', style: 'height:6px' }, h('i', { style: `width:${Math.min(100, Math.round((n.progress[0] / Math.max(1, n.progress[1])) * 100))}%` })) : null)))) : null;
+
 /** Testo del pulsante d'acquisto (o del perché non si può). */
 function buyText(s: SaveData, d: PlaceableDef, av: R.ShopAvailability, qty: number): string {
   switch (av) {
@@ -197,13 +235,16 @@ function buyText(s: SaveData, d: PlaceableDef, av: R.ShopAvailability, qty: numb
   }
 }
 
-export function openShop(ui: UI, cat: PlaceableCategory = 'light', selected: string | null = null) {
+export function openShop(ui: UI, cat: PlaceableCategory | 'house' = 'light', selected: string | null = null) {
   const game = ui.game;
   const s = game.state;
   const now = game.now();
   let qty = 1;
   const render = () => {
-    const tabs = h('div', { class: 'tabs' }, ...CATEGORY_ORDER.map((c) => h('button', { class: `tab ${c === cat ? 'active' : ''}`, onclick: () => { cat = c; selected = null; render(); } }, tabIcon(c), PLACEABLE_CATEGORY_LABELS[c])));
+    const tabs = h('div', { class: 'tabs' }, ...CATEGORY_ORDER.map((c) => h('button', { class: `tab ${c === cat ? 'active' : ''}`, onclick: () => { cat = c; selected = null; render(); } }, tabIcon(c), PLACEABLE_CATEGORY_LABELS[c])),
+      // anteprima: tetti e aggiunte della Casa del Custode
+      uiPreview() ? h('button', { class: `tab ${cat === 'house' ? 'active' : ''}`, onclick: () => { cat = 'house'; selected = null; render(); } }, uiPlay() ? icon('house', 20) : null, 'Casa') : null);
+    if (cat === 'house') { renderHouse(tabs); return; }
     const items = CATALOG_LIST.filter((d) => d.category === cat && !d.permanent);
     const grid = h('div', { class: 'grid' }, ...items.map((d) => {
       const av = R.shopAvailability(s, d.id, now);
@@ -219,9 +260,11 @@ export function openShop(ui: UI, cat: PlaceableCategory = 'light', selected: str
           locked ? h('span', { class: 'lock-over' }, icon('lock', 30)) : null,
           owned ? h('span', { class: 'owned-tick' }, icon('check', 15)) : null),
         h('b', {}, d.label),
-        locked ? h('span', { class: 'lock-why' }, av === 'rank' ? `Rango ${d.minRank}` : lockText(s, d, av))
-          : owned ? h('span', { class: 'price owned' }, 'Tuo')
-            : h('span', { class: 'price' }, String(d.cost), icon('wisp', 12)),
+        // in prova: sotto la carta bloccata (o troppo cara) c'è proprio cosa serve
+        uiPreview() && !owned && av !== 'ok' ? needChip(unlockNeeds(s, d, now)[0] ?? { icon: 'lock', short: lockText(s, d, av), long: '' })
+          : locked ? h('span', { class: 'lock-why' }, av === 'rank' ? `Rango ${d.minRank}` : lockText(s, d, av))
+            : owned ? h('span', { class: 'price owned' }, 'Tuo')
+              : h('span', { class: 'price' }, String(d.cost), icon('wisp', 12)),
         (s.inventory[d.id] ?? 0) > 0 ? h('span', { class: 'badge' }, String(s.inventory[d.id])) : null);
       }
       return h('button', {
@@ -234,7 +277,7 @@ export function openShop(ui: UI, cat: PlaceableCategory = 'light', selected: str
       LOCK_LABEL[av] ? h('span', { class: 'lock' }, av === 'rank' || av === 'graves' || av === 'feat' ? icon('lock', 12) : null, lockText(s, d, av)) : null,
       (s.inventory[d.id] ?? 0) > 0 ? h('span', { class: 'badge' }, String(s.inventory[d.id])) : null);
     }));
-    setDrawerBody(h('div', {}, h('p', { class: 'muted' }, `Hai ${s.player.wisps.toLocaleString('it-IT')} fuochi fatui. Gli oggetti grigi richiedono rango, stagione o più fuochi fatui.`), tabs, grid));
+    setDrawerBody(h('div', {}, h('p', { class: 'muted' }, uiPreview() ? `Hai ${s.player.wisps.toLocaleString('it-IT')} fuochi fatui. Sotto ogni oggetto bloccato c’è cosa serve per averlo.` : `Hai ${s.player.wisps.toLocaleString('it-IT')} fuochi fatui. Gli oggetti grigi richiedono rango, stagione o più fuochi fatui.`), tabs, grid));
     // la scheda scelta resta in vista (al centro, se si può), anche dopo aver toccato un oggetto
     const active = tabs.querySelector<HTMLElement>('.tab.active');
     if (active) tabs.scrollLeft = active.offsetLeft - (tabs.clientWidth - active.offsetWidth) / 2;
@@ -252,9 +295,10 @@ export function openShop(ui: UI, cat: PlaceableCategory = 'light', selected: str
           h('div', {}, h('h3', {}, d.label), h('p', { class: 'muted' }, `${PLACEABLE_CATEGORY_LABELS[d.category]} · ${d.unique ? 'pezzo unico' : `ne puoi comprare ${R.maxBuyable(s, d.id)}`}${(s.inventory[d.id] ?? 0) > 0 ? ` · ne hai ${s.inventory[d.id]}` : ''}`)))
         : h('div', { class: 'row' }, h('b', {}, d.label), h('span', { class: 'muted', style: 'text-align:right' }, d.unique ? 'Pezzo unico' : `Max ${R.maxBuyable(s, d.id)}`)),
       h('p', { class: 'muted', style: 'margin:0' }, d.description),
-      av === 'graves' ? h('div', { class: 'xp-bar', style: 'height:6px' }, h('i', { style: `width:${Math.round((R.graveTotal(s) / d.minGraves!) * 100)}%` })) : null,
-      av === 'feat' ? h('div', { class: 'xp-bar', style: 'height:6px' }, h('i', { style: `width:${Math.round((R.featProgress(s, d.feat!)[0] / d.feat!.goal) * 100)}%` })) : null,
-      d.season || d.feat ? h('p', { class: 'muted', style: 'margin:0;font-size:12px' }, [d.season ? `Stagionale: si compra solo ${d.season.label}, poi resta tuo per sempre.` : '', d.feat ? `Traguardo: ${d.feat.label.toLowerCase()}.` : ''].filter(Boolean).join(' ')) : null,
+      uiPreview() ? needRows(av === 'owned' ? [] : unlockNeeds(s, d, now)) : null,
+      !uiPreview() && av === 'graves' ? h('div', { class: 'xp-bar', style: 'height:6px' }, h('i', { style: `width:${Math.round((R.graveTotal(s) / d.minGraves!) * 100)}%` })) : null,
+      !uiPreview() && av === 'feat' ? h('div', { class: 'xp-bar', style: 'height:6px' }, h('i', { style: `width:${Math.round((R.featProgress(s, d.feat!)[0] / d.feat!.goal) * 100)}%` })) : null,
+      (d.season || d.feat) && (!uiPreview() || av === 'ok' || av === 'owned') ? h('p', { class: 'muted', style: 'margin:0;font-size:12px' }, [d.season ? `Stagionale: si compra solo ${d.season.label}, poi resta tuo per sempre.` : '', d.feat ? `Traguardo: ${d.feat.label.toLowerCase()}.` : ''].filter(Boolean).join(' ')) : null,
       !d.unique && av === 'ok' ? h('div', { class: 'qty' },
         h('button', { onclick: () => { qty = Math.max(1, qty - 1); render(); } }, '−'),
         h('b', {}, String(qty)),
@@ -286,6 +330,16 @@ export function openShop(ui: UI, cat: PlaceableCategory = 'light', selected: str
       }, next && av === 'ok' && d.cost ? h('span', { style: 'display:inline-flex;align-items:center;gap:6px' }, `Compra · ${d.cost * qty}`, icon('wisp', 18)) : buyText(s, d, av, qty))),
       next ? null : h('button', { class: 'big-btn ghost', onclick: close }, 'Annulla'),
     ));
+  };
+  // la scheda «Casa»: le carte dei tetti e delle aggiunte, il dettaglio sotto
+  const renderHouse = (tabs: HTMLElement) => {
+    setDrawerBody(h('div', {}, h('p', { class: 'muted' }, `Hai ${s.player.wisps.toLocaleString('it-IT')} fuochi fatui. Tetti e aggiunte compaiono subito sulla casa; dalla casa li togli e li rimetti quando vuoi.`), tabs,
+      houseShopGrid(s, selected, (id) => { selected = id; render(); })));
+    const active = tabs.querySelector<HTMLElement>('.tab.active');
+    if (active) tabs.scrollLeft = active.offsetLeft - (tabs.clientWidth - active.offsetWidth) / 2;
+    if (!selected) { setDrawerFooter(null); return; }
+    const close = () => { selected = null; render(); };
+    setDrawerFooter(houseShopDetail(ui, selected, close, () => { render(); setDrawerFooter(houseBoughtFooter(ui, close)); }));
   };
   openDrawer('Bottega', h('div'));
   // interfaccia nuova: in testa l'interno della bottega, con lo zombie al lavoro

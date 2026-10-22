@@ -6,10 +6,11 @@
 
 import * as THREE from 'three';
 import { LP, gothicArchShape, type LPModel } from './kit.ts';
-import { bouquet, candle, cobweb, deadLeaves, graveLight, grassTuft, hangingLantern, inscription, ivy, moss, pumpkin, vase, weeds, wreath } from './details.ts';
+import { bouquet, candle, cobweb, deadLeaves, flower, graveLight, grassTuft, hangingLantern, inscription, ivy, moss, pumpkin, vase, weeds, wreath } from './details.ts';
 import { decayLP } from './lights.ts';
 import { LPC } from './palette.ts';
 import type { PVis } from '../models/types.ts';
+import { decodeHouseVariant } from '../../game/house.ts';
 
 // ── Componenti ───────────────────────────────────────────────────────────
 
@@ -42,7 +43,7 @@ export function archedDoor(lp: LP, x: number, zFace: number, w: number, h: numbe
  * Ogni falda va esattamente dal colmo alla gronda (sporto incluso), così le
  * due falde si incontrano sul colmo senza sporgere dall'altra parte.
  */
-export function gableRoof(lp: LP, w: number, d: number, y: number, rise: number, color: string = LPC.roof, overhang = 0.14, alongZ = false) {
+export function gableRoof(lp: LP, w: number, d: number, y: number, rise: number, color: string = LPC.roof, overhang = 0.14, alongZ = false, dark: string = LPC.roofDark) {
   if (alongZ) lp.push([0, 0, 0], Math.PI / 2);
   const half = d / 2 + overhang;
   const slope = Math.atan2(rise, d / 2);
@@ -55,11 +56,11 @@ export function gableRoof(lp: LP, w: number, d: number, y: number, rise: number,
     const rows = 5;
     for (let i = 0; i < rows; i++) {
       const z = -len / 2 + (i + 0.5) * (len / rows);
-      lp.box(r.range(-0.02, 0.02), 0.03, z, w + overhang * 2 - 0.04, 0.03, (len / rows) * 0.7, i % 2 ? color : LPC.roofDark, { bevel: 0.006, vary: 0.1, ao: 0 });
+      lp.box(r.range(-0.02, 0.02), 0.03, z, w + overhang * 2 - 0.04, 0.03, (len / rows) * 0.7, i % 2 ? color : dark, { bevel: 0.006, vary: 0.1, ao: 0 });
     }
     lp.pop();
   }
-  lp.box(0, y + rise - 0.02, 0, w + overhang * 2 + 0.04, 0.08, 0.12, LPC.roofDark, { bevel: 0.015 });
+  lp.box(0, y + rise - 0.02, 0, w + overhang * 2 + 0.04, 0.08, 0.12, dark, { bevel: 0.015 });
   if (alongZ) lp.pop();
 }
 
@@ -203,7 +204,7 @@ export function gateLP(lit: boolean): LPModel {
 
 interface CottageOpts {
   w: number; d: number; wallH: number; rise: number;
-  plaster: string; timber: string; roof: string; lean?: number;
+  plaster: string; timber: string; roof: string; roofDark?: string; lean?: number;
   planks?: boolean; roundWindow?: boolean; lit: boolean;
 }
 
@@ -238,7 +239,7 @@ function cottage(lp: LP, o: CottageOpts) {
   }
   // timpani e tetto ripido
   for (const sx of [-1, 1]) gable(lp, sx * (o.w / 2 - 0.05), o.d, H, o.rise, o.plaster);
-  gableRoof(lp, o.w, o.d, H, o.rise, o.roof, 0.2);
+  gableRoof(lp, o.w, o.d, H, o.rise, o.roof, 0.2, false, o.roofDark);
   // muschio sulle falde
   const slope = Math.atan2(o.rise, o.d / 2);
   for (let i = 0; i < 6; i++) {
@@ -578,5 +579,144 @@ export function angelStatueLP(v: PVis): LPModel {
   }
   if (v.dirty) { deadLeaves(lp, -0.6, -0.6, 0.6, 0.6, 10); moss(lp, 0.3, 0.73, 0.3, 0.08); }
   grassTuft(lp, 0.58, 0.58, 1.1); grassTuft(lp, -0.6, 0.5, 1);
+  return lp.build();
+}
+
+// ── Casa del Custode ─────────────────────────────────────────────────────
+// Ingombro 4×4: la casetta sul retro, davanti il cortile dove compaiono le
+// aggiunte comprate in Bottega. La variante dice tetto e aggiunte in vista
+// (game/house.ts); `only` disegna una sola aggiunta, per le miniature.
+
+// tetto e la sua ombra (le file alterne delle tegole e il colmo)
+const HOUSE_ROOF_COLORS: Record<string, [string, string]> = { slate: ['#3a4152', '#2b303d'], moss: ['#4f6146', '#3c4a36'], tiles: ['#8a3f2e', '#6c2f23'], thatch: ['#b8955a', '#94743f'] };
+
+export function keeperHouseLP(v: PVis): LPModel {
+  const { roof, parts } = decodeHouseVariant(v.variant);
+  const lp = new LP(`lp:keeperhouse:${v.seed}:${v.variant}`);
+  const r = lp.rng;
+  const w = 2.3, d = 1.5, wallH = 1.12, rise = 0.92, z = -0.95;
+  const front = d / 2;
+  lp.push([0, 0, z]);
+  cottage(lp, { w, d, wallH, rise, plaster: '#9a8a70', timber: '#3a2b22', roof: (HOUSE_ROOF_COLORS[roof] ?? HOUSE_ROOF_COLORS.slate)[0], roofDark: (HOUSE_ROOF_COLORS[roof] ?? HOUSE_ROOF_COLORS.slate)[1], lean: -0.012, roundWindow: true, lit: v.lit });
+  // tetti speciali: più muschio, o la frangia di paglia sulle gronde
+  if (roof === 'moss') for (let i = 0; i < 10; i++) lp.push([r.range(-w / 2, w / 2) * 0.9, 0.2 + wallH + rise * r.range(0.15, 0.8), (r.chance(0.5) ? 1 : -1) * r.range(0.1, 0.65)]).blob(0, 0, 0, r.range(0.1, 0.18), 0.05, r.range(0.08, 0.14), r.pick([LPC.moss, LPC.mossBright, '#56693f']), { jitter: 0.02, vary: 0.15, ao: 0 }).pop();
+  if (roof === 'thatch') for (const sz of [-1, 1]) for (let x = -w / 2 - 0.12; x < w / 2 + 0.12; x += 0.1) lp.box(x, 0.2 + wallH - 0.1, sz * (d / 2 + 0.22), 0.09, r.range(0.08, 0.13), 0.06, r.pick(['#c9a466', '#a88550', '#d6b676']), { jitter: 0.01, vary: 0.1, ao: 0 });
+  lp.push([0, 0.2, 0], 0, 0, -0.012);
+  archedDoor(lp, -0.4, front + 0.02, 0.46, 0.9, '#5a3a28', LPC.stoneLight);
+  gothicWindow(lp, 0.55, 0.3, front + 0.02, 0.5, 0.56, v.lit);
+  shutters(lp, 0.55, 0.26, front + 0.02, 0.5, 0.6, '#5d4a6a');
+  if (parts.has('flowerbox')) flowerBox(lp, 0.55, 0.16, front + 0.02, 0.64);
+  gothicWindow(lp, -0.35, 0.45, -front - 0.05, 0.34, 0.45, v.lit);
+  cobweb(lp, -w / 2 + 0.1, wallH - 0.05, front + 0.03, 0.22);
+  if (parts.has('lantern')) {
+    lp.box(-0.85, 0.92, front + 0.1, 0.03, 0.03, 0.2, LPC.iron, { jitter: 0 });
+    hangingLantern(lp, -0.85, 0.92, front + 0.2, v.lit, 0.9);
+  }
+  ivy(lp, w / 2 - 0.15, 0.0, front + 0.02, 1.05, 0.12);
+  lp.pop();
+  chimney(lp, -w * 0.3, 0.2 + wallH + rise * 0.2, -d * 0.15, rise * 1.05);
+  if (parts.has('smoke')) for (let i = 0; i < 4; i++) lp.blob(-w * 0.3 + i * 0.07, 0.2 + wallH + rise * 1.3 + 0.12 + i * 0.2, -d * 0.15 - i * 0.03, 0.09 + i * 0.035, 0.08 + i * 0.03, 0.09 + i * 0.035, '#8d8a96', { bucket: 'ghost', jitter: 0.02, detail: 1 });
+  lp.pop();
+  // soglia e cortile
+  lp.box(-0.4, 0, z + front + 0.16, 0.62, 0.07, 0.26, LPC.stoneLight, { bevel: 0.012 });
+  housePartsLP(lp, parts);
+  if (v.lit) lp.light(0.55, 0.75, z + front + 0.25, LPC.window, 0.75, 4.5, 0.1, 0.8);
+  if (v.lit && parts.has('lantern')) lp.light(-0.85, 0.85, z + front + 0.25, LPC.lantern, 0.6, 3.5, 0.2, 0.6);
+  grassTuft(lp, -1.8, -1.75, 1.1); grassTuft(lp, 1.85, -1.8, 1); grassTuft(lp, 1.8, 1.85, 1.1);
+  return lp.build();
+}
+
+/** Alberello da frutto storto, carico di frutti. */
+function fruitTree(lp: LP, x: number, zz: number, fruit: string, s: number) {
+  const r = lp.rng;
+  lp.push([x, 0, zz], r.range(0, 3), 0, r.range(-0.06, 0.06));
+  lp.cyl(0, 0, 0, 0.07 * s, 0.05 * s, 0.75 * s, 6, LPC.woodDark, { vary: 0.12 });
+  lp.push([0, 0.55 * s, 0], 0.5, 0, 0.6).cyl(0, 0, 0, 0.03 * s, 0.02 * s, 0.3 * s, 5, LPC.woodDark).pop();
+  for (const [dx, dy, dz, rr] of [[0, 0.95, 0, 0.42], [0.25, 0.8, 0.1, 0.3], [-0.24, 0.82, -0.08, 0.3], [0.05, 1.15, -0.05, 0.28]] as const) lp.blob(dx * s, dy * s, dz * s, rr * s, rr * 0.85 * s, rr * s, r.pick([LPC.leaf, '#5a7a45', '#4a6a3c']), { vary: 0.12, detail: 1 });
+  for (let i = 0; i < 9; i++) { const a = r.range(0, Math.PI * 2), h = r.range(0.75, 1.2); lp.blob(Math.cos(a) * 0.38 * s, h * s, Math.sin(a) * 0.38 * s, 0.05 * s, 0.05 * s, 0.05 * s, fruit, { jitter: 0, detail: 0 }); }
+  lp.pop();
+}
+
+/** Le aggiunte del cortile (coordinate dell'ingombro 4×4, centro 0,0; la casetta sta sul retro). */
+function housePartsLP(lp: LP, parts: Set<string>) {
+  const r = lp.rng;
+  if (parts.has('pumpkins')) { pumpkin(lp, -0.95, 0, 0.02, 0.14, true, true, 0.3); pumpkin(lp, -1.15, 0, 0.2, 0.1, true, false, -0.5); pumpkin(lp, 0.1, 0, -0.05, 0.09, false, false); }
+  if (parts.has('mailbox')) {
+    // accanto al cancelletto, girata verso la strada
+    lp.push([0.5, 0, 1.78]);
+    lp.cyl(0, 0, 0, 0.03, 0.03, 0.7, 5, LPC.woodDark);
+    lp.box(0, 0.7, 0, 0.2, 0.16, 0.3, '#4a5470', { bevel: 0.02, vary: 0.08 });
+    lp.push([0, 0.78, 0], 0, Math.PI / 2).cyl(0, 0, 0, 0.1, 0.1, 0.2, 6, '#4a5470', { jitter: 0 }).pop();
+    lp.box(0.12, 0.78, 0.08, 0.015, 0.16, 0.015, LPC.iron, { jitter: 0 }).box(0.12, 0.9, 0.04, 0.015, 0.06, 0.1, LPC.red, { jitter: 0 });
+    lp.pop();
+  }
+  if (parts.has('picket')) {
+    const picket = (x: number, zz: number, along: 'x' | 'z') => {
+      const h = 0.36 + r.range(-0.03, 0.03);
+      lp.push([x, 0, zz], along === 'x' ? 0 : Math.PI / 2, 0, r.range(-0.06, 0.06)).box(0, 0, 0, 0.07, h, 0.025, r.pick(['#d4cbb8', '#c9bfaa', '#ddd5c3']), { bevel: 0.006, vary: 0.08 }).pop();
+    };
+    for (let x = -1.9; x <= 1.9; x += 0.16) if (Math.abs(x) > 0.34) picket(x, 1.92, 'x');
+    for (let zz = -0.05; zz <= 1.9; zz += 0.16) { picket(-1.92, zz, 'z'); picket(1.92, zz, 'z'); }
+    for (const [x0, x1] of [[-1.92, -0.34], [0.34, 1.92]]) lp.box((x0 + x1) / 2, 0.2, 1.9, x1 - x0, 0.04, 0.03, '#bdb39e', { jitter: 0 });
+    for (const sx of [-1, 1]) lp.box(sx * 1.9, 0.2, 0.93, 0.03, 0.04, 1.95, '#bdb39e', { jitter: 0 });
+  }
+  if (parts.has('garden')) {
+    // vialetto di pietre dalla porta al cancelletto, aiuola e panchina
+    for (let i = 0; i < 7; i++) {
+      const t = i / 6, x = -0.4 + t * 0.4 + r.range(-0.05, 0.05), zz = 0.05 + t * 1.8;
+      lp.push([x, 0.005, zz], r.range(0, 3)).cyl(0, 0, 0, r.range(0.13, 0.17), r.range(0.13, 0.17), 0.035, 6, r.pick([LPC.stoneLight, LPC.stone, '#a8a39a']), { vary: 0.08 }).pop();
+    }
+    lp.box(-1.25, 0, 0.75, 0.75, 0.06, 0.8, LPC.soil, { bevel: 0.02, vary: 0.1 });
+    for (let i = 0; i < 12; i++) flower(lp, -1.25 + r.range(-0.32, 0.32), 0.75 + r.range(-0.35, 0.35), r.pick(LPC.flowers), r.range(0.12, 0.2), 0.06);
+    lp.push([-1.35, 0, 1.55], 0.15);
+    lp.box(0, 0.22, 0, 0.62, 0.05, 0.2, LPC.wood, { bevel: 0.01, vary: 0.1 });
+    lp.box(0, 0.34, -0.09, 0.62, 0.16, 0.03, LPC.wood, { bevel: 0.008, vary: 0.1 });
+    for (const sx of [-1, 1]) lp.box(sx * 0.26, 0, 0, 0.05, 0.22, 0.16, LPC.woodDark, { jitter: 0 });
+    lp.pop();
+  }
+  if (parts.has('beehive')) {
+    lp.box(1.68, 0, 0.18, 0.32, 0.22, 0.32, LPC.woodDark, { bevel: 0.01, vary: 0.1 });
+    lp.lathe(1.68, 0.22, 0.18, [[0, 0], [0.17, 0], [0.18, 0.08], [0.16, 0.17], [0.11, 0.26], [0.05, 0.31], [0, 0.32]], 9, '#c9a466', { vary: 0.08, ao: 0.2 });
+    for (const y of [0.06, 0.13, 0.2, 0.27]) lp.cyl(1.68, 0.22 + y, 0.18, 0.165 - y * 0.35, 0.165 - y * 0.35, 0.015, 9, '#a88550', { jitter: 0 });
+    lp.blob(1.68, 0.28, 0.35, 0.035, 0.03, 0.01, LPC.charcoal, { jitter: 0, detail: 0 });
+    for (let i = 0; i < 3; i++) lp.blob(1.55 + i * 0.12, 0.62 + i * 0.05, 0.3 + i * 0.06, 0.014, 0.01, 0.01, '#f0c040', { jitter: 0, detail: 0 });
+  }
+  if (parts.has('fruit')) {
+    // il melo sul lato sinistro (davanti alla casa si vede), il pero dietro a destra
+    fruitTree(lp, -1.62, -0.05, '#c8402e', 0.9);
+    fruitTree(lp, 1.66, -1.45, '#d8b440', 0.85);
+  }
+  if (parts.has('veggie')) {
+    lp.box(1.1, 0, 0.95, 1.4, 0.07, 1.05, LPC.soilDark, { bevel: 0.02, vary: 0.08 });
+    for (let row = 0; row < 3; row++) {
+      const zz = 0.6 + row * 0.35;
+      lp.box(1.1, 0.07, zz, 1.3, 0.04, 0.12, LPC.soil, { jitter: 0.005, vary: 0.1 });
+      for (let i = 0; i < 4; i++) {
+        const x = 0.55 + i * 0.36 + r.range(-0.03, 0.03);
+        if (row === 0) lp.blob(x, 0.16, zz, 0.11, 0.08, 0.11, r.pick(['#7fa05a', '#6b8f4e', '#93b06a']), { vary: 0.12, detail: 1 }); // cavoli
+        else if (row === 1) pumpkin(lp, x, 0.08, zz, 0.09, false, false, r.range(0, 3));
+        else for (let k = 0; k < 3; k++) lp.push([x + (k - 1) * 0.04, 0.1, zz], r.range(0, 3), 0, (k - 1) * 0.35).cyl(0, 0, 0, 0.025, 0, 0.18, 3, LPC.leaf, { jitter: 0 }).pop(); // rape
+      }
+    }
+    // cartellino e annaffiatoio
+    lp.cyl(0.45, 0, 0.4, 0.015, 0.015, 0.35, 4, LPC.woodDark).box(0.45, 0.3, 0.42, 0.22, 0.12, 0.02, LPC.woodLight, { bevel: 0.006 });
+    lp.cyl(0.42, 0.07, 1.42, 0.08, 0.09, 0.14, 7, '#7f8a95').push([0.52, 0.17, 1.42], 0, 0, -0.9).cyl(0, 0, 0, 0.015, 0.02, 0.18, 4, '#7f8a95').pop();
+  }
+}
+
+/** Una sola aggiunta della casa, al centro (per le miniature della Bottega). */
+export function housePartLP(id: string): LPModel {
+  const lp = new LP(`lp:housepart:${id}`);
+  // la miniatura si centra da sola sul modello: basta disegnarlo
+  if (id === 'lantern') { lp.box(0, 0.5, -0.1, 0.03, 0.03, 0.2, LPC.iron, { jitter: 0 }); hangingLantern(lp, 0, 0.5, 0, true, 1.4); }
+  else if (id === 'flowerbox') flowerBox(lp, 0, 0.05, 0, 0.8);
+  else if (id === 'smoke') { chimney(lp, 0, 0, 0, 0.6); for (let i = 0; i < 4; i++) lp.blob(i * 0.07, 0.8 + i * 0.2, -i * 0.03, 0.09 + i * 0.035, 0.08 + i * 0.03, 0.09 + i * 0.035, '#8d8a96', { bucket: 'ghost', jitter: 0.02, detail: 1 }); }
+  else if (id === 'picket') {
+    const r = lp.rng;
+    for (let x = -0.7; x <= 0.71; x += 0.16) if (Math.abs(x) > 0.2) lp.push([x, 0, 0], 0, 0, r.range(-0.06, 0.06)).box(0, 0, 0, 0.07, 0.36, 0.025, r.pick(['#d4cbb8', '#c9bfaa', '#ddd5c3']), { bevel: 0.006, vary: 0.08 }).pop();
+    for (const sx of [-1, 1]) lp.box(sx * 0.45, 0.2, -0.02, 0.5, 0.04, 0.03, '#bdb39e', { jitter: 0 });
+  } else if (id === 'fruit') {
+    fruitTree(lp, 0, 0, '#c8402e', 1);
+  } else housePartsLP(lp, new Set([id]));
   return lp.build();
 }

@@ -38,3 +38,12 @@ export function setUiPlay(v: boolean) {
   play = v;
   document.documentElement.classList.toggle('ui-play', v);
 }
+
+/**
+ * Anteprime in prova (solo nel bench, finché non le approviamo): requisiti di
+ * sblocco espliciti in Bottega, la Casa del Custode (da lì parte il Custode)
+ * con il registro delle sepolture e la scheda «Casa» in Bottega.
+ */
+let preview = false;
+export const uiPreview = () => preview;
+export function setUiPreview(v: boolean) { preview = v; }

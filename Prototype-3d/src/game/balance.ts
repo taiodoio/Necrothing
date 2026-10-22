@@ -168,6 +168,8 @@ export const BUSINESS: Record<string, { perDay: [number, number]; cap: number }>
   brain_farm: { perDay: [2, 5], cap: 12 },
   // ogni fuoco fatuo incassato è una pozione venduta
   witch_corner: { perDay: [3, 6], cap: 15 },
+  // l'orto dietro la casa del Custode (rende solo se c'è: vedi houseHasVeggie)
+  keeper_house: { perDay: [2, 4], cap: 10 },
 };
 
 /** Velocità del Custode a piedi (celle al secondo) e moltiplicatori in bicicletta e sulla scopa. */

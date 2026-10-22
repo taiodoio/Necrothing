@@ -813,3 +813,46 @@ test('causa del decesso personalizzata: testo obbligatorio, max 60, salvato sull
   const { grave: g2 } = R.bury(s, draft({ name: 'Mouse', deathCauseText: 'ignorato' }), at2.x, at2.y, NOW);
   assert.equal(g2.deathCauseText, undefined);
 });
+
+test('casa del Custode: accanto alla Bottega, una sola, tetti e aggiunte, orto che rende', async () => {
+  const { houseVariant, decodeHouseVariant } = await import('../src/game/house.ts');
+  const { BUSINESS } = await import('../src/game/balance.ts');
+  const { normalizeSave } = await import('../src/game/state.ts');
+  const s = createNewGame(NOW, 5);
+  const house = R.ensureKeeperHouse(s, NOW);
+  assert.ok(house);
+  assert.equal(R.ensureKeeperHouse(s, NOW), house, 'non se ne fa una seconda');
+  // non si sovrappone a niente
+  const others = buildOccupancy(s, house.id).owner;
+  for (let dx = 0; dx < 4; dx++) for (let dy = 0; dy < 4; dy++) assert.equal(others.get(`${house.x + dx},${house.y + dy}`), undefined);
+  // rango e fuochi fatui
+  s.player.wisps = 1000;
+  assert.equal(R.houseAvailability(s, 'slate'), 'owned');
+  assert.equal(R.houseAvailability(s, 'veggie'), 'rank');
+  assert.throws(() => R.buyHousePart(s, 'veggie', NOW), /rango 3/);
+  s.player.xp = 1500;
+  R.buyHousePart(s, 'tiles', NOW);
+  assert.equal(s.house.roof, 'tiles', 'il tetto comprato si mette subito');
+  R.setHouseRoof(s, 'slate');
+  assert.throws(() => R.setHouseRoof(s, 'thatch'), /non ce l’hai/);
+  // l'orto rende solo dopo l'acquisto e finché è in vista
+  assert.equal(R.businessPending(s, house.id, later(3)), 0);
+  R.buyHousePart(s, 'veggie', NOW);
+  const n = R.businessPending(s, house.id, later(2));
+  assert.ok(n >= BUSINESS.keeper_house.perDay[0] * 2 && n <= BUSINESS.keeper_house.cap);
+  R.toggleHousePart(s, 'veggie', NOW);
+  assert.equal(R.businessPending(s, house.id, later(2)), 0, 'tolto non rende');
+  R.toggleHousePart(s, 'veggie', later(2));
+  assert.equal(R.businessPending(s, house.id, later(2)), 0, 'rimesso riparte da oggi');
+  // la variante del modello dice tetto e aggiunte in vista
+  R.buyHousePart(s, 'lantern', NOW);
+  const look = decodeHouseVariant(houseVariant(s.house));
+  assert.equal(look.roof, 'slate');
+  assert.deepEqual([...look.parts].sort(), ['lantern', 'veggie']);
+  // salvataggi vecchi o sporchi: si torna alla casa di base, gli id sconosciuti spariscono
+  const old = normalizeSave({ ...JSON.parse(JSON.stringify(s)), house: undefined });
+  assert.deepEqual(old.house, { owned: ['slate'], roof: 'slate', hidden: [] });
+  const odd = normalizeSave({ ...JSON.parse(JSON.stringify(s)), house: { owned: ['moss', 'boh'], roof: 'thatch', hidden: ['boh'] } });
+  assert.deepEqual(odd.house.owned.sort(), ['moss', 'slate']);
+  assert.equal(odd.house.roof, 'slate');
+});

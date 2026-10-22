@@ -104,6 +104,7 @@ const defs: PlaceableDef[] = [
 
   // ── Costruzioni ───────────────────────────────────────────────────────
   { id: 'shop', label: 'Bottega', category: 'structure', footprint: [3, 3], cost: 0, minRank: 1, unique: true, permanent: true, decays: true, light: true, description: 'Qui si compra tutto ciò che serve a un cimitero perbene. Anche ciò che non serve.' },
+  { id: 'keeper_house', label: 'Casa del Custode', category: 'structure', footprint: [4, 4], cost: 0, minRank: 1, unique: true, permanent: true, light: true, description: 'Qui il Custode dorme, mangia e tiene il registro delle sepolture. Il cortile cresce con lui.' },
   { id: 'gravedigger_house', label: 'Casa del becchino', category: 'structure', footprint: [4, 3], cost: 60, minRank: 3, unique: true, decays: true, light: true, description: 'Con la casa vicina, il becchino passa più spesso. Porta la pala, e il malumore.' },
   { id: 'shrine', label: 'Santuario', category: 'structure', footprint: [3, 3], cost: 55, minRank: 3, unique: true, decays: true, light: true, description: 'Il prete si ferma volentieri a benedire: compare più spesso.' },
   { id: 'zombie_bar', label: 'Bar degli zombie', category: 'structure', footprint: [3, 2], cost: 45, minRank: 3, unique: true, decays: true, light: true, description: 'Pozioni che fanno la schiuma e una bara per frigo. Attira gli zombie e incassa qualche fuoco fatuo al giorno.' },

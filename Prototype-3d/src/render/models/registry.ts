@@ -31,6 +31,8 @@ const BUILDERS: Record<string, (v: PVis) => Model> = {
   bones,
   vase,
   shop,
+  // la casa del Custode nello stile voxel (solo ripiego: il gioco è low-poly) è la Bottega
+  keeper_house: shop,
   gravedigger_house: gravediggerHouse,
   shrine,
   mausoleum,

@@ -17,6 +17,7 @@ import { hydrateIcons, icon, iconUrl, installFrames } from './icons.ts';
 import { uiNext, uiPlay } from '../app/uiNext.ts';
 import { custodePortrait } from './lookThumbs.ts';
 import * as S from './screens.ts';
+import * as H from './house.ts';
 import * as T from './memoryTree.ts';
 
 /** Icona del pulsante del menù di gioco: la pala, o le tre righe con l'interfaccia nuova. */
@@ -167,7 +168,9 @@ export class UI {
     }
   }
 
-  openShop() { S.openShop(this); }
+  openShop(cat?: Parameters<typeof S.openShop>[1], selected?: string | null) { S.openShop(this, cat, selected ?? null); }
+  openRegistry() { H.openRegistry(this); }
+  openHouse() { H.openHouse(this); }
   openDetail(id: string) { S.openDetail(this, id); }
   openEntrust(graveId: string) { T.openEntrust(this, graveId); }
   openMemoryTree() { T.openMemoryTree(this); }
@@ -268,6 +271,11 @@ export class UI {
         actions.push({ act: 'confirm', label: 'Fatto', icon: 'check', cls: 'primary' });
       } else {
         if (p.type === 'shop') actions.push({ act: 'shop', label: 'Entra in bottega', icon: 'shop', cls: 'primary' });
+        // casa del Custode (anteprima): il registro e la personalizzazione; l'orto pronto si riscuote toccando
+        if (p.type === 'keeper_house') {
+          actions.push({ act: 'registry', label: 'Registro delle sepolture', icon: 'book', cls: 'primary' }, { act: 'house', label: 'Personalizza la casa', icon: 'house' });
+          sub = `${s.graves.length + s.entrusted.length} nel registro`;
+        }
         if (p.type === 'memory_tree') { actions.push({ act: 'memories', label: 'Ricordi', icon: 'tree', cls: 'primary' }); sub = `${s.entrusted.length} ${s.entrusted.length === 1 ? 'ricordo' : 'ricordi'}`; }
         if (p.type === 'soul_bell' && !p.broken) {
           const ready = R.bellReady(s, p.id, this.game.now());

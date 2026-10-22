@@ -63,7 +63,7 @@ export class UI {
     $('#bike-toggle').addEventListener('click', () => game.toggleBike());
     $('#broom-toggle').addEventListener('click', () => game.toggleBroom());
     $('#staff-toggle').addEventListener('click', () => game.toggleStaff());
-    // anteprima: da pipistrello, il pulsante per tornare Custode (coi secondi che restano)
+    // da pipistrello, il pulsante per tornare Custode (coi secondi che restano)
     if (uiPreview()) {
       const bat = h('button', { class: 'icon-btn bat-btn', id: 'bat-toggle', 'aria-label': 'Torna Custode', hidden: true, onclick: () => game.endBat() }, icon('bat', 26), h('em', { class: 'bat-left' }, ''));
       $('#staff-toggle').before(bat);
@@ -285,7 +285,7 @@ export class UI {
         actions.push({ act: 'confirm', label: 'Fatto', icon: 'check', cls: 'primary' });
       } else {
         if (p.type === 'shop') actions.push({ act: 'shop', label: 'Entra in bottega', icon: 'shop', cls: 'primary' });
-        // casa del Custode (anteprima): il registro e la personalizzazione; l'orto pronto si riscuote toccando
+        // casa del Custode: il registro e la personalizzazione; l'orto pronto si riscuote toccando
         if (p.type === 'keeper_house') {
           actions.push({ act: 'registry', label: 'Registro delle sepolture', icon: 'book', cls: 'primary' }, { act: 'house', label: 'Personalizza la casa', icon: 'house' });
           sub = `${s.graves.length + s.entrusted.length} nel registro`;

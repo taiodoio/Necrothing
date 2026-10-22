@@ -40,9 +40,10 @@ export function setUiPlay(v: boolean) {
 }
 
 /**
- * Anteprime in prova (solo nel bench, finché non le approviamo): requisiti di
- * sblocco espliciti in Bottega, la Casa del Custode (da lì parte il Custode)
- * con il registro delle sepolture e la scheda «Casa» in Bottega.
+ * Casa del Custode e novità collegate, accese nel gioco e nel bench: la casa
+ * (da lì parte il Custode) col registro delle sepolture, la personalizzazione
+ * e i vantaggi delle aggiunte, la scheda «Casa» in Bottega, i requisiti di
+ * sblocco espliciti, il morso del vampiro (si vola da pipistrello).
  */
 let preview = false;
 export const uiPreview = () => preview;

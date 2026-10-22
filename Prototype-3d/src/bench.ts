@@ -18,7 +18,7 @@ import '@fontsource/nunito/800.css';
 import './styles/main.css';
 import './styles/ui-next.css';
 import './styles/ui-play.css';
-import './styles/ui-preview.css'; // anteprime in prova: solo qui
+import './styles/ui-house.css';
 import * as THREE from 'three';
 import { Game } from './app/Game.ts';
 import { PROFILES, QUALITY_LABELS } from './app/AutoQuality.ts';
@@ -34,7 +34,7 @@ setPersistence(false);
 // interfaccia nuova in prova (interazioni, menù a icone, menù verticale): per ora solo qui
 setUiNext(true);
 setUiPlay(true); // interfaccia «viva»
-setUiPreview(true); // casa del Custode, registro e requisiti di sblocco: in prova solo qui
+setUiPreview(true); // casa del Custode, registro, requisiti di sblocco, morso del vampiro
 installPlayDecor();
 
 interface Inner {

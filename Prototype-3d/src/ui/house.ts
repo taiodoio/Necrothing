@@ -1,4 +1,4 @@
-// Casa del Custode (anteprima): il registro delle sepolture, la
+// Casa del Custode: il registro delle sepolture, la
 // personalizzazione della casa (tetto e aggiunte del cortile) e la scheda
 // «Casa» della Bottega, dove tetti e aggiunte si comprano salendo di rango.
 

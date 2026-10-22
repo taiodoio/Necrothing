@@ -125,7 +125,7 @@ export class Game {
     this.world.staticShadows = this.profile().shadows === 'still';
     this.world.quality = q;
     if (params.get('mist') !== '0') this.mist = new ForestMist(this.scene, q);
-    // anteprima: la Casa del Custode c'è sempre, accanto alla Bottega
+    // la Casa del Custode c'è sempre, accanto alla Bottega (anche nei salvataggi di prima)
     if (uiPreview()) R.ensureKeeperHouse(this.state, now);
     const report = runCatchUp(this.state, now);
     R.afterAction(this.state, now);
@@ -752,7 +752,7 @@ export class Game {
     // la tomba affidata, mentre la sua bara è in viaggio, non c'è più
     const hits = this.raycaster.intersectObjects([...this.actors.pickables(), ...this.world.hitboxes], false)
       .filter((h) => !h.object.userData.entityId || !this.world.isHidden(h.object.userData.entityId))
-      // il vampiro si tocca solo nell'anteprima (il morso)
+      // il vampiro si tocca solo con la casa e le sue novità accese (uiPreview): il morso
       .filter((h) => !h.object.userData.vampireId || uiPreview());
     if (!hits.length) return null;
     // priorità: presenze erranti e animali > fuochi fatui > entità
@@ -853,7 +853,7 @@ export class Game {
     this.focusEntity(target);
   }
 
-  /** Dove il Custode comincia: sulla soglia di casa (anteprima) o davanti alla Bottega. */
+  /** Dove il Custode comincia: sulla soglia di casa o (senza casa) davanti alla Bottega. */
   private homeSpot(s: SaveData): THREE.Vector3 {
     const house = uiPreview() ? s.placeables.find((p) => p.type === 'keeper_house') : undefined;
     if (house) return cellCenter(house.x + 1, house.y + 4, [1, 1]);
@@ -903,7 +903,7 @@ export class Game {
     this.ui.openActorMenu(pet.label, this.petStatus(id), this.petMenu(id), () => this.actors.petTop(id));
   }
 
-  // ── Il morso del vampiro (anteprima) ─────────────────────────────────
+  // ── Il morso del vampiro ─────────────────────────────────────────────
 
   /** Fine del volo da pipistrello (performance.now()), o null se si è Custode. */
   private batUntil: number | null = null;

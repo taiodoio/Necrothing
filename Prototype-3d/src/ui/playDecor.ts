@@ -1,4 +1,4 @@
-// Decori dell'interfaccia «viva» (per ora solo nel bench): le immagini negli
+// Decori dell'interfaccia «viva»: le immagini negli
 // angoli dei riquadri e il pattern tono su tono dei pannelli, passati al CSS
 // come variabili (--deco-*, --pattern-*), così gli stili restano tutti in ui-play.css.
 

@@ -1,6 +1,7 @@
-/* Anteprime in prova (solo nel bench, caricato da bench.ts): requisiti di
-   sblocco espliciti in Bottega, il registro delle sepolture con la sua
-   testata, la personalizzazione della Casa del Custode. */
+/* Casa del Custode e dintorni (nel gioco e nel bench, con uiPreview):
+   requisiti di sblocco espliciti in Bottega, il registro delle sepolture con
+   la sua testata, la personalizzazione della casa coi vantaggi, il pulsante
+   del pipistrello (morso del vampiro). */
 
 /* ── Requisito di sblocco: una pillola sotto la carta ─────────────── */
 .ui-next .card .need {

@@ -242,7 +242,7 @@ export function openShop(ui: UI, cat: PlaceableCategory | 'house' = 'light', sel
   let qty = 1;
   const render = () => {
     const tabs = h('div', { class: 'tabs' }, ...CATEGORY_ORDER.map((c) => h('button', { class: `tab ${c === cat ? 'active' : ''}`, onclick: () => { cat = c; selected = null; render(); } }, tabIcon(c), PLACEABLE_CATEGORY_LABELS[c])),
-      // anteprima: tetti e aggiunte della Casa del Custode
+      // tetti e aggiunte della Casa del Custode
       uiPreview() ? h('button', { class: `tab ${cat === 'house' ? 'active' : ''}`, onclick: () => { cat = 'house'; selected = null; render(); } }, uiPlay() ? icon('house', 20) : null, 'Casa') : null);
     if (cat === 'house') { renderHouse(tabs); return; }
     const items = CATALOG_LIST.filter((d) => d.category === cat && !d.permanent);

@@ -915,7 +915,7 @@ export class Game {
   private tapVampire(cryptId: string) {
     if (!this.actors.vampire(cryptId)) return;
     this.ui.openActorMenu('Vampiro', this.isBat ? 'Sei già un pipistrello' : 'Ha sete, ma è un gentiluomo', [
-      { label: 'Fatti mordere', icon: 'bat', cls: 'primary', disabled: this.isBat, run: () => this.getBitten(cryptId) },
+      { label: 'Fatti mordere', icon: 'fangs', cls: 'primary', disabled: this.isBat, run: () => this.getBitten(cryptId) },
     ], () => this.actors.vampire(cryptId)?.top ?? null);
   }
 
@@ -928,16 +928,19 @@ export class Game {
       if (!near()) { if (tries > 0) this.getBitten(cryptId, tries - 1); else toast('Il vampiro si è allontanato. Riprova.'); return; }
       this.actors.holdVampire(cryptId, 1.8, this.actors.avatar.pos);
       this.actors.face(v.pos);
-      toast('Il vampiro si china sul tuo collo… con garbo.');
+      // il morso, poi lo sbuffo di nuvolette: il cambio avviene mentre il Custode ne è coperto
       setTimeout(() => {
         if (this.disposed || this.isBat) return;
-        this.effects.puff(this.actors.avatar.pos.clone().setY(this.groundAt(this.actors.avatar.pos) + 0.9), '#6a4a7a');
-        this.actors.setBat(true);
-        this.batUntil = performance.now() + BAT.seconds * 1000;
-        this.rig.follow = this.actors.avatar.pos;
-        toast(`Sei un pipistrello! Per ${BAT.seconds} secondi voli sopra tombe e recinti, più veloce.`);
-        this.ui.refreshSettingsButtons();
-      }, 900);
+        this.effects.cloudPuff(this.actors.avatar.pos.clone().setY(this.groundAt(this.actors.avatar.pos)));
+        setTimeout(() => {
+          if (this.disposed || this.isBat) return;
+          this.actors.setBat(true);
+          this.batUntil = performance.now() + BAT.seconds * 1000;
+          this.rig.follow = this.actors.avatar.pos;
+          toast('Il vampiro ti morde. Ti trasformi in un pipistrello!');
+          this.ui.refreshSettingsButtons();
+        }, 170);
+      }, 800);
     };
     this.rig.follow = this.actors.avatar.pos;
     if (near()) { bite(); return; }
@@ -947,16 +950,25 @@ export class Game {
 
   /** Torna Custode: allo scadere del minuto o quando lo si sceglie (poi serve un altro morso). */
   endBat(message = 'Torni Custode. Per volare ancora serve un altro morso.') {
-    if (!this.isBat && !this.batUntil) return;
+    if ((!this.isBat && !this.batUntil) || this.batEnding) return;
+    this.batEnding = true;
+    // lo stesso sbuffo di nuvolette, attorno al pipistrello: quando si dirada c'è di nuovo il Custode
     const at = this.actors.batPos();
-    if (at) this.effects.puff(at, '#6a4a7a');
-    this.actors.setBat(false);
+    if (at) this.effects.cloudPuff(at.setY(at.y - 0.6));
     this.batUntil = null;
-    toast(message);
     this.ui.refreshSettingsButtons();
+    setTimeout(() => {
+      if (this.disposed) return;
+      this.batEnding = false;
+      this.actors.setBat(false);
+      toast(message);
+      this.ui.refreshSettingsButtons();
+    }, 170);
   }
 
   private lastBatSecond = -1;
+  /** Lo sbuffo del ritorno è partito (il cambio arriva un attimo dopo). */
+  private batEnding = false;
   private stepBat(now: number) {
     // sceso per salire in bici o sulla scopa: il volo finisce lì
     if (!this.actors.isBat) { this.batUntil = null; this.ui.refreshSettingsButtons(); return; }

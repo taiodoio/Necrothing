@@ -856,9 +856,23 @@ export class Game {
   /** Dove il Custode comincia: sulla soglia di casa o (senza casa) davanti alla Bottega. */
   private homeSpot(s: SaveData): THREE.Vector3 {
     const house = uiPreview() ? s.placeables.find((p) => p.type === 'keeper_house') : undefined;
-    if (house) return cellCenter(house.x + 1, house.y + 4, [1, 1]);
     const shop = s.placeables.find((p) => p.type === 'shop');
-    return shop ? cellCenter(shop.x + 1, shop.y + 4, [1, 1]) : new THREE.Vector3();
+    const door = house ? { x: house.x + 1, y: house.y + 4 } : shop ? { x: shop.x + 1, y: shop.y + 4 } : null;
+    if (!door) return new THREE.Vector3();
+    // davanti alla porta, se lì si può stare (dentro il recinto, niente sopra); se no la cella libera più vicina:
+    // con la casa contro il recinto la soglia cadrebbe fuori, e il Custode non potrebbe più muoversi
+    const area = areaForLevel(s.world.expansionLevel), occ = buildOccupancy(s);
+    const ok = (x: number, y: number) => x >= area.x && y >= area.y && x < area.x + area.w && y < area.y + area.h && !occ.blocked.has(`${x},${y}`);
+    for (let r = 0; r < 12; r++) {
+      let best: { x: number; y: number } | null = null, bd = Infinity;
+      for (let dy = -r; dy <= r; dy++) for (let dx = -r; dx <= r; dx++) {
+        if (Math.max(Math.abs(dx), Math.abs(dy)) !== r || !ok(door.x + dx, door.y + dy)) continue;
+        const d = Math.hypot(dx, dy);
+        if (d < bd) { bd = d; best = { x: door.x + dx, y: door.y + dy }; }
+      }
+      if (best) return cellCenter(best.x, best.y, [1, 1]);
+    }
+    return cellCenter(door.x, door.y, [1, 1]);
   }
 
   /**

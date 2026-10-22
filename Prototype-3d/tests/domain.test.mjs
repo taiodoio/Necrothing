@@ -913,3 +913,16 @@ test('arnia e giardinetto: fiori che durano di più, meno erbacce', async () => 
   assert.equal(plain.s.graves.find((g) => g.id === plain.grave.id).hasFlowers, false);
   assert.equal(bees.s.graves.find((g) => g.id === bees.grave.id).hasFlowers, true, 'con l’arnia i fiori durano');
 });
+
+test('casa del Custode: la soglia resta dentro il recinto anche nel cimitero pieno', async () => {
+  const { fullCemetery } = await import('../src/game/fullCemetery.ts');
+  for (const s of [createNewGame(NOW, 3), fullCemetery(4242, NOW)]) {
+    const h = R.ensureKeeperHouse(s, NOW);
+    assert.ok(h);
+    const area = areaForLevel(s.world.expansionLevel);
+    // due file davanti alla porta, dentro il recinto e libere
+    assert.ok(h.y + 6 <= area.y + area.h, `porta a ${h.y + 4}, recinto fino a ${area.y + area.h}`);
+    const occ = buildOccupancy(s);
+    assert.equal(occ.blocked.has(`${h.x + 1},${h.y + 4}`), false);
+  }
+});

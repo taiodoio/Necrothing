@@ -86,9 +86,21 @@ function bookHalf(side: 1 | -1): LPModel {
   // righe delle pagine sul taglio
   for (let i = 1; i < 5; i++) lp.box(side * (W / 2 + 0.015), 0.03 + i * 0.014, D / 2 + 0.002, W - 0.03, 0.003, 0.004, '#b8a67e', { jitter: 0 });
   if (side < 0) {
-    // sul piatto, che da chiuso è la copertina: cornice e croce d'oro
+    // sul piatto, che da chiuso è la copertina: cornice e un teschio d'oro (la cima verso il fondo)
     lp.box(-0.5, -0.004, 0, 0.8, 0.004, 1.18, '#8a6a3a', { jitter: 0 });
-    lp.box(-0.5, -0.008, 0, 0.06, 0.004, 0.55, LPC.gold, { jitter: 0 }).box(-0.5, -0.008, -0.1, 0.32, 0.004, 0.06, LPC.gold, { jitter: 0 });
+    const flat = (shape: THREE.Shape, y: number, thick: number, color: string) => lp.push([-0.5, y, -0.04], 0, -Math.PI / 2).plate(shape, thick, color, { vary: 0.04 }).pop();
+    const circle = (x: number, y: number, r: number) => { const c = new THREE.Shape(); c.absarc(x, y, r, 0, Math.PI * 2, false); return c; };
+    const jaw = new THREE.Shape();
+    jaw.moveTo(-0.1, -0.05); jaw.lineTo(0.1, -0.05); jaw.lineTo(0.085, -0.17); jaw.lineTo(-0.085, -0.17); jaw.closePath();
+    flat(circle(0, 0.06, 0.17), -0.008, 0.004, LPC.gold);
+    flat(jaw, -0.008, 0.004, LPC.gold);
+    // orbite, naso e denti scuri, appena più in fuori
+    const hole = '#3a1a16';
+    for (const sx of [-1, 1]) flat(circle(sx * 0.066, 0.035, 0.045), -0.0095, 0.002, hole);
+    const nose = new THREE.Shape();
+    nose.moveTo(0, -0.005); nose.lineTo(0.025, -0.05); nose.lineTo(-0.025, -0.05); nose.closePath();
+    flat(nose, -0.0095, 0.002, hole);
+    for (const x of [-0.05, -0.017, 0.017, 0.05]) { const tooth = new THREE.Shape(); tooth.moveTo(x - 0.004, -0.09); tooth.lineTo(x + 0.004, -0.09); tooth.lineTo(x + 0.004, -0.15); tooth.lineTo(x - 0.004, -0.15); tooth.closePath(); flat(tooth, -0.0095, 0.002, hole); }
   }
   return lp.build();
 }
@@ -213,7 +225,8 @@ const ease = (t: number) => (t <= 0 ? 0 : t >= 1 ? 1 : t * t * (3 - 2 * t));
 export interface RegistryHeader { el: HTMLElement; stop: () => void }
 
 /** Crea la testata; si ferma (e libera la scheda video) quando esce dal documento. */
-export function registryHeader(): RegistryHeader {
+/** `settled`: il libro è già aperto e scritto (tornando all'elenco da una scheda), senza rifare il racconto. */
+export function registryHeader(opts: { settled?: boolean } = {}): RegistryHeader {
   const el = document.createElement('div');
   el.className = 'drawer-hero registry-hero';
   const canvas = document.createElement('canvas');
@@ -295,6 +308,9 @@ export function registryHeader(): RegistryHeader {
   // il racconto: fermo, si apre, si sfoglia, scrive; poi resta lì
   const OPEN_AT = 0.5, OPEN_LEN = 1.5, FLIP_AT = 2.2, FLIP_LEN = 0.95, FLIP_GAP = 0.42, WRITE_AT = FLIP_AT + 3 * FLIP_GAP + FLIP_LEN + 0.25, LINES = 11, LINE_LEN = 0.32;
   let t = 0, last = 0, raf = 0, stopped = false, w = 0, h = 0, written = -1;
+  let ready = !!opts.settled, steady = 0;
+  const born = performance.now();
+  if (opts.settled) t = WRITE_AT + LINES * LINE_LEN + 0.2;
 
   const resize = () => {
     const nw = el.clientWidth, nh = el.clientHeight;
@@ -350,8 +366,12 @@ export function registryHeader(): RegistryHeader {
     if (!el.isConnected) { stop(); return; }
     raf = requestAnimationFrame(frame);
     if (document.hidden || now - last < 1000 / FPS - 2) return;
-    const dt = last ? Math.min(0.1, (now - last) / 1000) : 1 / FPS;
+    const raw = last ? (now - last) / 1000 : 1 / FPS;
     last = now;
+    // il racconto parte solo quando i frame scorrono regolari (all'apertura il pannello sale
+    // e la scheda video prepara tutto): così il libro non si apre a scatti
+    if (!ready) { steady = raw < 0.045 ? steady + 1 : 0; ready = steady >= 4 || now - born > 1600; }
+    const dt = ready ? Math.min(0.05, raw) : 0;
     resize();
     step(dt);
     renderer.render(scene, camera);
@@ -369,6 +389,16 @@ export function registryHeader(): RegistryHeader {
   }
 
   // la prima immagine subito, poi l'animazione
-  requestAnimationFrame(() => { resize(); step(0); renderer.render(scene, camera); last = performance.now(); raf = requestAnimationFrame(frame); });
+  // (gli shader si preparano subito, non al primo giro di pagina)
+  requestAnimationFrame(() => {
+    resize();
+    // anche le pagine che compaiono dopo (nascoste all'inizio) vanno preparate adesso
+    for (const p of [leftPage, rightPage, ...flips]) p.group.visible = true;
+    renderer.compile(scene, camera);
+    step(0);
+    renderer.render(scene, camera);
+    last = performance.now();
+    raf = requestAnimationFrame(frame);
+  });
   return { el, stop };
 }

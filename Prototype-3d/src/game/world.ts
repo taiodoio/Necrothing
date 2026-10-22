@@ -66,10 +66,21 @@ export function buildOccupancy(state: Pick<SaveData, 'graves' | 'placeables'>, e
     if (!def) continue;
     for (const c of cellsOf(p.x, p.y, rotatedFootprint(p.type, p.rot))) {
       owner.set(c, p.id);
-      if (!def.walkable) blocked.add(c);
+      if (!def.walkable && !(p.type === 'keeper_house' && houseYardCell(p, c))) blocked.add(c);
     }
   }
   return { owner, blocked };
+}
+
+/**
+ * Casa del Custode: nel cortile si entra dal cancelletto e si arriva alla porta
+ * lungo il vialetto (le due colonne centrali delle due file davanti); la
+ * casetta, le aiuole e l'orto restano da non calpestare.
+ */
+export function houseYardCell(p: Pick<Placed, 'x' | 'y'>, cell: string): boolean {
+  const [x, y] = cell.split(',').map(Number);
+  const col = x - p.x, row = y - p.y;
+  return row >= 2 && col >= 1 && col <= 2;
 }
 
 /** Un ingombro è posabile? Dentro l'area recintata e su celle libere. */

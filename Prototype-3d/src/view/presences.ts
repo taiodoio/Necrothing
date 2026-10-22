@@ -48,6 +48,8 @@ export interface CastMember {
   hidden?: boolean;
   /** Fantasmi più tenui (0..1): vicini tra loro e a una luce si sommano e diventano bianchi. */
   dim?: number;
+  /** Ruolo 'wander': resta almeno a questa distanza dal centro e ci gira attorno ad arco (il vampiro e la sua cripta). */
+  ring?: number;
 }
 
 /** Oggetti di scena che accompagnano un personaggio (`owner` = indice nel cast). */
@@ -99,7 +101,8 @@ export function presenceLayout(p: Pick<Placed, 'type' | 'broken'>, opts: { night
       break;
     case 'vampire_crypt':
       // di giorno dorme nella bara; di notte passeggia attorno alla cripta
-      if (!p.broken && opts.night) cast.push({ kind: 'vampire', role: 'wander', x: 0.3, z: 1.2, radius: 3, speed: 0.55 });
+      // la cripta è piena: gira attorno, senza attraversarla
+      if (!p.broken && opts.night) cast.push({ kind: 'vampire', role: 'wander', x: 0.3, z: 1.75, radius: 2.9, ring: 1.75, speed: 0.55 });
       break;
     case 'soul_gazebo':
       if (opts.night && !p.broken) {

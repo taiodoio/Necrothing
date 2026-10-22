@@ -15,7 +15,7 @@ import { animateRig, buildRig, rigLightPos, type CharacterKind, type Pose, type 
 import { DEFAULT_LOOK, lookKey, type CustodeLook } from '../game/look.ts';
 import { handPos, HUMAN_PIVOTS } from '../render/lowpoly/v2/custode.ts';
 import { broom2LP, mysticStaffLP } from '../render/lowpoly/newItems2.ts';
-import { batBodyLP, batWingLP } from '../render/lowpoly/bat.ts';
+import { BAT_LANTERN_FLAME, batBodyLP, batLanternLP, batWingLP } from '../render/lowpoly/bat.ts';
 import { animateNotes, attachProp, dimGhosts, lpMesh, presenceLayout, propPose, scenePropObject, type PresenceRole, type PresenceTier, type PropKind } from './presences.ts';
 export { BUSINESS_PRESENCES, type PresenceTier } from './presences.ts';
 import { instantiate, lightWorldPos, LOWPOLY_MATERIALS } from '../render/modelCache.ts';
@@ -106,6 +106,8 @@ interface Presence extends Walker {
   still?: Pose;
   /** Cosa tiene in mano (si riattacca quando si ricostruisce il rig). */
   prop?: PropKind;
+  /** Distanza minima dal centro mentre passeggia (vedi CastMember.ring). */
+  ring?: number;
   /** Fermo per un po' (il vampiro che morde), girato verso qualcuno. */
   hold?: number;
   faceTo?: THREE.Vector3;
@@ -499,7 +501,7 @@ export class Actors {
 
   // ── Pipistrello (il morso del vampiro) ────────────────────────────────
 
-  private bat: { group: THREE.Group; body: THREE.Group; wings: THREE.Group[]; shadow: THREE.Mesh; flap: number } | null = null;
+  private bat: { group: THREE.Group; body: THREE.Group; wings: THREE.Group[]; lantern: THREE.Group; flame: THREE.Object3D; shadow: THREE.Mesh; flap: number } | null = null;
   get isBat() { return !!this.bat; }
 
   /**
@@ -525,6 +527,14 @@ export class Actors {
         body.add(pivot);
         return pivot;
       });
+      // la lanterna del Custode tra le zampe: oscilla sotto il pipistrello e porta con sé la sua luce
+      const lantern = new THREE.Group();
+      lantern.position.set(0, -0.15, -0.07);
+      lantern.add(lpMesh(batModels().lantern));
+      const flame = new THREE.Object3D();
+      flame.position.copy(BAT_LANTERN_FLAME);
+      lantern.add(flame);
+      body.add(lantern);
       body.scale.setScalar(1.15);
       group.add(body);
       const shadow = new THREE.Mesh(this.blobGeo, this.blobMat);
@@ -532,7 +542,7 @@ export class Actors {
       this.group.add(group, shadow);
       a.rig.root.visible = false;
       if (a.blob) a.blob.visible = false;
-      this.bat = { group, body, wings, shadow, flap: 0 };
+      this.bat = { group, body, wings, lantern, flame, shadow, flap: 0 };
     } else {
       const b = this.bat!;
       b.group.removeFromParent(); b.shadow.removeFromParent();
@@ -558,6 +568,15 @@ export class Actors {
     b.body.position.y = -k * 0.04;
     b.shadow.position.set(a.pos.x, gy + 0.03, a.pos.z);
     b.shadow.scale.setScalar(0.5 + Math.sin(t * 2.3) * 0.04);
+    // la lanterna penzola (indietro quando vola, un po' di lato a ogni colpo d'ala)
+    b.lantern.rotation.x = (this.avatarMoving ? -0.35 : 0) + Math.sin(t * 3.1) * 0.12;
+    b.lantern.rotation.z = Math.sin(b.flap * 0.5) * 0.1;
+    // la luce del Custode (la sua lanterna) segue la fiamma
+    if (a.lightHandles.length) {
+      b.group.updateMatrixWorld(true);
+      const at = b.flame.getWorldPosition(new THREE.Vector3());
+      for (const h of a.lightHandles) this.atmosphere.moveAnchor(h, at);
+    }
   }
 
   /** Il Custode si gira verso un punto (il vampiro che lo morde). */
@@ -936,7 +955,7 @@ export class Actors {
     const made = cast.map((c) => {
       const w = this.makeWalker(c.kind, local(c.x, c.z), c.speed ?? 0.6);
       const home = c.around ? local(c.around[0], c.around[1]) : center.clone();
-      const pr: Presence = { ...w, placeId: p.id, role: c.role, home, radius: c.radius ?? 0, angle: (c.angle ?? 0) - turn, hidden: !!c.hidden };
+      const pr: Presence = { ...w, placeId: p.id, role: c.role, home, radius: c.radius ?? 0, angle: (c.angle ?? 0) - turn, hidden: !!c.hidden, ring: c.ring };
       pr.still = c.pose; pr.lift = c.lift; pr.prop = c.prop; pr.size = c.size; pr.dim = c.dim;
       pr.facing = (c.facing ?? 0) + turn;
       pr.rig.root.rotation.y = pr.facing;
@@ -1017,8 +1036,22 @@ export class Actors {
         }
         if (!pr.path.length) {
           if (Math.random() < dt * 0.5) {
-            const a = Math.random() * Math.PI * 2, d = Math.random() * pr.radius;
-            pr.path = [new THREE.Vector3(pr.home.x + Math.cos(a) * d, 0, pr.home.z + Math.sin(a) * d)];
+            const a = Math.random() * Math.PI * 2;
+            if (pr.ring) {
+              // gira attorno al centro ad arco, sempre fuori dall'anello: non passa attraverso la cripta
+              const from = Math.atan2(pr.pos.z - pr.home.z, pr.pos.x - pr.home.x);
+              const r0 = Math.max(pr.ring, Math.hypot(pr.pos.x - pr.home.x, pr.pos.z - pr.home.z));
+              const r1 = pr.ring + Math.random() * Math.max(0, pr.radius - pr.ring);
+              const turn = Math.atan2(Math.sin(a - from), Math.cos(a - from));
+              const steps = Math.max(1, Math.ceil(Math.abs(turn) / 0.35));
+              pr.path = Array.from({ length: steps }, (_, i) => {
+                const k = (i + 1) / steps, ang = from + turn * k, r = r0 + (r1 - r0) * k;
+                return new THREE.Vector3(pr.home.x + Math.cos(ang) * r, 0, pr.home.z + Math.sin(ang) * r);
+              });
+            } else {
+              const d = Math.random() * pr.radius;
+              pr.path = [new THREE.Vector3(pr.home.x + Math.cos(a) * d, 0, pr.home.z + Math.sin(a) * d)];
+            }
           }
           pr.pose = 'idle';
         } else {
@@ -1716,8 +1749,8 @@ export class Actors {
 }
 
 // il pipistrello si costruisce una volta e si riusa a ogni morso
-let batCache: { body: LPModel; wing: LPModel } | null = null;
-const batModels = () => (batCache ??= { body: batBodyLP(), wing: batWingLP() });
+let batCache: { body: LPModel; wing: LPModel; lantern: LPModel } | null = null;
+const batModels = () => (batCache ??= { body: batBodyLP(), wing: batWingLP(), lantern: batLanternLP() });
 
 export function graveSpots(state: SaveData): THREE.Vector3[] {
   return state.graves.map((g) => cellCenter(g.x, g.y, [2, 2]).add(new THREE.Vector3(0, 0, -0.6)));

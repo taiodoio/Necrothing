@@ -38,3 +38,13 @@ export function setUiPlay(v: boolean) {
   play = v;
   document.documentElement.classList.toggle('ui-play', v);
 }
+
+/**
+ * Casa del Custode e novità collegate, accese nel gioco e nel bench: la casa
+ * (da lì parte il Custode) col registro delle sepolture, la personalizzazione
+ * e i vantaggi delle aggiunte, la scheda «Casa» in Bottega, i requisiti di
+ * sblocco espliciti, il morso del vampiro (si vola da pipistrello).
+ */
+let preview = false;
+export const uiPreview = () => preview;
+export function setUiPreview(v: boolean) { preview = v; }

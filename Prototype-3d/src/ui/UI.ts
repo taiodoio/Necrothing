@@ -14,9 +14,10 @@ import type { BurialDraft } from '../game/rules.ts';
 import { DAY_PHASE_LABELS } from '../game/time.ts';
 import { $, closeDrawer, drawerOpen, h, toast } from './dom.ts';
 import { hydrateIcons, icon, iconUrl, installFrames } from './icons.ts';
-import { uiNext, uiPlay } from '../app/uiNext.ts';
+import { uiNext, uiPlay, uiPreview } from '../app/uiNext.ts';
 import { custodePortrait } from './lookThumbs.ts';
 import * as S from './screens.ts';
+import * as H from './house.ts';
 import * as T from './memoryTree.ts';
 
 /** Icona del pulsante del menù di gioco: la pala, o le tre righe con l'interfaccia nuova. */
@@ -62,6 +63,11 @@ export class UI {
     $('#bike-toggle').addEventListener('click', () => game.toggleBike());
     $('#broom-toggle').addEventListener('click', () => game.toggleBroom());
     $('#staff-toggle').addEventListener('click', () => game.toggleStaff());
+    // da pipistrello, il pulsante per tornare Custode (coi secondi che restano)
+    if (uiPreview()) {
+      const bat = h('button', { class: 'icon-btn bat-btn', id: 'bat-toggle', 'aria-label': 'Torna Custode', hidden: true, onclick: () => game.endBat() }, icon('bat', 26), h('em', { class: 'bat-left' }, ''));
+      $('#staff-toggle').before(bat);
+    }
     this.refreshSettingsButtons();
     this.refreshEditBanner();
   }
@@ -111,7 +117,16 @@ export class UI {
     if (!d.hidden) d.textContent = text;
   }
 
+  /** Il pulsante del pipistrello: c'è solo in volo, coi secondi che restano. */
+  refreshBatButton() {
+    const b = document.getElementById('bat-toggle');
+    if (!b) return;
+    b.hidden = !this.game.isBat;
+    b.querySelector('.bat-left')!.textContent = `${this.game.batSecondsLeft()}`;
+  }
+
   refreshSettingsButtons() {
+    this.refreshBatButton();
     // bicicletta: l'icona c'è solo se la si possiede; dorata quando il Custode è in sella
     const bike = $('#bike-toggle') as HTMLButtonElement;
     const riding = this.game.riding;
@@ -167,7 +182,9 @@ export class UI {
     }
   }
 
-  openShop() { S.openShop(this); }
+  openShop(cat?: Parameters<typeof S.openShop>[1], selected?: string | null) { S.openShop(this, cat, selected ?? null); }
+  openRegistry() { H.openRegistry(this); }
+  openHouse() { H.openHouse(this); }
   openDetail(id: string) { S.openDetail(this, id); }
   openEntrust(graveId: string) { T.openEntrust(this, graveId); }
   openMemoryTree() { T.openMemoryTree(this); }
@@ -250,7 +267,7 @@ export class UI {
         actions.push({ act: 'detail', label: 'Dettagli', icon: 'search' });
         // interfaccia nuova: «Affida all'albero» resta solo nel dettaglio della tomba
         if (!icons && s.placeables.some((p) => p.type === 'memory_tree')) actions.push({ act: 'entrust', label: 'Affida all’albero', icon: 'tree' });
-        if (g.broken) actions.push({ act: 'repair', label: 'Ripara', icon: 'hammer', cls: 'primary', cost: DECAY.graveRepairCost });
+        if (g.broken) actions.push({ act: 'repair', label: 'Ripara', icon: 'hammer', cls: 'primary', cost: R.graveRepairPrice(s) });
         else if (g.dirty || g.weeds) actions.push({ act: 'clean', label: 'Pulisci', icon: 'broom', cls: 'primary' });
         else actions.push({ act: 'flowers', label: g.hasFlowers ? 'Rinnova fiori' : 'Porta fiori', icon: 'flower', cls: 'primary' });
       }
@@ -268,6 +285,11 @@ export class UI {
         actions.push({ act: 'confirm', label: 'Fatto', icon: 'check', cls: 'primary' });
       } else {
         if (p.type === 'shop') actions.push({ act: 'shop', label: 'Entra in bottega', icon: 'shop', cls: 'primary' });
+        // casa del Custode: il registro e la personalizzazione; l'orto pronto si riscuote toccando
+        if (p.type === 'keeper_house') {
+          actions.push({ act: 'registry', label: 'Registro delle sepolture', icon: 'book', cls: 'primary' }, { act: 'house', label: 'Personalizza la casa', icon: 'house' });
+          sub = `${s.graves.length + s.entrusted.length} nel registro`;
+        }
         if (p.type === 'memory_tree') { actions.push({ act: 'memories', label: 'Ricordi', icon: 'tree', cls: 'primary' }); sub = `${s.entrusted.length} ${s.entrusted.length === 1 ? 'ricordo' : 'ricordi'}`; }
         if (p.type === 'soul_bell' && !p.broken) {
           const ready = R.bellReady(s, p.id, this.game.now());
@@ -275,7 +297,7 @@ export class UI {
           sub = `${sub} · ${ready ? 'Pronta a suonare' : 'Ha già suonato oggi'}`;
         }
         actions.push({ act: 'detail', label: 'Dettagli', icon: 'search' });
-        if (p.broken) actions.push({ act: 'repair', label: 'Ripara', icon: 'hammer', cls: 'primary', cost: repairCost(def) });
+        if (p.broken) actions.push({ act: 'repair', label: 'Ripara', icon: 'hammer', cls: 'primary', cost: R.placeableRepairPrice(s, p.type) });
         else if (p.dirty) actions.push({ act: 'clean', label: 'Pulisci', icon: 'broom' });
         if (def.light && !p.broken) actions.push({ act: 'light', label: p.lit ? 'Spegni' : 'Accendi', icon: p.lit ? 'lightOff' : 'lightOn' });
         // la casetta porta anche il menù del suo animale (utile quando dorme in tana)

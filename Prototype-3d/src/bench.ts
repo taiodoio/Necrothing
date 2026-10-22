@@ -18,11 +18,12 @@ import '@fontsource/nunito/800.css';
 import './styles/main.css';
 import './styles/ui-next.css';
 import './styles/ui-play.css';
+import './styles/ui-house.css';
 import * as THREE from 'three';
 import { Game } from './app/Game.ts';
 import { PROFILES, QUALITY_LABELS } from './app/AutoQuality.ts';
 import { setPersistence } from './app/persistence.ts';
-import { setUiNext, setUiPlay } from './app/uiNext.ts';
+import { setUiNext, setUiPlay, setUiPreview } from './app/uiNext.ts';
 import { installPlayDecor } from './ui/playDecor.ts';
 import type { FpsSetting, Quality } from './game/state.ts';
 import { fullCemetery } from './game/fullCemetery.ts';
@@ -32,7 +33,8 @@ import { cellCenter } from './view/WorldView.ts';
 setPersistence(false);
 // interfaccia nuova in prova (interazioni, menù a icone, menù verticale): per ora solo qui
 setUiNext(true);
-setUiPlay(true); // interfaccia «viva», in prova solo qui
+setUiPlay(true); // interfaccia «viva»
+setUiPreview(true); // casa del Custode, registro, requisiti di sblocco, morso del vampiro
 installPlayDecor();
 
 interface Inner {

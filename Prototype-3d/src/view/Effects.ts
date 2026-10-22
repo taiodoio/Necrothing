@@ -14,6 +14,8 @@ export class Effects {
   private motePos: Float32Array;
   private moteSeed: Float32Array;
   private puffs: Array<{ mesh: THREE.Points; life: number; vel: Float32Array }> = [];
+  private clouds: Array<{ group: THREE.Group; mat: THREE.MeshLambertMaterial; age: number; parts: Array<{ mesh: THREE.Mesh; dir: THREE.Vector3; size: number; delay: number }> }> = [];
+  private readonly cloudGeo = new THREE.IcosahedronGeometry(1, 1);
   private center = new THREE.Vector3();
   private radius = 14;
   private rainCount = 0;
@@ -74,7 +76,54 @@ export class Effects {
     this.puffs.push({ mesh, life: 0.9, vel });
   }
 
+  /**
+   * Sbuffo di nuvolette da cartone (trasformazioni): una corona di batuffoli
+   * che si gonfiano di colpo, coprono chi sta in mezzo, poi si sgonfiano
+   * salendo e allargandosi. Si vedono anche di notte (un po' di luce propria).
+   */
+  cloudPuff(at: THREE.Vector3, tint = '#efe8f6') {
+    const group = new THREE.Group();
+    group.position.copy(at);
+    const mat = new THREE.MeshLambertMaterial({ color: tint, emissive: '#6a5a80', emissiveIntensity: 0.55, flatShading: true, transparent: true });
+    const parts: Array<{ mesh: THREE.Mesh; dir: THREE.Vector3; size: number; delay: number }> = [];
+    const n = 11;
+    for (let i = 0; i < n; i++) {
+      const a = (i / n) * Math.PI * 2 + Math.random() * 0.4;
+      const up = i % 3 === 0 ? 0.55 : i % 3 === 1 ? 0.05 : -0.35;
+      const dir = new THREE.Vector3(Math.cos(a) * 0.42, up, Math.sin(a) * 0.42);
+      const mesh = new THREE.Mesh(this.cloudGeo, mat);
+      mesh.raycast = () => undefined;
+      mesh.rotation.set(Math.random() * 3, Math.random() * 3, 0);
+      mesh.scale.setScalar(0.01);
+      group.add(mesh);
+      parts.push({ mesh, dir, size: 0.24 + Math.random() * 0.12, delay: Math.random() * 0.06 });
+    }
+    // uno grande al centro, che nasconde il cambio
+    const core = new THREE.Mesh(this.cloudGeo, mat);
+    core.raycast = () => undefined;
+    core.scale.setScalar(0.01);
+    group.add(core);
+    parts.push({ mesh: core, dir: new THREE.Vector3(0, 0.15, 0), size: 0.42, delay: 0 });
+    this.group.add(group);
+    this.clouds.push({ group, mat, age: 0, parts });
+  }
+
   update(dt: number, t: number) {
+    for (let i = this.clouds.length - 1; i >= 0; i--) {
+      const c = this.clouds[i];
+      c.age += dt;
+      const LIFE = 0.95;
+      for (const p of c.parts) {
+        const k = Math.max(0, c.age - p.delay);
+        // si gonfia in un attimo (con un piccolo rimbalzo), poi si sgonfia piano
+        const grow = k < 0.16 ? (k / 0.16) * 1.15 : k < 0.26 ? 1.15 - ((k - 0.16) / 0.1) * 0.15 : Math.max(0, 1 - (k - 0.26) / (LIFE - 0.26));
+        p.mesh.scale.setScalar(Math.max(0.01, p.size * grow));
+        const spread = 0.6 + k * 1.4;
+        p.mesh.position.set(p.dir.x * spread, 0.5 + p.dir.y * spread + k * 0.5, p.dir.z * spread);
+      }
+      c.mat.opacity = c.age < 0.5 ? 1 : Math.max(0, 1 - (c.age - 0.5) / (LIFE - 0.5));
+      if (c.age >= LIFE) { this.group.remove(c.group); c.mat.dispose(); this.clouds.splice(i, 1); }
+    }
     const R = this.radius, c = this.center;
     if (this.rain.visible) {
       const p = this.rainPos;

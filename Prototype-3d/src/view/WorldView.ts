@@ -5,6 +5,7 @@
 // Cambiare stile ricostruisce solo la resa: posizioni e stati arrivano sempre
 // dallo stato di gioco.
 
+import { houseVariant } from '../game/house.ts';
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import { FOREST_MARGIN, GRAVE_FOOTPRINT, MAP_SIZE } from '../game/balance.ts';
@@ -169,7 +170,7 @@ function earnMaterial(n: number): THREE.SpriteMaterial {
 }
 
 /** Dove sta l'etichetta dell'incasso (in coordinate dell'oggetto): sopra il bancone o la bancarella. */
-const EARN_AT: Record<string, number> = { zombie_bar: 0, brain_farm: 1.35, witch_corner: -0.35 };
+const EARN_AT: Record<string, number> = { zombie_bar: 0, brain_farm: 1.35, witch_corner: -0.35, keeper_house: 1.1 };
 
 export class WorldView {
   readonly root = new THREE.Group();
@@ -253,6 +254,7 @@ export class WorldView {
     this.version++;
     this.area = areaForLevel(state.world.expansionLevel);
     this.treeMemories = Math.min(30, state.entrusted.length);
+    this.houseLook = houseVariant(state.house);
     this.syncTerrain(state);
     this.syncScenery(state);
     this.syncDecor(state);
@@ -646,10 +648,12 @@ export class WorldView {
 
   /** Ricordi affidati all'albero: un frutto acceso per ciascuno (fino a 30). */
   private treeMemories = 0;
+  /** Tetto e aggiunte della Casa del Custode (la variante del suo modello). */
+  private houseLook = 0;
 
   pvis(p: Placed): PVis {
     // le varianti diventate oggetti a sé si disegnano col modello della loro famiglia
-    const vis = visualOf(p.type, p.type === 'memory_tree' ? this.treeMemories : p.variant);
+    const vis = visualOf(p.type, p.type === 'memory_tree' ? this.treeMemories : p.type === 'keeper_house' ? this.houseLook : p.variant);
     return { type: vis.type, variant: vis.variant, dirty: p.dirty, broken: p.broken, lit: p.lit, seed: placeableSeed(vis.type, hashString(p.id)) };
   }
 

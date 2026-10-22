@@ -2,6 +2,7 @@
 // grafico e dalla camera: cambiare resa non tocca mai questi dati.
 
 import { DEFAULT_LOOK, normalizeLook, type CustodeLook } from './look.ts';
+import { defaultHouse, houseItem, type HouseState } from './house.ts';
 import type { CauseChoice, Category, DeathCause, GraveType } from './graves.ts';
 import type { DayPhase } from './time.ts';
 import { MAP_SIZE, WISPS } from './balance.ts';
@@ -176,6 +177,8 @@ export interface SaveData {
   memories: MemoryEvent[];
   /** Ricordi affidati all'Albero dei ricordi (le loro tombe non ci sono più). */
   entrusted: EntrustedMemory[];
+  /** Casa del Custode: tetto e aggiunte del cortile. */
+  house: HouseState;
   settings: Settings;
 }
 
@@ -318,8 +321,18 @@ export function createNewGame(now: Date, seed = Math.floor(Math.random() * 1e9))
     achievements: [],
     memories: [],
     entrusted: [],
+    house: defaultHouse(),
     settings: { ...DEFAULT_SETTINGS },
   };
+}
+
+/** Casa del Custode di un salvataggio vecchio o ritoccato: solo voci note, il tetto in vista tra quelli comprati. */
+function normalizeHouse(raw: Partial<HouseState> | undefined): HouseState {
+  const base = defaultHouse();
+  const owned = [...new Set([...base.owned, ...(Array.isArray(raw?.owned) ? raw!.owned : [])])].filter((id) => houseItem(id));
+  const roof = raw?.roof && owned.includes(raw.roof) ? raw.roof : base.roof;
+  const hidden = (Array.isArray(raw?.hidden) ? raw!.hidden : []).filter((id) => owned.includes(id));
+  return { owned, roof, hidden };
 }
 
 /** Migra/ripara un salvataggio caricato (campi mancanti → default). */
@@ -394,6 +407,7 @@ export function normalizeSave(raw: unknown): SaveData | null {
     achievements: data.achievements ?? [],
     memories: data.memories ?? [],
     entrusted: Array.isArray(data.entrusted) ? data.entrusted : [],
+    house: normalizeHouse(data.house),
     version: SAVE_VERSION,
   } as SaveData;
 }

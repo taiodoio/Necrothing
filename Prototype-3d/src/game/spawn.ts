@@ -1,7 +1,8 @@
 // Calcolo (puro) delle comparse di presenze erranti e dei fuochi fatui, con
 // i modificatori dati da edifici e fiori. Deterministico rispetto alla RNG.
 
-import { SPAWN_CHANCE, SPAWN_MODIFIERS, WISP_SPAWN } from './balance.ts';
+import { HOUSE_PERKS, SPAWN_CHANCE, SPAWN_MODIFIERS, WISP_SPAWN } from './balance.ts';
+import { housePerk } from './house.ts';
 import { ZOMBIE_ATTRACTORS } from './catalog.ts';
 import type { Rng } from './rng.ts';
 import type { SaveData } from './state.ts';
@@ -50,25 +51,29 @@ export function countBuildings(state: Pick<SaveData, 'placeables'>): BuildingCou
 }
 
 export function computeSpawns(
-  state: Pick<SaveData, 'graves' | 'placeables'> & Partial<Pick<SaveData, 'entrusted'>>,
+  state: Pick<SaveData, 'graves' | 'placeables'> & Partial<Pick<SaveData, 'entrusted' | 'house'>>,
   isNight: boolean,
   rng: Rng,
+  now?: Date,
 ): SpawnRequest[] {
   const b = countBuildings(state);
   const graves = state.graves;
   const flowers = graves.filter((g) => g.hasFlowers).length;
   const mult = (1 + SPAWN_MODIFIERS.mausoleumEventBonus * b.mausoleum) * (1 + SPAWN_MODIFIERS.flowerEventBonus * flowers);
   const out: SpawnRequest[] = [];
+  // casa del Custode: le zucche sul portico chiamano i fantasmi di notte, la frutta gatti e corvi
+  const pumpkins = isNight && housePerk(state, 'pumpkins') ? (now?.getMonth() === 9 ? HOUSE_PERKS.pumpkinsOctoberGhosts : HOUSE_PERKS.pumpkinsNightGhosts) : 1;
+  const animals = housePerk(state, 'fruit') ? HOUSE_PERKS.fruitAnimals : 1;
 
   if (graves.length > 0) {
-    const ghost = (isNight ? SPAWN_CHANCE.ghostGenericNight : SPAWN_CHANCE.ghostGenericDay) + SPAWN_MODIFIERS.hellHoleGhostBonus * b.hellHole + SPAWN_MODIFIERS.hellCrackGhostBonus * b.hellCrack;
+    const ghost = ((isNight ? SPAWN_CHANCE.ghostGenericNight : SPAWN_CHANCE.ghostGenericDay) + SPAWN_MODIFIERS.hellHoleGhostBonus * b.hellHole + SPAWN_MODIFIERS.hellCrackGhostBonus * b.hellCrack) * pumpkins;
     if (rng.chance(ghost * mult)) out.push({ kind: 'ghost', graveId: rng.pick(graves).id });
-    const rare = isNight ? SPAWN_CHANCE.ghostObjectNight : SPAWN_CHANCE.ghostObjectDay;
+    const rare = (isNight ? SPAWN_CHANCE.ghostObjectNight : SPAWN_CHANCE.ghostObjectDay) * pumpkins;
     const own = graves.filter((g) => !g.legacy);
     if (own.length > 0 && rng.chance(rare * mult)) out.push({ kind: 'ghost', graveId: rng.pick(own).id, rare: true });
   }
-  if (rng.chance(SPAWN_CHANCE.cat)) out.push({ kind: 'cat' });
-  if (!isNight && rng.chance(SPAWN_CHANCE.crowDay)) out.push({ kind: 'crow' });
+  if (rng.chance(SPAWN_CHANCE.cat * animals)) out.push({ kind: 'cat' });
+  if (!isNight && rng.chance(SPAWN_CHANCE.crowDay * animals)) out.push({ kind: 'crow' });
   if (graves.length > 0) {
     const p = (SPAWN_CHANCE.priest + SPAWN_MODIFIERS.shrinePriestBonus * b.shrine) * mult;
     if (rng.chance(p)) out.push({ kind: 'priest', graveId: rng.pick(graves).id });
@@ -94,10 +99,12 @@ export function wispCap(state: Pick<SaveData, 'graves'>): number {
 }
 
 /** Probabilità che compaia un fuoco fatuo in un tick live: tombe, cure e fiori. */
-export function liveWispChance(state: Pick<SaveData, 'graves' | 'world'>, now: Date): number {
+export function liveWispChance(state: Pick<SaveData, 'graves' | 'world' | 'placeables'> & Partial<Pick<SaveData, 'house'>>, now: Date, isNight = false): number {
   const flowers = state.graves.filter((g) => g.hasFlowers).length;
   const clean = state.graves.filter((g) => !g.dirty && !g.weeds && !g.broken).length;
   let p = WISP_SPAWN.liveChanceBase + flowers * WISP_SPAWN.liveChancePerFlower + clean * WISP_SPAWN.liveChancePerCleanGrave;
   if (state.world.blessingUntil && new Date(state.world.blessingUntil) > now) p *= WISP_SPAWN.blessingMultiplier;
+  // la lanterna al portico della casa del Custode li attira di notte
+  if (isNight && housePerk(state, 'lantern')) p *= HOUSE_PERKS.lanternNightWisps;
   return Math.min(0.9, p);
 }

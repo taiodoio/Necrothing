@@ -2,7 +2,7 @@
 // rispetto a three/DOM. Ogni azione muta lo SaveData passato e ritorna un
 // esito (messaggio + ricompense) oppure lancia GameError.
 
-import { BUSINESS, DECAY, EARLY_ACCESS, ECONOMY, HAT_FEATS, RELEASE_LOCKS, EXPANSION, GRAVE_FOOTPRINT, GRAVEDIGGER, WISP_SPAWN, WISPS, XP, ZOMBIE_MUD } from './balance.ts';
+import { BUSINESS, DECAY, EARLY_ACCESS, ECONOMY, HAT_FEATS, HOUSE_PERKS, RELEASE_LOCKS, EXPANSION, GRAVE_FOOTPRINT, GRAVEDIGGER, WISP_SPAWN, WISPS, XP, ZOMBIE_MUD } from './balance.ts';
 import { CATALOG, isSeasonallyAvailable, placeableDef, repairCost, rotatedFootprint, type PlaceableDef } from './catalog.ts';
 import { CATEGORIES, CUSTOM_CAUSE_MAX, DEATH_CAUSES, GRAVE_TYPE_MIN_RANK, GRAVE_TYPES, type CauseChoice, type Category, type DeathCause, type GraveType } from './graves.ts';
 import { evaluateAchievements, rankForXp, type AchievementDef } from './progression.ts';
@@ -10,7 +10,8 @@ import { hashString, newId } from './rng.ts';
 import type { RoamerKind } from './spawn.ts';
 import type { Grave, MemoryType, Placed, SaveData } from './state.ts';
 import { isoDate } from './time.ts';
-import { areaForLevel, buildOccupancy, canPlaceAt, cellsOf, computePrestige } from './world.ts';
+import { areaForLevel, buildOccupancy, canPlaceAt, cellsOf, computePrestige, nearestFreeSpot } from './world.ts';
+import { houseHasVeggie, houseItem, housePart, housePerk, houseRoof } from './house.ts';
 
 export class GameError extends Error {}
 
@@ -190,8 +191,10 @@ export function bringFlowers(s: SaveData, graveId: string, now: Date): ActionRes
   if (alreadyToday) return ok('I fiori sono ancora freschi.');
   memory(s, g.id, 'flower', now);
   s.player.counters.flowersBrought++;
-  reward(s, XP.flowers, WISPS.flowers);
-  return ok('Hai portato fiori.', XP.flowers, WISPS.flowers);
+  // le fioriere della casa del Custode: un fuoco fatuo in più per ogni mazzo
+  const wisps = housePerk(s, 'flowerbox') ? HOUSE_PERKS.flowerboxWisps : WISPS.flowers;
+  reward(s, XP.flowers, wisps);
+  return ok('Hai portato fiori.', XP.flowers, wisps);
 }
 
 export function cleanGrave(s: SaveData, graveId: string, now: Date): ActionResult {
@@ -206,15 +209,21 @@ export function cleanGrave(s: SaveData, graveId: string, now: Date): ActionResul
   return ok('Lapide pulita.', XP.cleaned, WISPS.cleaned);
 }
 
+/** Quanto costa riparare: col banco degli attrezzi della casa del Custode un quarto in meno. */
+const repairDiscount = (s: SaveData) => (housePerk(s, 'toolbench') ? HOUSE_PERKS.toolbenchRepair : 1);
+export const graveRepairPrice = (s: SaveData) => Math.max(1, Math.round(DECAY.graveRepairCost * repairDiscount(s)));
+export const placeableRepairPrice = (s: SaveData, type: string) => Math.max(1, Math.round(repairCost(placeableDef(type)) * repairDiscount(s)));
+
 export function repairGrave(s: SaveData, graveId: string, now: Date): ActionResult {
   const g = graveById(s, graveId);
   if (!g.broken) return ok('Non c’è nulla da riparare.');
-  spend(s, DECAY.graveRepairCost, 'riparare');
+  const cost = graveRepairPrice(s);
+  spend(s, cost, 'riparare');
   g.broken = false; g.dirty = false; g.weeds = false; g.dirtySince = null; g.muddy = false; g.caredAt = now.toISOString();
   memory(s, g.id, 'repaired', now);
   s.player.counters.repairs++;
   reward(s, XP.repaired, 0);
-  return ok('Tomba riparata: torna come nuova.', XP.repaired, -DECAY.graveRepairCost);
+  return ok('Tomba riparata: torna come nuova.', XP.repaired, -cost);
 }
 
 export function exhumeGrave(s: SaveData, graveId: string): ActionResult {
@@ -305,7 +314,7 @@ export function cleanPlaceable(s: SaveData, id: string, now: Date): ActionResult
 export function repairPlaceable(s: SaveData, id: string, now: Date): ActionResult {
   const p = placedById(s, id);
   if (!p.broken) return ok('Non c’è nulla da riparare.');
-  const cost = repairCost(placeableDef(p.type));
+  const cost = placeableRepairPrice(s, p.type);
   spend(s, cost, 'riparare');
   p.broken = false; p.dirty = false; p.caredAt = now.toISOString();
   s.player.counters.repairs++;
@@ -512,10 +521,17 @@ export function businessDayIncome(id: string, type: string, day: number): number
  * Fuochi fatui da riscuotere: un incasso per ogni giorno passato dall'ultima
  * riscossione (o dalla posa), fino al tetto. Un edificio rotto non incassa.
  */
+/** Probabilità che uno zombie sporchi la tomba accanto a cui passa: la staccionata della casa lo fa esitare. */
+export const zombieMudChance = (s: SaveData) => (housePerk(s, 'picket') ? HOUSE_PERKS.picketZombieMud : ZOMBIE_MUD.chance);
+
+/** Passo del Custode a piedi: col camino acceso è più riposato. */
+export const keeperPace = (s: SaveData) => (housePerk(s, 'smoke') ? HOUSE_PERKS.smokeSpeed : 1);
+
 export function businessPending(s: SaveData, id: string, now: Date): number {
   const p = s.placeables.find((x) => x.id === id);
   const b = p && BUSINESS[p.type];
   if (!p || !b || p.broken) return 0;
+  if (p.type === 'keeper_house' && !houseHasVeggie(s.house)) return 0; // senza orto la casa non rende
   const from = dayNumber(new Date(p.collectedAt ?? p.createdAt));
   const to = dayNumber(now);
   let sum = 0;
@@ -654,4 +670,66 @@ export function recordPhoto(s: SaveData, now: Date): ActionResult {
   s.player.lastShareDate = today;
   reward(s, XP.photo, 0);
   return ok('Foto salvata in galleria.', XP.photo, 0);
+}
+
+// ── Casa del Custode ────────────────────────────────────────────────────
+
+/** Mette la casa del Custode vicino alla Bottega, se non c'è ancora (partite vecchie comprese). */
+export function ensureKeeperHouse(s: SaveData, now: Date): Placed | null {
+  const have = s.placeables.find((p) => p.type === 'keeper_house');
+  if (have) return have;
+  const fp = rotatedFootprint('keeper_house', 0);
+  const shop = s.placeables.find((p) => p.type === 'shop');
+  const area = areaForLevel(s.world.expansionLevel);
+  // a destra della Bottega, se c'è posto; altrimenti il punto libero più vicino
+  const cx = shop ? shop.x + 3 + 1 + fp[0] / 2 : area.x + area.w / 2, cy = shop ? shop.y + fp[1] / 2 : area.y + 4;
+  const at = nearestFreeSpot(cx, cy, fp, buildOccupancy(s), area);
+  if (!at) return null;
+  const iso = now.toISOString();
+  const p: Placed = { id: newId('keeper_house'), type: 'keeper_house', x: at.x, y: at.y, rot: 0, variant: 0, lit: true, caredAt: iso, dirty: false, broken: false, createdAt: iso };
+  s.placeables.push(p);
+  return p;
+}
+
+export type HouseAvailability = 'ok' | 'owned' | 'rank' | 'funds';
+
+export function houseAvailability(s: SaveData, id: string): HouseAvailability {
+  const it = houseItem(id);
+  if (!it) throw new GameError('Non esiste.');
+  if (s.house.owned.includes(id)) return 'owned';
+  if (it.minRank > rankForXp(s.player.xp).level) return 'rank';
+  if (s.player.wisps < it.cost) return 'funds';
+  return 'ok';
+}
+
+/** Compra un tetto (e lo mette) o un'aggiunta per la casa: si vede subito, niente inventario. */
+export function buyHousePart(s: SaveData, id: string, now: Date): ActionResult {
+  const it = houseItem(id)!;
+  const av = houseAvailability(s, id);
+  if (av === 'owned') throw new GameError('Ce l’hai già.');
+  if (av === 'rank') throw new GameError(`Serve il rango ${it.minRank}.`);
+  if (av === 'funds') throw new GameError(`Servono ${it.cost} fuochi fatui.`);
+  s.player.wisps -= it.cost;
+  s.house.owned.push(id);
+  if (houseRoof(id)) s.house.roof = id;
+  // l'orto comincia a rendere da oggi (non per i giorni passati)
+  const home = s.placeables.find((p) => p.type === 'keeper_house');
+  if (id === 'veggie' && home) home.collectedAt = now.toISOString();
+  return ok(`${it.label}: fatto!`);
+}
+
+export function setHouseRoof(s: SaveData, id: string): void {
+  if (!houseRoof(id) || !s.house.owned.includes(id)) throw new GameError('Questo tetto non ce l’hai.');
+  s.house.roof = id;
+}
+
+/** Toglie o rimette un'aggiunta comprata. */
+export function toggleHousePart(s: SaveData, id: string, now?: Date): boolean {
+  if (!housePart(id) || !s.house.owned.includes(id)) throw new GameError('Questa aggiunta non ce l’hai.');
+  const i = s.house.hidden.indexOf(id);
+  if (i >= 0) s.house.hidden.splice(i, 1); else s.house.hidden.push(id);
+  // l'orto rimesso riparte da oggi: i giorni in cui non c'era non rendono
+  const home = s.placeables.find((p) => p.type === 'keeper_house');
+  if (id === 'veggie' && i >= 0 && home && now) home.collectedAt = now.toISOString();
+  return i >= 0;
 }

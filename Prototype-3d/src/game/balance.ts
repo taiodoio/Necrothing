@@ -168,10 +168,32 @@ export const BUSINESS: Record<string, { perDay: [number, number]; cap: number }>
   brain_farm: { perDay: [2, 5], cap: 12 },
   // ogni fuoco fatuo incassato è una pozione venduta
   witch_corner: { perDay: [3, 6], cap: 15 },
+  // l'orto dietro la casa del Custode (rende solo se c'è: vedi houseHasVeggie)
+  keeper_house: { perDay: [2, 4], cap: 10 },
 };
 
-/** Velocità del Custode a piedi (celle al secondo) e moltiplicatori in bicicletta e sulla scopa. */
-export const CUSTODE_SPEED = { walk: 3.1, bike: 2, broom: 2.6 } as const;
+/**
+ * Vantaggi delle aggiunte della Casa del Custode (solo quelle in vista): i
+ * testi per il giocatore sono in game/house.ts (HOUSE_PARTS.perk).
+ */
+export const HOUSE_PERKS = {
+  lanternNightWisps: 1.2,
+  flowerboxWisps: 2,
+  toolbenchRepair: 0.75,
+  smokeSpeed: 1.1,
+  picketZombieMud: 0.25,
+  pumpkinsNightGhosts: 1.25,
+  pumpkinsOctoberGhosts: 1.5,
+  gardenWeeds: 0.75,
+  beehiveFlowerDays: 5,
+  fruitAnimals: 1.5,
+} as const;
+
+/** Velocità del Custode a piedi (celle al secondo) e moltiplicatori in bicicletta, sulla scopa e da pipistrello. */
+export const CUSTODE_SPEED = { walk: 3.1, bike: 2, broom: 2.6, bat: 2.4 } as const;
+
+/** Morso del vampiro: per quanti secondi il Custode vola da pipistrello. */
+export const BAT = { seconds: 60 } as const;
 
 /** Bastone mistico: da quanto lontano (celle) i fuochi fatui accorrono al Custode (senza: 0,65). */
 export const STAFF = { radius: 3.5 } as const;

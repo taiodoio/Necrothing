@@ -813,3 +813,103 @@ test('causa del decesso personalizzata: testo obbligatorio, max 60, salvato sull
   const { grave: g2 } = R.bury(s, draft({ name: 'Mouse', deathCauseText: 'ignorato' }), at2.x, at2.y, NOW);
   assert.equal(g2.deathCauseText, undefined);
 });
+
+test('casa del Custode: accanto alla Bottega, una sola, tetti e aggiunte, orto che rende', async () => {
+  const { houseVariant, decodeHouseVariant } = await import('../src/game/house.ts');
+  const { BUSINESS } = await import('../src/game/balance.ts');
+  const { normalizeSave } = await import('../src/game/state.ts');
+  const s = createNewGame(NOW, 5);
+  const house = R.ensureKeeperHouse(s, NOW);
+  assert.ok(house);
+  assert.equal(R.ensureKeeperHouse(s, NOW), house, 'non se ne fa una seconda');
+  // non si sovrappone a niente
+  const others = buildOccupancy(s, house.id).owner;
+  for (let dx = 0; dx < 4; dx++) for (let dy = 0; dy < 4; dy++) assert.equal(others.get(`${house.x + dx},${house.y + dy}`), undefined);
+  // rango e fuochi fatui
+  s.player.wisps = 1000;
+  assert.equal(R.houseAvailability(s, 'slate'), 'owned');
+  assert.equal(R.houseAvailability(s, 'veggie'), 'rank');
+  assert.throws(() => R.buyHousePart(s, 'veggie', NOW), /rango 3/);
+  s.player.xp = 1500;
+  R.buyHousePart(s, 'tiles', NOW);
+  assert.equal(s.house.roof, 'tiles', 'il tetto comprato si mette subito');
+  R.setHouseRoof(s, 'slate');
+  assert.throws(() => R.setHouseRoof(s, 'thatch'), /non ce l’hai/);
+  // l'orto rende solo dopo l'acquisto e finché è in vista
+  assert.equal(R.businessPending(s, house.id, later(3)), 0);
+  R.buyHousePart(s, 'veggie', NOW);
+  const n = R.businessPending(s, house.id, later(2));
+  assert.ok(n >= BUSINESS.keeper_house.perDay[0] * 2 && n <= BUSINESS.keeper_house.cap);
+  R.toggleHousePart(s, 'veggie', NOW);
+  assert.equal(R.businessPending(s, house.id, later(2)), 0, 'tolto non rende');
+  R.toggleHousePart(s, 'veggie', later(2));
+  assert.equal(R.businessPending(s, house.id, later(2)), 0, 'rimesso riparte da oggi');
+  // la variante del modello dice tetto e aggiunte in vista
+  R.buyHousePart(s, 'lantern', NOW);
+  const look = decodeHouseVariant(houseVariant(s.house));
+  assert.equal(look.roof, 'slate');
+  assert.deepEqual([...look.parts].sort(), ['lantern', 'veggie']);
+  // salvataggi vecchi o sporchi: si torna alla casa di base, gli id sconosciuti spariscono
+  const old = normalizeSave({ ...JSON.parse(JSON.stringify(s)), house: undefined });
+  assert.deepEqual(old.house, { owned: ['slate'], roof: 'slate', hidden: [] });
+  const odd = normalizeSave({ ...JSON.parse(JSON.stringify(s)), house: { owned: ['moss', 'boh'], roof: 'thatch', hidden: ['boh'] } });
+  assert.deepEqual(odd.house.owned.sort(), ['moss', 'slate']);
+  assert.equal(odd.house.roof, 'slate');
+});
+
+test('vantaggi della casa: valgono solo con la casa e l’aggiunta in vista', async () => {
+  const { HOUSE_PERKS, DECAY: D, WISPS: W, SPAWN_CHANCE } = await import('../src/game/balance.ts');
+  const { computeSpawns, liveWispChance } = await import('../src/game/spawn.ts');
+  const { housePerk } = await import('../src/game/house.ts');
+  const s = createNewGame(NOW, 21);
+  s.player.wisps = 999; s.player.xp = 5000;
+  // comprata ma senza casa: niente
+  s.house.owned.push('toolbench', 'flowerbox', 'picket', 'smoke', 'lantern', 'pumpkins', 'fruit');
+  assert.equal(housePerk(s, 'toolbench'), false);
+  assert.equal(R.graveRepairPrice(s), D.graveRepairCost);
+  R.ensureKeeperHouse(s, NOW);
+  assert.equal(housePerk(s, 'toolbench'), true);
+  // banco degli attrezzi: riparare costa un quarto in meno
+  assert.equal(R.graveRepairPrice(s), Math.round(D.graveRepairCost * HOUSE_PERKS.toolbenchRepair));
+  // tolta per gusto, smette di aiutare
+  R.toggleHousePart(s, 'toolbench', NOW);
+  assert.equal(R.graveRepairPrice(s), D.graveRepairCost);
+  // camino, staccionata
+  assert.equal(R.keeperPace(s), HOUSE_PERKS.smokeSpeed);
+  assert.equal(R.zombieMudChance(s), HOUSE_PERKS.picketZombieMud);
+  // fioriere: due fuochi fatui per mazzo
+  const at = spot(s);
+  const { grave } = R.bury(s, draft(), at.x, at.y, NOW);
+  const before = s.player.wisps;
+  R.bringFlowers(s, grave.id, NOW);
+  assert.equal(s.player.wisps - before, HOUSE_PERKS.flowerboxWisps);
+  assert.ok(HOUSE_PERKS.flowerboxWisps > W.flowers);
+  // lanterna: più fuochi fatui di notte, uguali di giorno
+  const base = { ...s, house: { owned: ['slate'], roof: 'slate', hidden: [] } };
+  assert.ok(liveWispChance(s, NOW, true) > liveWispChance(base, NOW, true));
+  assert.equal(liveWispChance(s, NOW, false), liveWispChance(base, NOW, false));
+  // zucche e frutta: con una rng che dice sempre «sì appena sotto la soglia» si vede la soglia più alta
+  const edge = (p) => ({ next: () => p, int: () => 0, range: (a) => a, chance: (q) => p < q, pick: (xs) => xs[0] });
+  const kinds = (st, p) => computeSpawns(st, true, edge(p), NOW).map((r) => r.kind);
+  const catEdge = SPAWN_CHANCE.cat * 1.2;
+  assert.ok(kinds(s, catEdge).includes('cat') && !kinds(base, catEdge).includes('cat'));
+});
+
+test('arnia e giardinetto: fiori che durano di più, meno erbacce', async () => {
+  const { HOUSE_PERKS, SIM } = await import('../src/game/balance.ts');
+  const make = (parts) => {
+    const s = createNewGame(NOW, 33);
+    s.house.owned.push(...parts);
+    R.ensureKeeperHouse(s, NOW);
+    const at = spot(s);
+    const { grave } = R.bury(s, draft(), at.x, at.y, NOW);
+    R.bringFlowers(s, grave.id, NOW);
+    return { s, grave };
+  };
+  const days = SIM.flowerWitherDays + 1;
+  assert.ok(days < HOUSE_PERKS.beehiveFlowerDays);
+  const plain = make([]), bees = make(['beehive']);
+  runCatchUp(plain.s, later(days)); runCatchUp(bees.s, later(days));
+  assert.equal(plain.s.graves.find((g) => g.id === plain.grave.id).hasFlowers, false);
+  assert.equal(bees.s.graves.find((g) => g.id === bees.grave.id).hasFlowers, true, 'con l’arnia i fiori durano');
+});

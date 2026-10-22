@@ -11,7 +11,8 @@ import '@fontsource/nunito/800.css';
 import './styles/main.css';
 import './styles/ui-next.css';
 import './styles/ui-play.css';
-import { setUiNext, setUiPlay } from './app/uiNext.ts';
+import './styles/ui-house.css';
+import { setUiNext, setUiPlay, setUiPreview } from './app/uiNext.ts';
 import { installPlayDecor } from './ui/playDecor.ts';
 
 const canvas = document.querySelector<HTMLCanvasElement>('#world');
@@ -21,6 +22,8 @@ if (!canvas) throw new Error('Canvas di gioco non trovato.');
 setUiNext(true);
 // interfaccia «viva» (tema marrone, pattern, menù a riquadri, angoli dei recinti, Custode fuori dal riquadro)
 setUiPlay(true);
+// casa del Custode (registro, personalizzazione, vantaggi), requisiti di sblocco in Bottega, morso del vampiro
+setUiPreview(true);
 installPlayDecor();
 
 try {

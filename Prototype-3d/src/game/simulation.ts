@@ -5,7 +5,8 @@
 //    fuochi fatui secondo la matrice di spawn.
 // Deterministico rispetto a seed + ora (stessa ora → stessi esiti).
 
-import { DECAY, KEEPER_LAMP, SIM, WISPS, XP } from './balance.ts';
+import { DECAY, HOUSE_PERKS, KEEPER_LAMP, SIM, WISPS, XP } from './balance.ts';
+import { housePerk } from './house.ts';
 import { CATALOG, rotatedFootprint } from './catalog.ts';
 import { createRng, hashString, newId, type Rng } from './rng.ts';
 import { computeSpawns, liveWispChance, wispCap, type SpawnRequest } from './spawn.ts';
@@ -90,6 +91,9 @@ export function runCatchUp(s: SaveData, now: Date): CatchUpReport {
     placeablesBroken: 0, anniversaries: [], blessing: null, wispsAdded: 0, weatherChanged: false, xpGained: 0,
   };
 
+  // casa del Custode: l'arnia fa durare i fiori, il giardinetto rallenta le erbacce
+  const flowerDays = housePerk(s, 'beehive') ? HOUSE_PERKS.beehiveFlowerDays : SIM.flowerWitherDays;
+  const weedPace = housePerk(s, 'garden') ? HOUSE_PERKS.gardenWeeds : 1;
   for (const g of s.graves) {
     // Anniversario annuale della morte (dagli anni successivi).
     const death = new Date(g.deathDate);
@@ -104,8 +108,8 @@ export function runCatchUp(s: SaveData, now: Date): CatchUpReport {
     }
     // Ciclo esclusivo: PULITA → (fiori) → appassiti = SPORCA → pulisci → PULITA.
     if (g.hasFlowers && g.flowersAt) {
-      if (daysBetween(g.flowersAt, now) >= SIM.flowerWitherDays) {
-        const withered = new Date(new Date(g.flowersAt).getTime() + SIM.flowerWitherDays * 86400000).toISOString();
+      if (daysBetween(g.flowersAt, now) >= flowerDays) {
+        const withered = new Date(new Date(g.flowersAt).getTime() + flowerDays * 86400000).toISOString();
         g.hasFlowers = false;
         g.flowersAt = null;
         if (!g.dirty) { g.dirty = true; g.dirtySince ??= withered; }
@@ -113,7 +117,7 @@ export function runCatchUp(s: SaveData, now: Date): CatchUpReport {
       }
     } else if (!g.hasFlowers && elapsedDays > 0 && !g.broken) {
       // erbacce o sporco: il primo segno d'incuria fa partire il conto verso «rotta»
-      if (!g.weeds && rng.chance(Math.min(SIM.weedProbMax, SIM.weedProbPerDay * elapsedDays))) {
+      if (!g.weeds && rng.chance(Math.min(SIM.weedProbMax, SIM.weedProbPerDay * weedPace * elapsedDays))) {
         g.weeds = true; g.dirtySince ??= onset();
       }
       if (!g.dirty && rng.chance(Math.min(SIM.dirtProbMax, SIM.dirtProbPerDay * elapsedDays))) {
@@ -176,9 +180,9 @@ export interface LiveTickResult {
 export function liveTick(s: SaveData, now: Date, salt: number): LiveTickResult {
   const rng = createRng(`${s.seed}:live:${Math.floor(now.getTime() / 1000)}:${salt}`);
   const isNight = dayPhaseForHour(now.getHours()) === 'night';
-  const spawns = computeSpawns(s, isNight, rng);
+  const spawns = computeSpawns(s, isNight, rng, now);
   let wisp: LiveTickResult['wisp'] = null;
-  if (s.world.looseWisps.length < wispCap(s) && rng.chance(liveWispChance(s, now))) {
+  if (s.world.looseWisps.length < wispCap(s) && rng.chance(liveWispChance(s, now, isNight))) {
     const cell = randomWispCell(s, rng);
     if (cell) {
       wisp = { id: newId('w'), ...cell };

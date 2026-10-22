@@ -9,7 +9,7 @@ import { setLowpolyResolver } from '../modelCache.ts';
 import type { PVis } from '../models/types.ts';
 import { lowpolyGrave } from './graves.ts';
 import type { LPModel } from './kit.ts';
-import { angelStatueLP, fencePillarLP, fenceSegmentLP, gateLP, gravediggerHouseLP, mausoleumLP, shopLP, votiveStatueLP, wellLP } from './architecture.ts';
+import { angelStatueLP, fencePillarLP, fenceSegmentLP, gateLP, gravediggerHouseLP, housePartLP, keeperHouseLP, mausoleumLP, shopLP, votiveStatueLP, wellLP } from './architecture.ts';
 import { v2Generators } from './v2/npc.ts';
 import {
   archLP, bonfireLP, candleTreeLP, fenceIronLP, fenceWoodLP, fountainLP, ghostLanternLP, glowPumpkinLP, hellHoleLP, hillockLP,
@@ -47,6 +47,7 @@ export const LP_PLACEABLES: Record<string, (v: PVis) => LPModel> = {
   flowerbed: flowerbedLP,
   pond: pondLP,
   shop: shopLP,
+  keeper_house: keeperHouseLP,
   gravedigger_house: gravediggerHouseLP,
   mausoleum: mausoleumLP,
   well: wellLP,
@@ -95,6 +96,7 @@ export const LP_PLACEABLES: Record<string, (v: PVis) => LPModel> = {
 /** Generatori di scenografia (prefisso della chiave → generatore con parametro). */
 export const LP_SCENERY: Record<string, (arg: string) => LPModel> = {
   fseg: (a) => fenceSegmentLP(Number(a)),
+  hpart: (a) => housePartLP(a), // aggiunte della casa del Custode, da sole (miniature)
   fpil: (a) => fencePillarLP(Number(a)),
   gate: (a) => gateLP(a === 'lit'),
   wpine: (a) => pineLP(Number(a) + 40, false, 1.15),

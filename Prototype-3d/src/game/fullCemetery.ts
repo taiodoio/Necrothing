@@ -8,15 +8,18 @@ import { CATEGORIES, DEATH_CAUSES, GRAVE_TYPES } from './graves.ts';
 import { EXPANSION, GRAVE_FOOTPRINT } from './balance.ts';
 import * as R from './rules.ts';
 import { createRng } from './rng.ts';
+import { ensureKeeperHouse } from './rules.ts';
 import { createNewGame, type SaveData } from './state.ts';
 import { areaForLevel, buildOccupancy, cellsOf, type Rect } from './world.ts';
 
 /** Quante copie per categoria (le cose uniche una sola volta). */
 const COPIES: Record<string, number> = { light: 2, decoration: 1, ambient: 1, structure: 1, npc: 1 };
-const SKIP = new Set(['path_stone', 'path_dirt', 'mud', 'tall_grass', 'shop']);
+// la casa del Custode si mette per prima (ensureKeeperHouse), quando c'è ancora spazio davanti alla porta
+const SKIP = new Set(['path_stone', 'path_dirt', 'mud', 'tall_grass', 'shop', 'keeper_house']);
 
 export function fullCemetery(seed = 4242, now = new Date(), graves = 150): SaveData {
   const s = createNewGame(now, seed);
+  ensureKeeperHouse(s, now);
   const rng = createRng(seed);
   const level = EXPANSION.length - 1;
   s.world.expansionLevel = level;

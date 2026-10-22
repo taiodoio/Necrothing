@@ -681,9 +681,11 @@ export function ensureKeeperHouse(s: SaveData, now: Date): Placed | null {
   const fp = rotatedFootprint('keeper_house', 0);
   const shop = s.placeables.find((p) => p.type === 'shop');
   const area = areaForLevel(s.world.expansionLevel);
-  // a destra della Bottega, se c'è posto; altrimenti il punto libero più vicino
-  const cx = shop ? shop.x + 3 + 1 + fp[0] / 2 : area.x + area.w / 2, cy = shop ? shop.y + fp[1] / 2 : area.y + 4;
-  const at = nearestFreeSpot(cx, cy, fp, buildOccupancy(s), area);
+  // a destra della Bottega, se c'è posto; altrimenti il punto libero più vicino. Si cerca
+  // spazio anche per due file davanti alla porta: la soglia resta dentro il recinto e libera
+  const room: [number, number] = [fp[0], fp[1] + 2];
+  const cx = shop ? shop.x + 3 + 1 + fp[0] / 2 : area.x + area.w / 2, cy = shop ? shop.y + room[1] / 2 : area.y + 4;
+  const at = nearestFreeSpot(cx, cy, room, buildOccupancy(s), area);
   if (!at) return null;
   const iso = now.toISOString();
   const p: Placed = { id: newId('keeper_house'), type: 'keeper_house', x: at.x, y: at.y, rot: 0, variant: 0, lit: true, caredAt: iso, dirty: false, broken: false, createdAt: iso };

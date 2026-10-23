@@ -88,8 +88,8 @@ export function openMemory(ui: UI, id: string, visit?: R.ActionResult, fromList 
       h('ul', { class: 'timeline' }, ...mem.map((m) => h('li', {}, h('time', {}, fmtDate(m.at)), m.type === 'ghost' && m.at >= e.entrustedAt ? t('tree.memory.ghostNear') : MEMORY_LABELS[m.type])))) : null,
   ), {
     footer: h('div', { style: 'display:grid;gap:6px' },
-      h('button', { class: 'big-btn', onclick: () => openMemoryTree(ui) }, t('tree.memory.back')),
-      moreActions([{ icon: 'shovel', label: t('tree.memory.free'), danger: true, run: () => confirmExhume(ui, id, g.name, 'memory') }])),
+      moreActions([{ icon: 'shovel', label: t('tree.memory.free'), danger: true, run: () => confirmExhume(ui, id, g.name, 'memory') }]),
+      h('button', { class: 'big-btn', onclick: () => openMemoryTree(ui) }, t('tree.memory.back'))),
     beforeClose: fromList ? () => { openMemoryTree(ui); return false; } : undefined,
   });
 }

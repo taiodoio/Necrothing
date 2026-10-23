@@ -458,13 +458,13 @@ export function openDetail(ui: UI, id: string) {
       ),
       mem.length ? h('div', {}, h('div', { class: 'section-title' }, t('detail.grave.memories')), h('ul', { class: 'timeline' }, ...mem.map((m) => h('li', {}, h('time', {}, fmtDate(m.at)), MEMORY_LABELS[m.type])))) : null,
     ), { footer: h('div', { style: 'display:grid;gap:6px' },
-      h('button', { class: 'big-btn', onclick: () => { closeDrawer(true); game.performEntityAction(id, main.act); } }, icon(main.ic, 22), main.label),
-      // le azioni di tutti i giorni sopra; le altre (cartolina, albero, riesuma) raccolte in «Altro»
+      // le altre azioni (cartolina, albero, riesuma) in «Altro», secondario, sopra l'azione che serve adesso
       moreActions([
         { icon: 'postcard', label: t('detail.grave.postcard'), run: async () => openPostcard(await postcardData(g, photoUrl, ui, g.seed % 4)) },
         R.memoryTree(s) ? { icon: 'tree', label: t('detail.grave.entrust'), run: () => ui.openEntrust(id) } : null,
         { icon: 'shovel', label: t('detail.exhume'), danger: true, run: () => confirmExhume(ui, id, g.name, 'grave') },
-      ])) });
+      ]),
+      h('button', { class: 'big-btn', onclick: () => { closeDrawer(true); game.performEntityAction(id, main.act); } }, icon(main.ic, 22), main.label)) });
     return;
   }
   const p = s.placeables.find((x) => x.id === id);
@@ -502,19 +502,27 @@ export async function confirmExhume(ui: UI, id: string, name: string, kind: 'gra
 }
 
 /**
- * «Altro»: le azioni secondarie raccolte sotto la principale, in una
- * fisarmonica (la freccia si gira quando si apre). Ogni voce ha la sua icona;
- * quelle distruttive in rosso.
+ * «Altro»: pulsante secondario sopra l'azione principale; il menù delle azioni
+ * secondarie si apre sopra di lui, in sovrimpressione (la freccia si gira).
+ * Ogni voce ha la sua icona, quelle distruttive in rosso. Si chiude scegliendo
+ * una voce, toccando di nuovo «Altro» o toccando fuori.
  */
 export function moreActions(items: Array<{ icon: string; label: string; danger?: boolean; run: () => void } | null>): HTMLElement {
-  const list = h('div', { class: 'more-list' }, ...items.filter((x) => x !== null).map((it) =>
-    h('button', { class: `more-item${it.danger ? ' danger' : ''}`, onclick: it.run }, icon(it.icon, 22), h('span', {}, it.label))));
+  const wrap = h('div', { class: 'more' });
+  const setOpen = (open: boolean) => {
+    list.hidden = !open;
+    toggle.setAttribute('aria-expanded', String(open));
+    if (open) setTimeout(() => document.addEventListener('pointerdown', outside, true));
+    else document.removeEventListener('pointerdown', outside, true);
+  };
+  const outside = (e: Event) => { if (!wrap.contains(e.target as Node)) setOpen(false); };
+  const list = h('div', { class: 'more-list', role: 'menu' }, ...items.filter((x) => x !== null).map((it) =>
+    h('button', { class: `more-item${it.danger ? ' danger' : ''}`, role: 'menuitem', onclick: () => { setOpen(false); it.run(); } }, icon(it.icon, 22), h('span', {}, it.label))));
+  const toggle = h('button', { class: 'big-btn ghost more-toggle', 'aria-expanded': 'false', 'aria-haspopup': 'menu', onclick: () => setOpen(list.hidden) },
+    h('span', {}, t('detail.more')), icon('chevron', 18));
   list.hidden = true;
-  const toggle = h('button', { class: 'more-toggle', 'aria-expanded': 'false', onclick: () => {
-    list.hidden = !list.hidden;
-    toggle.setAttribute('aria-expanded', String(!list.hidden));
-  } }, h('span', {}, t('detail.more')), icon('chevron', 16));
-  return h('div', { class: 'more' }, toggle, list);
+  wrap.append(list, toggle);
+  return wrap;
 }
 
 // ── Profilo & achievement ──────────────────────────────────────────────

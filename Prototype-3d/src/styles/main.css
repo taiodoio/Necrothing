@@ -383,19 +383,20 @@ button.slot:active, .icon-btn:active, .ctx-actions button:active, .big-btn:activ
 .memory-row { width: 100%; text-align: left; color: inherit; cursor: pointer; font: inherit; }
 .memory-row .ico { filter: none; }
 
-/* «Altro»: le azioni secondarie del dettaglio in una fisarmonica sotto la principale. */
-.more-toggle { display: flex; align-items: center; justify-content: center; gap: 6px; width: auto; margin: 0 auto; padding: 8px 16px; background: none; border: 0; box-shadow: none;
-  font: inherit; font-weight: 700; font-size: 14px; color: var(--muted, #bcb5a8); cursor: pointer; }
-.more-toggle .pxi { transition: transform 0.2s ease; }
-.more-toggle[aria-expanded="true"] .pxi { transform: rotate(180deg); }
-.more-list { display: grid; margin: 0 2px 2px; border-radius: var(--r-s, 12px); background: var(--panel, #3a4150); overflow: hidden; animation: moreOpen 0.18s ease-out; }
+/* «Altro»: pulsante secondario sopra l'azione principale; il menù si apre verso l'alto, sopra il contenuto. */
+.more { position: relative; }
+.more-toggle { display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%; }
+.more-toggle .pxi { transform: rotate(180deg); transition: transform 0.2s ease; } /* chiuso: la freccia punta in su, dove si apre */
+.more-toggle[aria-expanded="true"] .pxi { transform: none; }
+.more-list { position: absolute; z-index: 5; left: 0; right: 0; bottom: calc(100% + 8px); display: grid; border-radius: var(--r-s, 12px); background: var(--panel, #3a4150);
+  box-shadow: 0 -2px 0 var(--edge, rgba(255, 255, 255, 0.14)) inset, 0 10px 30px rgba(0, 0, 0, 0.45); overflow: hidden; transform-origin: bottom center; animation: moreOpen 0.16s ease-out; }
 .more-list[hidden] { display: none; }
-.more-item { display: flex; align-items: center; gap: 12px; width: 100%; min-height: 50px; padding: 0 16px; background: none; border: 0; box-shadow: none; border-top: 1px solid var(--line, rgba(255, 255, 255, 0.07));
+.more-item { display: flex; align-items: center; gap: 12px; width: 100%; min-height: 52px; padding: 0 16px; background: none; border: 0; box-shadow: none; border-top: 1px solid var(--line, rgba(255, 255, 255, 0.07));
   font: inherit; font-weight: 700; font-size: 15px; color: var(--paper, #f3ecdf); text-align: left; cursor: pointer; }
 .more-item:first-child { border-top: 0; }
 .more-item:active { background: var(--line, rgba(255, 255, 255, 0.07)); }
 .more-item.danger { color: var(--danger, #c4513f); }
-@keyframes moreOpen { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: none; } }
+@keyframes moreOpen { from { opacity: 0; transform: translateY(6px) scale(0.98); } to { opacity: 1; transform: none; } }
 
 /* Lista dei ricordi affidati all'albero: righe staccate tra loro. */
 .memory-row { width: 100%; margin-bottom: 10px; padding: 10px 12px 10px 6px; text-align: left; }

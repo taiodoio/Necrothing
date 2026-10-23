@@ -5,7 +5,7 @@
 import * as THREE from 'three';
 import { BAT, BUSINESS, FOREST_MARGIN, GRAVE_FOOTPRINT, KEEPER_LAMP, LIVE_TICK_MS, SOUL_BELL, STAFF, ZOMBIE_MUD } from '../game/balance.ts';
 import { CATALOG, CATALOG_LIST, EDIT_ONLY, rotatedFootprint, TRACEABLE } from '../game/catalog.ts';
-import { applyTheme, uiNext, uiPlay, uiPreview } from './uiNext.ts';
+import { applyTheme, uiNext, uiPreview } from './uiNext.ts';
 import { watchLifecycle } from './platform.ts';
 import { askReminderPermission, clearReminders, remindersAvailable, syncReminders } from './reminders.ts';
 import type { GraveVisualState } from '../game/graves.ts';
@@ -24,7 +24,7 @@ import { placeableKey, placeableModel, placeableSeed, seedCount, type PVis } fro
 import { UI } from '../ui/UI.ts';
 import { confirmDialog, drawerOpen, floater, toast } from '../ui/dom.ts';
 import { npcNote, type NpcNote } from '../ui/npcNote.ts';
-import { custodePortrait } from '../ui/lookThumbs.ts';
+import { npcPortrait } from '../ui/npcPortraits.ts';
 import { ROAMER_LABELS } from '../game/spawn.ts';
 import type { CharacterKind } from '../view/characters.ts';
 import { Actors, graveSpots, type PetMode, type VisitStop } from '../view/Actors.ts';
@@ -980,7 +980,7 @@ export class Game {
   private sayText(kind: CharacterKind, name: string, text: string) { this.say({ kind, name, text }); }
   /** Il Custode commenta quello che fa, col suo ritratto (lo stesso dell'HUD). */
   private custodeSays(say: string, text: string, r?: R.ActionResult | null) {
-    this.say({ kind: 'custode', name: this.state.player.name, say, text, wisps: r?.wisps && r.wisps > 0 ? r.wisps : undefined, xp: r?.xp || undefined, img: custodePortrait(this.state.player.look, uiPlay()) || undefined });
+    this.say({ kind: 'custode', name: this.state.player.name, say, text, wisps: r?.wisps && r.wisps > 0 ? r.wisps : undefined, xp: r?.xp || undefined, img: npcPortrait('custode', this.state.player.look) || undefined });
   }
 
   /** Dopo un comando l'animale ricorda cosa fa (salvato nella sua casetta). */

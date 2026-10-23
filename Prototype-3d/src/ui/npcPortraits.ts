@@ -4,13 +4,26 @@
 // (la notifica sta alla loro destra).
 
 import * as THREE from 'three';
+import type { CustodeLook } from '../game/look.ts';
 import { buildRig, type CharacterKind } from '../view/characters.ts';
 
 const SIZE = 192;
+/**
+ * Figure umane (o quasi: zombie, strega, vampiro, scheletro): stessa scala per
+ * tutte, Custode compreso. Inquadratura quadrata larga FRAME (unità del mondo),
+ * che parte BUST sotto il collo (dove la testa si attacca al corpo): ogni
+ * figura esce allo stesso ingrandimento, i cappelli alti salgono di più.
+ */
+const FRAME = 1.15;
+const BUST = 0.3;
+/** L'immagine delle figure umane è più alta che larga: i cappelli alti (strega) salgono senza tagli. */
+const TALL = 1.5;
+
 let renderer: THREE.WebGLRenderer | null = null;
 let scene: THREE.Scene | null = null;
 const camera = new THREE.PerspectiveCamera(24, 1, 0.05, 60);
-const done = new Map<CharacterKind, string>();
+const ortho = new THREE.OrthographicCamera(-1, 1, 1, -1, 0.05, 60);
+const done = new Map<string, string>();
 
 function setup() {
   renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, preserveDrawingBuffer: true });
@@ -30,17 +43,18 @@ function setup() {
 }
 
 /**
- * Il ritratto del personaggio (data URL; vuota senza WebGL). Gli animali piccoli
- * si inquadrano interi, le figure alte dalla vita in su.
+ * Il ritratto del personaggio (data URL; vuota senza WebGL). Il Custode col
+ * suo aspetto (`look`). Animali e fantasmi si inquadrano interi.
  */
-export function npcPortrait(kind: CharacterKind): string {
-  const ready = done.get(kind);
+export function npcPortrait(kind: CharacterKind, look?: CustodeLook): string {
+  const key = look ? `${kind}:${JSON.stringify(look)}` : kind;
+  const ready = done.get(key);
   if (ready !== undefined) return ready;
   let url = '';
   try {
     if (!renderer) setup();
-    const rig = buildRig(kind, 'lowpoly');
-    rig.root.rotation.y = 0.55;
+    const rig = buildRig(kind, 'lowpoly', look);
+    rig.root.rotation.y = 0.32; // girati come il Custode nel suo ritratto
     // le parti additive (il velo dei fantasmi) sono fatte per brillare sul buio della scena:
     // su fondo trasparente lascerebbero un alone su tutta l'immagine, qui sono trasparenti normali
     rig.root.traverse((o) => {
@@ -56,20 +70,31 @@ export function npcPortrait(kind: CharacterKind): string {
     rig.root.updateMatrixWorld(true);
     const box = new THREE.Box3().setFromObject(rig.root);
     const size = box.getSize(new THREE.Vector3());
-    const tall = size.y > 1.1;
-    // figure alte: dalla vita in su; animali: interi
-    const top = box.max.y, bottom = tall ? box.min.y + size.y * 0.42 : box.min.y - size.y * 0.1;
-    const cy = (top + bottom) / 2;
-    // quanto inquadrare: l'altezza (o la larghezza, se è più largo che alto: fantasmi, corvi ad ali aperte)
-    const h = Math.max(top - bottom, Math.max(size.x, size.z) * 0.85) * (tall ? 1.12 : 1.02);
     const center = box.getCenter(new THREE.Vector3());
-    const dist = h / (2 * Math.tan(THREE.MathUtils.degToRad(camera.fov / 2)));
-    camera.position.set(center.x, cy + h * 0.12, center.z + dist);
-    camera.lookAt(center.x, cy, center.z);
-    renderer!.render(scene!, camera);
+    const head = rig.parts.head;
+    if (head && size.y > 1.1) {
+      const neck = head.getWorldPosition(new THREE.Vector3());
+      const bottom = neck.y - BUST, top = bottom + FRAME * TALL;
+      ortho.left = -FRAME / 2; ortho.right = FRAME / 2; ortho.top = (FRAME * TALL) / 2; ortho.bottom = -(FRAME * TALL) / 2;
+      ortho.updateProjectionMatrix();
+      const cy = (top + bottom) / 2;
+      ortho.position.set(neck.x, cy, neck.z + 8);
+      ortho.lookAt(neck.x, cy, neck.z);
+      renderer!.setSize(SIZE, Math.round(SIZE * TALL), false);
+      renderer!.render(scene!, ortho);
+    } else {
+      const top = box.max.y, bottom = box.min.y, cy = (top + bottom) / 2;
+      // se è più largo che alto (ali, veli) conta la larghezza
+      const h = Math.max(top - bottom, Math.max(size.x, size.z) * 0.85) * 1.02;
+      const dist = h / (2 * Math.tan(THREE.MathUtils.degToRad(camera.fov / 2)));
+      camera.position.set(center.x, cy + h * 0.12, center.z + dist);
+      camera.lookAt(center.x, cy, center.z);
+      renderer!.render(scene!, camera);
+    }
     url = renderer!.domElement.toDataURL('image/png');
+    renderer!.setSize(SIZE, SIZE, false);
     scene!.remove(rig.root);
   } catch { url = ''; }
-  done.set(kind, url);
+  done.set(key, url);
   return url;
 }

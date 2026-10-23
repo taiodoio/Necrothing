@@ -31,6 +31,10 @@ const SPEED: Record<RoamerKind, number> = { ghost: 0.9, cat: 1.6, crow: 3.2, gra
 const RIG_FOR: Record<RoamerKind, CharacterKind> = { ghost: 'ghost', cat: 'cat', crow: 'crow', gravedigger: 'gravedigger', priest: 'priest', rat: 'rat', zombie: 'zombie' };
 const PET_KINDS: CharacterKind[] = ['petDog', 'petCat', 'petRabbit', 'petDuck', 'petCrow'];
 const PET_LABELS = ['Cane', 'Gatto', 'Coniglio', 'Papera', 'Corvo'];
+/** Con l'articolo, per le frasi: «Il cane ti raggiunge», «la papera tornerà fuori». */
+const PET_THE: Record<string, string> = { Cane: 'il cane', Gatto: 'il gatto', Coniglio: 'il coniglio', Papera: 'la papera', Corvo: 'il corvo' };
+const theLower = (label: string) => PET_THE[label] ?? label.toLowerCase();
+const theUpper = (label: string) => { const t = theLower(label); return t[0].toUpperCase() + t.slice(1); };
 /** Quale animale vive in una casetta (ogni animale ha la sua casetta in Bottega). */
 const petKind = (h: Placed) => visualOf(h.type, h.variant).variant;
 
@@ -1361,11 +1365,11 @@ export class Actors {
   callPet(id: string): string {
     const p = this.pets.get(id);
     if (!p) return '';
-    if (p.broken) return `La casetta è rotta: riparala e ${p.label.toLowerCase()} tornerà fuori.`;
+    if (p.broken) return `La casetta è rotta: riparala e ${theLower(p.label)} tornerà fuori.`;
     p.mode = 'follow';
     if (p.act === 'sleep') this.wake(p);
     else if (!['fetch', 'bring', 'happy', 'wait'].includes(p.act)) { p.act = 'follow'; p.path = []; }
-    return `${p.label} ti raggiunge e ti segue.`;
+    return `${theUpper(p.label)} ti raggiunge e ti segue.`;
   }
 
   /** A cuccia: torna alla casetta e resta a dormire finché non lo richiami. */
@@ -1375,7 +1379,7 @@ export class Actors {
     p.mode = 'home';
     if (this.bone.carrier === p) { this.bone.carrier = null; this.bone.obj.visible = false; }
     if (p.act !== 'sleep') this.goHome(p);
-    return `${p.label} va a cuccia.`;
+    return `${theUpper(p.label)} va a cuccia.`;
   }
 
   /** Libero: gira per il cimitero e ogni tanto torna in tana. */
@@ -1383,9 +1387,9 @@ export class Actors {
     const p = this.pets.get(id);
     if (!p) return '';
     p.mode = 'free';
-    if (p.act === 'sleep') { p.timer = 1.5; return `${p.label} esce a fare un giro.`; }
+    if (p.act === 'sleep') { p.timer = 1.5; return `${theUpper(p.label)} esce a fare un giro.`; }
     if (p.act === 'follow') { p.act = 'rest'; p.timer = 0.5; p.path = []; }
-    return `${p.label} va a zonzo per il cimitero.`;
+    return `${theUpper(p.label)} va a zonzo per il cimitero.`;
   }
 
   /** Coccole: il Custode si avvicina, l'animale aspetta e poi scodinzola. */

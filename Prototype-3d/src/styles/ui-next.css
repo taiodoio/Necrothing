@@ -273,7 +273,7 @@
   display: grid; gap: 1px; padding: 7px 36px 8px 60px; border-radius: var(--r); background-color: var(--panel); box-shadow: var(--shadow), inset 0 1px 0 var(--line);
   animation: npcIn 0.4s cubic-bezier(0.2, 1.4, 0.4, 1) both; }
 .ui-next .npc-note.out { animation: npcOut 0.22s ease-in both; }
-.ui-next .npc-note img { position: absolute; left: 0; bottom: 0; width: 56px; height: 56px; object-fit: contain; object-position: center bottom; filter: drop-shadow(0 3px 3px rgba(0, 0, 0, 0.35)); pointer-events: none; }
+.ui-next .npc-note img { position: absolute; left: 0; bottom: 0; width: 56px; height: auto; /* larghezza fissa: stesso ingrandimento per tutti; i cappelli alti salgono */ filter: drop-shadow(0 3px 3px rgba(0, 0, 0, 0.35)); pointer-events: none; }
 .ui-next .npc-note-head { display: flex; align-items: baseline; gap: 8px; min-width: 0; }
 .ui-next .npc-note .say { font: 700 16px/1 var(--gothic); color: var(--gold-bright); white-space: nowrap; }
 .ui-next .npc-note .say span { display: inline-block; animation: npcWob 1.1s ease-in-out infinite; }

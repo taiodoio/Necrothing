@@ -102,9 +102,10 @@ function show(n: NpcNote) {
 }
 
 /**
- * Il ritratto ritagliato in basso: ogni modello ha sotto i piedi (o sotto il
- * busto) un margine trasparente diverso, e nella notifica sembrerebbe
- * sospeso. Qui la figura tocca il bordo inferiore dell'immagine, centrata.
+ * Il ritratto appoggiato in basso: ogni modello ha sotto un margine
+ * trasparente diverso, e nella notifica sembrerebbe sospeso. Qui la figura
+ * scende fino al bordo inferiore e si centra in orizzontale, senza cambiare
+ * di grandezza (così tutti hanno lo stesso ingrandimento).
  */
 const trimmed = new Map<string, Promise<string>>();
 function restingOnFloor(url: string): Promise<string> {
@@ -119,15 +120,13 @@ function restingOnFloor(url: string): Promise<string> {
         const g = c.getContext('2d')!;
         g.drawImage(im, 0, 0);
         const d = g.getImageData(0, 0, w, hh).data;
-        let x0 = w, x1 = -1, y0 = hh, y1 = -1;
+        let x0 = w, x1 = -1, y1 = -1;
         for (let y = 0; y < hh; y++) for (let x = 0; x < w; x++) {
-          if (d[(y * w + x) * 4 + 3] > 12) { if (x < x0) x0 = x; if (x > x1) x1 = x; if (y < y0) y0 = y; if (y > y1) y1 = y; }
+          if (d[(y * w + x) * 4 + 3] > 12) { if (x < x0) x0 = x; if (x > x1) x1 = x; if (y > y1) y1 = y; }
         }
         if (x1 < 0) { resolve(url); return; }
-        // quadrato largo quanto la figura (o alto, se è più alta), figura in fondo e al centro
-        const bw = x1 - x0 + 1, bh = y1 - y0 + 1, side = Math.max(bw, bh);
-        const out = document.createElement('canvas'); out.width = side; out.height = side;
-        out.getContext('2d')!.drawImage(c, x0, y0, bw, bh, Math.round((side - bw) / 2), side - bh, bw, bh);
+        const out = document.createElement('canvas'); out.width = w; out.height = hh;
+        out.getContext('2d')!.drawImage(c, Math.round((w - (x1 - x0 + 1)) / 2 - x0), hh - 1 - y1);
         resolve(out.toDataURL('image/png'));
       } catch { resolve(url); }
     };
@@ -137,4 +136,3 @@ function restingOnFloor(url: string): Promise<string> {
   trimmed.set(url, p);
   return p;
 }
-

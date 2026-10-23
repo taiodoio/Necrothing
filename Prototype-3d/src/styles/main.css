@@ -385,7 +385,11 @@ button.slot:active, .icon-btn:active, .ctx-actions button:active, .big-btn:activ
 
 /* «Altro»: pulsante secondario sopra l'azione principale; il menù si apre verso l'alto, sopra il contenuto. */
 .more { position: relative; }
-.more-toggle { width: 100%; }
+.more-toggle { position: relative; z-index: 5; width: 100%; }
+/* dietro al menù aperto la scheda si scurisce: il menù si legge meglio */
+.more-scrim { position: fixed; inset: 0; z-index: 4; background: rgba(8, 6, 4, 0.55); animation: moreFade 0.16s ease-out; }
+.more-scrim[hidden] { display: none; }
+@keyframes moreFade { from { opacity: 0; } to { opacity: 1; } }
 .more-list { position: absolute; z-index: 5; left: 0; right: 0; bottom: calc(100% + 8px); display: grid; border-radius: var(--r-s, 12px); background: var(--panel, #3a4150);
   box-shadow: 0 -2px 0 var(--edge, rgba(255, 255, 255, 0.14)) inset, 0 10px 30px rgba(0, 0, 0, 0.45); overflow: hidden; transform-origin: bottom center; animation: moreOpen 0.16s ease-out; }
 .more-list[hidden] { display: none; }

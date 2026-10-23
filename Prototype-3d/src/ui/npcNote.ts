@@ -16,6 +16,10 @@ export interface NpcNote {
   text: string;
   wisps?: number;
   xp?: number;
+  /** Il verso o la battuta, se non quello a caso del personaggio (il Custode dice cose diverse a seconda di cosa fa). */
+  say?: string;
+  /** Il ritratto, se non quello del modello (il Custode col suo aspetto). */
+  img?: string;
 }
 
 /** I versi, scelti a caso tra due o tre perché non stanchino. */
@@ -31,6 +35,8 @@ const VERSES: Partial<Record<CharacterKind, string[]>> = {
   priest: ['Amen.', 'Pace a voi!'],
   gravedigger: ['Ehm…', 'Mmh, mmh.', 'Al lavoro!'],
   vampire: ['Slurp!', 'Gnam!'],
+  witch: ['Eh eh eh!', 'Abracadabra!'],
+  gardener: ['Gnam!', 'Che raccolto!'],
   petDog: ['Bau!', 'Bau bau!'],
   petRabbit: ['Snif snif!', 'Hop!'],
   petDuck: ['Qua qua!', 'Quaaa!'],
@@ -74,8 +80,8 @@ function dismiss(next = true) {
 
 function show(n: NpcNote) {
   const gain = (v: number, xp: boolean) => h('span', { class: `gain${xp ? ' xp' : ''}` }, xp ? null : icon('wisp', 12), `+${v}${xp ? ' XP' : ''}`);
-  const say = h('b', { class: 'say' }, ...[...verse(n.kind)].map((c, i) => h('span', { style: `animation-delay:${(i * 0.06).toFixed(2)}s` }, c === ' ' ? ' ' : c)));
-  const url = npcPortrait(n.kind);
+  const say = h('b', { class: 'say' }, ...[...(n.say ?? verse(n.kind))].map((c, i) => h('span', { style: `animation-delay:${(i * 0.06).toFixed(2)}s` }, c === ' ' ? ' ' : c)));
+  const url = n.img ?? npcPortrait(n.kind);
   const el = h('div', { class: 'npc-note', role: 'status' },
     url ? h('img', { src: url, alt: '' }) : null,
     // il guadagno accanto al nome: la frase resta su una riga quando può

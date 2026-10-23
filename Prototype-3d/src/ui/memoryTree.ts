@@ -12,7 +12,7 @@ import type { LPModel } from '../render/lowpoly/kit.ts';
 import { t } from '../i18n/index.ts';
 import { closeDrawer, fmtDate, h, joinDot, openDrawer } from './dom.ts';
 import { icon } from './icons.ts';
-import { exhumeButton, MEMORY_LABELS } from './screens.ts';
+import { confirmExhume, MEMORY_LABELS, moreActions } from './screens.ts';
 import { modelThumb } from './thumbs.ts';
 import type { UI } from './UI.ts';
 
@@ -49,26 +49,27 @@ export function openMemoryTree(ui: UI) {
   const game = ui.game;
   const s = game.state;
   const list = [...s.entrusted].reverse();
-  const tree = R.memoryTree(s);
   openDrawer(t('tree.title'), h('div', {},
     h('div', { class: 'hero' }, h('img', { src: treeImg(s.entrusted.length), alt: '' }),
       h('p', { class: 'muted', style: 'margin:0' }, list.length ? t('tree.list.count', { n: list.length }) : t('tree.list.none'))),
     list.length ? h('div', { class: 'section-title' }, t('tree.list.title')) : h('p', { class: 'muted' }, t('tree.list.hint')),
-    ...list.map((e) => h('button', { class: 'ach got memory-row', onclick: () => openMemory(ui, e.grave.id) },
+    ...list.map((e) => h('button', { class: 'ach got memory-row', onclick: () => openMemory(ui, e.grave.id, undefined, true) },
       h('div', { class: 'ico' }, h('img', { src: fruitImg(), width: 36, height: 36, alt: '' })),
       h('div', {}, h('b', {}, e.grave.name), h('p', {}, t('tree.list.row', { category: CATEGORY_LABELS[e.grave.category], date: fmtDate(e.entrustedAt) }))))),
-  ), { footer: tree ? h('button', { class: 'big-btn ghost', onclick: () => { closeDrawer(); game.focusEntity(tree.id); } }, t('tree.list.map')) : undefined });
+  ));
 }
 
-/** Scheda di un ricordo affidato (dalla lista, o toccando il suo fantasma: allora in cima c'è la visita). */
-export function openMemory(ui: UI, id: string, visit?: R.ActionResult) {
+/**
+ * Scheda di un ricordo affidato (dalla lista, o toccando il suo fantasma: allora
+ * in cima c'è la visita). «Indietro» torna alla lista; aperta dalla lista, anche la X.
+ */
+export function openMemory(ui: UI, id: string, visit?: R.ActionResult, fromList = false) {
   const game = ui.game;
   const s = game.state;
   const e: EntrustedMemory | undefined = R.entrustedById(s, id);
   if (!e) return;
   const g = e.grave;
   const mem = s.memories.filter((m) => m.graveId === id).slice(-10).reverse();
-  const tree = R.memoryTree(s);
   const visits = e.ghostVisits;
   openDrawer(t('tree.memory.title'), h('div', {},
     visit ? h('div', { class: 'ach got', style: 'margin-bottom:10px' }, h('div', { class: 'ico' }, icon('wisp', 30)),
@@ -87,9 +88,8 @@ export function openMemory(ui: UI, id: string, visit?: R.ActionResult) {
       h('ul', { class: 'timeline' }, ...mem.map((m) => h('li', {}, h('time', {}, fmtDate(m.at)), m.type === 'ghost' && m.at >= e.entrustedAt ? t('tree.memory.ghostNear') : MEMORY_LABELS[m.type])))) : null,
   ), {
     footer: h('div', { style: 'display:grid;gap:6px' },
-      h('div', { class: 'row' },
-        h('button', { class: 'big-btn ghost', onclick: () => openMemoryTree(ui) }, t('tree.memory.all')),
-        tree ? h('button', { class: 'big-btn ghost', onclick: () => { closeDrawer(); game.focusEntity(tree.id); } }, t('tree.memory.showTree')) : null),
-      exhumeButton(ui, id, g.name, 'memory')),
+      h('button', { class: 'big-btn', onclick: () => openMemoryTree(ui) }, t('tree.memory.back')),
+      moreActions([{ icon: 'shovel', label: t('tree.memory.free'), danger: true, run: () => confirmExhume(ui, id, g.name, 'memory') }])),
+    beforeClose: fromList ? () => { openMemoryTree(ui); return false; } : undefined,
   });
 }

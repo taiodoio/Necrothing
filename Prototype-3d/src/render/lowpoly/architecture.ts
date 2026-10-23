@@ -614,8 +614,8 @@ export function keeperHouseLP(v: PVis): LPModel {
   }
   ivy(lp, w / 2 - 0.15, 0.0, front + 0.02, 1.05, 0.12);
   lp.pop();
+  // il fumo del camino acceso è animato (render/lowpoly/animated.ts), qui solo il camino
   chimney(lp, -w * 0.3, 0.2 + wallH + rise * 0.2, -d * 0.15, rise * 1.05);
-  if (parts.has('smoke')) for (let i = 0; i < 4; i++) lp.blob(-w * 0.3 + i * 0.07, 0.2 + wallH + rise * 1.3 + 0.12 + i * 0.2, -d * 0.15 - i * 0.03, 0.09 + i * 0.035, 0.08 + i * 0.03, 0.09 + i * 0.035, '#8d8a96', { bucket: 'ghost', jitter: 0.02, detail: 1 });
   lp.pop();
   // soglia e cortile
   lp.box(-0.4, 0, z + front + 0.16, 0.62, 0.07, 0.26, LPC.stoneLight, { bevel: 0.012 });

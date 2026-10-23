@@ -217,11 +217,12 @@ export default {
   'detail.grave.stateBroken#one': '{state} (riparare costa {n} fuochi fatui)',
   'detail.grave.stateBroken#other': '{state} (riparare costa {n} fuochi fatui)',
   'detail.grave.memories': 'Ricordi',
-  // breve: pulsante
-  'detail.grave.postcard': 'Cartolina',
-  // breve: pulsante
+  // breve: pulsante che apre le azioni secondarie del dettaglio (fisarmonica)
+  'detail.more': 'Altro',
+  // breve: voci di «Altro» nel dettaglio della tomba, con l'icona
+  'detail.grave.postcard': 'Manda una cartolina',
   'detail.grave.entrust': 'Affida all’albero',
-  // breve: testo con icona in fondo al dettaglio della tomba e del ricordo (azione distruttiva, in rosso)
+  // in rosso (azione distruttiva)
   'detail.exhume': 'Riesuma',
   // conferma della riesumazione: {name} è l'oggetto sepolto
   'exhume.confirm.title': 'Riesumare {name}?',
@@ -229,6 +230,10 @@ export default {
   'exhume.confirm.memory': 'Arriva il becchino con la carriola e lo dissotterra tra le radici. Il ricordo lascia l’albero e il registro delle sepolture, e non si torna indietro.',
   // breve: pulsante della conferma
   'exhume.confirm.ok': 'Riesuma',
+  // conferma di «Libera ricordo» (ricordo dell'Albero dei ricordi); il testo è exhume.confirm.memory
+  'exhume.free.title': 'Liberare il ricordo di {name}?',
+  // breve: pulsante della conferma
+  'exhume.free.ok': 'Libera',
 
   // ── Scheda dell'oggetto ──
   'detail.item.category': 'Categoria',

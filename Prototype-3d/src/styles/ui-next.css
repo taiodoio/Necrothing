@@ -287,7 +287,7 @@
 .ui-next .npc-note-cta { justify-self: end; margin: 6px -29px 0 0; padding: 4px 12px; border: 0; border-radius: 999px; background: var(--primary); color: #2a1d10;
   font: 800 12.5px var(--pixel); letter-spacing: 0.01em; } /* a destra, allineato alla X (che sta a 7 px dal bordo) */
 .ui-next .npc-note.with-action .npc-note-x { top: 7px; margin-top: 0; }
-.ui-next .has-note .toasts { top: calc(var(--hud-top) + 86px + var(--safe-t)); transition: top 0.2s ease; }
+.ui-next .has-note .toasts { top: calc(var(--hud-top) + 22px + var(--note-h, 64px) + 10px + var(--safe-t)); transition: top 0.2s ease; }
 @keyframes npcIn { from { transform: translateY(-18px); opacity: 0; } }
 @keyframes npcOut { to { transform: translateY(-10px); opacity: 0; } }
 @keyframes npcWob { 0%, 100% { transform: translateY(0) rotate(0); } 30% { transform: translateY(-2px) rotate(-6deg); } 60% { transform: translateY(1px) rotate(4deg); } }

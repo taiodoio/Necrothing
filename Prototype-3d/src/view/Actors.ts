@@ -1155,12 +1155,16 @@ export class Actors {
    * lungo un percorso tirato; tiene il passo e rallenta arrivando, e si
    * ferma/riparte con un po' di margine (niente scatti avanti e indietro).
    */
-  private chase(pet: Pet, dt: number, stop: number): boolean {
+  private chase(pet: Pet, dt: number, stop: number, slot: THREE.Vector3 | null = null): boolean {
     const a = this.avatar.pos;
     const d = Math.hypot(a.x - pet.pos.x, a.z - pet.pos.z);
-    pet.chasing = pet.chasing ? d > stop : d > stop + 0.6;
+    if (slot) {
+      // col suo posto nel ventaglio: lo raggiunge e lì si ferma (con un po' di isteresi)
+      const ds = Math.hypot(slot.x - pet.pos.x, slot.z - pet.pos.z);
+      pet.chasing = pet.chasing ? ds > 0.15 : ds > 0.55;
+    } else pet.chasing = pet.chasing ? d > stop : d > stop + 0.6;
     if (!pet.chasing) { pet.path = []; return false; }
-    const target = a.clone().add(pet.pos.clone().sub(a).setY(0).normalize().multiplyScalar(stop - 0.05));
+    const target = slot ?? a.clone().add(pet.pos.clone().sub(a).setY(0).normalize().multiplyScalar(stop - 0.05));
     target.y = 0;
     pet.repath -= dt;
     if (this.clearLine(pet.pos, target)) pet.path = [target];
@@ -1169,6 +1173,40 @@ export class Actors {
     // se è lontano (appena uscito dalla cuccia, o rimasto indietro) corre di più, ma ci arriva sempre a piedi
     pet.speed = THREE.MathUtils.clamp((d - stop) * 3, 0.8, d > 6 ? PET_SPEED.dash : PET_SPEED.run);
     return this.followPath(pet, dt);
+  }
+
+  /**
+   * Con più animali al seguito ognuno ha il suo posto, a ventaglio dietro al
+   * Custode, così non si ammucchiano uno sull'altro. Con uno solo (o se il
+   * posto cade su una tomba o un oggetto) segue come sempre.
+   */
+  private followSlot(pet: Pet, stop: number): THREE.Vector3 | null {
+    const followers = [...this.pets.values()].filter((p) => p.act === 'follow' && p.rig.root.visible).sort((x, y) => x.placeId.localeCompare(y.placeId));
+    const i = followers.indexOf(pet), n = followers.length;
+    if (n < 2 || i < 0) return null;
+    const a = this.avatar.pos;
+    const back = this.avatar.facing + Math.PI; // dietro al Custode
+    const ang = back + (i - (n - 1) / 2) * (n === 2 ? 1.0 : 0.8);
+    const r = stop + (n > 3 && i % 2 ? 0.6 : 0); // dal quarto in su, una seconda fila
+    const slot = new THREE.Vector3(a.x + Math.sin(ang) * r, 0, a.z + Math.cos(ang) * r);
+    const c = worldToCell(slot);
+    return this.walkable(c.x, c.y) ? slot : null;
+  }
+
+  /** Gli animali svegli non si sovrappongono: se due sono troppo vicini, si scostano un poco. */
+  private separatePets() {
+    const awake = [...this.pets.values()].filter((p) => p.rig.root.visible && p.act !== 'enter' && p.act !== 'sleep');
+    const MIN = 0.6;
+    for (let i = 0; i < awake.length; i++) for (let j = i + 1; j < awake.length; j++) {
+      const p = awake[i], q = awake[j];
+      let dx = q.pos.x - p.pos.x, dz = q.pos.z - p.pos.z;
+      let d = Math.hypot(dx, dz);
+      if (d >= MIN) continue;
+      if (d < 1e-3) { dx = Math.cos(i + j); dz = Math.sin(i + j); d = 1; } // uno esattamente sopra l'altro
+      const push = (MIN - d) / 2;
+      p.pos.x -= (dx / d) * push; p.pos.z -= (dz / d) * push;
+      q.pos.x += (dx / d) * push; q.pos.z += (dz / d) * push;
+    }
   }
 
   /** Esce dalla tana dall'arco e si ferma sul davanzale. */
@@ -1240,7 +1278,7 @@ export class Actors {
         { const t = this.randomRoamTarget(pet); pet.path = t ? this.pathTo(pet.pos, t) : []; pet.act = 'roam'; }
         return;
       case 'follow': {
-        if (this.chase(pet, dt, 1.2)) pet.pose = 'walk';
+        if (this.chase(pet, dt, 1.2, this.followSlot(pet, 1.2))) pet.pose = 'walk';
         else { pet.pose = 'idle'; face(a); }
         return;
       }
@@ -1671,6 +1709,7 @@ export class Actors {
     for (const p of this.presences) this.stepPresence(p, dt, t);
     this.ground = ground;
     for (const p of this.pets.values()) this.stepPet(p, dt);
+    if (this.pets.size > 1) this.separatePets();
     if (this.funeral) this.stepFuneral(dt);
     if (this.rite) this.stepRite(dt);
     for (const d of [...this.departing]) {

@@ -54,6 +54,68 @@ void main() {
   #include <colorspace_fragment>
 }`;
 
+/** Lato della texture di rumore (texel = una cella del reticolo del rumore). */
+const NOISE_SIZE = 128;
+
+/**
+ * Variante ottimizzata (in prova nel bench): il rumore viene da una piccola
+ * texture ripetibile invece che dall'hash con `sin` (una lettura al posto di
+ * quattro hash), e la deformazione usa 2 ottave invece di 4 (è a bassa
+ * frequenza: le ottave alte non si vedono). Da 48 hash a pixel si passa a 8
+ * letture di texture.
+ */
+const FRAG_OPT = /* glsl */ `
+uniform float uTime;
+uniform vec3 uColor;
+uniform vec4 uRect;
+uniform float uOpacity;
+uniform float uLayer;
+uniform float uCreep;
+uniform float uWind;
+uniform sampler2D tNoise;
+varying vec3 vWorld;
+
+float noise(vec2 p) { return texture2D(tNoise, (p + 0.5) / ${NOISE_SIZE}.0).r; }
+float fbm2(vec2 p) { return 0.6667 * noise(p) + 0.3333 * noise(p * 2.03 + vec2(17.0, 9.0)); }
+float fbm(vec2 p) {
+  float v = 0.0, a = 0.5;
+  for (int i = 0; i < 4; i++) { v += a * noise(p); p = p * 2.03 + vec2(17.0, 9.0); a *= 0.5; }
+  return v;
+}
+
+void main() {
+  vec2 p = vWorld.xz;
+  float d = max(abs(p.x - uRect.x) - uRect.z, abs(p.y - uRect.y) - uRect.w);
+  float mask = smoothstep(-2.5 - uCreep, 4.0, d) * (0.55 + 0.45 * smoothstep(-uCreep, 3.0, d));
+  vec2 wind = vec2(0.3, 0.1) * uWind * (0.8 + uLayer * 0.35);
+  vec2 q = p * vec2(0.09, 0.2) + wind * vec2(0.35, 0.8) + uLayer * 5.7;
+  vec2 warp = vec2(fbm2(q + 1.7), fbm2(q + 8.3)) * 0.94 + 0.03;
+  float n = fbm(q + warp * 1.6 + wind * 0.25);
+  float a = smoothstep(0.42, 0.78, n) * mask * uOpacity;
+  gl_FragColor = vec4(uColor, a);
+  #include <tonemapping_fragment>
+  #include <colorspace_fragment>
+}`;
+
+let noiseTex: THREE.DataTexture | null = null;
+/** Rumore a valori ripetibile: un numero a caso per texel, interpolato dal filtro bilineare. */
+function noiseTexture(): THREE.DataTexture {
+  if (noiseTex) return noiseTex;
+  const data = new Uint8Array(NOISE_SIZE * NOISE_SIZE * 4);
+  let seed = 1337;
+  const rnd = () => { seed = (seed * 1664525 + 1013904223) >>> 0; return seed / 4294967296; };
+  for (let i = 0; i < NOISE_SIZE * NOISE_SIZE; i++) { const v = Math.floor(rnd() * 256); data.set([v, v, v, 255], i * 4); }
+  noiseTex = new THREE.DataTexture(data, NOISE_SIZE, NOISE_SIZE, THREE.RGBAFormat);
+  noiseTex.wrapS = noiseTex.wrapT = THREE.RepeatWrapping;
+  noiseTex.magFilter = noiseTex.minFilter = THREE.LinearFilter;
+  noiseTex.needsUpdate = true;
+  return noiseTex;
+}
+
+/** Versione della nebbia: l'attuale o quella ottimizzata (interruttore nel bench). */
+let optimizedMist = false;
+export const mistOptimized = () => optimizedMist;
+
 /** Densità di base per fase del giorno (alba e notte le più nebbiose). */
 const PHASE_DENSITY: Record<DayPhase, number> = { dawn: 0.95, day: 0.45, dusk: 0.8, night: 1 };
 /** Moltiplicatore del meteo, rientro nel recinto e velocità del vento. */
@@ -72,7 +134,8 @@ export function mistTarget(phase: DayPhase, weather: Weather): { density: number
 
 /** Veli per qualità grafica (ogni velo è uno strato trasparente in più). */
 export function mistLayers(q: Quality): number {
-  return q === 'low' ? 1 : q === 'medium' ? 2 : 3;
+  // ottimizzata: in Alta 2 veli invece di 3 (un po' più densi, vedi update)
+  return q === 'low' ? 1 : q === 'medium' || optimizedMist ? 2 : 3;
 }
 
 export class ForestMist {
@@ -82,6 +145,7 @@ export class ForestMist {
   private readonly color = new THREE.Color();
   private readonly night = new THREE.Color('#5d7396');
   private layers: number;
+  private quality: Quality;
   private world: { area: Rect; half: number; bound: number; heightAt: (x: number, z: number) => number } | null = null;
   // stato attuale e obiettivo (la nebbia cambia lentamente)
   private density = 0;
@@ -93,6 +157,7 @@ export class ForestMist {
   private targetNight = 0;
 
   constructor(scene: THREE.Scene, quality: Quality) {
+    this.quality = quality;
     this.layers = mistLayers(quality);
     this.group.name = 'nebbia-bosco';
     scene.add(this.group);
@@ -110,7 +175,15 @@ export class ForestMist {
     }
   }
 
+  /** Passa alla versione ottimizzata (o torna all'attuale): si ricostruiscono i veli. */
+  setOptimized(on: boolean) {
+    optimizedMist = on;
+    this.layers = mistLayers(this.quality);
+    if (this.world) this.rebuild();
+  }
+
   setQuality(q: Quality) {
+    this.quality = q;
     const n = mistLayers(q);
     if (n === this.layers) return;
     this.layers = n;
@@ -147,10 +220,11 @@ export class ForestMist {
       const geo = new THREE.BufferGeometry();
       geo.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
       const mat = new THREE.ShaderMaterial({
-        vertexShader: VERT, fragmentShader: FRAG, transparent: true, depthWrite: false,
+        vertexShader: VERT, fragmentShader: optimizedMist ? FRAG_OPT : FRAG, transparent: true, depthWrite: false,
         uniforms: {
           uTime: { value: 0 }, uColor: { value: new THREE.Color() }, uRect: { value: this.rect },
           uOpacity: { value: 0 }, uLayer: { value: layer }, uCreep: { value: 0 }, uWind: { value: 0 },
+          tNoise: { value: optimizedMist ? noiseTexture() : null },
         },
       });
       this.mats.push(mat);
@@ -174,7 +248,9 @@ export class ForestMist {
       const u = m.uniforms;
       u.uWind.value = this.windPos;
       u.uCreep.value = this.creep;
-      u.uOpacity.value = (0.42 - i * 0.09) * this.density * dim;
+      // con un velo in meno (ottimizzata, Alta) gli altri due si fanno un po' più densi
+      const boost = optimizedMist && this.quality === 'high' ? 1.3 : 1;
+      u.uOpacity.value = (0.42 - i * 0.09) * this.density * dim * boost;
       (u.uColor.value as THREE.Color).copy(this.color);
     });
     this.group.visible = this.density > 0.01;

@@ -6,6 +6,8 @@ import * as THREE from 'three';
 import { BAT, BUSINESS, FOREST_MARGIN, GRAVE_FOOTPRINT, KEEPER_LAMP, LIVE_TICK_MS, SOUL_BELL, STAFF, ZOMBIE_MUD } from '../game/balance.ts';
 import { CATALOG, CATALOG_LIST, EDIT_ONLY, rotatedFootprint, TRACEABLE } from '../game/catalog.ts';
 import { applyTheme, uiNext, uiPreview } from './uiNext.ts';
+import { watchLifecycle } from './platform.ts';
+import { askReminderPermission, clearReminders, remindersAvailable, syncReminders } from './reminders.ts';
 import type { GraveVisualState } from '../game/graves.ts';
 import { graveVisualState } from '../game/graves.ts';
 import * as R from '../game/rules.ts';
@@ -20,12 +22,12 @@ import { setVoxelResolution, voxelResolution, voxelsPerWorldUnit } from '../rend
 import { graveModel } from '../render/models/graves.ts';
 import { placeableKey, placeableModel, placeableSeed, seedCount, type PVis } from '../render/models/registry.ts';
 import { UI } from '../ui/UI.ts';
-import { drawerOpen, floater, toast } from '../ui/dom.ts';
+import { confirmDialog, drawerOpen, floater, toast } from '../ui/dom.ts';
 import { Actors, graveSpots, type PetMode, type VisitStop } from '../view/Actors.ts';
 import { Atmosphere } from '../view/Atmosphere.ts';
 import { CameraRig } from '../view/CameraRig.ts';
 import { Effects } from '../view/Effects.ts';
-import { ForestMist } from '../view/ForestMist.ts';
+import { ForestMist, mistOptimized } from '../view/ForestMist.ts';
 import { PostFX } from '../view/PostFX.ts';
 import { cellCenter, HALF, worldToCell, WorldView } from '../view/WorldView.ts';
 import { WalkTarget } from '../view/walkTarget.ts';
@@ -156,7 +158,13 @@ export class Game {
     this.applySettingQuality();
     this.updatePhase(true);
     window.addEventListener('resize', this.resize);
-    document.addEventListener('visibilitychange', this.onVisibility);
+    this.stopLifecycle = watchLifecycle({
+      pause: this.onPause,
+      resume: this.onResume,
+      // visibile ma senza focus (centro notifiche, chiamata, split view): al minimo
+      blur: () => { this.unfocused = true; },
+      focus: () => { this.unfocused = false; this.markActive(); },
+    });
     canvas.addEventListener('webglcontextlost', (e) => { e.preventDefault(); toast('La scena si sta ripristinando…'); });
     canvas.addEventListener('webglcontextrestored', () => { this.world.setStyle(this.state.settings.style, this.state, true); this.actors.setStyle(this.state.settings.style); });
     this.resize();
@@ -171,7 +179,15 @@ export class Game {
   }
 
   start() {
-    this.renderer.setAnimationLoop(this.tick);
+    this.renderer.setAnimationLoop(this.loop);
+  }
+
+  /** Il loop dei frame (la pagina di misura ci mette attorno il suo cronometro). */
+  private customLoop: ((time?: number) => void) | null = null;
+  private get loop() { return this.customLoop ?? this.tick; }
+  setLoop(fn: (time?: number) => void) {
+    this.customLoop = fn;
+    if (!this.paused) this.renderer.setAnimationLoop(fn);
   }
 
   now() { return new Date(); }
@@ -209,6 +225,13 @@ export class Game {
   framesDrawn = 0;
   private readonly markActive = () => { this.lastActiveAt = performance.now(); };
 
+  /** Solo per la pagina di misura: nebbia del bosco ottimizzata (texture di rumore, meno ottave, meno veli) o quella attuale. */
+  setMistOptimized(on: boolean) { this.mist?.setOptimized(on); }
+  get mistOptimized() { return mistOptimized(); }
+  /** Solo per la pagina di misura: sfocatura ai bordi calcolata a mezza risoluzione. */
+  setHalfResBlur(on: boolean) { this.postfx.setHalfRes(on); }
+  get halfResBlur() { return this.postfx.half; }
+
   /** Solo per la pagina di misura: senza rallentamento da fermo (la camera gira da sola, senza tocchi). */
   setIdleSaver(on: boolean) { this.idleSaver = on; this.lastActiveAt = performance.now(); }
 
@@ -219,6 +242,8 @@ export class Game {
   }
 
   private currentCap(now: number): number {
+    // visibile ma senza focus: quasi fermo (vale anche nella pagina di misura)
+    if (this.unfocused) return Math.min(this.frameCap, UNFOCUSED_FPS);
     if (!this.idleSaver) return this.frameCap;
     if (drawerOpen()) return Math.min(this.frameCap, MENU_FPS);
     const still = now - this.lastActiveAt > IDLE_MS && !this.actors.avatarMoving && !this.placement && !this.drag;
@@ -333,16 +358,60 @@ export class Game {
   };
   private resized = false;
 
-  private readonly onVisibility = () => {
-    if (document.hidden) { saveNow(this.state); return; }
+  /** In background (app in pausa, scheda nascosta): si salva e si ferma il loop, niente frame né timer. */
+  private paused = false;
+  private unfocused = false;
+  private stopLifecycle: () => void = () => undefined;
+
+  private readonly onPause = () => {
+    this.paused = true;
+    saveNow(this.state);
+    this.renderer.setAnimationLoop(null);
+    // i promemoria si ripianificano adesso: da qui in poi il gioco non gira
+    void syncReminders(this.state, this.now());
+    this.onPaused?.();
+  };
+
+  /** Chi vuole sapere quando l'app va in pausa. */
+  onPaused: (() => void) | null = null;
+
+  /**
+   * Dopo la prima sepoltura (nell'app): «vuoi un promemoria?». Il permesso
+   * di sistema si chiede solo se il giocatore dice di sì, e una volta sola.
+   */
+  private async offerReminders(name: string) {
+    if (!remindersAvailable() || this.state.settings.reminders !== null) return;
+    const yes = await confirmDialog({
+      title: 'Promemoria',
+      message: `Vuoi che ti avvisi il giorno dell’anniversario di ${name}, e quando una tomba sta per rompersi?`,
+      ok: 'Sì, avvisami', cancel: 'No, grazie',
+    });
+    this.setReminders(yes);
+  }
+
+  /** Accende o spegne i promemoria (accendendo si chiede il permesso al sistema). */
+  async setReminders(on: boolean) {
+    const granted = on ? await askReminderPermission() : false;
+    this.state.settings.reminders = granted;
+    if (on && !granted) toast('Le notifiche sono spente nelle impostazioni del telefono.');
+    scheduleSave(this.state);
+    if (granted) void syncReminders(this.state, this.now()); else void clearReminders();
+    this.ui.refreshSettingsButtons();
+  }
+
+  private readonly onResume = () => {
+    this.paused = false;
     // scarta la pausa senza azzerare l'orologio: Clock.start()/stop()
     // riportavano il tempo a 0 e le animazioni basate sul tempo trascorso
     // (es. un fuoco fatuo che stava comparendo) diventavano enormi
     this.clock.getDelta();
+    this.lastFrameAt = 0;
+    this.markActive();
     const report = runCatchUp(this.state, this.now());
     this.afterChange();
     const msg = catchUpMessage(report);
     if (msg) toast(msg);
+    this.renderer.setAnimationLoop(this.loop);
   };
 
   // ── Azioni ───────────────────────────────────────────────────────────
@@ -724,6 +793,7 @@ export class Game {
           toast(result.message);
           this.showRewards(center.clone().setY(1.5), result);
           this.ui.refreshHud();
+          void this.offerReminders(grave.name);
         });
         this.ui.refreshPlacementBar();
       } catch (e) {
@@ -1684,6 +1754,7 @@ export class Game {
 
   dispose() {
     this.disposed = true;
+    this.stopLifecycle();
     saveNow(this.state);
     this.renderer.setAnimationLoop(null);
     this.renderer.dispose();
@@ -1696,7 +1767,7 @@ const AUTO_KEY = 'necro3d:auto-quality';
 /** Cresce quando cambia la stima del dispositivo: i profili ricordati prima si rifanno (v2: iPhone in Alta). */
 const AUTO_VERSION = 2;
 /** Dopo quanto senza tocchi il gioco rallenta, e a quanti frame al secondo (sotto i menù ancora meno). */
-const IDLE_MS = 4000, IDLE_FPS = 15, MENU_FPS = 10;
+const IDLE_MS = 4000, IDLE_FPS = 15, MENU_FPS = 10, UNFOCUSED_FPS = 5;
 let gpuName: string | null = null;
 
 /** GPU e memoria del dispositivo (per stimare la fascia). */

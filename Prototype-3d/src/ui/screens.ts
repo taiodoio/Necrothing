@@ -20,6 +20,7 @@ import { houseBoughtFooter, houseShopDetail, houseShopGrid } from './house.ts';
 import { graveThumb, placeableThumb } from './thumbs.ts';
 import { ACH_ICONS, icon } from './icons.ts';
 import { uiNext, uiPlay, uiPreview } from '../app/uiNext.ts';
+import { remindersAvailable } from '../app/reminders.ts';
 
 /** Interfaccia «viva»: un'icona per ogni scheda delle categorie. */
 const CAT_ICON: Record<PlaceableCategory | 'all', string> = { all: 'bag', light: 'lightOn', decoration: 'flower', structure: 'fence', ambient: 'tree', npc: 'ghost', extra: 'bike' };
@@ -539,7 +540,12 @@ export function openSettings(ui: UI) {
     h('label', { class: 'setting' }, 'Effetti meteo', h('input', { type: 'checkbox', checked: s.weatherEffects, onchange: (e: Event) => game.setWeatherEffects((e.target as HTMLInputElement).checked) })),
     h('label', { class: 'setting' }, 'Statistiche tecniche', h('input', { type: 'checkbox', checked: s.showDebug, onchange: (e: Event) => { s.showDebug = (e.target as HTMLInputElement).checked; game.afterChange(); } })),
     h('div', { class: 'section-title' }, 'Notifiche'),
-    h('p', { class: 'muted' }, 'Promemoria per anniversari, erbacce e apparizioni arriveranno con l’app nativa (Capacitor). Nel browser il cimitero si aggiorna quando lo riapri.'),
+    remindersAvailable()
+      ? h('label', { class: 'setting' }, 'Promemoria', h('input', { type: 'checkbox', checked: s.reminders === true, onchange: (e: Event) => void game.setReminders((e.target as HTMLInputElement).checked) }))
+      : null,
+    h('p', { class: 'muted' }, remindersAvailable()
+      ? 'Un avviso il giorno di ogni anniversario (si festeggia solo aprendo il gioco quel giorno) e la sera prima che una tomba trascurata si rompa.'
+      : 'Nel browser niente notifiche: nell’app arriva un avviso il giorno di ogni anniversario e la sera prima che una tomba trascurata si rompa. Il cimitero si aggiorna comunque quando lo riapri.'),
     h('div', { class: 'section-title' }, 'Backup'),
     h('div', { class: 'row' },
       h('button', { class: 'big-btn ghost', onclick: async () => {

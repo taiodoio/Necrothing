@@ -162,6 +162,8 @@ export interface Settings {
   showDebug: boolean;
   /** Il Custode impugna il Bastone mistico (i fuochi fatui accorrono da lontano). */
   staffEquipped: boolean;
+  /** Promemoria (notifiche dell'app): null = non ancora chiesto (lo si chiede dopo la prima sepoltura). */
+  reminders: boolean | null;
 }
 
 export interface SaveData {
@@ -195,6 +197,7 @@ export const DEFAULT_SETTINGS: Settings = {
   shopTutorialDone: false,
   showDebug: false,
   staffEquipped: false,
+  reminders: null,
 };
 
 export function emptyCounters(): Counters {

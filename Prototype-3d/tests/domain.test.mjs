@@ -931,3 +931,76 @@ test('casa del Custode: la soglia resta dentro il recinto anche nel cimitero pie
     assert.equal(occ.owner.get(`${h.x + 1},${h.y + 3}`), h.id);
   }
 });
+
+test('tempo a gioco chiuso: i rientri frequenti non azzerano le ore accumulate', () => {
+  const s = createNewGame(NOW, 12);
+  const at = spot(s);
+  R.bury(s, draft(), at.x, at.y, NOW);
+  s.world.lastSimulationAt = NOW.toISOString();
+  // tre rientri a 9 ore di distanza: dopo 27 ore il conto è avanzato di un giorno intero, non azzerato
+  runCatchUp(s, new Date(NOW.getTime() + 9 * 3600e3));
+  runCatchUp(s, new Date(NOW.getTime() + 18 * 3600e3));
+  assert.equal(s.world.lastSimulationAt, NOW.toISOString(), 'meno di un giorno: il conto non riparte');
+  const r = runCatchUp(s, new Date(NOW.getTime() + 27 * 3600e3));
+  assert.equal(r.elapsedDays, 1);
+  assert.equal(s.world.lastSimulationAt, new Date(NOW.getTime() + 24 * 3600e3).toISOString(), 'avanza solo del giorno consumato');
+});
+
+test('anniversari: quello di oggi premia, quelli persi restano nei ricordi', async () => {
+  const { anniversariesBetween } = await import('../src/game/simulation.ts');
+  const s = createNewGame(NOW, 13);
+  const at = spot(s);
+  // morto il 5 ottobre 2024: l'anniversario 2026 cade mentre il gioco è chiuso (dal 1° al 9 ottobre)
+  const { grave } = R.bury(s, draft({ name: 'Radio', deathDate: '2024-10-05' }), at.x, at.y, NOW);
+  s.world.lastSimulationAt = new Date('2026-10-01T12:00:00Z').toISOString();
+  const xp = s.player.xp;
+  const r = runCatchUp(s, NOW);
+  assert.ok(r.missedAnniversaries.includes('Radio'));
+  assert.ok(!r.anniversaries.includes('Radio'));
+  assert.ok(s.player.xp - xp < XP.anniversary || r.anniversaries.length > 0, 'perso: niente premio');
+  assert.ok(s.memories.some((m) => m.graveId === grave.id && m.type === 'anniversary'));
+  // non si ripete
+  assert.ok(!runCatchUp(s, later(1)).missedAnniversaries.includes('Radio'));
+  // il giorno giusto premia
+  const s2 = createNewGame(NOW, 14);
+  const at2 = spot(s2);
+  R.bury(s2, draft({ name: 'Walkman', deathDate: '2020-10-09' }), at2.x, at2.y, NOW);
+  s2.world.lastSimulationAt = new Date('2026-10-08T20:00:00Z').toISOString();
+  const xp2 = s2.player.xp;
+  assert.ok(runCatchUp(s2, NOW).anniversaries.includes('Walkman'));
+  assert.ok(s2.player.xp > xp2);
+  // il 29 febbraio negli anni non bisestili cade il 28
+  assert.equal(anniversariesBetween('2024-02-29', new Date('2027-02-01T12:00:00'), new Date('2027-03-10T12:00:00'))[0].getDate(), 28);
+});
+
+test('promemoria: anniversari futuri e tombe che stanno per rompersi, uno al giorno per tipo', async () => {
+  const { planReminders, REMINDER_HOURS } = await import('../src/game/reminders.ts');
+  const { DECAY: D } = await import('../src/game/balance.ts');
+  const s = createNewGame(NOW, 15);
+  s.graves = [];
+  const put = (name, deathDate) => { const at = spot(s); return R.bury(s, draft({ name, deathDate }), at.x, at.y, NOW).grave; };
+  put('Lettore CD', '2019-10-20');
+  put('Calcolatrice', '2021-10-20');
+  put('Tamagotchi', '2018-11-02');
+  const dirty = put('Fax', '2015-01-01');
+  dirty.dirty = true; dirty.dirtySince = new Date(NOW.getTime() - 3 * 86400000).toISOString();
+  const plan = planReminders(s, NOW, { days: 40 });
+  const ann = plan.filter((r) => r.kind === 'anniversary');
+  // stesso giorno, una notifica sola con tutti e due i nomi
+  const oct20 = ann.find((r) => r.at.getDate() === 20 && r.at.getMonth() === 9);
+  assert.ok(oct20 && /2 anniversari/.test(oct20.title) && /Lettore CD/.test(oct20.body) && /Calcolatrice/.test(oct20.body));
+  assert.equal(oct20.at.getHours(), REMINDER_HOURS.anniversary);
+  assert.ok(ann.some((r) => /Tamagotchi/.test(r.title)));
+  // la sera prima della rottura
+  const brk = plan.find((r) => r.kind === 'breaking');
+  const breaks = new Date(new Date(dirty.dirtySince).getTime() + D.graveBreakDays * 86400000);
+  assert.equal(brk.at.getDate(), new Date(breaks.getTime() - 86400000).getDate());
+  assert.equal(brk.at.getHours(), REMINDER_HOURS.breaking);
+  // in ordine, id stabili, niente nel passato
+  assert.ok(plan.every((r, i) => i === 0 || plan[i - 1].at <= r.at));
+  assert.deepEqual(planReminders(s, NOW, { days: 40 }).map((r) => r.id), plan.map((r) => r.id));
+  assert.ok(plan.every((r) => r.at > NOW));
+  // già festeggiato quest'anno: non torna
+  for (const g of s.graves) g.lastAnniversaryYear = 2026;
+  assert.equal(planReminders(s, NOW, { days: 40 }).filter((r) => r.kind === 'anniversary').length, 0);
+});

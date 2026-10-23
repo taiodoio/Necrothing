@@ -27,6 +27,7 @@ import { setUiNext, setUiPlay, setUiPreview } from './app/uiNext.ts';
 import { installPlayDecor } from './ui/playDecor.ts';
 import type { FpsSetting, Quality } from './game/state.ts';
 import { fullCemetery } from './game/fullCemetery.ts';
+import { planReminders } from './game/reminders.ts';
 import { areaForLevel } from './game/world.ts';
 import { cellCenter } from './view/WorldView.ts';
 
@@ -90,7 +91,7 @@ const inner = game as unknown as Inner;
 // il loop del gioco, cronometrato: il tempo speso a preparare e mandare i frame
 // (sul telefono è la cosa più vicina alla batteria che una pagina possa misurare)
 let work = 0;
-inner.renderer.setAnimationLoop((time) => { const s = performance.now(); inner.tick(time); work += performance.now() - s; });
+game.setLoop((time) => { const s = performance.now(); inner.tick(time); work += performance.now() - s; });
 
 // dispositivo
 const gl = inner.renderer.getContext();
@@ -151,13 +152,30 @@ let mini = false, testing = false, results = '';
 const FPS_LABELS: Record<FpsSetting, string> = { auto: 'Auto', '30': '30 FPS', '60': '60 FPS' };
 const fpsOf = (q: Quality, f: FpsSetting) => (f === 'auto' ? PROFILES[q].fps : Number(f));
 
+/** Le notifiche che l'app pianificherebbe adesso (nel browser non partono: qui si controllano). */
+function remindersLine() {
+  const plan = planReminders(game.state, new Date());
+  if (!plan.length) return 'Promemoria: nessuno nei prossimi 60 giorni.';
+  const r = plan[0];
+  return `Promemoria pianificati: ${plan.length} · il prossimo ${r.at.toLocaleString('it-IT', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}: «${r.title}»`;
+}
+
+/** Le due prove A/B: nebbia del bosco ottimizzata, sfocatura ai bordi a mezza risoluzione. */
+const variants = () => `nebbia ${game.mistOptimized ? 'ottimizzata' : 'attuale'} · sfocatura ${game.halfResBlur ? 'a metà' : 'piena'}`;
+const abButtons = () => `<button id="mist" class="${game.mistOptimized ? 'on' : ''}">Nebbia: ${game.mistOptimized ? 'ottimizzata' : 'attuale'}</button><button id="halfblur" class="${game.halfResBlur ? 'on' : ''}">Sfocatura: ${game.halfResBlur ? 'mezza ris.' : 'piena ris.'}</button>`;
+function bindAb() {
+  document.getElementById('mist')!.onclick = () => { game.setMistOptimized(!game.mistOptimized); render(); };
+  document.getElementById('halfblur')!.onclick = () => { game.setHalfResBlur(!game.halfResBlur); render(); };
+}
+
 function render() {
   if (testing) return;
   const options = `${QUALITY_LABELS[level]} · ${fpsOf(level, fps)} FPS${idle ? ' · rallenta da fermo' : ''}`;
   if (mini) {
     panel.className = 'bench mini';
-    say(`<div class="live" id="live" style="margin:0">${liveText()}</div><div class="muted">${options}</div><button id="open">Apri il pannello</button>`);
+    say(`<div class="live" id="live" style="margin:0">${liveText()}</div><div class="muted">${options}</div><div>${abButtons()}</div><button id="open">Apri il pannello</button>`);
     document.getElementById('open')!.onclick = () => { mini = false; render(); };
+    bindAb();
     return;
   }
   panel.className = 'bench';
@@ -166,7 +184,10 @@ function render() {
     <div>${LEVELS.map((q) => `<button data-q="${q}" class="${q === level ? 'on' : ''}">${QUALITY_LABELS[q]}<br><small>${NOTES[q]}</small></button>`).join('')}</div>
     <div>${(['auto', '30', '60'] as FpsSetting[]).map((f) => `<button data-f="${f}" class="${f === fps ? 'on' : ''}">${FPS_LABELS[f]}</button>`).join('')}<button id="idle" class="${idle ? 'on' : ''}">Rallenta da fermo</button></div>
     <div class="muted">Fluidità Auto: 60 FPS in Alta, 30 in Media e Bassa.</div>
+    <div>${abButtons()}</div>
+    <div class="muted">Prove A/B: la nebbia ottimizzata legge il rumore da una texture (2 ottave per la deformazione, 2 veli in Alta); la sfocatura a mezza risoluzione calcola il blur su un quarto dei pixel e lo sfuma con la scena nitida. In Bassa la sfocatura è spenta.</div>
     <div class="live" id="live">${liveText()}</div>
+    <div class="muted">${remindersLine()}</div>
     <div><button class="cta" id="go">Avvia il test</button><button id="hide">Nascondi e gira</button></div>
     ${results}`);
   panel.querySelectorAll<HTMLButtonElement>('[data-q]').forEach((b) => { b.onclick = () => { apply(b.dataset.q as Quality, fps, idle); render(); }; });
@@ -174,6 +195,7 @@ function render() {
   document.getElementById('idle')!.onclick = () => { apply(level, fps, !idle); render(); };
   document.getElementById('hide')!.onclick = () => { mini = true; render(); };
   document.getElementById('go')!.onclick = runTest;
+  bindAb();
   const copy = document.getElementById('copy');
   if (copy) copy.onclick = async () => {
     try { await navigator.clipboard.writeText(lastOut); copy.textContent = 'Copiato ✓'; } catch { copy.textContent = 'Seleziona il testo qui sotto'; }
@@ -251,6 +273,7 @@ async function runTest() {
     `UA: ${device.ua}`,
     `schermo ${device.screen} · dpr ${device.dpr} · core ${device.cores} · mem ${device.memory}`,
     `scena: ${state.graves.length} tombe · ${state.placeables.length} oggetti · generazione ${fmt(genMs, 0)} ms · costruzione ${fmt(buildMs, 0)} ms · shader ${fmt(prepMs, 0)} ms`,
+    `prove: ${variants()}`,
     '',
     'prova | FPS | ms 95% | frame lenti | lavoro ms/s | draw call | triangoli',
     ...rs.map((x) => `${x.r.label} | ${fmt(x.fps)} | ${fmt(x.p95)} | ${x.slow} | ${fmt(x.work, 0)} | ${x.calls} | ${x.tris}`),

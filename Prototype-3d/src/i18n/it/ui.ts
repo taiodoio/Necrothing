@@ -308,8 +308,6 @@ export default {
   'tree.list.hint': 'Apri la scheda di una tomba e scegli «Affida all’albero»: il corteo porterà qui la bara e la terra la accoglierà. Lo spazio della tomba si libera, il ricordo resta.',
   // riga dell'elenco: {category} è la categoria dell'oggetto
   'tree.list.row': '{category} · affidato il {date}',
-  // breve: pulsante
-  'tree.list.map': 'Mostra sulla mappa',
   'tree.memory.title': 'Ricordo',
   'tree.memory.visit': 'Il fantasma di {name} è tornato a trovarti',
   'tree.memory.visitWisps': '+{n} fuochi fatui',
@@ -333,9 +331,10 @@ export default {
   // titolo della cronologia
   'tree.memory.log': 'Ricordi',
   'tree.memory.ghostNear': 'Apparizione vicino all’albero',
-  // breve: pulsanti
-  'tree.memory.all': 'Tutti i ricordi',
-  'tree.memory.showTree': 'Mostra l’albero',
+  // breve: pulsante principale della scheda del ricordo, torna alla lista
+  'tree.memory.back': 'Indietro',
+  // breve: voce di «Altro» nella scheda del ricordo (come «Riesuma» per le tombe: arriva il becchino)
+  'tree.memory.free': 'Libera ricordo',
 
   // ── Personalizzazione del Custode ──
   'look.ui.title': 'Personaggio',

@@ -83,7 +83,9 @@ function show(n: NpcNote) {
     n.action ? h('button', { class: 'npc-note-cta', onclick: () => { const a = n.action!; dismiss(); a.run(); } }, n.action.label, ' ›') : null,
     h('button', { class: 'npc-note-x', 'aria-label': t('dialog.close'), onclick: () => dismiss() }, icon('close', 14)));
   $('#game').append(el);
-  $('#game').classList.add('has-note'); // i toast scendono sotto la notifica
+  // i toast scendono sotto la notifica, quanto è alta (con la frase su due righe o il pulsante è più alta)
+  $('#game').style.setProperty('--note-h', `${el.offsetHeight}px`);
+  $('#game').classList.add('has-note');
   current = { el, at: performance.now(), timer: window.setTimeout(() => dismiss(), ms) };
 }
 

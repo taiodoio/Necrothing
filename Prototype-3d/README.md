@@ -88,9 +88,12 @@ interagisci, `B` sali/scendi dalla bici, `F` sali/scendi dalla scopa, `Esc` chiu
     «Riposa a Necrothing». Dal riepilogo (prima di scegliere il posto) e dal dettaglio della
     tomba; «Condividi» apre la condivisione del telefono (o scarica l'immagine).
   - Nel dettaglio della tomba il pulsante principale è l'azione che serve (ripara, pulisci,
-    porta/rinnova fiori); sopra, cartolina e «Affida all'albero»; in fondo, solo testo e icona,
-    **Riesuma**.
-- **Riesumazione** (dal dettaglio della tomba o del ricordo dell'Albero dei ricordi, con
+    porta/rinnova fiori); sopra, il pulsante secondario **Altro** apre verso l'alto, in
+    sovrimpressione, le azioni secondarie con le icone: «Manda una cartolina», «Affida
+    all'albero», **Riesuma** (in rosso). Si chiude scegliendo una voce o toccando fuori.
+  - Nel dettaglio di un ricordo dell'albero il pulsante principale è «Indietro» (torna alla lista,
+    come la X), e in «Altro» c'è **Libera ricordo** (come la riesumazione).
+- **Riesumazione** (dal dettaglio della tomba, o «Libera ricordo» da quello del ricordo, con
   conferma): il becchino arriva spingendo la carriola vuota, scava, la tomba sparisce in una
   nuvola di terra e lui se ne va con la carriola piena. Il terreno torna libero e la tomba esce
   dal registro; niente ricompense tolte, e le sepolture fatte contano ancora per gli sblocchi.

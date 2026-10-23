@@ -458,11 +458,13 @@ export function openDetail(ui: UI, id: string) {
       ),
       mem.length ? h('div', {}, h('div', { class: 'section-title' }, t('detail.grave.memories')), h('ul', { class: 'timeline' }, ...mem.map((m) => h('li', {}, h('time', {}, fmtDate(m.at)), MEMORY_LABELS[m.type])))) : null,
     ), { footer: h('div', { style: 'display:grid;gap:6px' },
-      h('div', { class: 'row' },
-        h('button', { class: 'big-btn ghost', onclick: async () => openPostcard(await postcardData(g, photoUrl, ui, g.seed % 4)) }, t('detail.grave.postcard')),
-        R.memoryTree(s) ? h('button', { class: 'big-btn ghost', onclick: () => ui.openEntrust(id) }, t('detail.grave.entrust')) : null),
-      h('button', { class: 'big-btn', onclick: () => { closeDrawer(true); game.performEntityAction(id, main.act); } }, icon(main.ic, 22), main.label),
-      exhumeButton(ui, id, g.name, 'grave')) });
+      // le altre azioni (cartolina, albero, riesuma) in «Altro», secondario, sopra l'azione che serve adesso
+      moreActions([
+        { icon: 'postcard', label: t('detail.grave.postcard'), run: async () => openPostcard(await postcardData(g, photoUrl, ui, g.seed % 4)) },
+        R.memoryTree(s) ? { icon: 'tree', label: t('detail.grave.entrust'), run: () => ui.openEntrust(id) } : null,
+        { icon: 'shovel', label: t('detail.exhume'), danger: true, run: () => confirmExhume(ui, id, g.name, 'grave') },
+      ]),
+      h('button', { class: 'big-btn', onclick: () => { closeDrawer(true); game.performEntityAction(id, main.act); } }, icon(main.ic, 22), main.label)) });
     return;
   }
   const p = s.placeables.find((x) => x.id === id);
@@ -486,17 +488,41 @@ export function openDetail(ui: UI, id: string) {
   openDrawer('', body);
 }
 
+/** Conferma della riesumazione (o del «Libera ricordo»), poi arriva il becchino con la carriola. */
+export async function confirmExhume(ui: UI, id: string, name: string, kind: 'grave' | 'memory') {
+  const grave = kind === 'grave';
+  const ok = await confirmDialog({
+    title: t(grave ? 'exhume.confirm.title' : 'exhume.free.title', { name }),
+    message: t(grave ? 'exhume.confirm.grave' : 'exhume.confirm.memory'),
+    ok: t(grave ? 'exhume.confirm.ok' : 'exhume.free.ok'), danger: true,
+  });
+  if (!ok) return;
+  closeDrawer(true);
+  ui.game.exhume(id);
+}
+
 /**
- * «Riesuma» (nel dettaglio della tomba e del ricordo): chiede conferma, poi
- * arriva il becchino con la carriola. Azione terziaria: solo testo e icona, in rosso e in fondo.
+ * «Altro»: pulsante secondario sopra l'azione principale, con l'icona a sinistra
+ * come lei; il menù delle azioni secondarie si apre sopra di lui, in sovrimpressione.
+ * Ogni voce ha la sua icona, quelle distruttive in rosso. Si chiude scegliendo
+ * una voce, toccando di nuovo «Altro» o toccando fuori.
  */
-export function exhumeButton(ui: UI, id: string, name: string, kind: 'grave' | 'memory'): HTMLElement {
-  return h('button', { class: 'link-btn', onclick: async () => {
-    const ok = await confirmDialog({ title: t('exhume.confirm.title', { name }), message: t(kind === 'grave' ? 'exhume.confirm.grave' : 'exhume.confirm.memory'), ok: t('exhume.confirm.ok'), danger: true });
-    if (!ok) return;
-    closeDrawer(true);
-    ui.game.exhume(id);
-  } }, icon('shovel', 18), t('detail.exhume'));
+export function moreActions(items: Array<{ icon: string; label: string; danger?: boolean; run: () => void } | null>): HTMLElement {
+  const wrap = h('div', { class: 'more' });
+  const setOpen = (open: boolean) => {
+    list.hidden = !open;
+    toggle.setAttribute('aria-expanded', String(open));
+    if (open) setTimeout(() => document.addEventListener('pointerdown', outside, true));
+    else document.removeEventListener('pointerdown', outside, true);
+  };
+  const outside = (e: Event) => { if (!wrap.contains(e.target as Node)) setOpen(false); };
+  const list = h('div', { class: 'more-list', role: 'menu' }, ...items.filter((x) => x !== null).map((it) =>
+    h('button', { class: `more-item${it.danger ? ' danger' : ''}`, role: 'menuitem', onclick: () => { setOpen(false); it.run(); } }, icon(it.icon, 22), h('span', {}, it.label))));
+  const toggle = h('button', { class: 'big-btn ghost more-toggle', 'aria-expanded': 'false', 'aria-haspopup': 'menu', onclick: () => setOpen(list.hidden) },
+    icon('more', 22), t('detail.more'));
+  list.hidden = true;
+  wrap.append(list, toggle);
+  return wrap;
 }
 
 // ── Profilo & achievement ──────────────────────────────────────────────

@@ -14,6 +14,7 @@ import { LPC } from './palette.ts';
 import { instantiate, LOWPOLY_MATERIALS, type CachedModel } from '../modelCache.ts';
 import { createRng } from '../../game/rng.ts';
 import type { PVis } from '../models/types.ts';
+import { decodeHouseVariant } from '../../game/house.ts';
 import { SCARECROW_NECK, SCARECROW_PERCH, scarecrowHead } from './newItems3.ts';
 
 export interface Animated {
@@ -324,6 +325,39 @@ function rising(kind: 'bubble' | 'ember', color: string, n: number, spread: [num
 }
 
 const VAPOR_GEO = new THREE.IcosahedronGeometry(1, 1);
+const SMOKE_GEO = new THREE.IcosahedronGeometry(1, 0);
+
+/** Cima del camino della Casa del Custode (coordinate del modello). */
+const KEEPER_CHIMNEY: [number, number, number] = [-0.69, 2.62, -1.17];
+
+/**
+ * Il fumo del camino acceso: sbuffi grigi a facce che escono piccoli, salgono
+ * allargandosi, piegano un po' col vento e svaniscono. Illuminati come la
+ * scena (di notte sono scuri, non brillano).
+ */
+function chimneySmoke([x, y, z]: [number, number, number]): Animated {
+  const root = new THREE.Group();
+  root.position.set(x, y, z);
+  const puffs = Array.from({ length: 6 }, (_, i) => {
+    const mat = new THREE.MeshLambertMaterial({ color: '#c4bfc7', transparent: true, opacity: 0, depthWrite: false, flatShading: true });
+    const o = new THREE.Mesh(SMOKE_GEO, mat);
+    o.rotation.set(i * 1.3, i * 2.1, 0);
+    root.add(o);
+    return { o, mat, ph: i / 6 };
+  });
+  return {
+    root, update: (t) => {
+      for (const p of puffs) {
+        const k = (t * 0.15 + p.ph) % 1;
+        p.o.position.set(k * k * 0.5 + Math.sin(t * 0.8 + p.ph * 7) * 0.03, k * 1.15, -k * 0.12);
+        const s = 0.05 + k * 0.17;
+        p.o.scale.set(s, s * 0.85, s);
+        p.o.rotation.y += 0.004;
+        p.mat.opacity = 0.55 * Math.min(1, k * 6) * (1 - k);
+      }
+    },
+  };
+}
 
 /** Pozza avvelenata: bolle che salgono e scoppiano lasciando un cerchio, e un filo di vapore verde. */
 function toxic(seed: number): Animated {
@@ -540,6 +574,7 @@ export function createAnimated(v: PVis): Animated | null {
     case 'bushes': return flyers(() => piece('firefly', firefly), 4, 0.7, 0.75, v.seed, false);
     case 'tall_grass': return flyers(() => piece('firefly', firefly), 3, 0.35, 0.5, v.seed, false);
     case 'flowerbed': return flyers((i) => piece(`butterfly:${i % 3}`, butterfly(['#e8c27a', '#c9a7d9', '#e8e0d0'][i % 3])), 3, 0.5, 0.45, v.seed, true);
+    case 'keeper_house': return decodeHouseVariant(v.variant).parts.has('smoke') ? chimneySmoke(KEEPER_CHIMNEY) : null;
     case 'hell_hole': return v.lit && !v.broken ? rising('ember', '#ffb347', 10, [0.4, 0.4], 1.4, v.seed) : null;
     default: return null;
   }

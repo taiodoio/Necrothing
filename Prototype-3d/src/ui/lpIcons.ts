@@ -90,12 +90,12 @@ function crescent(cx: number, cy: number, r: number, ox: number, oy: number, r2:
   for (let k = 1; k < 18; k++) { const a = a0 + (d * k) / 18; inn.push([ox + Math.cos(a) * r2, oy + Math.sin(a) * r2]); }
   return fan([...out, ...inn], t, cen(out));
 }
-const sunset = (t: Tones): Poly[] => [
-  ...[-2.4, -1.6, -0.8, 0].map((a) => a - Math.PI / 2 + 0.4).flatMap((a) => bar(12 + Math.cos(a) * 7.4, 14 + Math.sin(a) * 7.4, 12 + Math.cos(a) * 9.8, 14 + Math.sin(a) * 9.8, 1.9, t)),
-  ...bar(12 + Math.cos(-Math.PI / 2) * 7.4, 14 - 7.4, 12, 14 - 9.8, 1.9, t),
-  ...fan([...arc(12, 14, 5.8, Math.PI, Math.PI * 2, 8)], t, [11, 11.5]),
-  ...bar(3, 15.4, 21, 15.4, 2.2, T.iron), ...bar(6, 19, 18, 19, 2, T.iron),
+/** Mezzo sole all'orizzonte: cinque raggi a ventaglio, simmetrici, tutti sopra la linea. */
+const halfSun = (t: Tones, cy = 14): Poly[] => [
+  ...Array.from({ length: 5 }, (_, i) => -Math.PI + 0.32 + (i * (Math.PI - 0.64)) / 4).flatMap((a) => bar(12 + Math.cos(a) * 7.4, cy + Math.sin(a) * 7.4, 12 + Math.cos(a) * 9.8, cy + Math.sin(a) * 9.8, 1.9, t)),
+  ...fan([...arc(12, cy, 5.8, Math.PI, Math.PI * 2, 8)], t, [11, cy - 2.5]),
 ];
+const sunset = (t: Tones): Poly[] => [...halfSun(t), ...bar(3, 15.4, 21, 15.4, 2.2, T.iron), ...bar(6, 19, 18, 19, 2, T.iron)];
 const cloud = (dy = 0): Poly[] => [...disc(8, 11 + dy, 4, T.cloud), ...disc(13, 8.6 + dy, 5, T.cloud), ...disc(17, 11.4 + dy, 3.6, T.cloud), ...rrect(4.4, 10.6 + dy, 20.4, 15.2 + dy, 2.2, T.cloud, [10, 11 + dy])];
 
 const ICONS: Record<string, () => Poly[]> = {
@@ -185,6 +185,34 @@ const ICONS: Record<string, () => Poly[]> = {
   pin: () => [...fan([[12, 22], [6, 13.4], [5.2, 9], [7.2, 4.6], [12, 2.4], [16.8, 4.6], [18.8, 9], [18, 13.4]], T.red, [9.5, 6.5]), ...disc(12, 9.2, 3, T.paper, 10)],
   angled: () => [...P([[12, 3], [20.4, 7.6], [12, 12.2], [3.6, 7.6]], T.stone[0]), ...P([[3.6, 7.6], [12, 12.2], [12, 21.4], [3.6, 16.8]], T.stone[1]), ...P([[12, 12.2], [20.4, 7.6], [20.4, 16.8], [12, 21.4]], T.stone[2])],
 };
+
+// ── Il cielo in un'icona sola: fase del giorno e meteo insieme ──────────
+// sky-<fase>-<meteo>: alba/giorno/tramonto/notte × sereno/nebbia/pioggia/temporale
+
+/** Sposta e scala un disegno (griglia 24×24). */
+const tf = (ps: Poly[], k: number, dx: number, dy: number): Poly[] => ps.map((p) => ({ fill: p.fill, pts: p.pts.map(([x, y]) => [x * k + dx, y * k + dy] as V) }));
+const sun = (t: Tones = T.flame) => [...Array.from({ length: 8 }, (_, i) => (i / 8) * Math.PI * 2).flatMap((a) => bar(12 + Math.cos(a) * 7.6, 12 + Math.sin(a) * 7.6, 12 + Math.cos(a) * 10.2, 12 + Math.sin(a) * 10.2, 2, t)), ...disc(12, 12, 5.8, t, 12)];
+const moon = () => crescent(11.5, 12.5, 9.2, 16, 9, 7.6, T.moon);
+const star = (x: number, y: number, r: number): Poly[] => fan([[x, y - r], [x + r * 0.3, y - r * 0.3], [x + r, y], [x + r * 0.3, y + r * 0.3], [x, y + r], [x - r * 0.3, y + r * 0.3], [x - r, y], [x - r * 0.3, y - r * 0.3]], T.moon, [x, y]);
+const bolt = (): Poly[] => fan([[13.4, 14.6], [10.4, 19.2], [12.6, 19.2], [11.2, 23], [15.6, 17.6], [13.2, 17.6], [14.8, 14.6]], T.flame);
+const drops = (n: number) => [[7.6, 17], [12, 18], [16.4, 17]].slice(0, n).flatMap(([x, y]) => bar(x, y, x - 1.4, y + 4, 1.8, T.rain));
+const fogBars = (y: number) => [...bar(3.4, y, 15.6, y, 2.2, T.cloud), ...bar(8.4, y + 3.6, 20.6, y + 3.6, 2.2, T.cloud)];
+type SkyPhase = 'dawn' | 'day' | 'dusk' | 'night';
+type SkyWeather = 'clear' | 'fog' | 'rain' | 'storm';
+function sky(phase: SkyPhase, w: SkyWeather): Poly[] {
+  const tone = phase === 'dawn' ? T.dawn : phase === 'dusk' ? T.dusk : T.flame;
+  // la fonte di luce piccola, in alto a destra, dietro la nuvola (pioggia e temporale)
+  const peek = () => tf(phase === 'night' ? moon() : sun(tone), 0.56, 10.3, 0.3);
+  if (w === 'rain' || w === 'storm') return [...peek(), ...tf(cloud(-1), 1, -0.6, 0), ...(w === 'storm' ? [...drops(1), ...bolt()] : drops(3))];
+  if (phase === 'night') {
+    if (w === 'fog') return [...tf(moon(), 0.78, 2.4, -0.6), ...fogBars(16.6)];
+    return [...moon(), ...star(19.4, 4.6, 2.2), ...star(20.6, 14.6, 1.5)];
+  }
+  if (phase === 'day') return w === 'fog' ? [...tf(sun(), 0.74, 3.1, -0.8), ...fogBars(16.6)] : sun();
+  // alba e tramonto: il mezzo sole sull'orizzonte; con la nebbia l'orizzonte è di foschia
+  return w === 'fog' ? [...halfSun(tone, 12.6), ...fogBars(15.2)] : sunset(tone);
+}
+for (const ph of ['dawn', 'day', 'dusk', 'night'] as const) for (const w of ['clear', 'fog', 'rain', 'storm'] as const) ICONS[`sky-${ph}-${w}`] = () => sky(ph, w);
 
 const polysOf = (name: string): Poly[] => (ICONS[name] ?? ICONS.wisp)();
 export const hasLpIcon = (name: string) => name in ICONS;

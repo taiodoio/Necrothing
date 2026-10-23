@@ -3,14 +3,15 @@
 // filtrata. Tutto deterministico: lo stesso seme dà gli stessi graffi.
 
 import { createRng } from '../game/rng.ts';
+import { t } from '../i18n/index.ts';
 
 export type PhotoFilter = 'none' | 'sepia' | 'bw' | 'worn';
 
 export const PHOTO_FILTER_LABELS: Record<PhotoFilter, string> = {
-  none: 'Originale',
-  sepia: 'Seppia',
-  bw: 'B/N',
-  worn: 'Rovinata',
+  none: t('filter.none'),
+  sepia: t('filter.sepia'),
+  bw: t('filter.bw'),
+  worn: t('filter.worn'),
 };
 
 /** Lato massimo della foto salvata (pixel): basta per il dettaglio e la cartolina e pesa poco nel backup. */

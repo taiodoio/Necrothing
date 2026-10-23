@@ -7,12 +7,12 @@
 
 import * as THREE from 'three';
 
-const VERT = /* glsl */ `
+const VERT = /* glsl, i18n-ok */ `
 varying vec2 vUv;
 void main() { vUv = uv; gl_Position = vec4(position.xy, 0.0, 1.0); }
 `;
 
-const FRAG = /* glsl */ `
+const FRAG = /* glsl, i18n-ok */ `
 uniform sampler2D tDiffuse;
 uniform vec2 uTexel;     // 1/risoluzione
 uniform vec2 uDir;       // (1,0) orizzontale, (0,1) verticale
@@ -62,7 +62,7 @@ void main() {
  * risoluzione, con la stessa maschera (morbida): al centro tutto nitido, ai
  * bordi tutto sfocato, nel mezzo una sfumatura senza anelli.
  */
-const COMPOSITE = /* glsl */ `
+const COMPOSITE = /* glsl, i18n-ok */ `
 uniform sampler2D tSharp;
 uniform sampler2D tBlur;
 uniform vec2 uFocus;

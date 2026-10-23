@@ -4,6 +4,7 @@
 import { EXPANSION, GRAVE_FOOTPRINT, MAP_SIZE, MAUSOLEUM_PRESTIGE, DISTRICT } from './balance.ts';
 import { CATALOG, rotatedFootprint } from './catalog.ts';
 import type { Grave, Placed, SaveData } from './state.ts';
+import { t } from '../i18n/index.ts';
 
 export interface Rect { x: number; y: number; w: number; h: number }
 
@@ -119,9 +120,9 @@ export function gateCells(area: Rect): Set<string> {
 
 export type DistrictTheme = 'gothic' | 'natural' | 'tech';
 export const DISTRICT_LABELS: Record<DistrictTheme, string> = {
-  gothic: 'Quartiere Gotico',
-  natural: 'Boschetto Naturale',
-  tech: 'Settore Tecnologico',
+  gothic: t('district.gothic'),
+  natural: t('district.natural'),
+  tech: t('district.tech'),
 };
 
 export function graveFitsTheme(g: Grave, theme: DistrictTheme): boolean {

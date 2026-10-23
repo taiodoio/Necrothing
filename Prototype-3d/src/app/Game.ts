@@ -39,13 +39,14 @@ import { AutoGovernor, detectTier, newAutoProfile, PROFILES, QUALITY_LABELS, typ
 import { Input } from './Input.ts';
 import { loadSave, persistenceOn, saveNow, scheduleSave } from './persistence.ts';
 import { closedCoffinLP } from '../render/lowpoly/memoryTree.ts';
+import { currentLang, t, tList } from '../i18n/index.ts';
 
 export type Selection = { kind: 'grave' | 'placeable'; id: string } | null;
 
 export type EntityAction =
   | 'detail' | 'clean' | 'repair' | 'flowers' | 'light' | 'shop' | 'rotate' | 'store' | 'confirm' | 'exhume' | 'move' | 'entrust' | 'memories' | 'ring' | 'registry' | 'house';
 
-const PET_STATUS: Record<PetMode, string> = { free: 'Gira libero', follow: 'Ti segue', home: 'A cuccia' };
+const PET_STATUS: Record<PetMode, string> = { free: t('game.pet.status.free'), follow: t('game.pet.status.follow'), home: t('game.pet.status.home') };
 
 export interface Placement {
   kind: 'grave' | 'item';
@@ -169,7 +170,7 @@ export class Game {
       blur: () => { this.unfocused = true; },
       focus: () => { this.unfocused = false; this.markActive(); },
     });
-    canvas.addEventListener('webglcontextlost', (e) => { e.preventDefault(); toast('La scena si sta ripristinando…'); });
+    canvas.addEventListener('webglcontextlost', (e) => { e.preventDefault(); toast(t('game.contextRestoring')); });
     canvas.addEventListener('webglcontextrestored', () => { this.world.setStyle(this.state.settings.style, this.state, true); this.actors.setStyle(this.state.settings.style); });
     this.resize();
     saveNow(this.state);
@@ -386,9 +387,9 @@ export class Game {
   private async offerReminders(name: string) {
     if (!remindersAvailable() || this.state.settings.reminders !== null) return;
     const yes = await confirmDialog({
-      title: 'Promemoria',
-      message: `Vuoi che ti avvisi il giorno dell’anniversario di ${name}, e quando una tomba sta per rompersi?`,
-      ok: 'Sì, avvisami', cancel: 'No, grazie',
+      title: t('game.reminders.title'),
+      message: t('game.reminders.message', { name }),
+      ok: t('game.reminders.ok'), cancel: t('game.reminders.cancel'),
     });
     this.setReminders(yes);
   }
@@ -397,7 +398,7 @@ export class Game {
   async setReminders(on: boolean) {
     const granted = on ? await askReminderPermission() : false;
     this.state.settings.reminders = granted;
-    if (on && !granted) toast('Le notifiche sono spente nelle impostazioni del telefono.');
+    if (on && !granted) toast(t('game.reminders.off'));
     scheduleSave(this.state);
     if (granted) void syncReminders(this.state, this.now()); else void clearReminders();
     this.ui.refreshSettingsButtons();
@@ -437,7 +438,7 @@ export class Game {
       this.afterChange();
       return true;
     } catch (e) {
-      toast(e instanceof Error ? e.message : 'Qualcosa è andato storto.');
+      toast(e instanceof Error ? e.message : t('game.error.generic'));
       return false;
     }
   }
@@ -446,14 +447,14 @@ export class Game {
     const p = this.project(at);
     if (!p) return;
     if (r.wisps) floater(p.x + 18, p.y - 6, `${r.wisps > 0 ? '+' : ''}${r.wisps}`, 'wisp');
-    if (r.xp) floater(p.x - 18, p.y + 10, `+${r.xp} XP`, 'xp');
+    if (r.xp) floater(p.x - 18, p.y + 10, t('game.reward.xp', { n: r.xp }), 'xp');
   }
 
   /** Dopo ogni cambiamento: espansione/achievement, salvataggio, vista, HUD. */
   afterChange() {
     const now = this.now();
     const { achievements } = R.afterAction(this.state, now);
-    for (const a of achievements) toast(`Traguardo: ${a.name}`, 'ach');
+    for (const a of achievements) toast(t('game.achievement', { name: a.name }), 'ach');
     scheduleSave(this.state);
     const area = this.world.area;
     this.world.sync(this.state);
@@ -540,7 +541,7 @@ export class Game {
   finishShrink() {
     if (!this.shrink) return;
     const out = R.outsideArea(this.state, this.shrink.level);
-    if (out.length) { toast(`${out.length === 1 ? 'Manca ancora un elemento' : `Mancano ancora ${out.length} elementi`}: quelli in rosso sono fuori dall'area.`); return; }
+    if (out.length) { toast(t('game.shrink.missing', { n: out.length })); return; }
     const level = this.shrink.level;
     this.cancelShrink();
     this.setExpansion(level);
@@ -608,7 +609,7 @@ export class Game {
     const center = cellCenter(cells.x, cells.y, cells.fp).setY(1.2);
     const grave = this.state.graves.find((g) => g.id === id);
     // durante il rito la tomba affidata e l'albero restano dove sono finché il corteo non ha finito
-    if (this.riteIds?.includes(id) && !['detail', 'memories', 'shop', 'registry', 'house'].includes(action)) { toast('Aspetta che il corteo finisca il rito.'); return; }
+    if (this.riteIds?.includes(id) && !['detail', 'memories', 'shop', 'registry', 'house'].includes(action)) { toast(t('game.rite.wait')); return; }
     const instant: EntityAction[] = ['detail', 'shop', 'rotate', 'store', 'confirm', 'exhume', 'move', 'entrust', 'memories', 'registry', 'house'];
     const run = () => {
       switch (action) {
@@ -619,7 +620,7 @@ export class Game {
         case 'rotate': this.act((s) => R.rotateEntity(s, id)); break;
         case 'store': this.act((s) => R.storePlaceable(s, id)); this.select(null); break;
         case 'exhume': this.act((s) => R.exhumeGrave(s, id)); this.select(null); break;
-        case 'confirm': this.select(null); toast('Posizionato. Riposi in pace.'); break;
+        case 'confirm': this.select(null); toast(t('game.place.confirmed')); break;
         case 'detail': this.ui.openDetail(id); break;
         case 'shop': this.ui.openShop(); break;
         case 'move': this.setEditMode(true); this.select(this.selection); break;
@@ -654,7 +655,7 @@ export class Game {
     const occ = buildOccupancy(this.state);
     const c = this.viewCenterCell();
     const spot = nearestFreeSpot(c.x, c.y, GRAVE_FOOTPRINT, occ, areaForLevel(this.state.world.expansionLevel));
-    if (!spot) { toast('Non c’è più spazio: allarga il recinto con il prestigio.'); return; }
+    if (!spot) { toast(t('game.noSpace.grave')); return; }
     this.select(null);
     this.placement = { kind: 'grave', draft, x: spot.x, y: spot.y, rot: 0, valid: true };
     this.rig.follow = null;
@@ -669,7 +670,7 @@ export class Game {
     const occ = buildOccupancy(this.state);
     const c = this.viewCenterCell();
     const spot = nearestFreeSpot(c.x, c.y, fp, occ, areaForLevel(this.state.world.expansionLevel));
-    if (!spot) { toast('Non c’è spazio libero per questo oggetto.'); return; }
+    if (!spot) { toast(t('game.noSpace.item')); return; }
     this.select(null);
     this.placement = { kind: 'item', type, x: spot.x, y: spot.y, rot: 0, valid: true };
     this.rig.follow = null;
@@ -785,7 +786,7 @@ export class Game {
       }
       return;
     }
-    if (!p.valid) { toast('Spazio occupato: scegli un punto libero.'); return; }
+    if (!p.valid) { toast(t('game.place.busy')); return; }
     const now = this.now();
     if (p.kind === 'grave') {
       try {
@@ -797,25 +798,25 @@ export class Game {
         this.rig.jumpTo(center);
         const area = areaForLevel(this.state.world.expansionLevel);
         const gate = [...gateCells(area)][1].split(',').map(Number);
-        this.custodeSays('Silenzio…', 'Il corteo funebre arriva…');
+        this.custodeSays(t('say.custode.funeral.say'), t('say.custode.funeral.text'));
         this.actors.startFuneral(center, { x: gate[0], y: gate[1] }, () => {
-          this.custodeSays('Riposa in pace.', result.message, result);
+          this.custodeSays(t('say.custode.buried.say'), result.message, result);
           this.showRewards(center.clone().setY(1.5), result);
           this.ui.refreshHud();
           void this.offerReminders(grave.name);
         });
         this.ui.refreshPlacementBar();
       } catch (e) {
-        toast(e instanceof Error ? e.message : 'Sepoltura non riuscita.');
+        toast(e instanceof Error ? e.message : t('game.burial.failed'));
       }
       return;
     }
     const type = p.type!;
-    const ok = this.act((s, n) => { R.placeFromInventory(s, type, p.x, p.y, p.rot, n); return { message: `${CATALOG[type].label} posizionato.`, xp: 0, wisps: 0 }; });
+    const ok = this.act((s, n) => { R.placeFromInventory(s, type, p.x, p.y, p.rot, n); return { message: t('game.place.item', { item: CATALOG[type].label }), xp: 0, wisps: 0 }; });
     if (ok) {
       this.placement = null;
       this.refreshPlacement();
-      if ((this.state.inventory[type] ?? 0) > 0) toast(`Te ne restano ${this.state.inventory[type]}: “Inserisci” dall’inventario per posarne altri.`);
+      if ((this.state.inventory[type] ?? 0) > 0) toast(t('game.place.left', { n: this.state.inventory[type] }));
     }
   }
 
@@ -926,7 +927,7 @@ export class Game {
    */
   locate(id: string) {
     const target = this.state.graves.some((g) => g.id === id) ? id : R.memoryTree(this.state)?.id;
-    if (!target || !this.entityCells(target)) { toast('Non si trova più sulla mappa.'); return; }
+    if (!target || !this.entityCells(target)) { toast(t('game.locate.missing')); return; }
     if (this.editMode) this.setEditMode(false);
     this.goTo(target);
     // la camera resta sulla tomba: il Custode arriva nell'inquadratura
@@ -966,11 +967,11 @@ export class Game {
     if (!p) return [];
     const off = p.broken;
     return [
-      { label: 'Raggiungi il Custode', icon: uiNext() ? 'whistle' : 'paw', disabled: off || p.mode === 'follow', run: () => this.petCommand(id, this.actors.callPet(id)) },
-      { label: uiNext() ? 'Lascialo girare' : 'Libera', icon: uiNext() ? 'paw' : 'sun', disabled: off || p.mode === 'free', run: () => this.petCommand(id, this.actors.freePet(id)) },
-      { label: 'A cuccia', icon: 'kennel', disabled: off || p.mode === 'home', run: () => this.petCommand(id, this.actors.sendPetHome(id)) },
-      { label: 'Accarezza', icon: 'heart', cls: 'primary', disabled: off || p.sleeping, run: () => this.actors.petPet(id) },
-      { label: 'Lancia l’osso', icon: 'bone', disabled: off || p.sleeping, run: () => { if (!this.actors.throwBone(id)) toast('Qui non c’è spazio per lanciare l’osso.'); } },
+      { label: t('game.pet.call'), icon: uiNext() ? 'whistle' : 'paw', disabled: off || p.mode === 'follow', run: () => this.petCommand(id, this.actors.callPet(id)) },
+      { label: uiNext() ? t('game.pet.free') : t('game.pet.freeOld'), icon: uiNext() ? 'paw' : 'sun', disabled: off || p.mode === 'free', run: () => this.petCommand(id, this.actors.freePet(id)) },
+      { label: t('game.pet.home'), icon: 'kennel', disabled: off || p.mode === 'home', run: () => this.petCommand(id, this.actors.sendPetHome(id)) },
+      { label: t('game.pet.pet'), icon: 'heart', cls: 'primary', disabled: off || p.sleeping, run: () => this.actors.petPet(id) },
+      { label: t('game.pet.throw'), icon: 'bone', disabled: off || p.sleeping, run: () => { if (!this.actors.throwBone(id)) toast(t('game.pet.throwNoSpace')); } },
     ];
   }
 
@@ -997,8 +998,8 @@ export class Game {
   petStatus(id: string): string {
     const p = this.actors.petAt(id);
     if (!p) return '';
-    if (p.broken) return 'Casetta rotta: riparala per farlo uscire';
-    if (p.sleeping) return p.mode === 'home' ? 'A cuccia, dorme' : 'Dorme in tana';
+    if (p.broken) return t('game.pet.status.broken');
+    if (p.sleeping) return p.mode === 'home' ? t('game.pet.status.homeSleeping') : t('game.pet.status.denSleeping');
     return PET_STATUS[p.mode];
   }
 
@@ -1020,19 +1021,14 @@ export class Game {
   /** Toccando il vampiro: il suo menù, con «Fatti mordere». */
   /** Lo scheletro giardiniere, toccato, risponde (niente ricompense: è compagnia). */
   private tapGardener() {
-    const lines = [
-      'Rastrello le stesse foglie da trent’anni. Non ho fretta.',
-      'Queste foglie non finiscono mai… e meno male.',
-      'Attento a dove metti i piedi: ho appena rastrellato.',
-      'Un tempo avevo i calli. Adesso solo le ossa.',
-    ];
-    this.say({ kind: 'gardener', name: 'Scheletro giardiniere', text: lines[Math.floor(Math.random() * lines.length)] });
+    const lines = tList('say.gardener.lines');
+    this.say({ kind: 'gardener', name: t('say.gardener.name'), text: lines[Math.floor(Math.random() * lines.length)] });
   }
 
   private tapVampire(cryptId: string) {
     if (!this.actors.vampire(cryptId)) return;
-    this.ui.openActorMenu('Vampiro', this.isBat ? 'Sei già un pipistrello' : 'Ha sete, ma è un gentiluomo', [
-      { label: 'Fatti mordere', icon: 'fangs', cls: 'primary', disabled: this.isBat, run: () => this.getBitten(cryptId) },
+    this.ui.openActorMenu(t('say.vampire.name'), this.isBat ? t('game.vampire.statusBat') : t('game.vampire.status'), [
+      { label: t('game.vampire.bite'), icon: 'fangs', cls: 'primary', disabled: this.isBat, run: () => this.getBitten(cryptId) },
     ], () => this.actors.vampire(cryptId)?.top ?? null);
   }
 
@@ -1042,7 +1038,7 @@ export class Game {
     if (!v || this.isBat) return;
     const near = () => this.actors.avatar.pos.distanceTo(v.pos) < 1.6;
     const bite = () => {
-      if (!near()) { if (tries > 0) this.getBitten(cryptId, tries - 1); else this.say({ kind: 'vampire', name: 'Vampiro', say: 'Hmpf.', text: 'Il vampiro si è allontanato. Riprova.' }); return; }
+      if (!near()) { if (tries > 0) this.getBitten(cryptId, tries - 1); else this.say({ kind: 'vampire', name: t('say.vampire.name'), say: t('say.vampire.gone.say'), text: t('say.vampire.gone.text') }); return; }
       this.actors.holdVampire(cryptId, 1.8, this.actors.avatar.pos);
       this.actors.face(v.pos);
       // il morso, poi lo sbuffo di nuvolette: il cambio avviene mentre il Custode ne è coperto
@@ -1054,7 +1050,7 @@ export class Game {
           this.actors.setBat(true);
           this.batUntil = performance.now() + BAT.seconds * 1000;
           this.rig.follow = this.actors.avatar.pos;
-          this.say({ kind: 'vampire', name: 'Vampiro', text: 'Il vampiro ti morde: ti trasformi in un pipistrello!' });
+          this.say({ kind: 'vampire', name: t('say.vampire.name'), text: t('say.vampire.bite.text') });
           this.ui.refreshSettingsButtons();
         }, 170);
       }, 800);
@@ -1066,7 +1062,7 @@ export class Game {
   }
 
   /** Torna Custode: allo scadere del minuto o quando lo si sceglie (poi serve un altro morso). */
-  endBat(message = 'Torni Custode. Per volare ancora serve un altro morso.') {
+  endBat(message = t('say.custode.batEnd.text')) {
     if ((!this.isBat && !this.batUntil) || this.batEnding) return;
     this.batEnding = true;
     // lo stesso sbuffo di nuvolette, attorno al pipistrello: quando si dirada c'è di nuovo il Custode
@@ -1078,7 +1074,7 @@ export class Game {
       if (this.disposed) return;
       this.batEnding = false;
       this.actors.setBat(false);
-      this.custodeSays('Puff!', message);
+      this.custodeSays(t('say.custode.batEnd.say'), message);
       this.ui.refreshSettingsButtons();
     }, 170);
   }
@@ -1089,7 +1085,7 @@ export class Game {
   private stepBat(now: number) {
     // sceso per salire in bici o sulla scopa: il volo finisce lì
     if (!this.actors.isBat) { this.batUntil = null; this.ui.refreshSettingsButtons(); return; }
-    if (now >= this.batUntil!) { this.endBat('Il minuto è passato: torni Custode.'); return; }
+    if (now >= this.batUntil!) { this.endBat(t('say.custode.batTimeout.text')); return; }
     const left = this.batSecondsLeft();
     if (left !== this.lastBatSecond) { this.lastBatSecond = left; this.ui.refreshBatButton(); }
   }
@@ -1100,15 +1096,18 @@ export class Game {
     // becchino e prete in visita: non svaniscono, raccontano cosa stanno facendo
     if (r.visit) {
       const v = r.visit, left = Math.max(0, v.stops.length - v.i);
-      const back = (kind: 'priest' | 'gravedigger', home: string) => (this.visitorHome(kind) ? home : 'da dove è venuto');
+      // torna a casa (o al santuario), o da dove è venuto se non c'è: frasi intere per ognuno
+      const back = (kind: 'priest' | 'gravedigger') => (this.visitorHome(kind) ? 'home' : 'away');
       if (r.kind === 'gravedigger') {
-        this.sayText('gravedigger', 'Becchino', v.stage === 'leave' || !left
-          ? (v.stops.length ? `Il becchino ha finito il giro (${v.i} cose ripulite) e torna ${back('gravedigger', 'a casa')}.` : `Il becchino ha controllato: niente da pulire. Torna ${back('gravedigger', 'a casa')}.`)
-          : `Il becchino fa il giro e ripulisce metà delle cose sporche del cimitero: ${v.i} fatte, ancora ${left}. Poi torna ${back('gravedigger', 'a casa')}.`);
+        const b = back('gravedigger');
+        this.sayText('gravedigger', t('say.gravedigger.name'), v.stage === 'leave' || !left
+          ? (v.stops.length ? t(`say.gravedigger.done.${b}`, { done: v.i }) : t(`say.gravedigger.nothing.${b}`))
+          : t(`say.gravedigger.round.${b}`, { done: v.i, left }));
       } else {
-        this.sayText('priest', 'Prete', v.stage === 'leave' || !left
-          ? `Il prete ha benedetto il cimitero (più fuochi fatui fino a domani) e torna ${back('priest', 'al santuario')}.`
-          : `Il prete prega sulle tombe e benedice il cimitero: più fuochi fatui fino a domani. Ancora ${left} ${left === 1 ? 'tomba' : 'tombe'}, poi torna ${back('priest', 'al santuario')}.`);
+        const b = back('priest');
+        this.sayText('priest', t('say.priest.name'), v.stage === 'leave' || !left
+          ? t(`say.priest.done.${b}`)
+          : t(`say.priest.round.${b}`, { n: left }));
       }
       return;
     }
@@ -1122,7 +1121,7 @@ export class Game {
     const met = visit as R.ActionResult | null;
     const memoryId = r.memoryId;
     if (met) this.say({ kind: r.kind === 'ghost' && r.rare ? 'ghostRare' : r.kind, name: ROAMER_LABELS[r.kind], text: met.message, wisps: met.wisps, xp: met.xp,
-      action: memoryId ? { label: 'Vedi il ricordo', run: () => this.ui.openMemory(memoryId) } : undefined });
+      action: memoryId ? { label: t('game.memory.see'), run: () => this.ui.openMemory(memoryId) } : undefined });
     this.effects.puff(r.pos, r.kind === 'ghost' ? '#cfeee6' : r.kind === 'zombie' ? '#9bd34a' : '#e8dfcc');
     this.actors.removeRoamer(id);
     // interfaccia di prima: si apre subito la scheda del ricordo, con la visita in testa
@@ -1140,7 +1139,7 @@ export class Game {
     this.actors.cheer(1.2);
     let rang: R.ActionResult | null = null;
     if (!this.act((s, n) => (rang = R.ringBell(s, id, n)), center.clone().setY(2.6), true)) return;
-    if (rang) this.say({ kind: 'ghost', name: 'Anime', say: 'Din… don…', text: 'Le anime del cimitero accorrono alla campana.' });
+    if (rang) this.say({ kind: 'ghost', name: t('say.souls.name'), say: t('say.souls.bell.say'), text: t('say.souls.bell.text') });
     this.effects.puff(center.clone().setY(2.2), '#cfeee6');
     const graves = this.state.graves;
     for (let i = 0; i < SOUL_BELL.ghosts; i++) {
@@ -1215,11 +1214,11 @@ export class Game {
       else {
         let first: R.ActionResult | null = null;
         this.act((s, n) => (first = R.priestBless(s, id, n, !blessed)), top, true);
-        if (!blessed && first) this.say({ kind: 'priest', name: 'Prete', text: (first as R.ActionResult).message, wisps: (first as R.ActionResult).wisps, xp: (first as R.ActionResult).xp });
+        if (!blessed && first) this.say({ kind: 'priest', name: t('say.priest.name'), text: (first as R.ActionResult).message, wisps: (first as R.ActionResult).wisps, xp: (first as R.ActionResult).xp });
         blessed = true;
       }
     }, () => {
-      if (kind === 'gravedigger' && cleaned) this.say({ kind: 'gravedigger', name: 'Becchino', text: `Ha finito il giro: ${cleaned} ${cleaned === 1 ? 'cosa ripulita' : 'cose ripulite'}.` });
+      if (kind === 'gravedigger' && cleaned) this.say({ kind: 'gravedigger', name: t('say.gravedigger.name'), text: t('say.gravedigger.finished', { n: cleaned }) });
     });
   }
 
@@ -1248,27 +1247,27 @@ export class Game {
    */
   entrust(graveId: string) {
     const g = this.state.graves.find((x) => x.id === graveId);
-    const t = this.treeSpot();
-    if (!g || !t) { toast('Serve l’Albero dei ricordi.'); return; }
-    if (this.actors.funeralActive) { toast('Aspetta che finisca il rito in corso.'); return; }
+    const tree = this.treeSpot();
+    if (!g || !tree) { toast(t('game.rite.needTree')); return; }
+    if (this.actors.funeralActive) { toast(t('game.rite.busy')); return; }
     const area = areaForLevel(this.state.world.expansionLevel);
     const gate = [...gateCells(area)][1].split(',').map(Number);
     const grave = cellCenter(g.x, g.y, GRAVE_FOOTPRINT);
     const coffinModel = closedCoffinLP();
     // con le ombre ferme la bara in viaggio non proietta ombra (resterebbe indietro)
     const coffin = instantiate({ geometries: coffinModel.geometries, lights: [], height: 0.4, mats: LOWPOLY_MATERIALS, dedicated: true }, { castShadow: !this.world.staticShadows });
-    this.rig.jumpTo(grave.clone().lerp(t.center, 0.5));
+    this.rig.jumpTo(grave.clone().lerp(tree.center, 0.5));
     this.rig.follow = null;
-    this.custodeSays('Addio…', 'Il corteo arriva per accompagnarlo all’albero…');
-    this.riteIds = [graveId, t.id];
+    this.custodeSays(t('say.custode.rite.say'), t('say.custode.rite.text'));
+    this.riteIds = [graveId, tree.id];
     this.actors.startRite({
-      grave, graveFront: { x: g.x, y: g.y + 2 }, tree: t.center, treeFront: t.front, gate: { x: gate[0], y: gate[1] }, coffin,
+      grave, graveFront: { x: g.x, y: g.y + 2 }, tree: tree.center, treeFront: tree.front, gate: { x: gate[0], y: gate[1] }, coffin,
       onLift: () => { this.world.setHidden(graveId, true); if (this.selection?.id === graveId) this.select(null); this.effects.puff(grave, '#8a7a62'); },
       onDone: () => {
         this.riteIds = null;
         let kept: R.ActionResult | null = null;
-        if (!this.act((s, n) => (kept = R.entrustGrave(s, graveId, n)), t.center.clone().setY(3), true)) this.world.setHidden(graveId, false);
-        else if (kept) this.custodeSays('Riposa tra le radici.', (kept as R.ActionResult).message, kept);
+        if (!this.act((s, n) => (kept = R.entrustGrave(s, graveId, n)), tree.center.clone().setY(3), true)) this.world.setHidden(graveId, false);
+        else if (kept) this.custodeSays(t('say.custode.riteDone.say'), (kept as R.ActionResult).message, kept);
         this.ui.refreshHud();
       },
     });
@@ -1297,7 +1296,7 @@ export class Game {
     const hit = this.pick(x, y);
     const id = hit?.entityId;
     if (!id) return false;
-    if (this.riteIds?.includes(id)) { toast('Aspetta che il corteo finisca il rito.'); return false; }
+    if (this.riteIds?.includes(id)) { toast(t('game.rite.wait')); return false; }
     if (this.selection?.id !== id) this.select({ kind: this.kindOf(id), id });
     const c = this.entityCells(id)!;
     this.drag = { id, x: c.x, y: c.y, valid: true, grab: g.p.clone().sub(cellCenter(c.x, c.y, c.fp)) };
@@ -1333,11 +1332,11 @@ export class Game {
   }
 
   private onDragEnd(_x: number, _y: number, owned: boolean) {
-    const t = this.placement?.trace;
-    if (owned && t?.live) {
+    const tr = this.placement?.trace;
+    if (owned && tr?.live) {
       // alzando il dito il tratto resta (un tratto di una cella sola è il dito che si posa per il pizzico)
-      if (t.live.length > 1) t.segs.push(t.live);
-      t.live = null;
+      if (tr.live.length > 1) tr.segs.push(tr.live);
+      tr.live = null;
       this.refreshPlacement();
       return;
     }
@@ -1347,7 +1346,7 @@ export class Game {
     if (d.id === '__placement') return;
     this.world.endPreview();
     if (d.valid) this.act((s) => R.moveEntity(s, d.id, d.x, d.y));
-    else { toast('Spazio occupato: torna al suo posto.'); this.world.sync(this.state); }
+    else { toast(t('game.move.busy')); this.world.sync(this.state); }
     this.world.select(d.id);
     this.refreshKeeperArea();
     this.ui.refreshContext();
@@ -1388,7 +1387,7 @@ export class Game {
       if (d < bd) { bd = d; best = id; }
     }
     if (best) this.select({ kind: this.kindOf(best), id: best });
-    else toast('Avvicinati a una tomba o a un oggetto.');
+    else toast(t('game.interact.none'));
   }
 
   // ── Impostazioni ─────────────────────────────────────────────────────
@@ -1438,9 +1437,9 @@ export class Game {
   get riding(): boolean { return this.actors.riding; }
 
   toggleBike() {
-    if (!this.ownsBike()) { toast('Prima compra la bicicletta in Bottega (Extra).'); return; }
+    if (!this.ownsBike()) { toast(t('game.bike.notOwned')); return; }
     this.actors.setRiding(!this.actors.riding);
-    if (this.actors.riding) this.custodeSays('Si parte!', 'In sella: si va al doppio della velocità.'); else this.custodeSays('Ecco fatto.', 'Il Custode scende dalla bici.');
+    if (this.actors.riding) this.custodeSays(t('say.custode.bikeOn.say'), t('say.custode.bikeOn.text')); else this.custodeSays(t('say.custode.bikeOff.say'), t('say.custode.bikeOff.text'));
     this.ui.refreshSettingsButtons();
   }
 
@@ -1463,18 +1462,18 @@ export class Game {
 
   /** Sulla scopa si vola sopra tombe e oggetti, più veloci della bici. */
   toggleBroom() {
-    if (!this.ownsBroom()) { toast('Prima compra la scopa volante in Bottega (Extra).'); return; }
+    if (!this.ownsBroom()) { toast(t('game.broom.notOwned')); return; }
     this.actors.setFlying(!this.actors.flying);
-    if (this.actors.flying) this.custodeSays('Si vola!', 'A cavalcioni della scopa: si vola sopra tombe e recinti.'); else this.custodeSays('Terra!', 'Il Custode atterra e scende dalla scopa.');
+    if (this.actors.flying) this.custodeSays(t('say.custode.broomOn.say'), t('say.custode.broomOn.text')); else this.custodeSays(t('say.custode.broomOff.say'), t('say.custode.broomOff.text'));
     this.ui.refreshSettingsButtons();
   }
 
   /** Impugna o posa il bastone mistico: impugnato, i fuochi fatui accorrono da lontano. */
   toggleStaff() {
-    if (!this.ownsStaff()) { toast('Il bastone mistico si sblocca raccogliendo 500 fuochi fatui.'); return; }
+    if (!this.ownsStaff()) { toast(t('game.staff.notOwned')); return; }
     this.state.settings.staffEquipped = !this.state.settings.staffEquipped;
     this.actors.setStaff(this.staffOn);
-    if (this.staffOn) this.custodeSays('A me!', 'Bastone impugnato: i fuochi fatui accorrono da lontano.'); else this.custodeSays('Riposo.', 'Bastone posato.');
+    if (this.staffOn) this.custodeSays(t('say.custode.staffOn.say'), t('say.custode.staffOn.text')); else this.custodeSays(t('say.custode.staffOff.say'), t('say.custode.staffOff.text'));
     scheduleSave(this.state);
     this.ui.refreshSettingsButtons();
   }
@@ -1488,9 +1487,9 @@ export class Game {
 
   /** Il pulsante d'uso di un Extra, a seconda di com'è ora. */
   extraLabel(id: string): string {
-    if (id === 'broom') return this.flying ? 'Scendi dalla scopa' : 'Sali sulla scopa';
-    if (id === 'mystic_staff') return this.staffOn ? 'Posa il bastone' : 'Impugna il bastone';
-    return this.riding ? 'Scendi' : 'Sali in sella';
+    if (id === 'broom') return this.flying ? t('game.extra.broomOff') : t('game.extra.broomOn');
+    if (id === 'mystic_staff') return this.staffOn ? t('game.extra.staffOff') : t('game.extra.staffOn');
+    return this.riding ? t('game.extra.bikeOff') : t('game.extra.bikeOn');
   }
 
   // ── Bar e orto ───────────────────────────────────────────────────────
@@ -1509,11 +1508,10 @@ export class Game {
     if (this.act((s, now) => (got = R.collectBusiness(s, id, now)), at, true)) {
       // chi lavora lì racconta l'incasso
       const res = got as R.ActionResult | null, n = res?.wisps ?? 0, type = this.state.placeables.find((p) => p.id === id)?.type;
-      const pl = n === 1 ? 'fuoco fatuo' : 'fuochi fatui';
-      if (type === 'witch_corner') this.say({ kind: 'witch', name: 'Strega', text: `Ha venduto ${n} ${n === 1 ? 'pozione' : 'pozioni'} ai visitatori.`, wisps: n });
-      else if (type === 'zombie_bar') this.say({ kind: 'zombie', name: 'Bar degli zombie', say: 'Salute!', text: `Al bar si è brindato alla tua: ${n} ${pl} di incasso.`, wisps: n });
-      else if (type === 'brain_farm') this.say({ kind: 'zombie', name: 'Orto dei cervelli', say: 'Gnam!', text: `Gli zombie hanno raccolto cervelli per ${n} ${pl}.`, wisps: n });
-      else this.custodeSays('Che raccolto!', `L’orto dietro casa rende ${n} ${pl}.`, res);
+      if (type === 'witch_corner') this.say({ kind: 'witch', name: t('say.witch.name'), text: t('say.witch.sold', { n }), wisps: n });
+      else if (type === 'zombie_bar') this.say({ kind: 'zombie', name: t('say.zombieBar.name'), say: t('say.zombieBar.say'), text: t('say.zombieBar.text', { n }), wisps: n });
+      else if (type === 'brain_farm') this.say({ kind: 'zombie', name: t('say.brainFarm.name'), say: t('say.brainFarm.say'), text: t('say.brainFarm.text', { n }), wisps: n });
+      else this.custodeSays(t('say.custode.veggie.say'), t('say.custode.veggie.text', { n }), res);
       this.world.setEarnings(id, 0);
       this.ui.bumpWisps();
     }
@@ -1633,9 +1631,10 @@ export class Game {
   /** Per le statistiche tecniche: livello, risoluzione, fluidità, ombre e luci. */
   qualityInfo(): string {
     const p = this.profile(), a = this.auto;
-    const level = a ? `auto · ${QUALITY_LABELS[a.tier]} (max ${QUALITY_LABELS[a.top]}) · gradino ${a.step + 1}/${p.dpr.length}` : QUALITY_LABELS[this.level()];
-    const shadows = p.shadows === 'off' ? 'no' : p.shadows === 'still' ? 'ferme' : 'vive';
-    return `qualità ${level} · dpr ${this.renderer.getPixelRatio()} · tetto ${this.currentCap(performance.now())}/${this.frameCap} FPS · ombre ${shadows} · luci ${p.fakeLights ? 'finte' : 'vere'}${p.liteMaterials ? ' · materiale semplice' : ''}${p.lite ? ' · mondo leggero' : ''}`;
+    const level = a ? t('game.debug.auto', { tier: QUALITY_LABELS[a.tier], top: QUALITY_LABELS[a.top], step: a.step + 1, steps: p.dpr.length }) : QUALITY_LABELS[this.level()];
+    const shadows = p.shadows === 'off' ? t('game.debug.shadowsOff') : p.shadows === 'still' ? t('game.debug.shadowsStill') : t('game.debug.shadowsLive');
+    const extras = `${p.liteMaterials ? t('game.debug.liteMaterials') : ''}${p.lite ? t('game.debug.liteWorld') : ''}`;
+    return t('game.debug.quality', { level, dpr: this.renderer.getPixelRatio(), cap: this.currentCap(performance.now()), max: this.frameCap, shadows, lights: p.fakeLights ? t('game.debug.lightsFake') : t('game.debug.lightsReal'), extras });
   }
 
   /** La fascia nitida segue il Custode (o la selezione), senza scatti. */
@@ -1781,13 +1780,13 @@ export class Game {
     const info = this.renderer.info.render;
     const cs = cacheStats();
     return [
-      `FPS ${this.fps.value} · il browser ne offre ${this.fps.callsValue}/s`,
+      t('game.debug.fps', { fps: this.fps.value, calls: this.fps.callsValue }),
       this.qualityInfo(),
-      `draw calls ${info.calls} · tri ${info.triangles.toLocaleString('it-IT')}`,
-      `stile ${this.state.settings.style} · camera ${this.state.settings.camera}`,
-      `seed ${this.state.seed} · fase ${this.phase} · meteo ${this.state.world.weather}`,
-      `tombe ${this.state.graves.length} · oggetti ${this.state.placeables.length}`,
-      `presenze ${this.actors.stats().roamers}+${this.actors.stats().presences} · modelli ${cs.models}`,
+      t('game.debug.draw', { calls: info.calls, tris: info.triangles.toLocaleString(currentLang()) }),
+      t('game.debug.style', { style: this.state.settings.style, camera: this.state.settings.camera }),
+      t('game.debug.seed', { seed: this.state.seed, phase: this.phase, weather: this.state.world.weather }),
+      t('game.debug.counts', { graves: this.state.graves.length, items: this.state.placeables.length }),
+      t('game.debug.presences', { roamers: this.actors.stats().roamers, presences: this.actors.stats().presences, models: cs.models }),
     ].join('\n');
   }
 

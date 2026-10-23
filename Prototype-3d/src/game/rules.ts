@@ -12,6 +12,7 @@ import type { Grave, MemoryType, Placed, SaveData } from './state.ts';
 import { isoDate } from './time.ts';
 import { areaForLevel, buildOccupancy, canPlaceAt, cellsOf, computePrestige, nearestFreeSpot } from './world.ts';
 import { houseHasVeggie, houseItem, housePart, housePerk, houseRoof } from './house.ts';
+import { t } from '../i18n/index.ts';
 
 export class GameError extends Error {}
 
@@ -29,8 +30,9 @@ function reward(s: SaveData, xp: number, wisps: number) {
   if (wisps > 0) s.player.counters.wispsEarned += wisps;
 }
 
-function spend(s: SaveData, amount: number, what: string) {
-  if (s.player.wisps < amount) throw new GameError(`Servono ${amount} fuochi fatui per ${what}.`);
+/** `noFunds`: chiave del messaggio se i fuochi fatui non bastano (riceve {amount}). */
+function spend(s: SaveData, amount: number, noFunds: string) {
+  if (s.player.wisps < amount) throw new GameError(t(noFunds, { amount }));
   s.player.wisps -= amount;
   s.player.counters.wispsSpent += amount;
 }
@@ -41,13 +43,13 @@ function memory(s: SaveData, graveId: string, type: MemoryType, now: Date) {
 
 function graveById(s: SaveData, id: string): Grave {
   const g = s.graves.find((x) => x.id === id);
-  if (!g) throw new GameError('Tomba inesistente.');
+  if (!g) throw new GameError(t('rules.grave.missing'));
   return g;
 }
 
 function placedById(s: SaveData, id: string): Placed {
   const p = s.placeables.find((x) => x.id === id);
-  if (!p) throw new GameError('Oggetto inesistente.');
+  if (!p) throw new GameError(t('rules.placeable.missing'));
   return p;
 }
 
@@ -82,16 +84,16 @@ export function outsideArea(s: SaveData, level: number): Array<{ id: string; kin
  * I fuochi fatui rimasti fuori svaniscono.
  */
 export function setExpansionLevel(s: SaveData, level: number): ActionResult {
-  if (!Number.isInteger(level) || level < 0 || level >= EXPANSION.length) throw new GameError('Ampiezza non valida.');
-  if (level > s.world.unlockedLevel) throw new GameError(`«${EXPANSION[level].label}» si sblocca con ${EXPANSION[level].minPrestige} di prestigio.`);
+  if (!Number.isInteger(level) || level < 0 || level >= EXPANSION.length) throw new GameError(t('rules.expansion.invalid'));
+  if (level > s.world.unlockedLevel) throw new GameError(t('rules.expansion.locked', { area: EXPANSION[level].label, prestige: EXPANSION[level].minPrestige }));
   if (level === s.world.expansionLevel) return ok('', 0, 0);
   const left = outsideArea(s, level);
-  if (left.length) throw new GameError(`${left.length === 1 ? 'C’è ancora un elemento' : `Ci sono ancora ${left.length} elementi`} fuori dall'area: spostali o rimettili in inventario.`);
+  if (left.length) throw new GameError(left.length === 1 ? t('rules.expansion.outsideOne') : t('rules.expansion.outsideMany', { n: left.length }));
   const grow = level > s.world.expansionLevel;
   s.world.expansionLevel = level;
   const a = areaForLevel(level);
   s.world.looseWisps = s.world.looseWisps.filter((w) => w.x >= a.x && w.y >= a.y && w.x < a.x + a.w && w.y < a.y + a.h);
-  return ok(`${grow ? 'Il recinto si allarga' : 'Il recinto si stringe'}: ${EXPANSION[level].label}, ${a.w}×${a.h}.`, 0, 0);
+  return ok(t(grow ? 'rules.expansion.grow' : 'rules.expansion.shrink', { area: EXPANSION[level].label, w: a.w, h: a.h }), 0, 0);
 }
 
 // ── Sepoltura ───────────────────────────────────────────────────────────
@@ -119,19 +121,19 @@ export function emptyDraft(now: Date): BurialDraft {
 export function validateDraft(d: BurialDraft, now: Date): Record<string, string> {
   const e: Record<string, string> = {};
   const name = d.name.trim();
-  if (!name) e.name = 'Dai un nome al defunto.';
-  else if (name.length > 40) e.name = 'Massimo 40 caratteri.';
-  if (!d.category || !CATEGORIES.includes(d.category)) e.category = 'Scegli una categoria.';
-  if (!d.deathDate) e.deathDate = 'Indica la data del trapasso.';
-  else if (d.deathDate > isoDate(now)) e.deathDate = 'Non si seppellisce il futuro.';
-  if (d.birthDate && d.deathDate && d.birthDate > d.deathDate) e.birthDate = 'Nato dopo essere morto? Sospetto.';
+  if (!name) e.name = t('rules.draft.nameMissing');
+  else if (name.length > 40) e.name = t('rules.draft.maxChars', { max: 40 });
+  if (!d.category || !CATEGORIES.includes(d.category)) e.category = t('rules.draft.categoryMissing');
+  if (!d.deathDate) e.deathDate = t('rules.draft.deathDateMissing');
+  else if (d.deathDate > isoDate(now)) e.deathDate = t('rules.draft.deathDateFuture');
+  if (d.birthDate && d.deathDate && d.birthDate > d.deathDate) e.birthDate = t('rules.draft.bornAfterDeath');
   if (d.deathCause === 'custom') {
-    const t = (d.deathCauseText ?? '').trim();
-    if (!t) e.deathCause = 'Scrivi la causa del decesso.';
-    else if (t.length > CUSTOM_CAUSE_MAX) e.deathCause = `Massimo ${CUSTOM_CAUSE_MAX} caratteri.`;
-  } else if (!d.deathCause || !DEATH_CAUSES.includes(d.deathCause)) e.deathCause = 'Scegli una causa.';
-  if (d.epitaph.length > 240) e.epitaph = 'Massimo 240 caratteri.';
-  if (!d.graveType || !GRAVE_TYPES.includes(d.graveType)) e.graveType = 'Scegli una lapide.';
+    const text = (d.deathCauseText ?? '').trim();
+    if (!text) e.deathCause = t('rules.draft.customCauseMissing');
+    else if (text.length > CUSTOM_CAUSE_MAX) e.deathCause = t('rules.draft.maxChars', { max: CUSTOM_CAUSE_MAX });
+  } else if (!d.deathCause || !DEATH_CAUSES.includes(d.deathCause)) e.deathCause = t('rules.draft.causeMissing');
+  if (d.epitaph.length > 240) e.epitaph = t('rules.draft.maxChars', { max: 240 });
+  if (!d.graveType || !GRAVE_TYPES.includes(d.graveType)) e.graveType = t('rules.draft.graveTypeMissing');
   return e;
 }
 
@@ -144,14 +146,14 @@ export function bury(s: SaveData, d: BurialDraft, x: number, y: number, now: Dat
   const first = Object.values(errors)[0];
   if (first) throw new GameError(first);
   if (d.category === 'abstract' && !canBuryAbstractToday(s, now)) {
-    throw new GameError('Hai già seppellito una cosa astratta oggi. Torna domani.');
+    throw new GameError(t('rules.bury.abstractToday'));
   }
   if (GRAVE_TYPE_MIN_RANK[d.graveType!] > rankForXp(s.player.xp).level) {
-    throw new GameError('Questa lapide richiede un rango più alto.');
+    throw new GameError(t('rules.bury.rankTooLow'));
   }
   const occ = buildOccupancy(s);
   if (!canPlaceAt(x, y, GRAVE_FOOTPRINT, occ, areaForLevel(s.world.expansionLevel))) {
-    throw new GameError('Spazio non disponibile: servono 2×2 celle libere.');
+    throw new GameError(t('rules.bury.noSpace'));
   }
   const iso = now.toISOString();
   const grave: Grave = {
@@ -175,38 +177,38 @@ export function bury(s: SaveData, d: BurialDraft, x: number, y: number, now: Dat
   const xp = d.category === 'abstract' ? XP.burialAbstract : XP.burialPhysical;
   if (d.category === 'abstract') s.player.lastAbstractBurialDate = isoDate(now);
   reward(s, xp, WISPS.burial);
-  return { grave, result: ok(`${grave.name} riposa in pace.`, xp, WISPS.burial) };
+  return { grave, result: ok(t('rules.bury.done', { name: grave.name }), xp, WISPS.burial) };
 }
 
 // ── Cura delle tombe ────────────────────────────────────────────────────
 
 export function bringFlowers(s: SaveData, graveId: string, now: Date): ActionResult {
   const g = graveById(s, graveId);
-  if (g.broken) throw new GameError('La tomba è rotta: va prima riparata.');
-  if (g.dirty || g.weeds) throw new GameError('La tomba è sporca: va prima pulita.');
+  if (g.broken) throw new GameError(t('rules.grave.broken'));
+  if (g.dirty || g.weeds) throw new GameError(t('rules.flowers.dirty'));
   const alreadyToday = g.hasFlowers && g.flowersAt?.slice(0, 10) === now.toISOString().slice(0, 10);
   g.hasFlowers = true;
   g.flowersAt = now.toISOString();
   g.caredAt = now.toISOString();
-  if (alreadyToday) return ok('I fiori sono ancora freschi.');
+  if (alreadyToday) return ok(t('rules.flowers.fresh'));
   memory(s, g.id, 'flower', now);
   s.player.counters.flowersBrought++;
   // le fioriere della casa del Custode: un fuoco fatuo in più per ogni mazzo
   const wisps = housePerk(s, 'flowerbox') ? HOUSE_PERKS.flowerboxWisps : WISPS.flowers;
   reward(s, XP.flowers, wisps);
-  return ok('Hai portato fiori.', XP.flowers, wisps);
+  return ok(t('rules.flowers.done'), XP.flowers, wisps);
 }
 
 export function cleanGrave(s: SaveData, graveId: string, now: Date): ActionResult {
   const g = graveById(s, graveId);
-  if (g.broken) throw new GameError('La tomba è rotta: va prima riparata.');
+  if (g.broken) throw new GameError(t('rules.grave.broken'));
   g.caredAt = now.toISOString();
-  if (!g.dirty && !g.weeds) return ok('È già in ordine.');
+  if (!g.dirty && !g.weeds) return ok(t('rules.clean.already'));
   g.dirty = false; g.weeds = false; g.dirtySince = null; g.muddy = false;
   memory(s, g.id, 'cleaned', now);
   s.player.counters.cleanups++;
   reward(s, XP.cleaned, WISPS.cleaned);
-  return ok('Lapide pulita.', XP.cleaned, WISPS.cleaned);
+  return ok(t('rules.clean.done'), XP.cleaned, WISPS.cleaned);
 }
 
 /** Quanto costa riparare: col banco degli attrezzi della casa del Custode un quarto in meno. */
@@ -216,21 +218,21 @@ export const placeableRepairPrice = (s: SaveData, type: string) => Math.max(1, M
 
 export function repairGrave(s: SaveData, graveId: string, now: Date): ActionResult {
   const g = graveById(s, graveId);
-  if (!g.broken) return ok('Non c’è nulla da riparare.');
+  if (!g.broken) return ok(t('rules.repair.nothing'));
   const cost = graveRepairPrice(s);
-  spend(s, cost, 'riparare');
+  spend(s, cost, 'rules.repair.noFunds');
   g.broken = false; g.dirty = false; g.weeds = false; g.dirtySince = null; g.muddy = false; g.caredAt = now.toISOString();
   memory(s, g.id, 'repaired', now);
   s.player.counters.repairs++;
   reward(s, XP.repaired, 0);
-  return ok('Tomba riparata: torna come nuova.', XP.repaired, -cost);
+  return ok(t('rules.repair.graveDone'), XP.repaired, -cost);
 }
 
 export function exhumeGrave(s: SaveData, graveId: string): ActionResult {
   graveById(s, graveId);
   s.graves = s.graves.filter((g) => g.id !== graveId);
   s.memories = s.memories.filter((m) => m.graveId !== graveId);
-  return ok('Tomba rimossa. Il ricordo resta a te.');
+  return ok(t('rules.exhume.done'));
 }
 
 // ── Visite del becchino e del prete ─────────────────────────────────────
@@ -269,7 +271,7 @@ export function priestBless(s: SaveData, graveId: string, now: Date, first: bool
   if (!first) return ok('', 0, 0);
   s.world.blessingUntil = new Date(now.getTime() + WISP_SPAWN.blessingHours * 3_600_000).toISOString();
   reward(s, XP.blessing, WISPS.blessing);
-  return ok('Il prete benedice il cimitero: più fuochi fatui fino a domani.', XP.blessing, WISPS.blessing);
+  return ok(t('rules.priest.blessRound'), XP.blessing, WISPS.blessing);
 }
 
 // ── Albero dei ricordi ──────────────────────────────────────────────────
@@ -285,13 +287,13 @@ export function memoryTree(s: SaveData): Placed | undefined {
  */
 export function entrustGrave(s: SaveData, graveId: string, now: Date): ActionResult {
   const g = graveById(s, graveId);
-  if (!memoryTree(s)) throw new GameError('Serve l’Albero dei ricordi.');
+  if (!memoryTree(s)) throw new GameError(t('rules.entrust.noTree'));
   s.graves = s.graves.filter((x) => x.id !== graveId);
   s.entrusted.push({ grave: { ...g }, entrustedAt: now.toISOString(), ghostVisits: 0 });
   memory(s, graveId, 'entrusted', now);
   const xp = g.category === 'abstract' ? XP.burialAbstract : XP.burialPhysical;
   reward(s, xp, WISPS.burial);
-  return ok(`${g.name} riposa ora tra le radici dell’Albero dei ricordi.`, xp, WISPS.burial);
+  return ok(t('rules.entrust.done', { name: g.name }), xp, WISPS.burial);
 }
 
 export function entrustedById(s: SaveData, id: string) {
@@ -302,40 +304,40 @@ export function entrustedById(s: SaveData, id: string) {
 
 export function cleanPlaceable(s: SaveData, id: string, now: Date): ActionResult {
   const p = placedById(s, id);
-  if (p.broken) throw new GameError('È rotto: va prima riparato.');
+  if (p.broken) throw new GameError(t('rules.cleanItem.broken'));
   p.caredAt = now.toISOString();
-  if (!p.dirty) return ok('Già lucidato a dovere.');
+  if (!p.dirty) return ok(t('rules.cleanItem.already'));
   p.dirty = false;
   s.player.counters.cleanups++;
   reward(s, XP.placeableCleaned, WISPS.placeableCleaned);
-  return ok('Ripulito da polvere e ragnatele.', XP.placeableCleaned, WISPS.placeableCleaned);
+  return ok(t('rules.cleanItem.done'), XP.placeableCleaned, WISPS.placeableCleaned);
 }
 
 export function repairPlaceable(s: SaveData, id: string, now: Date): ActionResult {
   const p = placedById(s, id);
-  if (!p.broken) return ok('Non c’è nulla da riparare.');
+  if (!p.broken) return ok(t('rules.repair.nothing'));
   const cost = placeableRepairPrice(s, p.type);
-  spend(s, cost, 'riparare');
+  spend(s, cost, 'rules.repair.noFunds');
   p.broken = false; p.dirty = false; p.caredAt = now.toISOString();
   s.player.counters.repairs++;
   if (CATALOG[p.type]?.light) s.player.counters.lightsRepaired++;
   reward(s, XP.repaired, 0);
-  return ok('Riparato.', XP.repaired, -cost);
+  return ok(t('rules.repairItem.done'), XP.repaired, -cost);
 }
 
 export function toggleLight(s: SaveData, id: string): ActionResult {
   const p = placedById(s, id);
-  if (!CATALOG[p.type]?.light) throw new GameError('Non è una luce.');
-  if (p.broken) throw new GameError('È rotto: non si accende.');
+  if (!CATALOG[p.type]?.light) throw new GameError(t('rules.light.notLight'));
+  if (p.broken) throw new GameError(t('rules.light.broken'));
   p.lit = !p.lit;
-  return ok(p.lit ? 'Acceso.' : 'Spento.');
+  return ok(t(p.lit ? 'rules.light.on' : 'rules.light.off'));
 }
 
 export function setText(s: SaveData, id: string, text: string): ActionResult {
   const p = placedById(s, id);
-  if (!CATALOG[p.type]?.editableText) throw new GameError('Qui non si scrive.');
+  if (!CATALOG[p.type]?.editableText) throw new GameError(t('rules.text.notEditable'));
   p.text = text.slice(0, 60);
-  return ok('Scritta aggiornata.');
+  return ok(t('rules.text.done'));
 }
 
 // ── Bottega & inventario ────────────────────────────────────────────────
@@ -389,15 +391,15 @@ export function maxBuyable(s: SaveData, type: string): number {
 export function buy(s: SaveData, type: string, qty: number, now: Date): ActionResult {
   const def = placeableDef(type);
   const avail = shopAvailability(s, type, now);
-  if (avail === 'season') throw new GameError('Non è la stagione giusta.');
-  if (avail === 'rank') throw new GameError(`Serve il rango ${def.minRank}.`);
-  if (avail === 'feat') throw new GameError(`Si sblocca con un traguardo: ${def.feat!.label.toLowerCase()}.`);
-  if (avail === 'owned') throw new GameError('Ne possiedi già uno: è un pezzo unico.');
+  if (avail === 'season') throw new GameError(t('rules.buy.season'));
+  if (avail === 'rank') throw new GameError(t('rules.buy.rank', { rank: def.minRank }));
+  if (avail === 'feat') throw new GameError(t('rules.buy.feat', { feat: def.feat!.label.toLowerCase() }));
+  if (avail === 'owned') throw new GameError(t('rules.buy.owned'));
   const n = Math.max(1, Math.min(qty, maxBuyable(s, type)));
-  if (maxBuyable(s, type) < 1) throw new GameError('Fuochi fatui insufficienti.');
-  spend(s, def.cost * n, 'comprarlo');
+  if (maxBuyable(s, type) < 1) throw new GameError(t('rules.buy.funds'));
+  spend(s, def.cost * n, 'rules.buy.noFunds');
   s.inventory[type] = ownedCount(s, type) + n;
-  return ok(n > 1 ? `${def.label} ×${n} nell’inventario.` : `${def.label} nell’inventario.`, 0, -def.cost * n);
+  return ok(n > 1 ? t('rules.buy.doneMany', { item: def.label, n }) : t('rules.buy.done', { item: def.label }), 0, -def.cost * n);
 }
 
 export function sellPrice(type: string): number {
@@ -406,27 +408,27 @@ export function sellPrice(type: string): number {
 
 export function sell(s: SaveData, type: string, qty = 1): ActionResult {
   const def = placeableDef(type);
-  if (def.permanent) throw new GameError('La Bottega non si vende.');
+  if (def.permanent) throw new GameError(t('rules.sell.permanent'));
   const have = ownedCount(s, type);
-  if (have < 1) throw new GameError('Non ne possiedi.');
+  if (have < 1) throw new GameError(t('rules.sell.none'));
   const n = Math.min(have, Math.max(1, qty));
   s.inventory[type] = have - n;
   if (s.inventory[type] === 0) delete s.inventory[type];
   const gain = sellPrice(type) * n;
   s.player.wisps += gain;
-  return ok(`Venduto: +${gain} fuochi fatui.`, 0, gain);
+  return ok(t('rules.sell.done', { gain }), 0, gain);
 }
 
 // ── Piazzamento (modalità Modifica) ─────────────────────────────────────
 
 export function placeFromInventory(s: SaveData, type: string, x: number, y: number, rot: number, now: Date): Placed {
   const def = placeableDef(type);
-  if (def.category === 'extra') throw new GameError('Non si piazza: si usa.');
-  if (ownedCount(s, type) < 1) throw new GameError('Non ne hai in inventario.');
+  if (def.category === 'extra') throw new GameError(t('rules.place.extra'));
+  if (ownedCount(s, type) < 1) throw new GameError(t('rules.place.noneOwned'));
   const r = def.rotatable ? ((rot % 4) + 4) % 4 : 0;
   const occ = buildOccupancy(s);
   if (!canPlaceAt(x, y, rotatedFootprint(type, r), occ, areaForLevel(s.world.expansionLevel))) {
-    throw new GameError('Spazio occupato.');
+    throw new GameError(t('rules.place.busy'));
   }
   s.inventory[type] = ownedCount(s, type) - 1;
   if (s.inventory[type] === 0) delete s.inventory[type];
@@ -434,7 +436,7 @@ export function placeFromInventory(s: SaveData, type: string, x: number, y: numb
   const p: Placed = {
     id: newId(type), type, x, y, rot: r, variant: 0, lit: true,
     caredAt: iso, dirty: false, broken: false, createdAt: iso,
-    ...(def.editableText ? { text: 'Riposa in pace' } : {}),
+    ...(def.editableText ? { text: t('rules.place.defaultText') } : {}),
   };
   s.placeables.push(p);
   s.player.counters.decorationsPlaced++;
@@ -466,8 +468,8 @@ export function placeTrace(s: SaveData, type: string, cells: TraceCell[], now: D
   const status = traceStatus(s, type, cells);
   let placed = 0;
   cells.forEach((c, i) => { if (status[i] === 'ok') { placeFromInventory(s, type, c.x, c.y, c.rot, now); placed++; } });
-  if (!placed) throw new GameError(ownedCount(s, type) ? 'Il tracciato passa solo su spazi occupati.' : 'Non ne hai in inventario.');
-  return { ...ok(`${placeableDef(type).label}: ${placed} posat${placed === 1 ? 'o' : 'i'}.`), placed };
+  if (!placed) throw new GameError(t(ownedCount(s, type) ? 'rules.trace.allBusy' : 'rules.place.noneOwned'));
+  return { ...ok(t('rules.trace.done', { item: placeableDef(type).label, n: placed })), placed };
 }
 
 export function moveEntity(s: SaveData, id: string, x: number, y: number, rot?: number): ActionResult {
@@ -475,31 +477,31 @@ export function moveEntity(s: SaveData, id: string, x: number, y: number, rot?: 
   const occ = buildOccupancy(s, id);
   const grave = s.graves.find((g) => g.id === id);
   if (grave) {
-    if (!canPlaceAt(x, y, GRAVE_FOOTPRINT, occ, area)) throw new GameError('Spazio occupato.');
+    if (!canPlaceAt(x, y, GRAVE_FOOTPRINT, occ, area)) throw new GameError(t('rules.place.busy'));
     grave.x = x; grave.y = y;
-    return ok('Tomba spostata.');
+    return ok(t('rules.move.graveDone'));
   }
   const p = placedById(s, id);
   const r = rot ?? p.rot;
-  if (!canPlaceAt(x, y, rotatedFootprint(p.type, r), occ, area)) throw new GameError('Spazio occupato.');
+  if (!canPlaceAt(x, y, rotatedFootprint(p.type, r), occ, area)) throw new GameError(t('rules.place.busy'));
   p.x = x; p.y = y; p.rot = r;
-  return ok('Spostato.');
+  return ok(t('rules.move.done'));
 }
 
 /** Ruota di 90°; se il nuovo ingombro non entra, prova a restare ancorato. */
 export function rotateEntity(s: SaveData, id: string): ActionResult {
   const p = placedById(s, id);
-  if (!CATALOG[p.type]?.rotatable) throw new GameError('Non si può ruotare.');
+  if (!CATALOG[p.type]?.rotatable) throw new GameError(t('rules.rotate.no'));
   return moveEntity(s, id, p.x, p.y, (p.rot + 1) % 4);
 }
 
 export function storePlaceable(s: SaveData, id: string): ActionResult {
   const p = placedById(s, id);
   const def = placeableDef(p.type);
-  if (def.permanent) throw new GameError('La Bottega si può solo spostare.');
+  if (def.permanent) throw new GameError(t('rules.store.permanent'));
   s.placeables = s.placeables.filter((x) => x.id !== id);
   s.inventory[p.type] = ownedCount(s, p.type) + 1;
-  return ok(`${def.label} riposto nell’inventario.`);
+  return ok(t('rules.store.done', { item: def.label }));
 }
 
 // ── Bar e orto: incassi giornalieri ─────────────────────────────────────
@@ -541,15 +543,15 @@ export function businessPending(s: SaveData, id: string, now: Date): number {
 
 export function collectBusiness(s: SaveData, id: string, now: Date): ActionResult {
   const n = businessPending(s, id, now);
-  if (n < 1) throw new GameError('Oggi non c’è ancora niente da riscuotere.');
+  if (n < 1) throw new GameError(t('rules.collect.nothing'));
   const p = placedById(s, id);
   p.collectedAt = now.toISOString();
   reward(s, 0, n);
   if (p.type === 'witch_corner') {
     s.player.counters.potionsSold += n;
-    return ok(`La strega ha venduto ${n} ${n === 1 ? 'pozione' : 'pozioni'}: +${n} fuochi fatui.`, 0, n);
+    return ok(t('rules.collect.witch', { n }), 0, n);
   }
-  return ok(`Incasso: +${n} fuochi fatui.`, 0, n);
+  return ok(t('rules.collect.done', { n }), 0, n);
 }
 
 // ── Campana delle anime ─────────────────────────────────────────────────
@@ -563,11 +565,11 @@ export function bellReady(s: SaveData, id: string, now: Date): boolean {
 /** Il Custode suona la campana: le anime del cimitero accorrono (le fa comparire la vista). */
 export function ringBell(s: SaveData, id: string, now: Date): ActionResult {
   const p = placedById(s, id);
-  if (p.type !== 'soul_bell') throw new GameError('Non è una campana.');
-  if (p.broken) throw new GameError('È rotta: va prima riparata.');
-  if (!bellReady(s, id, now)) throw new GameError('La campana ha già suonato oggi: le anime tornano domani.');
+  if (p.type !== 'soul_bell') throw new GameError(t('rules.bell.notBell'));
+  if (p.broken) throw new GameError(t('rules.bell.broken'));
+  if (!bellReady(s, id, now)) throw new GameError(t('rules.bell.already'));
   p.rungAt = now.toISOString();
-  return ok('Din… don… Le anime del cimitero accorrono.');
+  return ok(t('rules.bell.rung'));
 }
 
 // ── Zombie e fango ──────────────────────────────────────────────────────
@@ -606,7 +608,7 @@ export function collectWisp(s: SaveData, id: string): ActionResult {
   s.world.looseWisps = s.world.looseWisps.filter((w) => w.id !== id);
   if (s.world.looseWisps.length === before) return ok('');
   reward(s, 0, WISPS.collect);
-  return ok('+1 fuoco fatuo', 0, WISPS.collect);
+  return ok(t('rules.wisp.collected'), 0, WISPS.collect);
 }
 
 /** Celle (x,y) entro raggio Chebyshev dal footprint 2×2 di una tomba. */
@@ -632,24 +634,24 @@ export function interactRoamer(
         kept.ghostVisits++;
         memory(s, kept.grave.id, 'ghost', now);
         reward(s, XP.ghost, WISPS.ghost);
-        return ok(`Il fantasma di ${kept.grave.name} è tornato a trovarti.`, XP.ghost, WISPS.ghost);
+        return ok(t('rules.ghost.memory', { name: kept.grave.name }), XP.ghost, WISPS.ghost);
       }
       if (opts.graveId && s.graves.some((g) => g.id === opts.graveId)) memory(s, opts.graveId, 'ghost', now);
       const xp = opts.rare ? XP.ghostObject : XP.ghost;
       const w = opts.rare ? WISPS.ghostObject : WISPS.ghost;
       reward(s, xp, w);
       const name = opts.rare ? s.graves.find((g) => g.id === opts.graveId)?.name : null;
-      return ok(name ? `Il fantasma di ${name} ti saluta.` : 'Un’apparizione si dissolve nella nebbia.', xp, w);
+      return ok(name ? t('rules.ghost.named', { name }) : t('rules.ghost.anon'), xp, w);
     }
-    case 'cat': reward(s, 0, WISPS.cat); return ok('Il gatto nero ti porta fortuna.', 0, WISPS.cat);
-    case 'rat': reward(s, 0, WISPS.rat); return ok('Hai scacciato un topo.', 0, WISPS.rat);
-    case 'crow': reward(s, 0, WISPS.crow); return ok('Il corvo lascia cadere un fuoco fatuo.', 0, WISPS.crow);
-    case 'zombie': reward(s, XP.zombie, WISPS.zombie); return ok('Hai ricacciato lo zombie nella fossa.', XP.zombie, WISPS.zombie);
+    case 'cat': reward(s, 0, WISPS.cat); return ok(t('rules.cat.met'), 0, WISPS.cat);
+    case 'rat': reward(s, 0, WISPS.rat); return ok(t('rules.rat.met'), 0, WISPS.rat);
+    case 'crow': reward(s, 0, WISPS.crow); return ok(t('rules.crow.met'), 0, WISPS.crow);
+    case 'zombie': reward(s, XP.zombie, WISPS.zombie); return ok(t('rules.zombie.met'), XP.zombie, WISPS.zombie);
     case 'priest': {
       if (opts.graveId && s.graves.some((g) => g.id === opts.graveId)) memory(s, opts.graveId, 'blessing', now);
       s.world.blessingUntil = new Date(now.getTime() + WISP_SPAWN.blessingHours * 3_600_000).toISOString();
       reward(s, XP.blessing, WISPS.blessing);
-      return ok('Il prete benedice il cimitero: più fuochi fatui per un giorno.', XP.blessing, WISPS.blessing);
+      return ok(t('rules.priest.met'), XP.blessing, WISPS.blessing);
     }
     case 'gravedigger': {
       const near = gravesNear(s, opts.x ?? 0, opts.y ?? 0, GRAVEDIGGER.cleanRadius).filter((g) => !g.broken && (g.dirty || g.weeds));
@@ -658,7 +660,7 @@ export function interactRoamer(
       const xp = near.length * XP.gravediggerPerGrave;
       const w = near.length * WISPS.gravediggerPerGrave;
       reward(s, xp, w);
-      return ok(near.length ? `Il becchino ripulisce ${near.length} ${near.length === 1 ? 'tomba' : 'tombe'} qui intorno.` : 'Il becchino borbotta e prosegue.', xp, w);
+      return ok(near.length ? t('rules.gravedigger.cleaned', { n: near.length }) : t('rules.gravedigger.idle'), xp, w);
     }
   }
 }
@@ -666,10 +668,10 @@ export function interactRoamer(
 export function recordPhoto(s: SaveData, now: Date): ActionResult {
   s.player.counters.photosTaken++;
   const today = isoDate(now);
-  if (s.player.lastShareDate === today) return ok('Foto salvata in galleria.');
+  if (s.player.lastShareDate === today) return ok(t('rules.photo.saved'));
   s.player.lastShareDate = today;
   reward(s, XP.photo, 0);
-  return ok('Foto salvata in galleria.', XP.photo, 0);
+  return ok(t('rules.photo.saved'), XP.photo, 0);
 }
 
 // ── Casa del Custode ────────────────────────────────────────────────────
@@ -697,7 +699,7 @@ export type HouseAvailability = 'ok' | 'owned' | 'rank' | 'funds';
 
 export function houseAvailability(s: SaveData, id: string): HouseAvailability {
   const it = houseItem(id);
-  if (!it) throw new GameError('Non esiste.');
+  if (!it) throw new GameError(t('rules.house.missing'));
   if (s.house.owned.includes(id)) return 'owned';
   if (it.minRank > rankForXp(s.player.xp).level) return 'rank';
   if (s.player.wisps < it.cost) return 'funds';
@@ -708,26 +710,26 @@ export function houseAvailability(s: SaveData, id: string): HouseAvailability {
 export function buyHousePart(s: SaveData, id: string, now: Date): ActionResult {
   const it = houseItem(id)!;
   const av = houseAvailability(s, id);
-  if (av === 'owned') throw new GameError('Ce l’hai già.');
-  if (av === 'rank') throw new GameError(`Serve il rango ${it.minRank}.`);
-  if (av === 'funds') throw new GameError(`Servono ${it.cost} fuochi fatui.`);
+  if (av === 'owned') throw new GameError(t('rules.house.owned'));
+  if (av === 'rank') throw new GameError(t('rules.house.rank', { rank: it.minRank }));
+  if (av === 'funds') throw new GameError(t('rules.house.funds', { cost: it.cost }));
   s.player.wisps -= it.cost;
   s.house.owned.push(id);
   if (houseRoof(id)) s.house.roof = id;
   // l'orto comincia a rendere da oggi (non per i giorni passati)
   const home = s.placeables.find((p) => p.type === 'keeper_house');
   if (id === 'veggie' && home) home.collectedAt = now.toISOString();
-  return ok(`${it.label}: fatto!`);
+  return ok(t('rules.house.done', { item: it.label }));
 }
 
 export function setHouseRoof(s: SaveData, id: string): void {
-  if (!houseRoof(id) || !s.house.owned.includes(id)) throw new GameError('Questo tetto non ce l’hai.');
+  if (!houseRoof(id) || !s.house.owned.includes(id)) throw new GameError(t('rules.house.roofNotOwned'));
   s.house.roof = id;
 }
 
 /** Toglie o rimette un'aggiunta comprata. */
 export function toggleHousePart(s: SaveData, id: string, now?: Date): boolean {
-  if (!housePart(id) || !s.house.owned.includes(id)) throw new GameError('Questa aggiunta non ce l’hai.');
+  if (!housePart(id) || !s.house.owned.includes(id)) throw new GameError(t('rules.house.partNotOwned'));
   const i = s.house.hidden.indexOf(id);
   if (i >= 0) s.house.hidden.splice(i, 1); else s.house.hidden.push(id);
   // l'orto rimesso riparte da oggi: i giorni in cui non c'era non rendono

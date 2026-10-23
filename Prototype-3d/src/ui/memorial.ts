@@ -7,6 +7,7 @@ import { memorials } from '../app/persistence.ts';
 import { newId } from '../game/rng.ts';
 import { $, h, toast } from './dom.ts';
 import { icon } from './icons.ts';
+import { t } from '../i18n/index.ts';
 import { applyPhotoFilter, PHOTO_FILTER_LABELS, squareCrop, type PhotoFilter } from './photoFilters.ts';
 import { drawPostcard, sharePostcard, type PostcardData } from './postcard.ts';
 
@@ -50,7 +51,7 @@ export class BurialPhoto {
     const key = `${this.version}:${this.filter}`;
     if (this.stored?.key === key) return this.stored.id;
     const id = newId('mp');
-    try { await memorials.put({ id, dataUrl }); this.stored = { key, id }; return id; } catch { toast('Non riesco a salvare la foto in questo browser.'); return null; }
+    try { await memorials.put({ id, dataUrl }); this.stored = { key, id }; return id; } catch { toast(t('memorial.saveFailed')); return null; }
   }
 }
 
@@ -58,7 +59,7 @@ export class BurialPhoto {
 export function portrait(src: string | null, stone: string | null): HTMLElement {
   return src
     ? h('div', { class: 'portrait' }, h('img', { class: 'pic', src, alt: '' }), stone ? h('img', { class: 'stone', src: stone, alt: '' }) : null)
-    : h('div', { class: 'portrait empty' }, h('div', { class: 'pic' }, icon('photo', 40), 'Nessuna foto'));
+    : h('div', { class: 'portrait empty' }, h('div', { class: 'pic' }, icon('photo', 40), t('memorial.noPhoto')));
 }
 
 /** Passo «Foto» della sepoltura. `rerender` ridisegna il passo (e il piede, che passa da «Salta» ad «Avanti»). */
@@ -70,14 +71,14 @@ export function photoStep(photo: BurialPhoto, rerender: () => void): HTMLElement
       const f = input.files?.[0];
       input.remove();
       if (!f) return;
-      try { await photo.load(f); } catch { toast('Questa immagine non si apre.'); return; }
+      try { await photo.load(f); } catch { toast(t('memorial.badImage')); return; }
       rerender();
     });
     document.body.append(input);
     input.click();
   };
   const box = h('div', { class: 'photo-pick' },
-    h('p', { class: 'muted', style: 'margin:0' }, photo.has ? 'Scorri sulla foto per cambiare filtro.' : 'Una foto dell’oggetto, per ricordarlo com’era. È facoltativa.'));
+    h('p', { class: 'muted', style: 'margin:0' }, photo.has ? t('memorial.hint.swipe') : t('memorial.hint.optional')));
   const frame = portrait(photo.url(), null);
   box.append(frame);
   if (photo.has) {
@@ -92,13 +93,13 @@ export function photoStep(photo: BurialPhoto, rerender: () => void): HTMLElement
     pic.addEventListener('pointerup', (e) => { if (x0 === null) return; const dx = e.clientX - x0; x0 = null; if (Math.abs(dx) > 36) go(dx < 0 ? 1 : -1); });
     pic.addEventListener('pointercancel', () => { x0 = null; });
     box.append(h('div', { class: 'filter-switch' },
-      h('button', { class: 'icon-btn small', 'aria-label': 'Filtro precedente', disabled: i === 0, onclick: () => go(-1) }, '‹'),
+      h('button', { class: 'icon-btn small', 'aria-label': t('memorial.filter.prev'), disabled: i === 0, onclick: () => go(-1) }, '‹'),
       h('div', {}, h('b', {}, PHOTO_FILTER_LABELS[photo.filter]), h('div', { class: 'swipe-dots' }, ...FILTERS.map((_, k) => h('i', { class: k === i ? 'on' : '' })))),
-      h('button', { class: 'icon-btn small', 'aria-label': 'Filtro successivo', disabled: i === FILTERS.length - 1, onclick: () => go(1) }, '›')));
+      h('button', { class: 'icon-btn small', 'aria-label': t('memorial.filter.next'), disabled: i === FILTERS.length - 1, onclick: () => go(1) }, '›')));
   }
   box.append(h('div', { class: 'row' },
-    h('button', { class: 'big-btn ghost', onclick: () => pickFile(true) }, icon('photo', 22), photo.has ? 'Rifai' : 'Scatta'),
-    h('button', { class: 'big-btn ghost', onclick: () => pickFile(false) }, photo.has ? 'Altra foto' : 'Dalla galleria')));
+    h('button', { class: 'big-btn ghost', onclick: () => pickFile(true) }, icon('photo', 22), photo.has ? t('memorial.retake') : t('memorial.take')),
+    h('button', { class: 'big-btn ghost', onclick: () => pickFile(false) }, photo.has ? t('memorial.another') : t('memorial.fromGallery'))));
   return box;
 }
 
@@ -112,12 +113,12 @@ export async function openPostcard(data: PostcardData) {
   const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') { e.stopPropagation(); close(); } };
   const share = async () => {
     const r = await sharePostcard(card, data.name);
-    if (r === 'downloaded') toast('Cartolina salvata.');
+    if (r === 'downloaded') toast(t('postcard.saved'));
   };
   const box = h('div', { class: 'dialog postcard-dialog', role: 'dialog', 'aria-modal': 'true', onclick: (e: Event) => e.stopPropagation() },
-    h('h3', {}, 'Cartolina funebre'),
-    h('img', { class: 'postcard-view', src: card.toDataURL('image/png'), alt: `Cartolina per ${data.name}` }),
-    h('div', { class: 'row' }, h('button', { class: 'big-btn ghost', onclick: close }, 'Chiudi'), h('button', { class: 'big-btn', onclick: share }, 'Condividi')));
+    h('h3', {}, t('postcard.dialog.title')),
+    h('img', { class: 'postcard-view', src: card.toDataURL('image/png'), alt: t('postcard.dialog.alt', { name: data.name }) }),
+    h('div', { class: 'row' }, h('button', { class: 'big-btn ghost', onclick: close }, t('postcard.close')), h('button', { class: 'big-btn', onclick: share }, t('postcard.share'))));
   const scrim = h('div', { class: 'dialog-scrim', onclick: close }, box);
   ($('#drawer').parentElement ?? document.body).append(scrim);
   document.addEventListener('keydown', onKey, true);

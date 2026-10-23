@@ -5,6 +5,7 @@
 // backup (un unico JSON con le foto in base64) si importano ancora.
 
 import { strFromU8, strToU8, unzipSync, zipSync, type Zippable } from 'fflate';
+import { t } from '../i18n/index.ts';
 
 export const BACKUP_FORMAT = 'necrothing-3d';
 export const BACKUP_VERSION = 2;
@@ -21,7 +22,7 @@ const MIME: Record<string, string> = { jpg: 'image/jpeg', png: 'image/png', webp
 
 export function dataUrlToBytes(url: string): { bytes: Uint8Array; mime: string } {
   const m = /^data:([^;,]+)(;base64)?,(.*)$/s.exec(url);
-  if (!m) throw new Error('Immagine non valida.');
+  if (!m) throw new Error(t('backup.invalidImage'));
   const raw = m[2] ? atob(m[3]) : decodeURIComponent(m[3]);
   const bytes = new Uint8Array(raw.length);
   for (let i = 0; i < raw.length; i++) bytes[i] = raw.charCodeAt(i);
@@ -61,15 +62,15 @@ export function unpackBackup(bytes: Uint8Array): BackupContent {
     // vecchio formato: tutto in un JSON, foto in base64
     let parsed: { format?: string; state?: unknown; photos?: PhotoRecord[] } | null = null;
     try { parsed = JSON.parse(strFromU8(bytes)); } catch { /* sotto: file non riconosciuto */ }
-    if (parsed?.format !== BACKUP_FORMAT) throw new Error('File non riconosciuto come backup Necrothing 3D.');
+    if (parsed?.format !== BACKUP_FORMAT) throw new Error(t('backup.unknownFile'));
     return { state: parsed.state, photos: parsed.photos ?? [], memorials: [] };
   }
   let files: Record<string, Uint8Array>;
-  try { files = unzipSync(bytes); } catch { throw new Error('Backup corrotto.'); }
+  try { files = unzipSync(bytes); } catch { throw new Error(t('backup.corrupt')); }
   const raw = files['save.json'];
-  if (!raw) throw new Error('File non riconosciuto come backup Necrothing 3D.');
+  if (!raw) throw new Error(t('backup.unknownFile'));
   const index = JSON.parse(strFromU8(raw)) as { format?: string; state?: unknown; photos?: Array<{ id: string; createdAt: string; file: string }>; memorials?: Array<{ id: string; file: string }> };
-  if (index.format !== BACKUP_FORMAT) throw new Error('File non riconosciuto come backup Necrothing 3D.');
+  if (index.format !== BACKUP_FORMAT) throw new Error(t('backup.unknownFile'));
   const image = (file: string) => {
     const b = files[file];
     return b ? bytesToDataUrl(b, MIME[file.split('.').pop() ?? ''] ?? 'application/octet-stream') : null;

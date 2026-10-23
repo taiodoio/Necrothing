@@ -302,7 +302,7 @@ function lookPart(spec: KawaiiSpec, key: string, part: KPart): CachedModel | nul
 // Sopra le stelline fisse della pelle brillantinata, a turno qualche punto si
 // accende in un lampo a croce (shader a punti, tempo letto a ogni render).
 
-const TWINKLE_VERT = /* glsl */ `
+const TWINKLE_VERT = /* glsl, i18n-ok */ `
 uniform float uTime;
 uniform float uScale;
 attribute float aSeed;
@@ -315,7 +315,7 @@ void main() {
   float persp = projectionMatrix[3][3] == 0.0 ? -mv.z : 1.0;
   gl_PointSize = 0.11 * vA * projectionMatrix[1][1] * uScale / persp;
 }`;
-const TWINKLE_FRAG = /* glsl */ `
+const TWINKLE_FRAG = /* glsl, i18n-ok */ `
 varying float vA;
 void main() {
   vec2 c = gl_PointCoord * 2.0 - 1.0;

@@ -1,6 +1,7 @@
 // Micro-helper DOM (niente framework): creazione elementi, toast, numeri
 // fluttuanti, drawer dal basso, dialogo di conferma nello stile del gioco.
 
+import { currentLang, t } from '../i18n/index.ts';
 import { icon } from './icons.ts';
 
 type Child = Node | string | number | null | undefined | false;
@@ -30,6 +31,22 @@ export function h<K extends keyof HTMLElementTagNameMap>(
 }
 
 export const $ = <T extends HTMLElement = HTMLElement>(sel: string) => document.querySelector<T>(sel)!;
+
+/** Pezzi di una riga uniti col separatore della lingua («a · b · c»); i vuoti si saltano. */
+export const joinDot = (parts: string[]): string => parts.filter(Boolean).reduce((a, b) => (a ? t('hud.join', { a, b }) : b), '');
+
+/**
+ * I testi fissi della pagina (index.html, bench.html) nella lingua scelta:
+ * data-i18n per il testo, data-i18n-aria per aria-label, data-i18n-title per
+ * title, data-i18n-content per le meta. Nell'HTML resta l'italiano come segnaposto.
+ */
+export function applyPageTexts() {
+  document.documentElement.lang = currentLang();
+  for (const el of document.querySelectorAll<HTMLElement>('[data-i18n]')) el.textContent = t(el.dataset.i18n!);
+  for (const el of document.querySelectorAll<HTMLElement>('[data-i18n-aria]')) el.setAttribute('aria-label', t(el.dataset.i18nAria!));
+  for (const el of document.querySelectorAll<HTMLElement>('[data-i18n-title]')) el.title = t(el.dataset.i18nTitle!);
+  for (const el of document.querySelectorAll<HTMLElement>('[data-i18n-content]')) el.setAttribute('content', t(el.dataset.i18nContent!));
+}
 
 export function toast(message: string, kind: '' | 'ach' = '') {
   if (!message) return;
@@ -84,7 +101,7 @@ export function setDrawerExtra(node: Node | null) {
 
 /** Il saldo dei fuochi fatui, come pastiglia. */
 export function wispPill(n: number): HTMLElement {
-  return h('span', { class: 'wisp-pill', 'aria-label': `${n} fuochi fatui` }, icon('wisp', 16), n.toLocaleString('it-IT'));
+  return h('span', { class: 'wisp-pill', 'aria-label': t('hud.wispsAria', { n }) }, icon('wisp', 16), n.toLocaleString(currentLang()));
 }
 
 /** Immagine in testa al drawer (la Bottega animata): resta finché non si apre un altro pannello. */
@@ -147,11 +164,11 @@ export function confirmDialog(opts: { title: string; message: string; ok?: strin
       resolve(yes);
     };
     const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') { e.stopPropagation(); e.preventDefault(); done(false); } };
-    const okBtn = h('button', { class: `big-btn${opts.danger ? ' danger' : ''}`, onclick: () => done(true) }, opts.ok ?? 'Conferma');
+    const okBtn = h('button', { class: `big-btn${opts.danger ? ' danger' : ''}`, onclick: () => done(true) }, opts.ok ?? t('dialog.ok'));
     const box = h('div', { class: 'dialog', role: 'alertdialog', 'aria-modal': 'true', onclick: (e: Event) => e.stopPropagation() },
       h('h3', {}, opts.title),
       h('p', {}, opts.message),
-      h('div', { class: 'row' }, h('button', { class: 'big-btn ghost', onclick: () => done(false) }, opts.cancel ?? 'Annulla'), okBtn));
+      h('div', { class: 'row' }, h('button', { class: 'big-btn ghost', onclick: () => done(false) }, opts.cancel ?? t('dialog.cancel')), okBtn));
     const scrim = h('div', { class: 'dialog-scrim', onclick: () => done(false) }, box);
     ($('#drawer').parentElement ?? document.body).append(scrim);
     document.addEventListener('keydown', onKey, true);
@@ -185,7 +202,7 @@ export function openModal(content: Node, opts: { onClose?: () => void; label?: s
   const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') { e.stopPropagation(); e.preventDefault(); close(); } };
   // la X in alto a sinistra, come nei pannelli; il contenuto si cambia senza toccarla
   const body = h('div', { class: 'modal-body' }, content);
-  const x = h('button', { class: 'icon-btn small modal-close', 'aria-label': 'Chiudi', onclick: () => close() }, icon('close', 22));
+  const x = h('button', { class: 'icon-btn small modal-close', 'aria-label': t('dialog.close'), onclick: () => close() }, icon('close', 22));
   const box = h('div', { class: 'dialog modal', role: 'dialog', 'aria-modal': 'true', 'aria-label': opts.label, onclick: (e: Event) => e.stopPropagation() }, x, body);
   const scrim = h('div', { class: 'dialog-scrim modal-scrim', onclick: () => close() }, box);
   ($('#drawer').parentElement ?? document.body).append(scrim);
@@ -196,5 +213,5 @@ export function openModal(content: Node, opts: { onClose?: () => void; label?: s
 export function fmtDate(iso: string | null): string {
   if (!iso) return '—';
   const d = new Date(iso.length === 10 ? iso + 'T12:00:00' : iso);
-  return d.toLocaleDateString('it-IT', { day: 'numeric', month: 'short', year: 'numeric' });
+  return d.toLocaleDateString(currentLang(), { day: 'numeric', month: 'short', year: 'numeric' });
 }

@@ -4,14 +4,15 @@
 import { HOUSE_PERKS, SPAWN_CHANCE, SPAWN_MODIFIERS, WISP_SPAWN } from './balance.ts';
 import { housePerk } from './house.ts';
 import { ZOMBIE_ATTRACTORS } from './catalog.ts';
+import { t } from '../i18n/index.ts';
 import type { Rng } from './rng.ts';
 import type { SaveData } from './state.ts';
 
 export type RoamerKind = 'ghost' | 'cat' | 'crow' | 'priest' | 'gravedigger' | 'rat' | 'zombie';
 
 export const ROAMER_LABELS: Record<RoamerKind, string> = {
-  ghost: 'Fantasma', cat: 'Gatto nero', crow: 'Corvo', priest: 'Prete',
-  gravedigger: 'Becchino', rat: 'Topo', zombie: 'Zombie',
+  ghost: t('npc.ghost.label'), cat: t('npc.cat.label'), crow: t('npc.crow.label'), priest: t('npc.priest.label'),
+  gravedigger: t('npc.gravedigger.label'), rat: t('npc.rat.label'), zombie: t('npc.zombie.label'),
 };
 
 export interface SpawnRequest {

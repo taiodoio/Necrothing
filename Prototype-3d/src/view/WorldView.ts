@@ -159,7 +159,7 @@ function earnMaterial(n: number): THREE.SpriteMaterial {
   else { plate(0, '#07080b'); plate(step, '#c9a25c'); plate(step * 2, '#161920'); }
   drawIcon(g, 'wisp', 20, 20, 56);
   g.fillStyle = uiNext() ? '#ffe2a8' : '#f1d39c';
-  g.font = uiNext() ? '800 46px "Nunito", system-ui, sans-serif' : 'bold 46px "Pixelify Sans", system-ui, sans-serif';
+  g.font = uiNext() ? '800 46px "Nunito", system-ui, sans-serif' : 'bold 46px "Pixelify Sans", system-ui, sans-serif'; // i18n-ok: font
   g.textBaseline = 'middle';
   g.fillText(`+${n}`, 84, 50);
   const tex = new THREE.CanvasTexture(c);
@@ -902,7 +902,7 @@ export class WorldView {
       for (const w of words) { if ((line + ' ' + w).trim().length > 12) { lines.push(line.trim()); line = w; } else line += ' ' + w; }
       lines.push(line.trim());
       const size = lines.length > 2 ? 30 : 38;
-      g.font = `${size}px "Jacquard 24", Georgia, serif`;
+      g.font = `${size}px "Jacquard 24", Georgia, serif`; // i18n-ok: font
       lines.slice(0, 3).forEach((l, i) => g.fillText(l, 128, 80 + (i - (Math.min(lines.length, 3) - 1) / 2) * (size + 4)));
       tex = new THREE.CanvasTexture(c);
       tex.colorSpace = THREE.SRGBColorSpace;

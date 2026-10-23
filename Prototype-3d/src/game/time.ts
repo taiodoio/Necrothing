@@ -1,5 +1,7 @@
 // Tempo reale: fasi del giorno, stagioni, differenze in giorni.
 
+import { t } from '../i18n/index.ts';
+
 export type DayPhase = 'dawn' | 'day' | 'dusk' | 'night';
 export type Season = 'spring' | 'summer' | 'autumn' | 'winter';
 
@@ -34,8 +36,8 @@ export function isoDate(d: Date): string {
 }
 
 export const DAY_PHASE_LABELS: Record<DayPhase, string> = {
-  dawn: 'Alba',
-  day: 'Giorno',
-  dusk: 'Crepuscolo',
-  night: 'Notte',
+  dawn: t('time.phase.dawn'),
+  day: t('time.phase.day'),
+  dusk: t('time.phase.dusk'),
+  night: t('time.phase.night'),
 };

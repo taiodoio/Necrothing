@@ -9,6 +9,7 @@ import { MAP_SIZE, WISPS } from './balance.ts';
 import { CATALOG, FAMILY_MEMBERS, rotatedFootprint } from './catalog.ts';
 import { createRng, hashString } from './rng.ts';
 import { isoDate } from './time.ts';
+import { t } from '../i18n/index.ts';
 
 /** v2: mappa 64×64 (prima 48×48), recinto iniziale 34×34. */
 export const SAVE_VERSION = 2;
@@ -271,16 +272,16 @@ export function createNewGame(now: Date, seed = Math.floor(Math.random() * 1e9))
   for (let y = 34; y <= 37; y++) placeables.push(P('path_dirt', 23, y));
 
   const legacy: Array<[string, GraveType, number, number, Category, DeathCause, string, 'dirty' | 'clean' | 'flowers' | 'broken']> = [
-    ['Floppy disk 1.44', 'rectangular', 20, 24, 'electronics', 'planned_obsolescence', 'Conteneva tutto. Ora contiene silenzio.', 'dirty'],
-    ['Tamagotchi', 'stone_simple', 23, 24, 'toys', 'owner_negligence', 'Aveva fame. Sempre.', 'clean'],
-    ['Ombrello del 2009', 'gothic', 26, 24, 'household', 'fatal_fall', 'Si è rovesciato per l’ultima volta.', 'dirty'],
-    ['Walkman', 'celtic_cross', 34, 24, 'electronics', 'battery_betrayal', 'Il nastro si è fermato a metà canzone.', 'flowers'],
-    ['Pianta grassa', 'victorian', 37, 24, 'plants', 'water_damage', 'Troppo amore, troppa acqua.', 'clean'],
-    ['Cabina telefonica', 'obelisk', 40, 24, 'other', 'planned_obsolescence', 'Chiamava. Nessuno rispondeva più.', 'dirty'],
-    ['Bicicletta rossa', 'angel', 20, 28, 'vehicles', 'fatal_fall', 'Ha imparato a stare in equilibrio. Poi più nulla.', 'flowers'],
-    ['Caffettiera', 'marble_cross', 26, 28, 'household', 'owner_negligence', 'Borbottava ogni mattina. Ora tace.', 'clean'],
-    ['Lettore DVD', 'family_memorial', 35, 28, 'electronics', 'battery_betrayal', 'Leggeva tutto tranne il nostro cuore.', 'broken'],
-    ['Peluche di coniglio', 'decorated_monument', 39, 28, 'toys', 'owner_negligence', 'Ha ascoltato ogni segreto.', 'clean'],
+    [t('state.legacy.floppy.name'), 'rectangular', 20, 24, 'electronics', 'planned_obsolescence', t('state.legacy.floppy.epitaph'), 'dirty'],
+    [t('state.legacy.tamagotchi.name'), 'stone_simple', 23, 24, 'toys', 'owner_negligence', t('state.legacy.tamagotchi.epitaph'), 'clean'],
+    [t('state.legacy.umbrella.name'), 'gothic', 26, 24, 'household', 'fatal_fall', t('state.legacy.umbrella.epitaph'), 'dirty'],
+    [t('state.legacy.walkman.name'), 'celtic_cross', 34, 24, 'electronics', 'battery_betrayal', t('state.legacy.walkman.epitaph'), 'flowers'],
+    [t('state.legacy.succulent.name'), 'victorian', 37, 24, 'plants', 'water_damage', t('state.legacy.succulent.epitaph'), 'clean'],
+    [t('state.legacy.phoneBooth.name'), 'obelisk', 40, 24, 'other', 'planned_obsolescence', t('state.legacy.phoneBooth.epitaph'), 'dirty'],
+    [t('state.legacy.bike.name'), 'angel', 20, 28, 'vehicles', 'fatal_fall', t('state.legacy.bike.epitaph'), 'flowers'],
+    [t('state.legacy.moka.name'), 'marble_cross', 26, 28, 'household', 'owner_negligence', t('state.legacy.moka.epitaph'), 'clean'],
+    [t('state.legacy.dvdPlayer.name'), 'family_memorial', 35, 28, 'electronics', 'battery_betrayal', t('state.legacy.dvdPlayer.epitaph'), 'broken'],
+    [t('state.legacy.bunny.name'), 'decorated_monument', 39, 28, 'toys', 'owner_negligence', t('state.legacy.bunny.epitaph'), 'clean'],
   ];
   const graves: Grave[] = legacy.map(([name, graveType, x, y, category, deathCause, epitaph, cond], i) => ({
     id: `legacy-${i + 1}`,
@@ -300,7 +301,7 @@ export function createNewGame(now: Date, seed = Math.floor(Math.random() * 1e9))
     seed,
     createdAt: iso,
     player: {
-      name: 'Custode', look: { ...DEFAULT_LOOK }, xp: 0, wisps: WISPS.start,
+      name: t('state.player.defaultName'), look: { ...DEFAULT_LOOK }, xp: 0, wisps: WISPS.start,
       lastAbstractBurialDate: null, lastShareDate: null, counters: emptyCounters(),
     },
     graves,

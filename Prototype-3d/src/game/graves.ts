@@ -1,5 +1,7 @@
 // Dominio delle tombe: categorie, cause di morte, tipi di lapide.
-// Etichette in italiano, identiche alla PWA React.
+// Le etichette sono in src/i18n/it/game.ts (grave.*).
+
+import { t } from '../i18n/index.ts';
 
 export const CATEGORIES = [
   'electronics', 'plants', 'clothing', 'household', 'toys',
@@ -8,16 +10,16 @@ export const CATEGORIES = [
 export type Category = (typeof CATEGORIES)[number];
 
 export const CATEGORY_LABELS: Record<Category, string> = {
-  electronics: 'Elettronica',
-  plants: 'Piante',
-  clothing: 'Abbigliamento',
-  household: 'Casalinghi',
-  toys: 'Giocattoli',
-  tools: 'Strumenti',
-  vehicles: 'Veicoli',
-  expensive: 'Oggetti costosi',
-  abstract: 'Cose astratte',
-  other: 'Altro',
+  electronics: t('grave.category.electronics'),
+  plants: t('grave.category.plants'),
+  clothing: t('grave.category.clothing'),
+  household: t('grave.category.household'),
+  toys: t('grave.category.toys'),
+  tools: t('grave.category.tools'),
+  vehicles: t('grave.category.vehicles'),
+  expensive: t('grave.category.expensive'),
+  abstract: t('grave.category.abstract'),
+  other: t('grave.category.other'),
 };
 
 export const CATEGORY_ICONS: Record<Category, string> = {
@@ -38,19 +40,19 @@ export type CauseChoice = DeathCause | 'custom';
 export const CUSTOM_CAUSE_MAX = 60;
 
 export const DEATH_CAUSE_LABELS: Record<DeathCause, string> = {
-  planned_obsolescence: 'Obsolescenza programmata',
-  fatal_fall: 'Caduta fatale',
-  water_damage: 'Acqua dove non doveva esserci acqua',
-  purifying_fire: 'Fuoco purificatore',
-  owner_negligence: 'Negligenza del padrone',
-  cat_intervention: 'Intervento del gatto',
-  unsupervised_child: 'Bambino non supervisionato',
-  mystery: 'Mistero della fede',
-  natural_wear: 'Usura naturale',
-  battery_betrayal: 'Tradimento della batteria',
-  final_update: 'Aggiornamento software finale',
-  broken_cable: 'Cavo spezzato',
-  eternal_black_screen: 'Schermo nero eterno',
+  planned_obsolescence: t('grave.cause.plannedObsolescence'),
+  fatal_fall: t('grave.cause.fatalFall'),
+  water_damage: t('grave.cause.waterDamage'),
+  purifying_fire: t('grave.cause.purifyingFire'),
+  owner_negligence: t('grave.cause.ownerNegligence'),
+  cat_intervention: t('grave.cause.catIntervention'),
+  unsupervised_child: t('grave.cause.unsupervisedChild'),
+  mystery: t('grave.cause.mystery'),
+  natural_wear: t('grave.cause.naturalWear'),
+  battery_betrayal: t('grave.cause.batteryBetrayal'),
+  final_update: t('grave.cause.finalUpdate'),
+  broken_cable: t('grave.cause.brokenCable'),
+  eternal_black_screen: t('grave.cause.eternalBlackScreen'),
 };
 
 /** Etichetta della causa (quella scritta a mano, se personalizzata). */
@@ -66,16 +68,16 @@ export const GRAVE_TYPES = [
 export type GraveType = (typeof GRAVE_TYPES)[number];
 
 export const GRAVE_TYPE_LABELS: Record<GraveType, string> = {
-  stone_simple: 'Lapide arrotondata',
-  rectangular: 'Lapide rettangolare',
-  gothic: 'Lapide gotica',
-  celtic_cross: 'Croce celtica',
-  marble_cross: 'Croce in marmo',
-  angel: 'Monumento con angelo',
-  obelisk: 'Obelisco',
-  family_memorial: 'Memoriale di famiglia',
-  decorated_monument: 'Monumento decorato',
-  victorian: 'Lapide vittoriana',
+  stone_simple: t('grave.type.stoneSimple'),
+  rectangular: t('grave.type.rectangular'),
+  gothic: t('grave.type.gothic'),
+  celtic_cross: t('grave.type.celticCross'),
+  marble_cross: t('grave.type.marbleCross'),
+  angel: t('grave.type.angel'),
+  obelisk: t('grave.type.obelisk'),
+  family_memorial: t('grave.type.familyMemorial'),
+  decorated_monument: t('grave.type.decoratedMonument'),
+  victorian: t('grave.type.victorian'),
 };
 
 /** Rango minimo per scegliere un tipo di lapide nel funnel di sepoltura. */
@@ -102,8 +104,8 @@ export function graveVisualState(g: GraveLike): GraveVisualState {
 }
 
 export const GRAVE_STATE_LABELS: Record<GraveVisualState, string> = {
-  clean: 'In ordine',
-  flowers: 'Ricordata con fiori',
-  dirty: 'Trascurata',
-  broken: 'Rotta: va riparata',
+  clean: t('grave.state.clean'),
+  flowers: t('grave.state.flowers'),
+  dirty: t('grave.state.dirty'),
+  broken: t('grave.state.broken'),
 };

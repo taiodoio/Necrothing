@@ -1,6 +1,9 @@
 // Aspetto del Custode (personalizzabile, salvato nella partita). Nessun
 // genere: si scelgono la testa (anche zucca, teschio, zombie), pelle (anche "brillantinata"), capelli e colore, occhi,
 // dettagli (occhiali, lentiggini, cerotto), barba e baffi, cappello, vestiti e colori.
+// I nomi delle scelte sono in src/i18n/it/game.ts (look.*).
+
+import { t } from '../i18n/index.ts';
 
 export type HairStyle = 'tufts' | 'bob' | 'long' | 'curly' | 'longcurly' | 'bun' | 'spiky' | 'none'
   | 'fringe' | 'fringeLong' | 'side' | 'sideLong' | 'wavy' | 'wavyLong' | 'buzz';
@@ -37,27 +40,27 @@ export interface CustodeLook {
 type Swatch = [color: string, label: string];
 
 export const LOOK_COLORS: Record<'skin' | 'hairColor' | 'beardColor' | 'eyes' | 'hatColor' | 'outfitColor' | 'accentColor', Swatch[]> = {
-  skin: [['#f6dcc7', 'Porcellana'], ['#f2cfb0', 'Pesca'], ['#e0b48f', 'Miele'], ['#c68e62', 'Ambra'], ['#8d5a3b', 'Cacao'], ['#5e3a26', 'Ebano'], ['#b9d7c8', 'Spettrale'], ['#c9c3e6', 'Lilla']],
-  hairColor: [['#2a2226', 'Nero'], ['#6b4a33', 'Castano'], ['#b0774a', 'Rame'], ['#e0c27a', 'Biondo'], ['#d9d4cc', 'Bianco'], ['#8a5ab0', 'Viola'], ['#4f7fb0', 'Blu'], ['#d0607a', 'Rosa']],
-  beardColor: [['#2a2226', 'Nero'], ['#6b4a33', 'Castano'], ['#b0774a', 'Rame'], ['#e0c27a', 'Biondo'], ['#8a8580', 'Grigio'], ['#d9d4cc', 'Bianco'], ['#8a5ab0', 'Viola'], ['#4f7fb0', 'Blu'], ['#d0607a', 'Rosa']],
-  eyes: [['#1b1a20', 'Nero'], ['#3b2a1e', 'Castano'], ['#1f4a6b', 'Blu'], ['#2f5a32', 'Verde'], ['#5a2f6b', 'Viola'], ['#8a2a2a', 'Rubino']],
-  hatColor: [['#4a3326', 'Cuoio'], ['#2a2a30', 'Nero'], ['#5a2f3a', 'Vinaccia'], ['#3a4a3a', 'Muschio'], ['#6b6050', 'Fango'], ['#2f3a5a', 'Notte']],
-  outfitColor: [['#6e4c36', 'Cuoio'], ['#3a4150', 'Ardesia'], ['#4f5a3e', 'Muschio'], ['#6b2f35', 'Vinaccia'], ['#4a3a5a', 'Prugna'], ['#2b2b30', 'Nero'], ['#8a7a5a', 'Sabbia']],
-  accentColor: [['#a4473b', 'Ruggine'], ['#d9b48a', 'Panna'], ['#4f7fb0', 'Fiordaliso'], ['#5f8a4a', 'Salvia'], ['#c9a227', 'Senape'], ['#8a5ab0', 'Glicine']],
+  skin: [['#f6dcc7', t('look.skin.porcelain')], ['#f2cfb0', t('look.skin.peach')], ['#e0b48f', t('look.skin.honey')], ['#c68e62', t('look.skin.amber')], ['#8d5a3b', t('look.skin.cocoa')], ['#5e3a26', t('look.skin.ebony')], ['#b9d7c8', t('look.skin.spectral')], ['#c9c3e6', t('look.skin.lilac')]],
+  hairColor: [['#2a2226', t('look.hairColor.black')], ['#6b4a33', t('look.hairColor.brown')], ['#b0774a', t('look.hairColor.copper')], ['#e0c27a', t('look.hairColor.blond')], ['#d9d4cc', t('look.hairColor.white')], ['#8a5ab0', t('look.hairColor.purple')], ['#4f7fb0', t('look.hairColor.blue')], ['#d0607a', t('look.hairColor.pink')]],
+  beardColor: [['#2a2226', t('look.beardColor.black')], ['#6b4a33', t('look.beardColor.brown')], ['#b0774a', t('look.beardColor.copper')], ['#e0c27a', t('look.beardColor.blond')], ['#8a8580', t('look.beardColor.grey')], ['#d9d4cc', t('look.beardColor.white')], ['#8a5ab0', t('look.beardColor.purple')], ['#4f7fb0', t('look.beardColor.blue')], ['#d0607a', t('look.beardColor.pink')]],
+  eyes: [['#1b1a20', t('look.eyes.black')], ['#3b2a1e', t('look.eyes.brown')], ['#1f4a6b', t('look.eyes.blue')], ['#2f5a32', t('look.eyes.green')], ['#5a2f6b', t('look.eyes.purple')], ['#8a2a2a', t('look.eyes.ruby')]],
+  hatColor: [['#4a3326', t('look.hatColor.leather')], ['#2a2a30', t('look.hatColor.black')], ['#5a2f3a', t('look.hatColor.wine')], ['#3a4a3a', t('look.hatColor.moss')], ['#6b6050', t('look.hatColor.mud')], ['#2f3a5a', t('look.hatColor.night')]],
+  outfitColor: [['#6e4c36', t('look.outfitColor.leather')], ['#3a4150', t('look.outfitColor.slate')], ['#4f5a3e', t('look.outfitColor.moss')], ['#6b2f35', t('look.outfitColor.wine')], ['#4a3a5a', t('look.outfitColor.plum')], ['#2b2b30', t('look.outfitColor.black')], ['#8a7a5a', t('look.outfitColor.sand')]],
+  accentColor: [['#a4473b', t('look.accentColor.rust')], ['#d9b48a', t('look.accentColor.cream')], ['#4f7fb0', t('look.accentColor.cornflower')], ['#5f8a4a', t('look.accentColor.sage')], ['#c9a227', t('look.accentColor.mustard')], ['#8a5ab0', t('look.accentColor.wisteria')]],
 };
 
 export const LOOK_STYLES = {
-  head: [['human', 'Umana'], ['pumpkin', 'Zucca'], ['skull', 'Teschio'], ['zombie', 'Zombie']] as Array<[HeadStyle, string]>,
+  head: [['human', t('look.head.human')], ['pumpkin', t('look.head.pumpkin')], ['skull', t('look.head.skull')], ['zombie', t('look.head.zombie')]] as Array<[HeadStyle, string]>,
   hair: [
-    ['tufts', 'Ciuffi'], ['spiky', 'Spettinati'], ['buzz', 'Rasati'], ['bob', 'Caschetto'], ['long', 'Lunghi'],
-    ['fringe', 'Frangia corta'], ['fringeLong', 'Frangia lunga'], ['side', 'Di lato corti'], ['sideLong', 'Di lato lunghi'], ['wavy', 'Mossi corti'],
-    ['wavyLong', 'Mossi lunghi'], ['curly', 'Ricci'], ['longcurly', 'Ricci lunghi'], ['bun', 'Chignon'], ['none', 'Nessuno'],
+    ['tufts', t('look.hair.tufts')], ['spiky', t('look.hair.spiky')], ['buzz', t('look.hair.buzz')], ['bob', t('look.hair.bob')], ['long', t('look.hair.long')],
+    ['fringe', t('look.hair.fringe')], ['fringeLong', t('look.hair.fringeLong')], ['side', t('look.hair.side')], ['sideLong', t('look.hair.sideLong')], ['wavy', t('look.hair.wavy')],
+    ['wavyLong', t('look.hair.wavyLong')], ['curly', t('look.hair.curly')], ['longcurly', t('look.hair.longcurly')], ['bun', t('look.hair.bun')], ['none', t('look.hair.none')],
   ] as Array<[HairStyle, string]>,
-  hat: [['wide', 'Tesa larga'], ['top', 'Cilindro'], ['beanie', 'Berretto'], ['witch', 'Da strega'], ['none', 'Nessuno']] as Array<[HatStyle, string]>,
-  outfit: [['coat', 'Cappotto'], ['cloak', 'Mantella'], ['overalls', 'Salopette'], ['sweater', 'Maglione']] as Array<[Outfit, string]>,
-  glasses: [['none', 'Nessuno'], ['round', 'Tondi'], ['square', 'Squadrati'], ['monocle', 'Monocolo']] as Array<[Glasses, string]>,
-  beard: [['none', 'Nessuna'], ['short', 'Corta'], ['full', 'Folta'], ['braid', 'Con treccia']] as Array<[Beard, string]>,
-  mustache: [['none', 'Nessuno'], ['thin', 'Sottili'], ['handlebar', 'A manubrio'], ['bushy', 'Folti']] as Array<[Mustache, string]>,
+  hat: [['wide', t('look.hat.wide')], ['top', t('look.hat.top')], ['beanie', t('look.hat.beanie')], ['witch', t('look.hat.witch')], ['none', t('look.hat.none')]] as Array<[HatStyle, string]>,
+  outfit: [['coat', t('look.outfit.coat')], ['cloak', t('look.outfit.cloak')], ['overalls', t('look.outfit.overalls')], ['sweater', t('look.outfit.sweater')]] as Array<[Outfit, string]>,
+  glasses: [['none', t('look.glasses.none')], ['round', t('look.glasses.round')], ['square', t('look.glasses.square')], ['monocle', t('look.glasses.monocle')]] as Array<[Glasses, string]>,
+  beard: [['none', t('look.beard.none')], ['short', t('look.beard.short')], ['full', t('look.beard.full')], ['braid', t('look.beard.braid')]] as Array<[Beard, string]>,
+  mustache: [['none', t('look.mustache.none')], ['thin', t('look.mustache.thin')], ['handlebar', t('look.mustache.handlebar')], ['bushy', t('look.mustache.bushy')]] as Array<[Mustache, string]>,
 };
 
 export const DEFAULT_LOOK: CustodeLook = {

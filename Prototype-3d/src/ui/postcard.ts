@@ -3,6 +3,8 @@
 // gioco (il link o il QR arriveranno con la pubblicazione negli store).
 // Disegnata su una tela 1080×1350 (4:5, va bene per chat e social).
 
+import { t } from '../i18n/index.ts';
+
 export interface PostcardData {
   name: string;
   /** Riga delle date, già formattata (es. «12 mar 2014 — 3 ott 2026»). */
@@ -17,8 +19,8 @@ export interface PostcardData {
 export const POSTCARD_W = 1080, POSTCARD_H = 1350;
 
 const GOLD = '#d8b26a', GOLD_HI = '#f1d39c', INK = '#07080b', PAPER = '#e8dcc4', MUTED = '#9a8f7c';
-const GOTHIC = '"Jacquard 24", "Pixelify Sans", serif';
-const PIXEL = '"Pixelify Sans", system-ui, sans-serif';
+const GOTHIC = '"Jacquard 24", "Pixelify Sans", serif'; // i18n-ok
+const PIXEL = '"Pixelify Sans", system-ui, sans-serif'; // i18n-ok
 
 /** Il testo più grande che entra in `max` pixel (scende fino a `min`). */
 function fit(g: CanvasRenderingContext2D, text: string, font: (px: number) => string, size: number, max: number, min = size * 0.5) {
@@ -39,7 +41,7 @@ function wrap(g: CanvasRenderingContext2D, text: string, max: number, lines: num
     if (out.length === lines) break;
   }
   if (out.length < lines && cur) out.push(cur);
-  if (out.join(' ').length < text.length) { let last = out[lines - 1] ?? ''; while (last && g.measureText(`${last}…`).width > max) last = last.slice(0, -1); out[lines - 1] = `${last}…`; }
+  if (out.join(' ').length < text.length) { let last = out[lines - 1] ?? ''; while (last && g.measureText(`${last}…`).width > max) last = last.slice(0, -1); out[lines - 1] = `${last}…`; } // i18n-ok: puntini di troncamento
   return out;
 }
 
@@ -78,7 +80,7 @@ export async function drawPostcard(d: PostcardData): Promise<HTMLCanvasElement> 
   g.textAlign = 'center'; g.textBaseline = 'alphabetic';
   // intestazione
   g.fillStyle = MUTED; g.font = `400 34px ${PIXEL}`;
-  g.fillText('In memoria di', W / 2, 122);
+  g.fillText(t('postcard.inMemoryOf'), W / 2, 122);
   const px = fit(g, d.name, (p) => `400 ${p}px ${GOTHIC}`, 104, W - 180, 56);
   g.fillStyle = '#000'; g.fillText(d.name, W / 2, 222 + 5);
   g.fillStyle = GOLD_HI; g.fillText(d.name, W / 2, 222);
@@ -104,31 +106,31 @@ export async function drawPostcard(d: PostcardData): Promise<HTMLCanvasElement> 
   g.fillText(d.dates, W / 2, y);
   y += 50;
   g.fillStyle = MUTED; g.font = `400 30px ${PIXEL}`;
-  g.fillText(`${d.cause} · ${d.category}`, W / 2, y);
+  g.fillText(t('postcard.causeCategory', { cause: d.cause, category: d.category }), W / 2, y);
   if (d.epitaph) {
     y += 64;
     g.fillStyle = '#cfc6b2'; g.font = `400 34px ${PIXEL}`;
-    for (const line of wrap(g, `“${d.epitaph}”`, W - 220, 2)) { g.fillText(line, W / 2, y); y += 44; }
+    for (const line of wrap(g, t('postcard.epitaph', { text: d.epitaph }), W - 220, 2)) { g.fillText(line, W / 2, y); y += 44; }
   }
   // il nome del gioco
   const fy2 = H - 150;
   g.fillStyle = 'rgba(216,178,106,0.5)'; g.fillRect(W / 2 - 220, fy2 - 70, 440, 2);
   corner(g, W / 2, fy2 - 69, 7);
   g.fillStyle = GOLD; g.font = `400 54px ${GOTHIC}`;
-  g.fillText('Riposa a Necrothing', W / 2, fy2);
+  g.fillText(t('postcard.restsAt'), W / 2, fy2);
   g.fillStyle = MUTED; g.font = `400 28px ${PIXEL}`;
-  g.fillText('il cimitero degli oggetti', W / 2, fy2 + 46);
+  g.fillText(t('postcard.tagline'), W / 2, fy2 + 46);
   return c;
 }
 
 /** Condivide la cartolina (foglio di condivisione del telefono) o, se non si può, la scarica. */
 export async function sharePostcard(canvas: HTMLCanvasElement, name: string): Promise<'shared' | 'downloaded' | 'cancelled'> {
   const blob = await new Promise<Blob>((res) => canvas.toBlob((b) => res(b!), 'image/png'));
-  const file = new File([blob], `necrothing-${name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'cartolina'}.png`, { type: 'image/png' });
-  const text = `In memoria di ${name}. Sepolto a Necrothing, il cimitero degli oggetti.`;
+  const file = new File([blob], `necrothing-${name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || t('postcard.file.fallback')}.png`, { type: 'image/png' });
+  const text = t('postcard.shareText', { name });
   const nav = navigator as Navigator & { canShare?: (d: unknown) => boolean };
   if (nav.canShare?.({ files: [file] })) {
-    try { await navigator.share({ files: [file], text, title: `In memoria di ${name}` }); return 'shared'; } catch { return 'cancelled'; }
+    try { await navigator.share({ files: [file], text, title: t('postcard.shareTitle', { name }) }); return 'shared'; } catch { return 'cancelled'; }
   }
   const a = document.createElement('a');
   a.href = URL.createObjectURL(blob); a.download = file.name; a.click();

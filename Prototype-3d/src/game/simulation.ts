@@ -13,6 +13,7 @@ import { computeSpawns, liveWispChance, wispCap, type SpawnRequest } from './spa
 import type { SaveData, Weather } from './state.ts';
 import { DAY_MS, dayPhaseForHour, daysBetween, isoDate } from './time.ts';
 import { areaForLevel, buildOccupancy } from './world.ts';
+import { t } from '../i18n/index.ts';
 
 export interface CatchUpReport {
   elapsedDays: number;
@@ -223,16 +224,16 @@ export function liveTick(s: SaveData, now: Date, salt: number): LiveTickResult {
 
 /** Messaggio narrativo principale del catch-up (o null). */
 export function catchUpMessage(r: CatchUpReport): string | null {
-  if (r.anniversaries.length === 1) return `Oggi ricorre l’anniversario di ${r.anniversaries[0]}.`;
-  if (r.anniversaries.length > 1) return `Oggi ricorrono ${r.anniversaries.length} anniversari funebri.`;
-  if (r.missedAnniversaries.length === 1) return `Mentre eri via è passato l’anniversario di ${r.missedAnniversaries[0]}.`;
-  if (r.missedAnniversaries.length > 1) return `Mentre eri via sono passati ${r.missedAnniversaries.length} anniversari.`;
-  if (r.newBroken > 0) return `${r.newBroken} ${r.newBroken === 1 ? 'tomba si è rotta' : 'tombe si sono rotte'}: vanno riparate.`;
-  if (r.placeablesBroken > 0) return `${r.placeablesBroken} ${r.placeablesBroken === 1 ? 'oggetto si è rotto' : 'oggetti si sono rotti'} per l’incuria.`;
-  if (r.blessing) return `Il prete è passato a benedire ${r.blessing}.`;
-  if (r.witheredFlowers > 0) return 'Alcuni fiori sono ormai cenere.';
-  if (r.newDirty > 0) return `${r.newDirty} ${r.newDirty === 1 ? 'lapide si è sporcata' : 'lapidi si sono sporcate'}: serve una pulita.`;
-  if (r.placeablesDirty > 0) return 'Polvere e ragnatele sugli oggetti del cimitero.';
-  if (r.wispsAdded > 0) return `Mentre eri via sono comparsi ${r.wispsAdded} fuochi fatui.`;
+  if (r.anniversaries.length === 1) return t('sim.anniversary.todayOne', { name: r.anniversaries[0] });
+  if (r.anniversaries.length > 1) return t('sim.anniversary.todayMany', { n: r.anniversaries.length });
+  if (r.missedAnniversaries.length === 1) return t('sim.anniversary.missedOne', { name: r.missedAnniversaries[0] });
+  if (r.missedAnniversaries.length > 1) return t('sim.anniversary.missedMany', { n: r.missedAnniversaries.length });
+  if (r.newBroken > 0) return t('sim.gravesBroken', { n: r.newBroken });
+  if (r.placeablesBroken > 0) return t('sim.itemsBroken', { n: r.placeablesBroken });
+  if (r.blessing) return t('sim.blessing', { name: r.blessing });
+  if (r.witheredFlowers > 0) return t('sim.flowersWithered');
+  if (r.newDirty > 0) return t('sim.gravesDirty', { n: r.newDirty });
+  if (r.placeablesDirty > 0) return t('sim.itemsDirty');
+  if (r.wispsAdded > 0) return t('sim.wispsAdded', { n: r.wispsAdded });
   return null;
 }

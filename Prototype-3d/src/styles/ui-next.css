@@ -193,6 +193,8 @@
 .ui-next .shop-detail { position: relative; display: grid; gap: 10px; }
 /* nel modale la pastiglia è più scura del fondo, col bordo verde acqua: si vede subito */
 .ui-next .shop-detail > .wisp-pill { position: absolute; top: 0; right: 0; background: rgba(0, 0, 0, 0.32); box-shadow: inset 0 0 0 1.5px color-mix(in srgb, var(--spectral) 45%, transparent); }
+/* le frasi sotto l'immagine centrate come nome e categoria (le righe dei requisiti restano allineate) */
+.ui-next .shop-detail > p { text-align: center; }
 .ui-next .shop-detail-top { display: grid; justify-items: center; gap: 4px; text-align: center; }
 .ui-next .shop-detail-top img { width: 132px; height: 132px; margin-bottom: 6px; object-fit: contain; border-radius: var(--r); background: var(--panel); }
 .ui-next .shop-detail-top h3 { margin: 0; font: 700 26px/1.05 var(--gothic); color: var(--gold-bright); }

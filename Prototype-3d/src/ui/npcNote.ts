@@ -38,7 +38,7 @@ const VERSES: Partial<Record<CharacterKind, string[]>> = {
   gravedigger: ['Ehm…', 'Mmh, mmh.', 'Al lavoro!'],
   vampire: ['Slurp!', 'Gnam!'],
   witch: ['Eh eh eh!', 'Abracadabra!'],
-  gardener: ['Gnam!', 'Che raccolto!'],
+  gardener: ['Scricch…', 'Ehilà!', 'Mmh?'],
   petDog: ['Bau!', 'Bau bau!'],
   petRabbit: ['Snif snif!', 'Hop!'],
   petDuck: ['Qua qua!', 'Quaaa!'],

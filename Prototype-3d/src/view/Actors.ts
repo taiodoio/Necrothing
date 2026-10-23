@@ -316,7 +316,7 @@ export class Actors {
     this.remount();
     for (const r of this.roamers.values()) { rebuild(r); r.rig.root.add(r.hitbox); }
     for (const p of this.pets.values()) { rebuild(p); p.rig.root.add(p.hitbox); p.rig.root.visible = p.act !== 'sleep'; }
-    for (const p of this.presences) { rebuild(p); this.presenceHits.filter((h) => h.userData.vampireId === p.placeId && p.rig.kind === 'vampire').forEach((h) => p.rig.root.add(h)); this.attachProp(p); dimGhosts(p.rig.root, p.dim); if (p.size) p.rig.root.scale.setScalar(p.size); p.rig.root.visible = !p.hidden; }
+    for (const p of this.presences) { rebuild(p); this.presenceHits.filter((h) => (h.userData.vampireId === p.placeId && p.rig.kind === 'vampire') || (h.userData.talkerId === p.placeId && p.rig.kind === 'gardener')).forEach((h) => p.rig.root.add(h)); this.attachProp(p); dimGhosts(p.rig.root, p.dim); if (p.size) p.rig.root.scale.setScalar(p.size); p.rig.root.visible = !p.hidden; }
     if (this.funeral) for (const m of this.funeral.members) rebuild(m);
     if (this.rite) for (const m of this.rite.members) rebuild(m);
     for (const d of this.departing) rebuild(d);
@@ -967,11 +967,12 @@ export class Actors {
       dimGhosts(pr.rig.root, c.dim);
       if (c.hidden) pr.rig.root.visible = false;
       this.attachProp(pr);
-      // il vampiro si tocca: ci si può far mordere
-      if (c.kind === 'vampire') {
+      // il vampiro si tocca (ci si può far mordere); il giardiniere scheletro si tocca e risponde
+      if (c.kind === 'vampire' || c.kind === 'gardener') {
         const hit = new THREE.Mesh(new THREE.BoxGeometry(1.1, 1.8, 1.1), hitMat);
         hit.position.y = 0.8;
-        hit.userData.vampireId = p.id;
+        if (c.kind === 'vampire') hit.userData.vampireId = p.id;
+        else hit.userData.talkerId = p.id;
         pr.rig.root.add(hit);
         this.presenceHits.push(hit);
       }

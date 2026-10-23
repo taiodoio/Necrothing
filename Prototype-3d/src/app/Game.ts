@@ -826,7 +826,7 @@ export class Game {
     return new THREE.Vector2(((x - r.left) / r.width) * 2 - 1, -((y - r.top) / r.height) * 2 + 1);
   }
 
-  private pick(x: number, y: number): { entityId?: string; wispId?: string; roamerId?: string; petId?: string; vampireId?: string } | null {
+  private pick(x: number, y: number): { entityId?: string; wispId?: string; roamerId?: string; petId?: string; vampireId?: string; talkerId?: string } | null {
     this.raycaster.setFromCamera(this.ndc(x, y), this.rig.camera);
     // la tomba affidata, mentre la sua bara è in viaggio, non c'è più
     const hits = this.raycaster.intersectObjects([...this.actors.pickables(), ...this.world.hitboxes], false)
@@ -835,10 +835,10 @@ export class Game {
       .filter((h) => !h.object.userData.vampireId || uiPreview());
     if (!hits.length) return null;
     // priorità: presenze erranti e animali > fuochi fatui > entità
-    const order = (o: THREE.Object3D) => (o.userData.roamerId || o.userData.petId || o.userData.vampireId ? 0 : o.userData.wispId ? 1 : 2);
+    const order = (o: THREE.Object3D) => (o.userData.roamerId || o.userData.petId || o.userData.vampireId || o.userData.talkerId ? 0 : o.userData.wispId ? 1 : 2);
     hits.sort((a, b) => order(a.object) - order(b.object) || a.distance - b.distance);
     const u = hits[0].object.userData;
-    return { entityId: u.entityId, wispId: u.wispId, roamerId: u.roamerId, petId: u.petId, vampireId: u.vampireId };
+    return { entityId: u.entityId, wispId: u.wispId, roamerId: u.roamerId, petId: u.petId, vampireId: u.vampireId, talkerId: u.talkerId };
   }
 
   groundCell(x: number, y: number) {
@@ -881,6 +881,7 @@ export class Game {
     if (hit?.roamerId) { this.tapRoamer(hit.roamerId); return; }
     if (hit?.petId && !this.editMode) { this.tapPet(hit.petId); return; }
     if (hit?.vampireId && !this.editMode) { this.tapVampire(hit.vampireId); return; }
+    if (hit?.talkerId && !this.editMode) { this.tapGardener(); return; }
     if (hit?.wispId) {
       const w = this.state.world.looseWisps.find((q) => q.id === hit.wispId);
       if (w && !this.editMode && this.actors.walkTo({ x: w.x, y: w.y })) { this.markWalk(); this.rig.follow = this.actors.avatar.pos; }
@@ -1017,6 +1018,17 @@ export class Game {
   batSecondsLeft(): number { return this.batUntil ? Math.max(0, Math.ceil((this.batUntil - performance.now()) / 1000)) : 0; }
 
   /** Toccando il vampiro: il suo menù, con «Fatti mordere». */
+  /** Lo scheletro giardiniere, toccato, risponde (niente ricompense: è compagnia). */
+  private tapGardener() {
+    const lines = [
+      'Rastrello le stesse foglie da trent’anni. Non ho fretta.',
+      'Queste foglie non finiscono mai… e meno male.',
+      'Attento a dove metti i piedi: ho appena rastrellato.',
+      'Un tempo avevo i calli. Adesso solo le ossa.',
+    ];
+    this.say({ kind: 'gardener', name: 'Scheletro giardiniere', text: lines[Math.floor(Math.random() * lines.length)] });
+  }
+
   private tapVampire(cryptId: string) {
     if (!this.actors.vampire(cryptId)) return;
     this.ui.openActorMenu('Vampiro', this.isBat ? 'Sei già un pipistrello' : 'Ha sete, ma è un gentiluomo', [
@@ -1500,7 +1512,7 @@ export class Game {
       const pl = n === 1 ? 'fuoco fatuo' : 'fuochi fatui';
       if (type === 'witch_corner') this.say({ kind: 'witch', name: 'Strega', text: `Ha venduto ${n} ${n === 1 ? 'pozione' : 'pozioni'} ai visitatori.`, wisps: n });
       else if (type === 'zombie_bar') this.say({ kind: 'zombie', name: 'Bar degli zombie', say: 'Salute!', text: `Al bar si è brindato alla tua: ${n} ${pl} di incasso.`, wisps: n });
-      else if (type === 'brain_farm') this.say({ kind: 'gardener', name: 'Orto dei cervelli', text: `Il raccolto dei cervelli rende ${n} ${pl}.`, wisps: n });
+      else if (type === 'brain_farm') this.say({ kind: 'zombie', name: 'Orto dei cervelli', say: 'Gnam!', text: `Gli zombie hanno raccolto cervelli per ${n} ${pl}.`, wisps: n });
       else this.custodeSays('Che raccolto!', `L’orto dietro casa rende ${n} ${pl}.`, res);
       this.world.setEarnings(id, 0);
       this.ui.bumpWisps();

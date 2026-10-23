@@ -15,7 +15,7 @@ import { DAY_PHASE_LABELS } from '../game/time.ts';
 import { currentLang, t } from '../i18n/index.ts';
 import { $, applyPageTexts, closeDrawer, drawerOpen, h, joinDot, toast } from './dom.ts';
 import { hydrateIcons, icon, iconUrl, installFrames } from './icons.ts';
-import { uiNext, uiPlay, uiPreview } from '../app/uiNext.ts';
+import { uiNext, uiPlay, uiPreview, uiTrial } from '../app/uiNext.ts';
 import { custodePortrait } from './lookThumbs.ts';
 import { shortWisps } from './numbers.ts';
 import * as S from './screens.ts';
@@ -285,7 +285,10 @@ export class UI {
       title = g.name;
       sub = t('ctx.grave.sub', { type: GRAVE_TYPE_LABELS[g.graveType], state: GRAVE_STATE_LABELS[vs] });
       if (this.game.editMode) {
-        actions.push({ act: 'detail', label: t('ctx.detail'), icon: 'search' }, { act: 'exhume', label: t('ctx.exhume'), icon: 'shovel', cls: 'danger' }, { act: 'confirm', label: t('ctx.done'), icon: 'check', cls: 'primary' });
+        actions.push({ act: 'detail', label: t('ctx.detail'), icon: 'search' });
+        // in prova (bench) si riesuma solo dal dettaglio, col becchino
+        if (!uiTrial()) actions.push({ act: 'exhume', label: t('ctx.exhume'), icon: 'shovel', cls: 'danger' });
+        actions.push({ act: 'confirm', label: t('ctx.done'), icon: 'check', cls: 'primary' });
       } else {
         actions.push({ act: 'detail', label: t('ctx.detail'), icon: 'search' });
         // interfaccia nuova: «Affida all'albero» resta solo nel dettaglio della tomba

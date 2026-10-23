@@ -202,6 +202,9 @@ export default {
   // notifica a fine giro
   'say.gravedigger.finished#one': 'Ha finito il giro: {n} cosa ripulita.',
   'say.gravedigger.finished#other': 'Ha finito il giro: {n} cose ripulite.',
+  // riesumazione: arriva con la carriola, scava e se ne va (la frase sotto è rules.exhume.*)
+  'say.gravedigger.exhume.say': 'Al lavoro!',
+  'say.gravedigger.exhumed.say': 'Fatto!',
 
   // ── Prete in visita ──
   // breve: nome nella notifica

@@ -81,10 +81,10 @@ export class Effects {
    * che si gonfiano di colpo, coprono chi sta in mezzo, poi si sgonfiano
    * salendo e allargandosi. Si vedono anche di notte (un po' di luce propria).
    */
-  cloudPuff(at: THREE.Vector3, tint = '#efe8f6') {
+  cloudPuff(at: THREE.Vector3, tint = '#efe8f6', glow = '#6a5a80') {
     const group = new THREE.Group();
     group.position.copy(at);
-    const mat = new THREE.MeshLambertMaterial({ color: tint, emissive: '#6a5a80', emissiveIntensity: 0.55, flatShading: true, transparent: true });
+    const mat = new THREE.MeshLambertMaterial({ color: tint, emissive: glow, emissiveIntensity: 0.55, flatShading: true, transparent: true });
     const parts: Array<{ mesh: THREE.Mesh; dir: THREE.Vector3; size: number; delay: number }> = [];
     const n = 11;
     for (let i = 0; i < n; i++) {

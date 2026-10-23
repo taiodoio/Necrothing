@@ -120,6 +120,8 @@ export interface Counters {
   wispsEarned: number;
   /** Pozioni vendute dalla strega (sblocca il cappello da strega). */
   potionsSold: number;
+  /** Tombe e ricordi riesumati: le sepolture fatte contano ancora per gli sblocchi. */
+  exhumed: number;
 }
 
 export interface Player {
@@ -205,7 +207,7 @@ export function emptyCounters(): Counters {
   return {
     flowersBrought: 0, cleanups: 0, ghostsWitnessed: 0, npcEncountered: 0,
     wispsSpent: 0, decorationsPlaced: 0, photosTaken: 0, repairs: 0,
-    lightsRepaired: 0, wispsEarned: 0, potionsSold: 0,
+    lightsRepaired: 0, wispsEarned: 0, potionsSold: 0, exhumed: 0,
   };
 }
 

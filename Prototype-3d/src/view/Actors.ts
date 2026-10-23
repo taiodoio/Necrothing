@@ -20,6 +20,8 @@ import { animateNotes, attachProp, dimGhosts, lpMesh, presenceLayout, propPose, 
 export { BUSINESS_PRESENCES, type PresenceTier } from './presences.ts';
 import { instantiate, lightWorldPos, LOWPOLY_MATERIALS } from '../render/modelCache.ts';
 import { BIKE, BIKE_SCALE, bicycleLP } from '../render/lowpoly/extraItems.ts';
+import { wheelbarrowLP } from '../render/lowpoly/newItems.ts';
+import { closedCoffinLP } from '../render/lowpoly/memoryTree.ts';
 import type { LPModel } from '../render/lowpoly/kit.ts';
 import type { LightAnchor } from '../render/shape.ts';
 import { findPath, type Cell } from './pathfinding.ts';
@@ -62,6 +64,8 @@ interface Walker {
   blob?: THREE.Mesh;
   /** Sollevato da terra (la pedana del bar). */
   lift?: number;
+  /** Spinge la carriola: braccia avanti sulle stanghe. */
+  push?: boolean;
 }
 
 export interface Roamer extends Walker {
@@ -205,13 +209,87 @@ const RITE_GLOW = '#ffd98a';
 /** Passo del corteo quando arriva e se ne va (portando la bara è più lento). */
 const CORTEGE_SPEED = 2.3;
 
+/**
+ * Riesumazione: il becchino arriva spingendo la carriola vuota, la lascia lì
+ * accanto, scava (le zolle saltano), la tomba sparisce in una nuvola di terra
+ * e la carriola si riempie; poi la riprende e se la porta via.
+ */
+interface Exhume {
+  digger: Walker;
+  stage: 'arrive' | 'walk' | 'dig' | 'fetch' | 'leave';
+  timer: number;
+  /** Dove si scava (centro della tomba, o davanti alla cavità dell'albero). */
+  target: THREE.Vector3;
+  /** Dove sta chi scava, rivolto verso `target`. */
+  stand: THREE.Vector3;
+  barrow: THREE.Group;
+  empty: THREE.Object3D;
+  full: THREE.Object3D;
+  dug: boolean;
+  onDig: () => void;
+  onDone: () => void;
+  exit: THREE.Vector3;
+}
+
+/** La carriola sta davanti a chi la spinge, a questa distanza. */
+const BARROW_AHEAD = 0.8;
+/** Quanto si scava: le zolle saltano per tutto il tempo, la tomba sparisce a `EXHUME_GONE`. */
+const EXHUME_DIG = 4.6;
+const EXHUME_GONE = 3.4;
+const CLOD_GEO = new THREE.DodecahedronGeometry(1, 0);
+const CLOD_MATS = ['#6e5a42', '#5a4733', '#7d6a50'].map((c) => new THREE.MeshLambertMaterial({ color: c, flatShading: true }));
+
 interface Funeral {
   members: Walker[];
-  stage: 'arrive' | 'rite' | 'leave';
+  stage: 'arrive' | 'carry' | 'place' | 'rite' | 'leave';
   timer: number;
   target: THREE.Vector3;
   onDone: () => void;
   exit: THREE.Vector3;
+  /** Prova: il corteo porta la bara, il becchino scava, la bara scende e la lapide compare (`onReveal`). */
+  dig?: DugBurial;
+}
+
+interface DugBurial {
+  marker: THREE.Group;
+  onReveal: () => void;
+  revealed: boolean;
+  coffin: THREE.Object3D;
+  route: THREE.Vector3[];
+  cum: number[];
+  s: number;
+  starts: THREE.Vector3[];
+  spots: THREE.Vector3[];
+  carryFrom: THREE.Vector3;
+}
+
+/** Sepoltura scavata: il becchino scava per tanto, la lapide compare a `FUNERAL_REVEAL`, poi si prega. */
+const FUNERAL_REVEAL = 4.2;
+const FUNERAL_DIG_RITE = 8;
+
+/** Il posto della tomba delimitato in attesa dello scavo: quattro paletti e una corda. */
+function plotMarker(center: THREE.Vector3, ground: (p: THREE.Vector3) => number): THREE.Group {
+  const g = new THREE.Group();
+  const wood = new THREE.MeshLambertMaterial({ color: '#8a6a45', flatShading: true });
+  const rope = new THREE.MeshLambertMaterial({ color: '#d9c9a3' });
+  const r = 0.88, h = 0.34;
+  const corners = [[-r, -r], [r, -r], [r, r], [-r, r]].map(([x, z]) => new THREE.Vector3(center.x + x, 0, center.z + z));
+  for (const c of corners) {
+    const stake = new THREE.Mesh(new THREE.BoxGeometry(0.06, h + 0.06, 0.06), wood);
+    stake.position.set(c.x, ground(c) + h / 2 - 0.03, c.z);
+    g.add(stake);
+  }
+  corners.forEach((a, i) => {
+    const b = corners[(i + 1) % 4];
+    const ya = ground(a) + h - 0.05, yb = ground(b) + h - 0.05;
+    const len = Math.hypot(b.x - a.x, b.z - a.z);
+    const line = new THREE.Mesh(new THREE.BoxGeometry(0.022, 0.022, len), rope);
+    line.position.set((a.x + b.x) / 2, (ya + yb) / 2 - 0.03, (a.z + b.z) / 2);
+    line.lookAt(b.x, yb - 0.03, b.z);
+    g.add(line);
+  });
+  g.traverse((o) => { o.raycast = () => undefined; });
+  return g;
 }
 
 const hitMat = new THREE.MeshBasicMaterial({ visible: false });
@@ -230,6 +308,9 @@ export class Actors {
   private presenceSig = '';
   private funeral: Funeral | null = null;
   private rite: Rite | null = null;
+  private exhume: Exhume | null = null;
+  /** Zolle di terra in volo (scavi del becchino). */
+  private clods: Array<{ m: THREE.Mesh; v: THREE.Vector3; life: number }> = [];
   /** Chi è uscito dal cancello e sta svanendo: secondi rimasti. */
   private fading = new Map<Walker, number>();
   /** Chi ha finito (corteo, rito) e se ne va: cammina fino all'uscita per conto suo, nessun tocco lo fa sparire. */
@@ -320,6 +401,7 @@ export class Actors {
     for (const p of this.presences) { rebuild(p); this.presenceHits.filter((h) => (h.userData.vampireId === p.placeId && p.rig.kind === 'vampire') || (h.userData.talkerId === p.placeId && p.rig.kind === 'gardener')).forEach((h) => p.rig.root.add(h)); this.attachProp(p); dimGhosts(p.rig.root, p.dim); if (p.size) p.rig.root.scale.setScalar(p.size); p.rig.root.visible = !p.hidden; }
     if (this.funeral) for (const m of this.funeral.members) rebuild(m);
     if (this.rite) for (const m of this.rite.members) rebuild(m);
+    if (this.exhume) { rebuild(this.exhume.digger); if (this.exhume.digger.push) this.exhume.digger.rig.root.add(this.exhume.barrow); }
     for (const d of this.departing) rebuild(d);
   }
 
@@ -1441,15 +1523,17 @@ export class Actors {
 
   // ── Funerale ─────────────────────────────────────────────────────────
 
-  startFuneral(graveCenter: THREE.Vector3, gateCell: Cell, onDone: () => void) {
+  startFuneral(graveCenter: THREE.Vector3, gateCell: Cell, onDone: () => void, onReveal?: () => void) {
     // un corteo precedente ancora qui non sparisce: si avvia all'uscita e chiude il suo funerale
     const prev = this.funeral;
     if (prev) {
       this.funeral = null;
       prev.members.forEach((m) => { m.rig.root.visible = true; });
       if (prev.stage !== 'leave') this.depart(prev.members, prev.exit); else this.departing.push(...prev.members);
+      if (prev.dig) { this.group.remove(prev.dig.marker, prev.dig.coffin); if (!prev.dig.revealed) prev.dig.onReveal(); }
       prev.onDone();
     }
+    if (onReveal) { this.startDugFuneral(graveCenter, gateCell, onDone, onReveal); return; }
     const gate = cellCenter(gateCell.x, gateCell.y, [1, 1]);
     // a semicerchio davanti alla tomba, ben distanziati: teste e cappelli grandi non si toccano
     const spots = [
@@ -1467,8 +1551,96 @@ export class Actors {
     this.funeral = { members, stage: 'arrive', timer: 0, target: graveCenter.clone(), onDone, exit: gate };
   }
 
+  /**
+   * Sepoltura scavata (prova): il posto è delimitato, il corteo entra portando
+   * la bara (becchino davanti, un dolente dietro, il prete in testa), la posa
+   * sulla fossa; il becchino scava di lato, la bara scende e la lapide compare.
+   */
+  private startDugFuneral(graveCenter: THREE.Vector3, gateCell: Cell, onDone: () => void, onReveal: () => void) {
+    const gate = cellCenter(gateCell.x, gateCell.y, [1, 1]);
+    const front = worldToCell(graveCenter.clone().add(new THREE.Vector3(0, 0, 1.6)));
+    const allow = [gateCell, front];
+    const p = findPath(gateCell, front, (x, y) => !this.walkable(x, y) && !allow.some((c) => c.x === x && c.y === y), MAP_SIZE);
+    const route = (p ?? allow).map((c) => cellCenter(c.x, c.y, [1, 1]));
+    route.push(graveCenter.clone().add(new THREE.Vector3(0, 0, 1.2)).setY(0));
+    const cum = [0];
+    for (let i = 1; i < route.length; i++) cum.push(cum[i - 1] + route[i].distanceTo(route[i - 1]));
+    const coffin = lpMesh(closedCoffinLP());
+    coffin.traverse((m) => { if ((m as THREE.Mesh).isMesh) m.castShadow = !this.blobShadows; });
+    this.group.add(coffin);
+    const marker = plotMarker(graveCenter, (q) => this.ground(q));
+    this.group.add(marker);
+    // dove si mettono dopo: prete davanti, becchino di lato alla fossa, i dolenti dietro
+    const spots = [[0, 1.75], [1.55, 0.15], [-1.25, 1.85], [1.15, 2.05], [-0.4, 2.85]].map(([x, z]) => graveCenter.clone().add(new THREE.Vector3(x, 0, z)).setY(0));
+    const dig: DugBurial = { marker, onReveal, revealed: false, coffin, route, cum, s: 0, starts: [], spots, carryFrom: new THREE.Vector3() };
+    // chi porta la bara: il becchino davanti e un dolente dietro (come nel rito dell'albero)
+    const members = RITE_KINDS.map((k, i) => this.makeWalker(k, this.routeAt(dig, RITE_OFFSETS[i]).p, CORTEGE_SPEED));
+    this.funeral = { members, stage: 'carry', timer: 0, target: graveCenter.clone(), onDone, exit: gate, dig };
+  }
+
+  private stepDugFuneral(f: Funeral, dt: number) {
+    const d = f.dig!;
+    const g = (p: THREE.Vector3) => this.ground(p);
+    const total = d.cum[d.cum.length - 1];
+    const smooth = (x: number) => { const k = Math.min(1, Math.max(0, x)); return k * k * (3 - 2 * k); };
+    const face = (m: Walker, at: THREE.Vector3) => { const v = at.clone().sub(m.pos); m.facing = Math.atan2(v.x, v.z); };
+    if (f.stage === 'carry') {
+      const speed = 1.5;
+      d.s = Math.min(total, d.s + speed * dt);
+      const c = this.routeAt(d, d.s);
+      d.coffin.position.set(c.p.x, g(c.p) + 0.55, c.p.z);
+      let dy = Math.atan2(c.dir.x, c.dir.z) - d.coffin.rotation.y;
+      dy = Math.atan2(Math.sin(dy), Math.cos(dy));
+      d.coffin.rotation.y += dy * Math.min(1, dt * 6);
+      f.members.forEach((m, i) => {
+        const q = this.routeAt(d, Math.min(total + 0.8, d.s + RITE_OFFSETS[i]));
+        if (q.p.distanceToSquared(m.pos) > 1e-6) m.phase += speed * dt * 2.6;
+        m.pos.copy(q.p);
+        m.facing = Math.atan2(q.dir.x, q.dir.z);
+        m.pose = 'walk';
+      });
+      if (d.s >= total) { f.stage = 'place'; f.timer = 0; d.starts = f.members.map((m) => m.pos.clone()); d.carryFrom = d.coffin.position.clone(); }
+    } else if (f.stage === 'place') {
+      // la bara si posa sulla fossa; il corteo si dispone attorno
+      const k = smooth(f.timer / 1.8);
+      const at = d.carryFrom.clone().lerp(f.target, k);
+      d.coffin.position.set(at.x, THREE.MathUtils.lerp(d.carryFrom.y, g(f.target) + 0.02, k), at.z);
+      let dy = 0 - d.coffin.rotation.y;
+      dy = Math.atan2(Math.sin(dy), Math.cos(dy));
+      d.coffin.rotation.y += dy * Math.min(1, dt * 4);
+      f.members.forEach((m, i) => {
+        const prev = m.pos.clone();
+        m.pos.copy(d.starts[i].clone().lerp(d.spots[i], k));
+        if (k < 1) { m.pose = 'walk'; m.phase += prev.distanceTo(m.pos) * 2.6; face(m, d.spots[i]); } else { m.pose = 'idle'; face(m, f.target); }
+      });
+      if (f.timer > 2.1) { f.stage = 'rite'; f.timer = 0; }
+    } else if (f.stage === 'rite') {
+      // il becchino scava (le zolle saltano) e la bara scende; poi la lapide compare nella nuvola di terra
+      const digger = f.members[1];
+      face(digger, f.target);
+      if (!d.revealed) {
+        d.coffin.position.y = g(f.target) + 0.02 - smooth(f.timer / FUNERAL_REVEAL) * 0.6;
+        if (Math.random() < dt * (f.timer > FUNERAL_REVEAL - 0.6 ? 24 : 9)) this.clod(f.target, digger.pos);
+        if (f.timer > FUNERAL_REVEAL) {
+          d.revealed = true;
+          for (let i = 0; i < 14; i++) this.clod(f.target, f.target.clone().add(new THREE.Vector3(Math.random() - 0.5, 0, Math.random() - 0.5)), 1.6);
+          this.group.remove(d.marker, d.coffin);
+          d.onReveal();
+        }
+      }
+      f.members.forEach((m, i) => { if (i !== 1) face(m, f.target); m.pose = i === 1 ? (d.revealed ? 'idle' : 'work') : 'pray'; });
+      if (f.timer > FUNERAL_DIG_RITE) {
+        this.depart(f.members, f.exit);
+        f.members = [];
+        const done = f.onDone; f.onDone = () => undefined;
+        this.funeral = null;
+        done();
+      }
+    }
+  }
+
   /** Un corteo occupa la scena finché non se ne va: nel frattempo non se ne può avviare un altro rito. */
-  get funeralActive() { return (!!this.funeral && this.funeral.stage !== 'leave') || (!!this.rite && this.rite.stage !== 'leave'); }
+  get funeralActive() { return (!!this.funeral && this.funeral.stage !== 'leave') || (!!this.rite && this.rite.stage !== 'leave') || (!!this.exhume && this.exhume.stage !== 'leave'); }
 
   /** Manda chi ha finito verso l'uscita: da qui in poi cammina da solo. */
   private depart(members: Walker[], exit: THREE.Vector3) {
@@ -1523,7 +1695,7 @@ export class Actors {
   }
 
   /** Punto e direzione a distanza `s` lungo il percorso (oltre gli estremi prosegue dritto). */
-  private routeAt(r: Rite, s: number): { p: THREE.Vector3; dir: THREE.Vector3 } {
+  private routeAt(r: { route: THREE.Vector3[]; cum: number[] }, s: number): { p: THREE.Vector3; dir: THREE.Vector3 } {
     const { route, cum } = r;
     const n = route.length;
     if (n < 2) return { p: route[0].clone(), dir: new THREE.Vector3(0, 0, 1) };
@@ -1650,8 +1822,130 @@ export class Actors {
     r.sparks = r.sparks.filter((q) => q.t < 1);
   }
 
+  // ── Riesumazione ─────────────────────────────────────────────────────
+
+  /**
+   * Il becchino viene a riesumare: `target` è dove scava (centro della tomba o
+   * davanti all'albero), `stand` dove si mette per scavare. `onDig` quando la
+   * tomba sparisce nella nuvola di terra (lì cambia il salvataggio), `onDone`
+   * quando se ne va con la carriola piena.
+   */
+  startExhume(o: { target: THREE.Vector3; stand: THREE.Vector3; gate: Cell; onDig: () => void; onDone: () => void }) {
+    this.endExhume();
+    const exit = cellCenter(o.gate.x, o.gate.y, [1, 1]);
+    const digger = this.makeWalker('gravedigger', exit.clone().add(new THREE.Vector3(0, 0, 0.6)), CORTEGE_SPEED);
+    const barrow = new THREE.Group();
+    const empty = lpMesh(wheelbarrowLP(false, false));
+    const full = lpMesh(wheelbarrowLP(true, false));
+    full.visible = false;
+    barrow.add(empty, full);
+    // con le ombre ferme la carriola in viaggio non proietta ombra (resterebbe indietro)
+    barrow.traverse((m) => { if ((m as THREE.Mesh).isMesh) m.castShadow = !this.blobShadows; });
+    barrow.position.set(0, 0, BARROW_AHEAD);
+    digger.rig.root.add(barrow);
+    digger.push = true;
+    // la carriola resta di lato, accanto a dove scava (che sia raggiungibile)
+    const park = o.stand.clone().add(new THREE.Vector3(0.2, 0, 1.5));
+    const p = findPath(worldToCell(digger.pos), worldToCell(park), (x, y) => !this.walkable(x, y), MAP_SIZE);
+    digger.path = (p ?? []).slice(1).map((c) => cellCenter(c.x, c.y, [1, 1]));
+    digger.path.push(park);
+    this.exhume = { digger, stage: 'arrive', timer: 0, target: o.target.clone(), stand: o.stand.clone(), barrow, empty, full, dug: false, onDig: o.onDig, onDone: o.onDone, exit };
+  }
+
+  private endExhume() {
+    const e = this.exhume;
+    if (!e) return;
+    if (!e.digger.push) this.group.remove(e.barrow);
+    if (e.stage !== 'leave') this.disposeWalker(e.digger);
+    this.exhume = null;
+  }
+
+  private stepExhume(dt: number) {
+    const e = this.exhume!;
+    const w = e.digger;
+    e.timer += dt;
+    const face = (at: THREE.Vector3) => { const d = at.clone().sub(w.pos); w.facing = Math.atan2(d.x, d.z); };
+    if (e.stage === 'arrive') {
+      if (this.followPath(w, dt) && e.timer < 30) { w.pose = 'walk'; return; }
+      // posa la carriola dov'è arrivata e va a scavare
+      w.rig.root.updateMatrixWorld(true);
+      const at = e.barrow.getWorldPosition(new THREE.Vector3());
+      w.rig.root.remove(e.barrow);
+      e.barrow.position.set(at.x, this.ground(at), at.z);
+      e.barrow.rotation.y = w.rig.root.rotation.y;
+      this.group.add(e.barrow);
+      w.push = false;
+      w.path = [e.stand.clone()];
+      e.stage = 'walk'; e.timer = 0;
+    } else if (e.stage === 'walk') {
+      if (this.followPath(w, dt) && e.timer < 8) { w.pose = 'walk'; return; }
+      e.stage = 'dig'; e.timer = 0;
+    } else if (e.stage === 'dig') {
+      w.pose = 'work';
+      face(e.target);
+      // le zolle saltano fuori a ogni colpo di pala, verso la carriola
+      if (e.timer < EXHUME_DIG - 0.4 && Math.random() < dt * (e.timer > EXHUME_GONE - 0.6 && !e.dug ? 26 : 9)) this.clod(e.target, e.stand);
+      if (!e.dug && e.timer > EXHUME_GONE) {
+        e.dug = true;
+        for (let i = 0; i < 14; i++) this.clod(e.target, e.stand, 1.6);
+        e.empty.visible = false; e.full.visible = true;
+        e.onDig();
+      }
+      if (e.timer > EXHUME_DIG) {
+        // torna dietro la carriola e la riprende
+        const fwd = new THREE.Vector3(Math.sin(e.barrow.rotation.y), 0, Math.cos(e.barrow.rotation.y));
+        w.path = [e.barrow.position.clone().addScaledVector(fwd, -BARROW_AHEAD).setY(0)];
+        e.stage = 'fetch'; e.timer = 0;
+      }
+    } else if (e.stage === 'fetch') {
+      if (this.followPath(w, dt) && e.timer < 6) { w.pose = 'walk'; return; }
+      w.facing = e.barrow.rotation.y;
+      w.rig.root.rotation.y = w.facing;
+      this.group.remove(e.barrow);
+      e.barrow.position.set(0, 0, BARROW_AHEAD);
+      e.barrow.rotation.set(0, 0, 0);
+      w.rig.root.add(e.barrow);
+      w.push = true;
+      e.stage = 'leave'; e.timer = 0;
+      // se ne va da solo (con la carriola attaccata) e svanisce fuori dal cancello come gli altri
+      this.depart([w], e.exit);
+      const done = e.onDone; e.onDone = () => undefined; done();
+      this.exhume = null;
+    }
+  }
+
+  /** Una zolla di terra che salta via dalla buca in `at` (verso `toward`) e ricade. */
+  private clod(at: THREE.Vector3, toward: THREE.Vector3, burst = 1) {
+    const m = new THREE.Mesh(CLOD_GEO, CLOD_MATS[Math.floor(Math.random() * CLOD_MATS.length)]);
+    m.scale.setScalar((0.045 + Math.random() * 0.05) * (burst > 1 ? 1.3 : 1));
+    m.raycast = () => undefined;
+    m.position.set(at.x + (Math.random() - 0.5) * 0.9, this.ground(at) + 0.1, at.z + (Math.random() - 0.5) * 0.9);
+    const out = toward.clone().sub(at).setY(0).normalize().multiplyScalar(0.6 + Math.random());
+    const v = new THREE.Vector3(out.x + (Math.random() - 0.5) * 1.4 * burst, 2.4 + Math.random() * 1.6 * burst, out.z + (Math.random() - 0.5) * 1.4 * burst);
+    this.group.add(m);
+    this.clods.push({ m, v, life: 1.6 });
+  }
+
+  private stepClods(dt: number) {
+    for (const c of this.clods) {
+      c.life -= dt;
+      const gy = this.ground(c.m.position);
+      if (c.m.position.y > gy + 0.02 || c.v.y > 0) {
+        c.v.y -= 9 * dt;
+        c.m.position.addScaledVector(c.v, dt);
+        c.m.rotation.x += dt * 6; c.m.rotation.z += dt * 4;
+        if (c.m.position.y < gy + 0.02) { c.m.position.y = gy + 0.02; c.v.set(0, 0, 0); }
+      }
+      // a terra si sbriciolano
+      if (c.life < 0.5) c.m.scale.multiplyScalar(Math.max(0, 1 - dt * 5));
+    }
+    for (const c of this.clods.filter((q) => q.life <= 0)) this.group.remove(c.m);
+    this.clods = this.clods.filter((q) => q.life > 0);
+  }
+
   private endFuneral() {
     if (!this.funeral) return;
+    if (this.funeral.dig) this.group.remove(this.funeral.dig.marker, this.funeral.dig.coffin);
     for (const m of this.funeral.members) this.disposeWalker(m);
     this.funeral = null;
   }
@@ -1673,6 +1967,7 @@ export class Actors {
   private stepFuneral(dt: number) {
     const f = this.funeral!;
     f.timer += dt;
+    if (f.dig) { this.stepDugFuneral(f, dt); return; }
     if (f.stage !== 'rite') this.keepApart(f.members.filter((m) => m.rig.root.visible), dt);
     if (f.stage === 'arrive') {
       let moving = false;
@@ -1718,6 +2013,8 @@ export class Actors {
     if (this.pets.size > 1) this.separatePets();
     if (this.funeral) this.stepFuneral(dt);
     if (this.rite) this.stepRite(dt);
+    if (this.exhume) this.stepExhume(dt);
+    if (this.clods.length) this.stepClods(dt);
     for (const d of [...this.departing]) {
       if (!this.fading.has(d) && this.followPath(d, dt)) { d.pose = 'walk'; continue; }
       // arrivati fuori dal cancello svaniscono rimpicciolendo, come le altre presenze (mai di colpo)
@@ -1742,6 +2039,7 @@ export class Actors {
       else if (riding) this.poseBroom(t);
       else if ((w as Presence).prop === 'mug') this.sip(w as Presence, t);
       else if ((w as Presence).prop) propPose(w.rig, (w as Presence).prop!, t + w.pos.x, w.pose === 'walk');
+      else if (w.push) { const p = w.rig.parts; if (p.armL) p.armL.rotation.x = -0.75; if (p.armR) p.armR.rotation.x = -0.75; }
       // ombra vera nella mappa delle ombre, oppure disco sotto i piedi
       const cast = !this.blobShadows;
       if (w.rig.root.userData.cast !== cast) {
@@ -1776,6 +2074,7 @@ export class Actors {
     for (const p of this.pets.values()) { if (p.rig.root.visible) apply(p); p.den.group.position.y = ground(p.home); p.den.update(dt, t, this.glyphs); }
     if (this.funeral) for (const m of this.funeral.members) apply(m);
     if (this.rite) for (const m of this.rite.members) apply(m);
+    if (this.exhume && this.exhume.stage !== 'leave') apply(this.exhume.digger);
     for (const d of this.departing) apply(d);
     this.updateBone(dt);
     this.glyphs.update(dt);

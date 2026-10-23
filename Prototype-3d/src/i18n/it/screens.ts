@@ -221,6 +221,14 @@ export default {
   'detail.grave.postcard': 'Cartolina',
   // breve: pulsante
   'detail.grave.entrust': 'Affida all’albero',
+  // breve: testo con icona in fondo al dettaglio della tomba e del ricordo (azione distruttiva, in rosso)
+  'detail.exhume': 'Riesuma',
+  // conferma della riesumazione: {name} è l'oggetto sepolto
+  'exhume.confirm.title': 'Riesumare {name}?',
+  'exhume.confirm.grave': 'Arriva il becchino con la carriola: scava, porta via tutto e il terreno torna libero. La tomba sparisce anche dal registro delle sepolture e non si torna indietro.',
+  'exhume.confirm.memory': 'Arriva il becchino con la carriola e lo dissotterra tra le radici. Il ricordo lascia l’albero e il registro delle sepolture, e non si torna indietro.',
+  // breve: pulsante della conferma
+  'exhume.confirm.ok': 'Riesuma',
 
   // ── Scheda dell'oggetto ──
   'detail.item.category': 'Categoria',

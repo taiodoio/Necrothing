@@ -228,11 +228,23 @@ export function repairGrave(s: SaveData, graveId: string, now: Date): ActionResu
   return ok(t('rules.repair.graveDone'), XP.repaired, -cost);
 }
 
+/** Riesuma una tomba: sparisce col suo registro e il terreno torna libero. */
 export function exhumeGrave(s: SaveData, graveId: string): ActionResult {
-  graveById(s, graveId);
-  s.graves = s.graves.filter((g) => g.id !== graveId);
+  const g = graveById(s, graveId);
+  s.graves = s.graves.filter((x) => x.id !== graveId);
   s.memories = s.memories.filter((m) => m.graveId !== graveId);
-  return ok(t('rules.exhume.done'));
+  s.player.counters.exhumed++;
+  return ok(t('rules.exhume.done', { name: g.name }));
+}
+
+/** Riesuma un ricordo affidato all'Albero dei ricordi: lascia l'albero e il registro. */
+export function exhumeMemory(s: SaveData, memoryId: string): ActionResult {
+  const e = entrustedById(s, memoryId);
+  if (!e) throw new GameError(t('rules.grave.missing'));
+  s.entrusted = s.entrusted.filter((x) => x !== e);
+  s.memories = s.memories.filter((m) => m.graveId !== memoryId);
+  s.player.counters.exhumed++;
+  return ok(t('rules.exhume.memoryDone', { name: e.grave.name }));
 }
 
 // ── Visite del becchino e del prete ─────────────────────────────────────
@@ -352,9 +364,9 @@ export function placedCount(s: SaveData, type: string): number {
 
 export type ShopAvailability = 'ok' | 'rank' | 'season' | 'feat' | 'owned' | 'graves' | 'funds';
 
-/** Tombe che contano per gli sblocchi: quelle nel cimitero più quelle affidate all'albero. */
+/** Sepolture che contano per gli sblocchi: nel cimitero, affidate all'albero e anche quelle poi riesumate. */
 export function graveTotal(s: SaveData): number {
-  return s.graves.length + (s.entrusted?.length ?? 0);
+  return s.graves.length + (s.entrusted?.length ?? 0) + (s.player.counters.exhumed ?? 0);
 }
 
 /** A che punto è il traguardo che sblocca un oggetto (o un cappello): [fatto, obiettivo]. */

@@ -618,6 +618,8 @@ export class WorldView {
     if (on) this.hidden.add(id); else this.hidden.delete(id);
     const e = this.entities.get(id);
     if (e) e.group.visible = !on;
+    // anche le sue luci (le candele della lapide in attesa dello scavo)
+    for (const h of e?.anchors ?? []) this.atmosphere.setAnchorOn(h, !on);
     this.flushZones();
   }
 

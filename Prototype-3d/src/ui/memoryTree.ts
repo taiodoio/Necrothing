@@ -12,7 +12,8 @@ import type { LPModel } from '../render/lowpoly/kit.ts';
 import { t } from '../i18n/index.ts';
 import { closeDrawer, fmtDate, h, joinDot, openDrawer } from './dom.ts';
 import { icon } from './icons.ts';
-import { MEMORY_LABELS } from './screens.ts';
+import { exhumeButton, MEMORY_LABELS } from './screens.ts';
+import { uiTrial } from '../app/uiNext.ts';
 import { modelThumb } from './thumbs.ts';
 import type { UI } from './UI.ts';
 
@@ -86,8 +87,10 @@ export function openMemory(ui: UI, id: string, visit?: R.ActionResult) {
     mem.length ? h('div', {}, h('div', { class: 'section-title' }, t('tree.memory.log')),
       h('ul', { class: 'timeline' }, ...mem.map((m) => h('li', {}, h('time', {}, fmtDate(m.at)), m.type === 'ghost' && m.at >= e.entrustedAt ? t('tree.memory.ghostNear') : MEMORY_LABELS[m.type])))) : null,
   ), {
-    footer: h('div', { class: 'row' },
-      h('button', { class: 'big-btn ghost', onclick: () => openMemoryTree(ui) }, t('tree.memory.all')),
-      tree ? h('button', { class: 'big-btn ghost', onclick: () => { closeDrawer(); game.focusEntity(tree.id); } }, t('tree.memory.showTree')) : null),
+    footer: h('div', { style: 'display:grid;gap:6px' },
+      h('div', { class: 'row' },
+        h('button', { class: 'big-btn ghost', onclick: () => openMemoryTree(ui) }, t('tree.memory.all')),
+        tree ? h('button', { class: 'big-btn ghost', onclick: () => { closeDrawer(); game.focusEntity(tree.id); } }, t('tree.memory.showTree')) : null),
+      uiTrial() ? exhumeButton(ui, id, g.name, 'memory') : null),
   });
 }

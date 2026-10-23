@@ -5,7 +5,7 @@
 import * as THREE from 'three';
 import { BAT, BUSINESS, FOREST_MARGIN, GRAVE_FOOTPRINT, KEEPER_LAMP, LIVE_TICK_MS, SOUL_BELL, STAFF, ZOMBIE_MUD } from '../game/balance.ts';
 import { CATALOG, CATALOG_LIST, EDIT_ONLY, rotatedFootprint, TRACEABLE } from '../game/catalog.ts';
-import { applyTheme, uiNext, uiPreview } from './uiNext.ts';
+import { applyTheme, uiNext, uiPreview, uiTrial } from './uiNext.ts';
 import { watchLifecycle } from './platform.ts';
 import { askReminderPermission, clearReminders, remindersAvailable, syncReminders } from './reminders.ts';
 import type { GraveVisualState } from '../game/graves.ts';
@@ -63,6 +63,8 @@ export interface Placement {
 
 /** Densità dei voxel per qualità (voxel per unità di design; 10 unità = 1 cella). */
 const VOXEL_RES: Record<Quality, number> = { low: 1.0, medium: 1.6, high: 2.0 };
+/** Nuvola di terra degli scavi del becchino (sepoltura e riesumazione). */
+const DUST = '#a08a6c', DUST_GLOW = '#3a2e22';
 
 export class Game {
   state: SaveData;
@@ -799,12 +801,18 @@ export class Game {
         const area = areaForLevel(this.state.world.expansionLevel);
         const gate = [...gateCells(area)][1].split(',').map(Number);
         this.custodeSays(t('say.custode.funeral.say'), t('say.custode.funeral.text'));
+        // prova (bench): la lapide non c'è ancora, il posto è delimitato; compare quando il becchino ha scavato
+        const dug = uiTrial();
+        if (dug) this.world.setHidden(grave.id, true);
         this.actors.startFuneral(center, { x: gate[0], y: gate[1] }, () => {
           this.custodeSays(t('say.custode.buried.say'), result.message, result);
           this.showRewards(center.clone().setY(1.5), result);
           this.ui.refreshHud();
           void this.offerReminders(grave.name);
-        });
+        }, dug ? () => {
+          this.world.setHidden(grave.id, false);
+          this.effects.cloudPuff(center.clone().setY(this.world.heightAt(center.x, center.z)), DUST, DUST_GLOW);
+        } : undefined);
         this.ui.refreshPlacementBar();
       } catch (e) {
         toast(e instanceof Error ? e.message : t('game.burial.failed'));
@@ -1270,6 +1278,42 @@ export class Game {
         else if (kept) this.custodeSays(t('say.custode.riteDone.say'), (kept as R.ActionResult).message, kept);
         this.ui.refreshHud();
       },
+    });
+  }
+
+  /**
+   * Riesuma una tomba o un ricordo dell'Albero dei ricordi: arriva il becchino
+   * con la carriola, scava, e quando la terra si solleva la tomba (o il
+   * ricordo) lascia il cimitero; poi se ne va con la carriola piena.
+   */
+  exhume(id: string) {
+    const g = this.state.graves.find((x) => x.id === id);
+    const memory = g ? undefined : R.entrustedById(this.state, id);
+    if (!g && !memory) return;
+    if (this.actors.funeralActive) { toast(t('game.rite.busy')); return; }
+    const run = (s: SaveData) => (g ? R.exhumeGrave(s, id) : R.exhumeMemory(s, id));
+    const tree = memory ? this.treeSpot() : null;
+    const target = g ? cellCenter(g.x, g.y, GRAVE_FOOTPRINT) : tree?.center.clone().add(new THREE.Vector3(0, 0, 1.95));
+    if (!target) { this.act(run); return; }
+    const area = areaForLevel(this.state.world.expansionLevel);
+    const gate = [...gateCells(area)][1].split(',').map(Number);
+    const stand = target.clone().add(new THREE.Vector3(g ? 1.5 : 1.3, 0, g ? 0.3 : 0.4));
+    this.rig.jumpTo(target);
+    this.rig.follow = null;
+    this.select(null);
+    this.riteIds = g ? [id] : [];
+    this.sayText('gravedigger', t('say.gravedigger.name'), t('say.gravedigger.exhume.say'));
+    this.actors.startExhume({
+      target, stand, gate: { x: gate[0], y: gate[1] },
+      onDig: () => {
+        if (g) this.world.setHidden(id, true);
+        this.effects.cloudPuff(target.clone().setY(this.world.heightAt(target.x, target.z)), DUST, DUST_GLOW);
+        let r: R.ActionResult | null = null;
+        if (!this.act((s) => (r = run(s)), undefined, true)) { if (g) this.world.setHidden(id, false); return; }
+        if (r) this.say({ kind: 'gravedigger', name: t('say.gravedigger.name'), say: t('say.gravedigger.exhumed.say'), text: (r as R.ActionResult).message });
+        this.ui.refreshHud();
+      },
+      onDone: () => { this.riteIds = null; },
     });
   }
 

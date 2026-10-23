@@ -80,5 +80,6 @@
 .ui-next.ui-play .scrim { background: rgba(12, 9, 18, 0.62); }
 
 /* ── Il Custode esce dal suo riquadro: testa e cappello interi, sopra il bordo ── */
-.ui-next.ui-play .chip-avatar { position: relative; overflow: visible; clip-path: inset(-40px -6px 0 -6px round 0 0 var(--r-s) var(--r-s)); }
-.ui-next.ui-play .chip-avatar img { position: absolute; left: 50%; bottom: 0; width: 62px; height: 62px; max-width: none; translate: -50% 0; object-fit: contain; }
+/* riquadro un po' più basso del box, in fondo: il ritratto (più grande) sporge sopra di circa un terzo della testa */
+.ui-next.ui-play .chip-avatar { position: relative; align-self: flex-end; width: 64px; height: 60px; overflow: visible; clip-path: inset(-70px -22px 0 -22px round 0 0 var(--r-s) var(--r-s)); }
+.ui-next.ui-play .chip-avatar img { position: absolute; left: 50%; bottom: 0; width: 106px; height: 106px; max-width: none; translate: -50% 0; object-fit: contain; }

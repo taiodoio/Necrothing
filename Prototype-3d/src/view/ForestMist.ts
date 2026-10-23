@@ -58,7 +58,7 @@ void main() {
 const NOISE_SIZE = 128;
 
 /**
- * Variante ottimizzata (in prova nel bench): il rumore viene da una piccola
+ * Versione ottimizzata (quella del gioco, a tutti i livelli): il rumore viene da una piccola
  * texture ripetibile invece che dall'hash con `sin` (una lettura al posto di
  * quattro hash), e la deformazione usa 2 ottave invece di 4 (è a bassa
  * frequenza: le ottave alte non si vedono). Da 48 hash a pixel si passa a 8
@@ -112,8 +112,8 @@ function noiseTexture(): THREE.DataTexture {
   return noiseTex;
 }
 
-/** Versione della nebbia: l'attuale o quella ottimizzata (interruttore nel bench). */
-let optimizedMist = false;
+/** Versione della nebbia: l'ottimizzata (nel gioco) o la precedente (nel bench, per confronto). */
+let optimizedMist = true;
 export const mistOptimized = () => optimizedMist;
 
 /** Densità di base per fase del giorno (alba e notte le più nebbiose). */

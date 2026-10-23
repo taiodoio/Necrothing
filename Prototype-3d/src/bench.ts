@@ -161,8 +161,8 @@ function remindersLine() {
 }
 
 /** Le due prove A/B: nebbia del bosco ottimizzata, sfocatura ai bordi a mezza risoluzione. */
-const variants = () => `nebbia ${game.mistOptimized ? 'ottimizzata' : 'attuale'} · sfocatura ${game.halfResBlur ? 'a metà' : 'piena'}`;
-const abButtons = () => `<button id="mist" class="${game.mistOptimized ? 'on' : ''}">Nebbia: ${game.mistOptimized ? 'ottimizzata' : 'attuale'}</button><button id="halfblur" class="${game.halfResBlur ? 'on' : ''}">Sfocatura: ${game.halfResBlur ? 'mezza ris.' : 'piena ris.'}</button>`;
+const variants = () => `nebbia ${game.mistOptimized ? 'ottimizzata' : 'precedente'} · sfocatura ${game.halfResBlur ? 'a metà' : 'piena'}`;
+const abButtons = () => `<button id="mist" class="${game.mistOptimized ? 'on' : ''}">Nebbia: ${game.mistOptimized ? 'ottimizzata' : 'precedente'}</button><button id="halfblur" class="${game.halfResBlur ? 'on' : ''}">Sfocatura: ${game.halfResBlur ? 'mezza ris.' : 'piena ris.'}</button>`;
 function bindAb() {
   document.getElementById('mist')!.onclick = () => { game.setMistOptimized(!game.mistOptimized); render(); };
   document.getElementById('halfblur')!.onclick = () => { game.setHalfResBlur(!game.halfResBlur); render(); };
@@ -185,7 +185,7 @@ function render() {
     <div>${(['auto', '30', '60'] as FpsSetting[]).map((f) => `<button data-f="${f}" class="${f === fps ? 'on' : ''}">${FPS_LABELS[f]}</button>`).join('')}<button id="idle" class="${idle ? 'on' : ''}">Rallenta da fermo</button></div>
     <div class="muted">Fluidità Auto: 60 FPS in Alta, 30 in Media e Bassa.</div>
     <div>${abButtons()}</div>
-    <div class="muted">Prove A/B: la nebbia ottimizzata legge il rumore da una texture (2 ottave per la deformazione, 2 veli in Alta); la sfocatura a mezza risoluzione calcola il blur su un quarto dei pixel e lo sfuma con la scena nitida. In Bassa la sfocatura è spenta.</div>
+    <div class="muted">Confronto col prima: il gioco usa la nebbia ottimizzata (rumore da texture, 2 ottave per la deformazione, 2 veli in Alta) e la sfocatura a mezza risoluzione (in Media e Alta; in Bassa è spenta). Spegnendo i due pulsanti si torna alle versioni precedenti.</div>
     <div class="live" id="live">${liveText()}</div>
     <div class="muted">${remindersLine()}</div>
     <div><button class="cta" id="go">Avvia il test</button><button id="hide">Nascondi e gira</button></div>

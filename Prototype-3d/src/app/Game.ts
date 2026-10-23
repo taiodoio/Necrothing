@@ -225,10 +225,10 @@ export class Game {
   framesDrawn = 0;
   private readonly markActive = () => { this.lastActiveAt = performance.now(); };
 
-  /** Solo per la pagina di misura: nebbia del bosco ottimizzata (texture di rumore, meno ottave, meno veli) o quella attuale. */
+  /** Pagina di misura: nebbia del bosco ottimizzata (quella del gioco) o la precedente, per confronto. */
   setMistOptimized(on: boolean) { this.mist?.setOptimized(on); }
   get mistOptimized() { return mistOptimized(); }
-  /** Solo per la pagina di misura: sfocatura ai bordi calcolata a mezza risoluzione. */
+  /** Pagina di misura: sfocatura ai bordi a mezza risoluzione (quella del gioco) o piena, per confronto. */
   setHalfResBlur(on: boolean) { this.postfx.setHalfRes(on); }
   get halfResBlur() { return this.postfx.half; }
 

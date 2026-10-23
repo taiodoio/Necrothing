@@ -26,7 +26,8 @@ const TECH = new Set(['Escape', 'Enter', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'A
 
 /** Sembra una frase per il giocatore? */
 export function looksLikeText(s) {
-  const v = s.trim();
+  // ⟨⟩ = dove nel template c'è un'espressione
+  const v = s.replaceAll('⟨⟩', ' ').replace(/\s+/g, ' ').trim();
   if (v.length < 2 || TECH.has(v)) return false;
   if (/^(https?:|data:|url\(|#[0-9a-f]{3,8}$|rgba?\(|hsl)/i.test(v)) return false;
   if (/^[.#[]/.test(v) || v.includes(':scope') || /^[a-z]+\[/.test(v)) return false; // selettori
@@ -35,7 +36,7 @@ export function looksLikeText(s) {
   if (/^\d+(\.\d+)?(px|%|em|rem|s|ms|deg)?( |$)/.test(v)) return false; // misure, font
   if (/^[a-z0-9_\-:./ ]+$/.test(v) && !/[à-ú]/.test(v)) return false; // classi, chiavi, percorsi
   if (/[à-úÀ-Ú’«»…]/.test(v)) return true; // accenti, apostrofo tipografico, caporali: italiano
-  if (/[A-Za-z]{2,}[\s,.;:!?'][^]*[A-Za-z]{2,}/.test(v) && /\s/.test(v)) return true; // più parole
+  if (/[A-Za-z]{2,}[,.;:!?']?\s+[^]*[A-Za-z]{2,}/.test(v)) return true; // più parole separate da spazi
   if (/^[A-Z][a-z']{2,}[.!?]?$/.test(v)) return true; // una parola con la maiuscola: «Bottega», «Chiudi»
   return false;
 }
@@ -74,7 +75,7 @@ export function scan() {
       if (ts.isPropertyAssignment(node) && (ts.isStringLiteral(node.name) || ts.isIdentifier(node.name))) { visit(node.initializer); return; }
       let value = null;
       if (ts.isStringLiteral(node) || ts.isNoSubstitutionTemplateLiteral(node)) value = node.text;
-      else if (ts.isTemplateExpression(node)) value = [node.head.text, ...node.templateSpans.map((s) => s.literal.text)].join(' {} ');
+      else if (ts.isTemplateExpression(node)) value = [node.head.text, ...node.templateSpans.map((s) => s.literal.text)].join(' ⟨⟩ ');
       if (value !== null) {
         const line = sf.getLineAndCharacterOfPosition(node.getStart()).line;
         if (looksLikeText(value) && !/i18n-ok/.test(lines[line] ?? '')) found.push({ file: rel, line: line + 1, text: value.replace(/\s+/g, ' ').slice(0, 120) });

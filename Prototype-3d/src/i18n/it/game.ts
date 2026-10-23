@@ -10,8 +10,8 @@ export default {
   'rules.expansion.invalid': 'Ampiezza non valida.',
   // {area}: nome dell'ampiezza del recinto (es. «Ala orientale»)
   'rules.expansion.locked': '«{area}» si sblocca con {prestige} di prestigio.',
-  'rules.expansion.outside#one': 'C’è ancora un elemento fuori dall\'area: spostali o rimettili in inventario.',
-  'rules.expansion.outside#other': 'Ci sono ancora {n} elementi fuori dall\'area: spostali o rimettili in inventario.',
+  'rules.expansion.outsideOne': 'C’è ancora un elemento fuori dall\'area: spostali o rimettili in inventario.',
+  'rules.expansion.outsideMany': 'Ci sono ancora {n} elementi fuori dall\'area: spostali o rimettili in inventario.',
   // {w}×{h}: misure del recinto in celle
   'rules.expansion.grow': 'Il recinto si allarga: {area}, {w}×{h}.',
   'rules.expansion.shrink': 'Il recinto si stringe: {area}, {w}×{h}.',
@@ -73,8 +73,9 @@ export default {
   'rules.buy.funds': 'Fuochi fatui insufficienti.',
   'rules.buy.noFunds': 'Servono {amount} fuochi fatui per comprarlo.',
   // {item}: nome dell'oggetto comprato
-  'rules.buy.done#one': '{item} nell’inventario.',
-  'rules.buy.done#other': '{item} ×{n} nell’inventario.',
+  'rules.buy.done': '{item} nell’inventario.',
+  // più pezzi comprati insieme
+  'rules.buy.doneMany': '{item} ×{n} nell’inventario.',
   'rules.sell.permanent': 'La Bottega non si vende.',
   'rules.sell.none': 'Non ne possiedi.',
   'rules.sell.done': 'Venduto: +{gain} fuochi fatui.',

@@ -11,6 +11,7 @@ import { createRng } from './rng.ts';
 import { ensureKeeperHouse } from './rules.ts';
 import { createNewGame, type SaveData } from './state.ts';
 import { areaForLevel, buildOccupancy, cellsOf, type Rect } from './world.ts';
+import { t } from '../i18n/index.ts';
 
 /** Quante copie per categoria (le cose uniche una sola volta). */
 const COPIES: Record<string, number> = { light: 2, decoration: 1, ambient: 1, structure: 1, npc: 1 };
@@ -66,11 +67,11 @@ export function fullCemetery(seed = 4242, now = new Date(), graves = 150): SaveD
     const at = spot(GRAVE_FOOTPRINT);
     if (!at) break;
     const d = R.emptyDraft(now);
-    d.name = `Oggetto ${i + 1}`;
+    d.name = t('demo.grave.name', { index: i + 1 });
     d.category = CATEGORIES[i % (CATEGORIES.length - 2)]; // niente «astratte» (una al giorno) né «altro»
     d.deathCause = DEATH_CAUSES[i % DEATH_CAUSES.length];
     d.graveType = GRAVE_TYPES[i % GRAVE_TYPES.length];
-    d.epitaph = 'Riposa in pace.';
+    d.epitaph = t('demo.grave.epitaph');
     const { grave } = R.bury(s, d, at.x, at.y, now);
     take(at.x, at.y, GRAVE_FOOTPRINT);
     const k = rng.next();

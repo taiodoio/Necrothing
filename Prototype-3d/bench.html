@@ -5,20 +5,20 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no" />
     <meta name="theme-color" content="#0d1016" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
-    <meta name="description" content="Necrothing — il cimitero degli oggetti morti, in voxel." />
-    <title>Necrothing — misura delle prestazioni</title>
+    <meta name="description" content="Necrothing — il cimitero degli oggetti morti, in voxel." data-i18n-content="page.description" />
+    <title data-i18n="page.bench.title">Necrothing — misura delle prestazioni</title>
     <!-- Pagina di misura: cimitero pieno generato al volo, non tocca il salvataggio del gioco. -->
   </head>
   <body>
-    <main id="game" aria-label="Cimitero di Necrothing">
-      <canvas id="world" aria-label="Scena di gioco 3D"></canvas>
+    <main id="game" aria-label="Cimitero di Necrothing" data-i18n-aria="page.main.aria">
+      <canvas id="world" aria-label="Scena di gioco 3D" data-i18n-aria="page.world.aria"></canvas>
 
       <header class="hud-top">
-        <button class="player-chip" id="player-chip" aria-label="Profilo del custode">
+        <button class="player-chip" id="player-chip" aria-label="Profilo del custode" data-i18n-aria="page.player.aria">
           <span class="chip-avatar" aria-hidden="true"><i data-icon="keeper"></i></span>
           <span class="chip-body">
-            <strong id="hud-name">Custode</strong>
-            <small id="hud-rank">Rango 1</small>
+            <strong id="hud-name" data-i18n="page.hud.name">Custode</strong>
+            <small id="hud-rank" data-i18n="page.hud.rank">Rango 1</small>
             <span class="xp-bar"><i id="hud-xp"></i></span>
           </span>
           <span class="wisp-count"><i class="wisp-icon" data-icon="wisp"></i><span id="hud-wisps">0</span></span>
@@ -26,33 +26,33 @@
         <div class="hud-right">
           <div class="clock-block">
             <strong id="hud-clock">--:--</strong>
-            <small id="hud-weather">Notte</small>
+            <small id="hud-weather" data-i18n="page.hud.weather">Notte</small>
           </div>
-          <button class="icon-btn" id="settings-btn" aria-label="Impostazioni"><i data-icon="gear"></i></button>
+          <button class="icon-btn" id="settings-btn" aria-label="Impostazioni" data-i18n-aria="menu.settings"><i data-icon="gear"></i></button>
         </div>
       </header>
 
       <div class="edit-banner" id="edit-banner" hidden>
-        <i data-icon="edit"></i><span>Modifica — tocca un elemento, trascinalo per spostarlo</span>
-        <button class="pill" id="edit-done">Fine</button>
+        <i data-icon="edit"></i><span data-i18n="page.edit.banner">Modifica — tocca un elemento, trascinalo per spostarlo</span>
+        <button class="pill" id="edit-done" data-i18n="page.edit.done">Fine</button>
       </div>
 
       <div class="map-tools">
-        <button class="icon-btn" id="staff-toggle" aria-label="Impugna il bastone mistico" aria-pressed="false" hidden><i data-icon="staff"></i></button>
-        <button class="icon-btn" id="broom-toggle" aria-label="Sali sulla scopa" aria-pressed="false" hidden><i data-icon="broom"></i></button>
-        <button class="icon-btn" id="bike-toggle" aria-label="Sali in bici" aria-pressed="false" hidden><i data-icon="bike"></i></button>
-        <button class="icon-btn" id="recenter" aria-label="Centra sul custode"><i data-icon="target"></i></button>
+        <button class="icon-btn" id="staff-toggle" aria-label="Impugna il bastone mistico" data-i18n-aria="hud.staff.take" aria-pressed="false" hidden><i data-icon="staff"></i></button>
+        <button class="icon-btn" id="broom-toggle" aria-label="Sali sulla scopa" data-i18n-aria="hud.broom.mount" aria-pressed="false" hidden><i data-icon="broom"></i></button>
+        <button class="icon-btn" id="bike-toggle" aria-label="Sali in bici" data-i18n-aria="hud.bike.mount" aria-pressed="false" hidden><i data-icon="bike"></i></button>
+        <button class="icon-btn" id="recenter" aria-label="Centra sul custode" data-i18n-aria="page.recenter.aria"><i data-icon="target"></i></button>
       </div>
 
-      <nav class="bubble" id="bubble" aria-label="Azioni">
-        <button class="fab" id="fab" aria-expanded="false" aria-label="Apri azioni"><i data-icon="shovel" id="fab-icon"></i></button>
+      <nav class="bubble" id="bubble" aria-label="Azioni" data-i18n-aria="page.bubble.aria">
+        <button class="fab" id="fab" aria-expanded="false" aria-label="Apri azioni" data-i18n-aria="page.fab.aria"><i data-icon="shovel" id="fab-icon"></i></button>
         <div class="slots" id="slots">
-          <button class="slot" data-act="bury"><i data-icon="bury"></i><small>Seppellisci</small></button>
-          <button class="slot" data-act="edit"><i data-icon="edit"></i><small>Modifica</small></button>
-          <button class="slot" data-act="inventory"><i data-icon="bag"></i><small>Inventario</small></button>
-          <button class="slot" data-act="shop"><i data-icon="shop"></i><small>Bottega</small></button>
-          <button class="slot" data-act="photo"><i data-icon="photo"></i><small>Foto</small></button>
-          <button class="slot" data-act="gallery"><i data-icon="gallery"></i><small>Galleria</small></button>
+          <button class="slot" data-act="bury"><i data-icon="bury"></i><small data-i18n="menu.bury">Seppellisci</small></button>
+          <button class="slot" data-act="edit"><i data-icon="edit"></i><small data-i18n="menu.edit">Modifica</small></button>
+          <button class="slot" data-act="inventory"><i data-icon="bag"></i><small data-i18n="menu.inventory">Inventario</small></button>
+          <button class="slot" data-act="shop"><i data-icon="shop"></i><small data-i18n="menu.shop">Bottega</small></button>
+          <button class="slot" data-act="photo"><i data-icon="photo"></i><small data-i18n="menu.photo">Foto</small></button>
+          <button class="slot" data-act="gallery"><i data-icon="gallery"></i><small data-i18n="menu.gallery">Galleria</small></button>
         </div>
       </nav>
 
@@ -64,7 +64,7 @@
       <div class="scrim" id="scrim" hidden></div>
       <section class="drawer" id="drawer" hidden aria-modal="true" role="dialog">
         <header class="drawer-head">
-          <button class="icon-btn small" id="drawer-close" aria-label="Chiudi"><i data-icon="close"></i></button>
+          <button class="icon-btn small" id="drawer-close" aria-label="Chiudi" data-i18n-aria="dialog.close"><i data-icon="close"></i></button>
           <h2 id="drawer-title"></h2>
           <div class="drawer-extra" id="drawer-extra"></div>
         </header>
@@ -78,9 +78,9 @@
           <i data-h="nw"></i><i data-h="ne"></i><i data-h="sw"></i><i data-h="se"></i>
         </div>
         <div class="photo-bar">
-          <button class="pill" id="photo-cancel">Annulla</button>
-          <button class="shutter" id="photo-shoot" aria-label="Scatta"></button>
-          <span class="photo-hint">Sposta gli angoli</span>
+          <button class="pill" id="photo-cancel" data-i18n="dialog.cancel">Annulla</button>
+          <button class="shutter" id="photo-shoot" aria-label="Scatta" data-i18n-aria="page.photo.shoot"></button>
+          <span class="photo-hint" data-i18n="page.photo.hint">Sposta gli angoli</span>
         </div>
       </div>
 

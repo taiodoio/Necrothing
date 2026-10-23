@@ -16,6 +16,7 @@
 //   più ritentato (tetto).
 
 import type { Quality } from '../game/state.ts';
+import { t } from '../i18n/index.ts';
 
 export interface QualityProfile {
   /** Livello «di costruzione»: densità di bosco e prato, nebbia, particelle, mappa delle ombre. */
@@ -45,7 +46,7 @@ export const PROFILES: Record<Quality, QualityProfile> = {
   high: { bake: 'high', lite: false, fakeLights: false, liteMaterials: false, shadows: 'live', dpr: [1.5, 1.75, 2], msaa: 4, blurRadius: 5, fps: 60, presences: 'high' },
 };
 
-export const QUALITY_LABELS: Record<Quality, string> = { low: 'Bassa', medium: 'Media', high: 'Alta' };
+export const QUALITY_LABELS: Record<Quality, string> = { low: t('quality.low'), medium: t('quality.medium'), high: t('quality.high') };
 const ORDER: readonly Quality[] = ['low', 'medium', 'high'];
 
 export interface DeviceInfo {

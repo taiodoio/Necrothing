@@ -10,7 +10,7 @@ import type { Quality, Weather } from '../game/state.ts';
 import type { DayPhase } from '../game/time.ts';
 import type { Rect } from '../game/world.ts';
 
-const VERT = /* glsl */ `
+const VERT = /* glsl, i18n-ok */ `
 varying vec3 vWorld;
 void main() {
   vec4 w = modelMatrix * vec4(position, 1.0);
@@ -18,7 +18,7 @@ void main() {
   gl_Position = projectionMatrix * viewMatrix * w;
 }`;
 
-const FRAG = /* glsl */ `
+const FRAG = /* glsl, i18n-ok */ `
 uniform float uTime;
 uniform vec3 uColor;
 uniform vec4 uRect;   // centro x, centro z, mezza larghezza, mezza profondità
@@ -64,7 +64,7 @@ const NOISE_SIZE = 128;
  * frequenza: le ottave alte non si vedono). Da 48 hash a pixel si passa a 8
  * letture di texture.
  */
-const FRAG_OPT = /* glsl */ `
+const FRAG_OPT = /* glsl, i18n-ok */ `
 uniform float uTime;
 uniform vec3 uColor;
 uniform vec4 uRect;

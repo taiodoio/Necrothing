@@ -5,6 +5,7 @@
 // successiva aspetta che la precedente sia rimasta in vista almeno un attimo.
 
 import type { CharacterKind } from '../view/characters.ts';
+import { hasT, t, tList } from '../i18n/index.ts';
 import { $, h } from './dom.ts';
 import { icon } from './icons.ts';
 import { npcPortrait } from './npcPortraits.ts';
@@ -24,26 +25,11 @@ export interface NpcNote {
   action?: { label: string; run: () => void };
 }
 
-/** I versi, scelti a caso tra due o tre perché non stanchino. */
-const VERSES: Partial<Record<CharacterKind, string[]>> = {
-  crow: ['Cra! Cra!', 'Craaa!'],
-  petCrow: ['Cra!', 'Cra cra?'],
-  cat: ['Miao!', 'Mrrr-miao!', 'Purr…'],
-  petCat: ['Miao!', 'Purr…'],
-  rat: ['Squit!', 'Squit squit!'],
-  zombie: ['Grrraaah!', 'Uuurgh…', 'Brrrainz…'],
-  ghost: ['Uuuuh…', 'Bu!', 'Ooooh…'],
-  ghostRare: ['Uuuuh…', 'Ooooh…'],
-  priest: ['Amen.', 'Pace a voi!'],
-  gravedigger: ['Ehm…', 'Mmh, mmh.', 'Al lavoro!'],
-  vampire: ['Slurp!', 'Gnam!'],
-  witch: ['Eh eh eh!', 'Abracadabra!'],
-  gardener: ['Scricch…', 'Ehilà!', 'Mmh?'],
-  petDog: ['Bau!', 'Bau bau!'],
-  petRabbit: ['Snif snif!', 'Hop!'],
-  petDuck: ['Qua qua!', 'Quaaa!'],
+/** I versi, scelti a caso tra due o tre perché non stanchino (note.verse.<personaggio>). */
+const verse = (k: CharacterKind) => {
+  const v = tList(hasT(`note.verse.${k}`) ? `note.verse.${k}` : 'note.verse.default');
+  return v[Math.floor(Math.random() * v.length)];
 };
-const verse = (k: CharacterKind) => { const v = VERSES[k] ?? ['…']; return v[Math.floor(Math.random() * v.length)]; };
 
 const SHOW_MS = 5000;
 /** Con un pulsante c'è il tempo di toccarlo. */
@@ -83,7 +69,7 @@ function dismiss(next = true) {
 }
 
 function show(n: NpcNote) {
-  const gain = (v: number, xp: boolean) => h('span', { class: `gain${xp ? ' xp' : ''}` }, xp ? null : icon('wisp', 12), `+${v}${xp ? ' XP' : ''}`);
+  const gain = (v: number, xp: boolean) => h('span', { class: `gain${xp ? ' xp' : ''}` }, xp ? null : icon('wisp', 12), xp ? t('note.gainXp', { v }) : `+${v}`);
   const say = h('b', { class: 'say' }, ...[...(n.say ?? verse(n.kind))].map((c, i) => h('span', { style: `animation-delay:${(i * 0.06).toFixed(2)}s` }, c === ' ' ? ' ' : c)));
   const url = n.img ?? npcPortrait(n.kind);
   const img = url ? h('img', { alt: '' }) as HTMLImageElement : null;
@@ -95,7 +81,7 @@ function show(n: NpcNote) {
     h('div', { class: 'npc-note-head' }, say, h('small', {}, n.name), n.wisps ? gain(n.wisps, false) : null, n.xp ? gain(n.xp, true) : null),
     h('p', {}, n.text),
     n.action ? h('button', { class: 'npc-note-cta', onclick: () => { const a = n.action!; dismiss(); a.run(); } }, n.action.label, ' ›') : null,
-    h('button', { class: 'npc-note-x', 'aria-label': 'Chiudi', onclick: () => dismiss() }, icon('close', 14)));
+    h('button', { class: 'npc-note-x', 'aria-label': t('dialog.close'), onclick: () => dismiss() }, icon('close', 14)));
   $('#game').append(el);
   $('#game').classList.add('has-note'); // i toast scendono sotto la notifica
   current = { el, at: performance.now(), timer: window.setTimeout(() => dismiss(), ms) };

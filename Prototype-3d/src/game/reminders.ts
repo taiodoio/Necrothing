@@ -8,6 +8,7 @@ import { DECAY } from './balance.ts';
 import { anniversariesBetween } from './simulation.ts';
 import type { SaveData } from './state.ts';
 import { DAY_MS, isoDate } from './time.ts';
+import { t } from '../i18n/index.ts';
 
 export type ReminderKind = 'anniversary' | 'breaking';
 
@@ -23,7 +24,10 @@ export interface Reminder {
 /** Ore locali dei promemoria: gli anniversari al mattino, le tombe a fine giornata (c'è ancora tempo). */
 export const REMINDER_HOURS: Record<ReminderKind, number> = { anniversary: 10, breaking: 18 };
 
-const list = (names: string[]) => (names.length <= 2 ? names.join(' e ') : `${names.slice(0, 2).join(', ')} e altri ${names.length - 2}`);
+/** «A e B», oppure «A, B e altri N». */
+const list = (names: string[]) => (names.length < 2 ? names.join('')
+  : names.length === 2 ? t('reminder.list.two', { a: names[0], b: names[1] })
+  : t('reminder.list.more', { a: names[0], b: names[1], n: names.length - 2 }));
 
 /**
  * I promemoria dei prossimi `days` giorni: uno al giorno per tipo al massimo
@@ -58,8 +62,8 @@ export function planReminders(s: SaveData, now: Date, opts: { days?: number; max
     const n = names.length;
     const id = (kind === 'anniversary' ? 1 : 2) * 1_000_000 + Math.floor(day.getTime() / DAY_MS) % 1_000_000;
     return kind === 'anniversary'
-      ? { id, kind, at: day, title: n === 1 ? `Oggi è l’anniversario di ${names[0]}` : `Oggi ricorrono ${n} anniversari`, body: n === 1 ? 'Passa al cimitero a ricordarlo: solo oggi.' : `${list(names)}: passa al cimitero a ricordarli, solo oggi.` }
-      : { id, kind, at: day, title: n === 1 ? `La tomba di ${names[0]} sta per rompersi` : `${n} tombe stanno per rompersi`, body: n === 1 ? 'Da domani sarà rotta: una pulita e torna come nuova.' : `${list(names)}: da domani saranno rotte, passa a pulirle.` };
+      ? { id, kind, at: day, title: n === 1 ? t('reminder.anniversary.titleOne', { name: names[0] }) : t('reminder.anniversary.titleMany', { n }), body: n === 1 ? t('reminder.anniversary.bodyOne') : t('reminder.anniversary.bodyMany', { names: list(names) }) }
+      : { id, kind, at: day, title: n === 1 ? t('reminder.breaking.titleOne', { name: names[0] }) : t('reminder.breaking.titleMany', { n }), body: n === 1 ? t('reminder.breaking.bodyOne') : t('reminder.breaking.bodyMany', { names: list(names) }) };
   });
   return out.sort((a, b) => a.at.getTime() - b.at.getTime()).slice(0, max);
 }

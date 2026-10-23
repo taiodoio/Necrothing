@@ -25,16 +25,17 @@ import type { LightAnchor } from '../render/shape.ts';
 import { findPath, type Cell } from './pathfinding.ts';
 import { boneMesh, Den, Glyphs } from './petFx.ts';
 import { cellCenter, HALF, worldToCell } from './WorldView.ts';
+import { t } from '../i18n/index.ts';
 
 const LIFESPAN: Record<RoamerKind, number> = { ghost: 26, cat: 32, crow: 22, gravedigger: 34, priest: 36, rat: 15, zombie: 30 };
 const SPEED: Record<RoamerKind, number> = { ghost: 0.9, cat: 1.6, crow: 3.2, gravedigger: 1.1, priest: 0.9, rat: 2.6, zombie: 0.85 };
 const RIG_FOR: Record<RoamerKind, CharacterKind> = { ghost: 'ghost', cat: 'cat', crow: 'crow', gravedigger: 'gravedigger', priest: 'priest', rat: 'rat', zombie: 'zombie' };
 const PET_KINDS: CharacterKind[] = ['petDog', 'petCat', 'petRabbit', 'petDuck', 'petCrow'];
-const PET_LABELS = ['Cane', 'Gatto', 'Coniglio', 'Papera', 'Corvo'];
-/** Con l'articolo, per le frasi: «Il cane ti raggiunge», «la papera tornerà fuori». */
-const PET_THE: Record<string, string> = { Cane: 'il cane', Gatto: 'il gatto', Coniglio: 'il coniglio', Papera: 'la papera', Corvo: 'il corvo' };
-const theLower = (label: string) => PET_THE[label] ?? label.toLowerCase();
-const theUpper = (label: string) => { const t = theLower(label); return t[0].toUpperCase() + t.slice(1); };
+/** Le specie, nello stesso ordine di PET_KINDS (chiavi dei testi «pet.<specie>.…»). */
+const PET_SPECIES = ['dog', 'cat', 'rabbit', 'duck', 'crow'] as const;
+const PET_LABELS = PET_SPECIES.map((s) => t(`pet.${s}.label`));
+/** Una frase dell'animale, intera per ogni specie («Il cane ti raggiunge», «la papera tornerà fuori»). */
+const petLine = (p: Pet, what: 'broken' | 'call' | 'home' | 'wake' | 'free') => t(`pet.${PET_SPECIES[p.variant % PET_SPECIES.length]}.${what}`);
 /** Quale animale vive in una casetta (ogni animale ha la sua casetta in Bottega). */
 const petKind = (h: Placed) => visualOf(h.type, h.variant).variant;
 
@@ -1366,11 +1367,11 @@ export class Actors {
   callPet(id: string): string {
     const p = this.pets.get(id);
     if (!p) return '';
-    if (p.broken) return `La casetta è rotta: riparala e ${theLower(p.label)} tornerà fuori.`;
+    if (p.broken) return petLine(p, 'broken');
     p.mode = 'follow';
     if (p.act === 'sleep') this.wake(p);
     else if (!['fetch', 'bring', 'happy', 'wait'].includes(p.act)) { p.act = 'follow'; p.path = []; }
-    return `${theUpper(p.label)} ti raggiunge e ti segue.`;
+    return petLine(p, 'call');
   }
 
   /** A cuccia: torna alla casetta e resta a dormire finché non lo richiami. */
@@ -1380,7 +1381,7 @@ export class Actors {
     p.mode = 'home';
     if (this.bone.carrier === p) { this.bone.carrier = null; this.bone.obj.visible = false; }
     if (p.act !== 'sleep') this.goHome(p);
-    return `${theUpper(p.label)} va a cuccia.`;
+    return petLine(p, 'home');
   }
 
   /** Libero: gira per il cimitero e ogni tanto torna in tana. */
@@ -1388,9 +1389,9 @@ export class Actors {
     const p = this.pets.get(id);
     if (!p) return '';
     p.mode = 'free';
-    if (p.act === 'sleep') { p.timer = 1.5; return `${theUpper(p.label)} esce a fare un giro.`; }
+    if (p.act === 'sleep') { p.timer = 1.5; return petLine(p, 'wake'); }
     if (p.act === 'follow') { p.act = 'rest'; p.timer = 0.5; p.path = []; }
-    return `${theUpper(p.label)} va a zonzo per il cimitero.`;
+    return petLine(p, 'free');
   }
 
   /** Coccole: il Custode si avvicina, l'animale aspetta e poi scodinzola. */

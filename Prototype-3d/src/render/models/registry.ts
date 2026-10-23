@@ -121,7 +121,7 @@ export function placeableSeed(type: string, idHash: number): number {
 export function placeableModel(v: PVis): Model {
   v = canonical(v);
   const build = BUILDERS[v.type];
-  if (!build) throw new Error(`Nessun modello per ${v.type}`);
+  if (!build) throw new Error(`Nessun modello per ${v.type}`); // i18n-ok: errore interno
   return build(v);
 }
 
@@ -158,7 +158,7 @@ export function gallerySets(): Record<string, GalleryItem[]> {
     }
     out[PLACEABLE_CATEGORY_LABELS[cat]] = items;
     if (cat === 'light' || cat === 'structure') {
-      out[`${PLACEABLE_CATEGORY_LABELS[cat]} — sporche/rotte`] = CATALOG_LIST.filter((x) => x.category === cat && x.decays).flatMap((d) => [
+      out[`${PLACEABLE_CATEGORY_LABELS[cat]} — sporche/rotte`] = CATALOG_LIST.filter((x) => x.category === cat && x.decays).flatMap((d) => [ // i18n-ok: solo galleria di sviluppo
         { dirty: true, broken: false, lit: true }, { dirty: true, broken: true, lit: false },
       ].map((s) => {
         const v: PVis = { type: d.id, variant: 0, seed: 1, ...s };

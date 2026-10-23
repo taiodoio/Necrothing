@@ -16,6 +16,7 @@ import { GRASS, LPC } from '../render/lowpoly/palette.ts';
 import { flower, grassTuft, moss, pebbles } from '../render/lowpoly/details.ts';
 import { mushroom } from '../render/lowpoly/nature.ts';
 import { instantiate, LOWPOLY_MATERIALS, type CachedModel } from '../render/modelCache.ts';
+import { t } from '../i18n/index.ts';
 import { closeDrawer, confirmDialog, h, openDrawer, toast } from './dom.ts';
 import type { UI } from './UI.ts';
 import { icon } from './icons.ts';
@@ -137,9 +138,9 @@ export function openCustomize(ui: UI) {
   const saveBtn = h('button', { class: 'big-btn', onclick: () => {
     game.setLook(look);
     saved = { ...look };
-    toast('Aspetto salvato.');
+    toast(t('look.ui.saved'));
     closeDrawer(true);
-  } }, 'Salva') as HTMLButtonElement;
+  } }, t('look.ui.save')) as HTMLButtonElement;
   const refresh = () => { saveBtn.disabled = !dirty(); };
   const apply = (patch: Partial<CustodeLook>) => {
     const headChanged = patch.head !== undefined && patch.head !== look.head;
@@ -161,7 +162,7 @@ export function openCustomize(ui: UI) {
       // il cappello da strega si sblocca con le pozioni della strega
       const locked = key === 'hat' && !R.hatUnlocked(game.state, String(v)) && look.hat !== v;
       const feat = locked ? HAT_FEATS[v as keyof typeof HAT_FEATS] : null;
-      const b = h('button', { class: `look-tile${look[key] === v ? ' active' : ''}${locked ? ' locked' : ''}`, 'aria-pressed': String(look[key] === v), disabled: disabled || locked, title: feat ? `${feat.label} (${Math.min(feat.goal, game.state.player.counters[feat.counter])}/${feat.goal})` : undefined, onclick: () => {
+      const b = h('button', { class: `look-tile${look[key] === v ? ' active' : ''}${locked ? ' locked' : ''}`, 'aria-pressed': String(look[key] === v), disabled: disabled || locked, title: feat ? t('look.ui.hatLocked', { label: feat.label, have: Math.min(feat.goal, game.state.player.counters[feat.counter]), goal: feat.goal }) : undefined, onclick: () => {
         for (const x of Array.from(box.children)) { x.classList.toggle('active', x === b); x.setAttribute('aria-pressed', String(x === b)); }
         apply({ [key]: v } as Partial<CustodeLook>);
       } }, h('span', { class: 'look-thumb' }, img), h('span', { class: 'look-tile-label' }, label));
@@ -188,27 +189,27 @@ export function openCustomize(ui: UI) {
     h('label', { class: `setting${off(key) ? ' off' : ''}` }, label, h('input', { type: 'checkbox', checked: look[key], disabled: off(key), onchange: (e: Event) => apply({ [key]: (e.target as HTMLInputElement).checked } as Partial<CustodeLook>) }));
 
   const lowpoly = game.state.settings.style === 'lowpoly';
-  const title = (t: string) => h('div', { class: 'section-title' }, t);
-  const sub = (t: string) => h('div', { class: 'muted look-sub' }, t);
+  const title = (text: string) => h('div', { class: 'section-title' }, text);
+  const sub = (text: string) => h('div', { class: 'muted look-sub' }, text);
   /** Avviso quando la testa scelta non usa una parte delle scelte. */
-  const bald = () => (lookUnused(look.head).size ? h('p', { class: 'muted look-note' }, `Con la testa a ${look.head === 'pumpkin' ? 'zucca' : 'teschio'} capelli, barba, baffi, pelle e occhi non si usano: tornano scegliendo un’altra testa.`) : null);
+  const bald = () => (lookUnused(look.head).size ? h('p', { class: 'muted look-note' }, t(look.head === 'pumpkin' ? 'look.ui.bald.pumpkin' : 'look.ui.bald.skull')) : null);
   // schede: poche scelte alla volta invece di una pagina lunghissima (ricostruite
   // quando si torna all'aspetto originale, così i tasti attivi seguono la bozza)
   const buildPanes = (): Array<[LookTab, string, HTMLElement]> => [
-    ['aspetto', 'Aspetto', h('div', {},
-      title('Testa'), options('head'), bald(),
-      title('Pelle'), swatches('skin'),
-      toggle('sparkle', 'Pelle hoa-boa-hoa ✨'), toggle('freckles', 'Lentiggini'), toggle('bandaid', 'Cerotto'),
-      title('Occhi'), swatches('eyes'),
-      title('Occhiali'), options('glasses'))],
-    ['capelli', 'Capelli', h('div', {},
+    ['aspetto', t('look.ui.tab.aspetto'), h('div', {},
+      title(t('look.ui.head')), options('head'), bald(),
+      title(t('look.ui.skin')), swatches('skin'),
+      toggle('sparkle', t('look.ui.sparkle')), toggle('freckles', t('look.ui.freckles')), toggle('bandaid', t('look.ui.bandaid')),
+      title(t('look.ui.eyes')), swatches('eyes'),
+      title(t('look.ui.glasses')), options('glasses'))],
+    ['capelli', t('look.ui.tab.capelli'), h('div', {},
       bald(),
-      title('Taglio'), options('hair'), sub('Colore'), swatches('hairColor'),
-      title('Barba e baffi'), sub('Barba'), options('beard'), sub('Baffi'), options('mustache'), sub('Colore di barba e baffi'), swatches('beardColor'))],
-    ['vestiti', 'Vestiti', h('div', {},
-      title('Vestito'), options('outfit'), sub('Colore'), swatches('outfitColor'),
-      sub('Colore dei dettagli (sciarpa, righe, toppe)'), swatches('accentColor'),
-      title('Cappello'), options('hat'), sub('Colore'), swatches('hatColor'))],
+      title(t('look.ui.cut')), options('hair'), sub(t('look.ui.color')), swatches('hairColor'),
+      title(t('look.ui.beardTitle')), sub(t('look.ui.beard')), options('beard'), sub(t('look.ui.mustache')), options('mustache'), sub(t('look.ui.beardColor')), swatches('beardColor'))],
+    ['vestiti', t('look.ui.tab.vestiti'), h('div', {},
+      title(t('look.ui.outfit')), options('outfit'), sub(t('look.ui.color')), swatches('outfitColor'),
+      sub(t('look.ui.accentColor')), swatches('accentColor'),
+      title(t('look.ui.hat')), options('hat'), sub(t('look.ui.color')), swatches('hatColor'))],
   ];
   let panes = buildPanes();
   const content = h('div', { class: 'look-pane' });
@@ -224,7 +225,7 @@ export function openCustomize(ui: UI) {
   for (const [id, label] of panes) tabs.append(h('button', { class: 'tab', role: 'tab', 'data-tab': id, onclick: () => show(id) }, uiPlay() ? icon(TAB_ICON[id], 20) : null, label));
   const body = h('div', { class: 'look' },
     h('div', { class: 'look-stage' }, preview.canvas, tabs),
-    lowpoly ? null : h('p', { class: 'muted' }, 'L’aspetto personalizzato si vede nello stile Low-Poly (Impostazioni → Stile).'),
+    lowpoly ? null : h('p', { class: 'muted' }, t('look.ui.styleNote')),
     content,
   );
   show(lastTab);
@@ -235,10 +236,10 @@ export function openCustomize(ui: UI) {
     panes = buildPanes();
     show(lastTab);
     refresh();
-  } }, 'Originale');
-  openDrawer('Personaggio', body, {
+  } }, t('look.ui.reset'));
+  openDrawer(t('look.ui.title'), body, {
     footer: h('div', { class: 'row look-foot' }, reset, saveBtn),
-    beforeClose: () => !dirty() || confirmDialog({ title: 'Modifiche non salvate', message: 'Hai cambiato l’aspetto del Custode senza salvare. Chiudere e perdere le modifiche?', ok: 'Chiudi', cancel: 'Resta', danger: true }),
+    beforeClose: () => !dirty() || confirmDialog({ title: t('look.ui.unsaved.title'), message: t('look.ui.unsaved.text'), ok: t('dialog.close'), cancel: t('look.ui.unsaved.stay'), danger: true }),
     onClose: () => preview.dispose(),
   });
 }

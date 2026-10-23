@@ -4,6 +4,7 @@
 
 import { normalizeSave, type SaveData } from '../game/state.ts';
 import { packBackup, unpackBackup, type MemorialPhoto, type PhotoRecord } from './backup.ts';
+import { t } from '../i18n/index.ts';
 
 export type { MemorialPhoto, PhotoRecord };
 
@@ -100,7 +101,7 @@ export async function exportBackup(state: SaveData): Promise<Blob> {
 export async function importBackup(data: ArrayBuffer): Promise<SaveData> {
   const content = unpackBackup(new Uint8Array(data));
   const state = normalizeSave(content.state);
-  if (!state) throw new Error('Backup corrotto.');
+  if (!state) throw new Error(t('backup.corrupt'));
   await gallery.clear().catch(() => undefined);
   for (const p of content.photos) await gallery.add(p);
   await memorials.clear().catch(() => undefined);

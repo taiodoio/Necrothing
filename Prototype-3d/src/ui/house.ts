@@ -12,6 +12,7 @@ import { housePartLP } from '../render/lowpoly/architecture.ts';
 import { memoryFruitLP } from '../render/lowpoly/memoryTree.ts';
 import type { LPModel } from '../render/lowpoly/kit.ts';
 import { LOWPOLY_MATERIALS } from '../render/modelCache.ts';
+import { t } from '../i18n/index.ts';
 import { closeDrawer, confirmDialog, fmtDate, h, openDrawer, setDrawerBody, setDrawerHero, toast, wispPill } from './dom.ts';
 import { icon } from './icons.ts';
 import { memorials } from '../app/persistence.ts';
@@ -38,9 +39,9 @@ function houseNeeds(s: SaveData, it: HouseRoof | HousePart): UnlockNeed[] {
   const rank = rankForXp(s.player.xp);
   if (it.minRank > rank.level) {
     const need = RANKS.find((r) => r.level === it.minRank)!;
-    out.push({ icon: 'lock', short: `Rango ${it.minRank}`, long: `Si sblocca al rango ${it.minRank}, «${need.name}». Sei al rango ${rank.level}: mancano ${(need.minXp - s.player.xp).toLocaleString('it-IT')} punti Necro.`, progress: [s.player.xp, need.minXp] });
+    out.push({ icon: 'lock', short: t('house.ui.need.rankShort', { rank: it.minRank }), long: t('house.ui.need.rank', { rank: it.minRank, name: need.name, now: rank.level, xp: (need.minXp - s.player.xp).toLocaleString('it-IT') }), progress: [s.player.xp, need.minXp] });
   }
-  if (s.player.wisps < it.cost) out.push({ icon: 'wisp', short: `Mancano ${it.cost - s.player.wisps}`, long: `Costa ${it.cost} fuochi fatui: te ne mancano ${it.cost - s.player.wisps}.`, progress: [s.player.wisps, it.cost] });
+  if (s.player.wisps < it.cost) out.push({ icon: 'wisp', short: t('house.ui.need.wispsShort', { n: it.cost - s.player.wisps }), long: t('house.ui.need.wisps', { cost: it.cost, n: it.cost - s.player.wisps }), progress: [s.player.wisps, it.cost] });
   return out;
 }
 
@@ -54,9 +55,9 @@ export function openRegistry(ui: UI, filter: RegFilter = 'all', settled = false)
   const s = game.state;
   const go = async (id: string, tree: boolean) => {
     const yes = await confirmDialog({
-      title: 'Localizza',
-      message: tree ? 'Riposa nell’Albero dei ricordi. Vuoi andarci?' : 'Vuoi andare al luogo di sepoltura?',
-      ok: 'Andiamo', cancel: 'Resta qui',
+      title: t('house.ui.registry.locate'),
+      message: tree ? t('house.ui.registry.locate.tree') : t('house.ui.registry.locate.grave'),
+      ok: t('house.ui.registry.locate.ok'), cancel: t('house.ui.registry.locate.cancel'),
     });
     if (!yes) return;
     closeDrawer(true);
@@ -65,25 +66,25 @@ export function openRegistry(ui: UI, filter: RegFilter = 'all', settled = false)
   const render = () => {
     const rows = [
       ...s.graves.map((g) => ({ id: g.id, name: g.name, at: g.createdAt, tree: false, legacy: !!g.legacy, img: graveThumb(g.graveType, s.settings.style, graveVisualState(g), g.seed), sub: CATEGORY_LABELS[g.category] })),
-      ...s.entrusted.map((e) => ({ id: e.grave.id, name: e.grave.name, at: e.grave.createdAt, tree: true, legacy: !!e.grave.legacy, img: fruitImg(), sub: `affidato all’albero il ${fmtDate(e.entrustedAt)}` })),
+      ...s.entrusted.map((e) => ({ id: e.grave.id, name: e.grave.name, at: e.grave.createdAt, tree: true, legacy: !!e.grave.legacy, img: fruitImg(), sub: t('house.ui.registry.row.tree', { date: fmtDate(e.entrustedAt) }) })),
     ].filter((r) => filter === 'all' || (filter === 'tree') === r.tree)
       .sort((a, b) => b.at.localeCompare(a.at));
     const count = (f: RegFilter) => f === 'all' ? s.graves.length + s.entrusted.length : f === 'tree' ? s.entrusted.length : s.graves.length;
-    const tabs = h('div', { class: 'tabs' }, ...([['all', 'Tutte'], ['graves', 'Nel cimitero'], ['tree', 'Nell’albero']] as const).map(([f, label]) =>
+    const tabs = h('div', { class: 'tabs' }, ...([['all', t('house.ui.registry.tab.all')], ['graves', t('house.ui.registry.tab.graves')], ['tree', t('house.ui.registry.tab.tree')]] as const).map(([f, label]) =>
       h('button', { class: `tab ${f === filter ? 'active' : ''}`, onclick: () => { filter = f; render(); } }, label, h('small', { class: 'tab-n' }, String(count(f))))));
     setDrawerBody(h('div', { class: 'registry' },
-      h('p', { class: 'muted' }, 'Ogni nome che il Custode ha scritto nel libro: dove riposa e da quando.'),
+      h('p', { class: 'muted' }, t('house.ui.registry.intro')),
       tabs,
       rows.length ? h('div', { class: 'reg-list' }, ...rows.map((r) => h('div', { class: 'reg-row' },
         h('button', { class: 'reg-open', onclick: () => openRegistryEntry(ui, r.id, filter) },
           h('span', { class: 'reg-thumb' }, h('img', { src: r.img, alt: '' })),
           h('span', { class: 'reg-text' }, h('b', {}, r.name),
-            h('small', {}, `${r.legacy ? 'lascito del vecchio custode' : `sepolto il ${fmtDate(r.at)}`} · ${r.sub}`))),
-        h('button', { class: 'reg-go', 'aria-label': `Localizza ${r.name}`, onclick: () => go(r.id, r.tree) }, icon('pin', 22), h('span', {}, 'Localizza')))))
-        : h('p', { class: 'muted reg-empty' }, filter === 'tree' ? 'All’albero non hai ancora affidato nessuno.' : 'Il libro è ancora bianco: la prima sepoltura la scriverai tu.'),
+            h('small', {}, r.legacy ? t('house.ui.registry.row.legacy', { sub: r.sub }) : t('house.ui.registry.row.buried', { date: fmtDate(r.at), sub: r.sub })))),
+        h('button', { class: 'reg-go', 'aria-label': t('house.ui.registry.locateAria', { name: r.name }), onclick: () => go(r.id, r.tree) }, icon('pin', 22), h('span', {}, t('house.ui.registry.locate'))))))
+        : h('p', { class: 'muted reg-empty' }, filter === 'tree' ? t('house.ui.registry.empty.tree') : t('house.ui.registry.empty.all')),
     ));
   };
-  openDrawer('Registro delle sepolture', h('div'));
+  openDrawer(t('house.ui.registry.title'), h('div'));
   setDrawerHero(registryHeader({ settled }).el);
   render();
 }
@@ -106,17 +107,17 @@ function openRegistryEntry(ui: UI, id: string, filter: RegFilter) {
   // il nome c'è già sotto l'immagine: niente titolo in testa
   openDrawer('', h('div', {},
     h('div', { class: 'hero' }, head, h('h3', {}, g.name),
-      g.epitaph ? h('div', { class: 'epitaph' }, `“${g.epitaph}”`) : null),
+      g.epitaph ? h('div', { class: 'epitaph' }, t('house.ui.registry.epitaph', { text: g.epitaph })) : null),
     h('dl', { class: 'kv' },
-      h('dt', {}, 'Categoria'), h('dd', {}, CATEGORY_LABELS[g.category]),
-      h('dt', {}, 'Vissuto'), h('dd', {}, `${fmtDate(g.birthDate)} → ${fmtDate(g.deathDate)}`),
-      h('dt', {}, 'Causa'), h('dd', {}, deathCauseLabel(g.deathCause, g.deathCauseText)),
-      h('dt', {}, 'Sepolto'), h('dd', {}, g.legacy ? 'Lascito del vecchio custode' : fmtDate(g.createdAt)),
-      h('dt', {}, 'Riposa'), h('dd', {}, kept ? `Nell’Albero dei ricordi, dal ${fmtDate(kept.entrustedAt)}` : `${GRAVE_TYPE_LABELS[g.graveType]}, nel cimitero`)),
+      h('dt', {}, t('house.ui.registry.category')), h('dd', {}, CATEGORY_LABELS[g.category]),
+      h('dt', {}, t('house.ui.registry.lived')), h('dd', {}, `${fmtDate(g.birthDate)} → ${fmtDate(g.deathDate)}`),
+      h('dt', {}, t('house.ui.registry.cause')), h('dd', {}, deathCauseLabel(g.deathCause, g.deathCauseText)),
+      h('dt', {}, t('house.ui.registry.buried')), h('dd', {}, g.legacy ? t('house.ui.registry.legacy') : fmtDate(g.createdAt)),
+      h('dt', {}, t('house.ui.registry.rests')), h('dd', {}, kept ? t('house.ui.registry.restTree', { date: fmtDate(kept.entrustedAt) }) : t('house.ui.registry.restGrave', { type: GRAVE_TYPE_LABELS[g.graveType] }))),
   ), {
     // la X (e il tocco fuori) riportano all'elenco, col filtro di prima
     beforeClose: () => { openRegistry(ui, filter, true); return false; },
-    footer: h('button', { class: 'big-btn', onclick: () => { closeDrawer(true); game.locate(id); } }, icon('pin', 22), kept ? 'Vai all’albero' : 'Vai alla tomba'),
+    footer: h('button', { class: 'big-btn', onclick: () => { closeDrawer(true); game.locate(id); } }, icon('pin', 22), kept ? t('house.ui.registry.goTree') : t('house.ui.registry.goGrave')),
   });
 }
 
@@ -125,9 +126,9 @@ function openRegistryEntry(ui: UI, id: string, filter: RegFilter) {
 /** I vantaggi che la casa dà adesso (le aggiunte in vista), uno per riga. */
 function perksBox(s: SaveData): HTMLElement {
   const on = HOUSE_PARTS.filter((p) => houseShown(s.house).includes(p.id));
-  return h('div', { class: 'perks' }, h('div', { class: 'needs-title' }, icon('unlock', 14), on.length ? 'Vantaggi attivi' : 'Nessun vantaggio attivo'),
+  return h('div', { class: 'perks' }, h('div', { class: 'needs-title' }, icon('unlock', 14), on.length ? t('house.ui.perks.on') : t('house.ui.perks.none')),
     on.length ? h('ul', {}, ...on.map((p) => h('li', {}, h('b', {}, p.label), ' · ', p.perk)))
-      : h('p', { class: 'muted', style: 'margin:0;font-size:13px' }, 'Ogni aggiunta del cortile aiuta un po’ nel gioco: fiori che durano, meno erbacce, riparazioni che costano meno…'));
+      : h('p', { class: 'muted', style: 'margin:0;font-size:13px' }, t('house.ui.perks.hint')));
 }
 
 export function openHouse(ui: UI) {
@@ -142,29 +143,29 @@ export function openHouse(ui: UI) {
         h('span', { class: 'thumb' }, h('img', { src: houseItemImg(s, it.id), alt: '' }),
           active ? h('span', { class: 'owned-tick' }, icon('check', 15)) : null),
         h('b', {}, it.label),
-        h('span', { class: 'price owned' }, active ? 'In vista' : 'Tolto'));
+        h('span', { class: 'price owned' }, active ? t('house.ui.card.shown') : t('house.ui.card.hidden')));
     setDrawerBody(h('div', {},
       h('div', { class: 'hero house-hero' }, h('img', { src: houseImg(s), alt: '' }),
-        h('p', { class: 'muted', style: 'margin:0' }, 'Tocca un tetto per cambiarlo, un’aggiunta per toglierla o rimetterla. I vantaggi valgono solo per le aggiunte in vista.')),
+        h('p', { class: 'muted', style: 'margin:0' }, t('house.ui.hint'))),
       perksBox(s),
-      roofs.length > 1 ? h('div', {}, h('div', { class: 'section-title' }, 'Tetto'),
+      roofs.length > 1 ? h('div', {}, h('div', { class: 'section-title' }, t('house.ui.roof')),
         h('div', { class: 'grid' }, ...roofs.map((r) => card(r, s.house.roof === r.id, () => {
           if (game.act((st) => R.setHouseRoof(st, r.id))) render();
         })))) : null,
-      h('div', { class: 'section-title' }, 'Cortile e casa'),
+      h('div', { class: 'section-title' }, t('house.ui.yard')),
       parts.length ? h('div', { class: 'grid' }, ...parts.map((p) => card(p, !s.house.hidden.includes(p.id), () => {
         if (game.act((st, n) => { R.toggleHousePart(st, p.id, n); })) {
-          toast(s.house.hidden.includes(p.id) ? `${p.label} tolta: il suo vantaggio si ferma finché non la rimetti.` : `${p.label} di nuovo in vista. ${p.perk}`);
+          toast(s.house.hidden.includes(p.id) ? t('house.ui.partHidden', { label: p.label }) : t('house.ui.partShown', { label: p.label, perk: p.perk }));
           render();
         }
       })))
-        : h('p', { class: 'muted' }, roofs.length > 1 ? 'Nessuna aggiunta ancora: lanterne, fioriere, orto e il resto li trovi in Bottega, nella scheda «Casa».' : 'Per ora c’è solo la casa: tetti, lanterne, fioriere, orto e il resto li trovi in Bottega, nella scheda «Casa».'),
+        : h('p', { class: 'muted' }, roofs.length > 1 ? t('house.ui.empty.parts') : t('house.ui.empty.all')),
     ));
   };
-  openDrawer('Casa del Custode', h('div'), {
+  openDrawer(t('house.ui.title'), h('div'), {
     footer: h('div', { class: 'row' },
-      h('button', { class: 'big-btn ghost', onclick: () => closeDrawer() }, 'Chiudi'),
-      h('button', { class: 'big-btn', onclick: () => openHouseShop(ui) }, icon('shop', 20), 'Altre aggiunte')),
+      h('button', { class: 'big-btn ghost', onclick: () => closeDrawer() }, t('dialog.close')),
+      h('button', { class: 'big-btn', onclick: () => openHouseShop(ui) }, icon('shop', 20), t('house.ui.more'))),
   });
   render();
 }
@@ -183,7 +184,7 @@ export function houseShopGrid(s: SaveData, selected: string | null, select: (id:
         locked ? h('span', { class: 'lock-over' }, icon('lock', 30)) : null,
         has ? h('span', { class: 'owned-tick' }, icon('check', 15)) : null),
       h('b', {}, it.label),
-      has ? h('span', { class: 'price owned' }, 'Tuo') : needs.length ? needChip(needs[0]) : h('span', { class: 'price' }, String(it.cost), icon('wisp', 12)));
+      has ? h('span', { class: 'price owned' }, t('house.ui.shop.owned')) : needs.length ? needChip(needs[0]) : h('span', { class: 'price' }, String(it.cost), icon('wisp', 12)));
   }));
 }
 
@@ -194,20 +195,20 @@ export function houseShopDetail(ui: UI, id: string, close: () => void, bought: (
   const it = houseItem(id)!;
   const has = s.house.owned.includes(id);
   const needs = has ? [] : houseNeeds(s, it);
-  const kind = houseRoof(id) ? 'Tetto' : 'Aggiunta della casa';
+  const kind = houseRoof(id) ? t('house.ui.shop.kindRoof') : t('house.ui.shop.kindPart');
   return h('div', { class: 'shop-detail' }, wispPill(s.player.wisps),
     h('div', { class: 'shop-detail-top' }, h('img', { src: houseItemImg(s, id), alt: '' }),
-      h('h3', {}, it.label), h('p', { class: 'muted' }, `${kind} · rango ${it.minRank}${id === 'veggie' ? ' · rende fuochi fatui ogni giorno' : ''}`)),
+      h('h3', {}, it.label), h('p', { class: 'muted' }, t(id === 'veggie' ? 'house.ui.shop.subVeggie' : 'house.ui.shop.sub', { kind, rank: it.minRank }))),
     h('p', { class: 'muted', style: 'margin:0' }, it.description),
-    'perk' in it ? h('div', { class: 'perk-row' }, icon('unlock', 18), h('p', {}, h('b', {}, 'Vantaggio: '), it.perk, ' Vale finché l’aggiunta è in vista.')) : h('p', { class: 'muted', style: 'margin:0;font-size:12px' }, 'Solo estetico: cambia l’aspetto della casa.'),
+    'perk' in it ? h('div', { class: 'perk-row' }, icon('unlock', 18), h('p', {}, h('b', {}, `${t('house.ui.shop.perkLabel')} `), it.perk, ` ${t('house.ui.shop.perkNote')}`)) : h('p', { class: 'muted', style: 'margin:0;font-size:12px' }, t('house.ui.shop.cosmetic')),
     needRows(needs),
-    !has && !needs.length && it.cost ? h('p', { class: 'muted after-buy' }, `Dopo l’acquisto te ne restano ${(s.player.wisps - it.cost).toLocaleString('it-IT')}`) : null,
+    !has && !needs.length && it.cost ? h('p', { class: 'muted after-buy' }, t('house.ui.shop.after', { n: (s.player.wisps - it.cost).toLocaleString('it-IT') })) : null,
     h('div', { class: 'row' },
-      h('button', { class: 'big-btn ghost', onclick: close }, 'Chiudi'),
+      h('button', { class: 'big-btn ghost', onclick: close }, t('dialog.close')),
       h('button', {
         class: 'big-btn', disabled: has || needs.length > 0,
         onclick: () => { if (game.act((st, n) => R.buyHousePart(st, id, n))) bought(); },
-      }, has ? 'Già tuo' : needs.length ? 'Non ancora' : h('span', { style: 'display:inline-flex;align-items:center;gap:6px' }, `Compra · ${it.cost}`, icon('wisp', 18)))));
+      }, has ? t('house.ui.shop.has') : needs.length ? t('house.ui.shop.notYet') : h('span', { style: 'display:inline-flex;align-items:center;gap:6px' }, t('house.ui.shop.buy', { cost: it.cost }), icon('wisp', 18)))));
 }
 
 /** Apre la Bottega direttamente sulla scheda «Casa» (dalla personalizzazione). */
@@ -220,8 +221,8 @@ export function houseBoughtView(ui: UI, id: string, back: () => void, leave: () 
   const s = ui.game.state;
   return h('div', { class: 'shop-detail' }, wispPill(s.player.wisps),
     h('div', { class: 'shop-detail-top' }, h('img', { src: houseItemImg(s, id), alt: '' }), h('h3', {}, houseItem(id)!.label),
-      h('p', { class: 'muted' }, 'È tua: la vedi già sulla casa.')),
+      h('p', { class: 'muted' }, t('house.ui.bought.text'))),
     h('div', { class: 'row' },
-      h('button', { class: 'big-btn ghost', onclick: back }, 'Continua'),
-      h('button', { class: 'big-btn', onclick: () => { leave(); closeDrawer(); ui.game.focusHouse(); } }, icon('house', 20), 'Vai alla casa')));
+      h('button', { class: 'big-btn ghost', onclick: back }, t('house.ui.bought.continue')),
+      h('button', { class: 'big-btn', onclick: () => { leave(); closeDrawer(); ui.game.focusHouse(); } }, icon('house', 20), t('house.ui.bought.go'))));
 }

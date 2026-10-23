@@ -14,9 +14,10 @@ import './styles/ui-play.css';
 import './styles/ui-house.css';
 import { setUiNext, setUiPlay, setUiPreview } from './app/uiNext.ts';
 import { installPlayDecor } from './ui/playDecor.ts';
+import { t } from './i18n/index.ts';
 
 const canvas = document.querySelector<HTMLCanvasElement>('#world');
-if (!canvas) throw new Error('Canvas di gioco non trovato.');
+if (!canvas) throw new Error('Canvas di gioco non trovato.'); // i18n-ok: errore interno, la pagina ha sempre il canvas
 
 // interfaccia nuova (stile low-poly, temi, menù a icone, strumento a traccia, Bottega animata)
 setUiNext(true);
@@ -33,5 +34,5 @@ try {
 } catch (error) {
   console.error('Impossibile inizializzare la scena 3D:', error);
   const el = document.querySelector<HTMLElement>('#fatal');
-  if (el) { el.hidden = false; el.textContent = 'La scena 3D non si è aperta in questo browser (WebGL non disponibile?).'; }
+  if (el) { el.hidden = false; el.textContent = t('boot.webglFailed'); }
 }

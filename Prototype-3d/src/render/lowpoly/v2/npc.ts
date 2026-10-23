@@ -615,23 +615,23 @@ export function v2Generators(): Record<string, () => ReturnType<LP['build']>> {
 // ── Elenchi per le gallerie di prototipo ────────────────────────────────
 
 export const HUMANS: Array<{ name: string; kind: string }> = [
-  { name: 'Becchino', kind: 'gravedigger' },
-  { name: 'Prete', kind: 'priest' },
-  { name: 'Corteo · signora', kind: 'mourner' },
-  { name: 'Corteo · signore', kind: 'mournerB' },
-  { name: 'Zombie', kind: 'zombie' },
-  { name: 'Scheletro', kind: 'skeleton' },
-  { name: 'Fantasma', kind: 'ghost' },
-  { name: 'Fantasma raro', kind: 'ghostRare' },
+  { name: 'Becchino', kind: 'gravedigger' }, // i18n-ok: solo galleria di sviluppo
+  { name: 'Prete', kind: 'priest' }, // i18n-ok: solo galleria di sviluppo
+  { name: 'Corteo · signora', kind: 'mourner' }, // i18n-ok: solo galleria di sviluppo
+  { name: 'Corteo · signore', kind: 'mournerB' }, // i18n-ok: solo galleria di sviluppo
+  { name: 'Zombie', kind: 'zombie' }, // i18n-ok: solo galleria di sviluppo
+  { name: 'Scheletro', kind: 'skeleton' }, // i18n-ok: solo galleria di sviluppo
+  { name: 'Fantasma', kind: 'ghost' }, // i18n-ok: solo galleria di sviluppo
+  { name: 'Fantasma raro', kind: 'ghostRare' }, // i18n-ok: solo galleria di sviluppo
 ];
 
 export const ANIMALS: Array<{ name: string; kind: string }> = [
-  { name: 'Gatto nero', kind: 'cat' },
-  { name: 'Ratto', kind: 'rat' },
-  { name: 'Corvo', kind: 'crow' },
-  { name: 'Cane (scheletro)', kind: 'petDog' },
-  { name: 'Gatto (scheletro)', kind: 'petCat' },
-  { name: 'Coniglio (scheletro)', kind: 'petRabbit' },
-  { name: 'Corvo (scheletro)', kind: 'petCrow' },
-  { name: 'Papera (scheletro)', kind: 'petDuck' },
+  { name: 'Gatto nero', kind: 'cat' }, // i18n-ok: solo galleria di sviluppo
+  { name: 'Ratto', kind: 'rat' }, // i18n-ok: solo galleria di sviluppo
+  { name: 'Corvo', kind: 'crow' }, // i18n-ok: solo galleria di sviluppo
+  { name: 'Cane (scheletro)', kind: 'petDog' }, // i18n-ok: solo galleria di sviluppo
+  { name: 'Gatto (scheletro)', kind: 'petCat' }, // i18n-ok: solo galleria di sviluppo
+  { name: 'Coniglio (scheletro)', kind: 'petRabbit' }, // i18n-ok: solo galleria di sviluppo
+  { name: 'Corvo (scheletro)', kind: 'petCrow' }, // i18n-ok: solo galleria di sviluppo
+  { name: 'Papera (scheletro)', kind: 'petDuck' }, // i18n-ok: solo galleria di sviluppo
 ];

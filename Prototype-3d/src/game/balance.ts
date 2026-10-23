@@ -3,6 +3,8 @@
 // (necrothing-docs/prototype/src/shared/domain/balance.ts e
 // progressionService.ts) e adattati al gioco 3D "in tempo reale".
 
+import { t } from '../i18n/index.ts';
+
 /** Mappa logica: 64×64 celle. 1 cella = 1 unità mondo. */
 export const MAP_SIZE = 64;
 /**
@@ -13,11 +15,11 @@ export const FOREST_MARGIN = 12;
 export const GRAVE_FOOTPRINT: [number, number] = [2, 2];
 
 export const RANKS = [
-  { level: 1, name: 'Angelo Custode degli Oggetti', minXp: 0 },
-  { level: 2, name: 'Rottamatore Novizio', minXp: 500 },
-  { level: 3, name: 'Becchino del Silicio', minXp: 1500 },
-  { level: 4, name: 'Tristo Mietitore Quotidiano', minXp: 3500 },
-  { level: 5, name: 'Lord of Decay', minXp: 7000 },
+  { level: 1, name: t('balance.rank.guardianAngel'), minXp: 0 },
+  { level: 2, name: t('balance.rank.noviceScrapper'), minXp: 500 },
+  { level: 3, name: t('balance.rank.siliconGravedigger'), minXp: 1500 },
+  { level: 4, name: t('balance.rank.dailyReaper'), minXp: 3500 },
+  { level: 5, name: t('balance.rank.lordOfDecay'), minXp: 7000 },
 ] as const;
 
 export const XP = {
@@ -87,7 +89,7 @@ export const EARLY_ACCESS: ReadonlySet<string> = new Set([
 ]);
 
 /** Cappelli del Custode che si sbloccano con un traguardo (anche questi liberi in prova). */
-export const HAT_FEATS = { witch: { counter: 'potionsSold', goal: 30, label: 'La strega deve vendere 30 pozioni' } } as const;
+export const HAT_FEATS = { witch: { counter: 'potionsSold', goal: 30, label: t('feat.potionsSold') } } as const;
 
 export const DECAY = {
   /** Tomba: giorni dal primo segno d'incuria (erbacce o sporco) a rotta. */
@@ -225,11 +227,11 @@ export const MAUSOLEUM_PRESTIGE = 25;
  * centrato nella mappa 64×64. Il resto è terra selvaggia non consacrata.
  */
 export const EXPANSION = [
-  { minPrestige: 0, size: 34, label: 'Recinto iniziale' },
-  { minPrestige: 160, size: 40, label: 'Ala orientale' },
-  { minPrestige: 260, size: 46, label: 'Ala occidentale' },
-  { minPrestige: 380, size: 52, label: 'Campo dei dimenticati' },
-  { minPrestige: 520, size: 58, label: 'Cimitero intero' },
+  { minPrestige: 0, size: 34, label: t('balance.expansion.start') },
+  { minPrestige: 160, size: 40, label: t('balance.expansion.eastWing') },
+  { minPrestige: 260, size: 46, label: t('balance.expansion.westWing') },
+  { minPrestige: 380, size: 52, label: t('balance.expansion.forgottenField') },
+  { minPrestige: 520, size: 58, label: t('balance.expansion.wholeCemetery') },
 ] as const;
 
 export const DISTRICT = { minGraves: 4, adjacency: 3 } as const;

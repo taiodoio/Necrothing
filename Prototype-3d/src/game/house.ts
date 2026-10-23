@@ -4,6 +4,8 @@
 // salendo di rango. L'orto rende fuochi fatui ogni giorno, come il bar degli
 // zombie e l'orto dei cervelli.
 
+import { t } from '../i18n/index.ts';
+
 export interface HouseRoof { id: string; label: string; cost: number; minRank: number; description: string }
 export interface HousePart {
   id: string; label: string; cost: number; minRank: number; description: string;
@@ -13,24 +15,24 @@ export interface HousePart {
 
 /** Tetti (se ne vede uno alla volta): il primo c'è già. */
 export const HOUSE_ROOFS: HouseRoof[] = [
-  { id: 'slate', label: 'Tetto d’ardesia', cost: 0, minRank: 1, description: 'Lastre grigie e un po’ di muschio: il tetto di sempre.' },
-  { id: 'moss', label: 'Tetto di muschio', cost: 12, minRank: 1, description: 'Così verde che i corvi ci fanno il nido.' },
-  { id: 'tiles', label: 'Coppi rossi', cost: 25, minRank: 2, description: 'Coppi di terracotta, storti quanto basta.' },
-  { id: 'thatch', label: 'Tetto di paglia', cost: 40, minRank: 3, description: 'Paglia intrecciata: profuma d’autunno.' },
+  { id: 'slate', label: t('house.roof.slate.label'), cost: 0, minRank: 1, description: t('house.roof.slate.desc') },
+  { id: 'moss', label: t('house.roof.moss.label'), cost: 12, minRank: 1, description: t('house.roof.moss.desc') },
+  { id: 'tiles', label: t('house.roof.tiles.label'), cost: 25, minRank: 2, description: t('house.roof.tiles.desc') },
+  { id: 'thatch', label: t('house.roof.thatch.label'), cost: 40, minRank: 3, description: t('house.roof.thatch.desc') },
 ];
 
 /** Aggiunte del cortile e della casa (si accendono e spengono quando si vuole). */
 export const HOUSE_PARTS: HousePart[] = [
-  { id: 'lantern', label: 'Lanterna al portico', cost: 6, minRank: 1, description: 'Una luce calda per chi torna tardi.', perk: 'Di notte i fuochi fatui compaiono il 20% più spesso.' },
-  { id: 'flowerbox', label: 'Fioriere alle finestre', cost: 8, minRank: 1, description: 'Gerani e qualche fiore che non dovrebbe esistere.', perk: 'Portare fiori a una tomba rende 2 fuochi fatui invece di 1.' },
-  { id: 'toolbench', label: 'Banco degli attrezzi', cost: 8, minRank: 1, description: 'Pala, rastrello e martello appesi al muro, sempre a portata di mano.', perk: 'Riparare tombe e oggetti costa il 25% in meno.' },
-  { id: 'smoke', label: 'Camino acceso', cost: 12, minRank: 2, description: 'Il fumo dice che c’è qualcuno in casa.', perk: 'Caldo e riposato, il Custode cammina il 10% più veloce.' },
-  { id: 'picket', label: 'Staccionata del cortile', cost: 15, minRank: 2, description: 'Bassa e bianca, con il cancelletto.', perk: 'Gli zombie esitano: sporcano le tombe meno spesso (25% invece di 35%).' },
-  { id: 'pumpkins', label: 'Zucche sul portico', cost: 10, minRank: 2, description: 'Intagliate dal Custode, una per stagione.', perk: 'Di notte i fantasmi passano il 25% più spesso (il 50% a ottobre).' },
-  { id: 'garden', label: 'Giardinetto', cost: 30, minRank: 2, description: 'Fiori, un vialetto di pietre e una panchina.', perk: 'Le erbacce sulle tombe crescono il 25% più piano.' },
-  { id: 'beehive', label: 'Arnia', cost: 20, minRank: 3, description: 'Le api fanno un miele scuro e misterioso.', perk: 'Le api impollinano: i fiori sulle tombe durano 5 giorni invece di 3.' },
-  { id: 'fruit', label: 'Alberi da frutto', cost: 45, minRank: 3, description: 'Un melo e un pero storti, carichi di frutti.', perk: 'La frutta attira gatti e corvi: passano il 50% più spesso.' },
-  { id: 'veggie', label: 'Orto', cost: 60, minRank: 3, description: 'Zucche, cavoli e rape.', perk: 'Ogni giorno rende 2–4 fuochi fatui da raccogliere (fino a 10).' },
+  { id: 'lantern', label: t('house.part.lantern.label'), cost: 6, minRank: 1, description: t('house.part.lantern.desc'), perk: t('house.part.lantern.perk') },
+  { id: 'flowerbox', label: t('house.part.flowerbox.label'), cost: 8, minRank: 1, description: t('house.part.flowerbox.desc'), perk: t('house.part.flowerbox.perk') },
+  { id: 'toolbench', label: t('house.part.toolbench.label'), cost: 8, minRank: 1, description: t('house.part.toolbench.desc'), perk: t('house.part.toolbench.perk') },
+  { id: 'smoke', label: t('house.part.smoke.label'), cost: 12, minRank: 2, description: t('house.part.smoke.desc'), perk: t('house.part.smoke.perk') },
+  { id: 'picket', label: t('house.part.picket.label'), cost: 15, minRank: 2, description: t('house.part.picket.desc'), perk: t('house.part.picket.perk') },
+  { id: 'pumpkins', label: t('house.part.pumpkins.label'), cost: 10, minRank: 2, description: t('house.part.pumpkins.desc'), perk: t('house.part.pumpkins.perk') },
+  { id: 'garden', label: t('house.part.garden.label'), cost: 30, minRank: 2, description: t('house.part.garden.desc'), perk: t('house.part.garden.perk') },
+  { id: 'beehive', label: t('house.part.beehive.label'), cost: 20, minRank: 3, description: t('house.part.beehive.desc'), perk: t('house.part.beehive.perk') },
+  { id: 'fruit', label: t('house.part.fruit.label'), cost: 45, minRank: 3, description: t('house.part.fruit.desc'), perk: t('house.part.fruit.perk') },
+  { id: 'veggie', label: t('house.part.veggie.label'), cost: 60, minRank: 3, description: t('house.part.veggie.desc'), perk: t('house.part.veggie.perk') },
 ];
 
 export interface HouseState {

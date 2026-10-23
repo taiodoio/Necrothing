@@ -11,7 +11,7 @@ import { CATALOG, rotatedFootprint } from './catalog.ts';
 import { createRng, hashString, newId, type Rng } from './rng.ts';
 import { computeSpawns, liveWispChance, wispCap, type SpawnRequest } from './spawn.ts';
 import type { SaveData, Weather } from './state.ts';
-import { dayPhaseForHour, daysBetween, isoDate } from './time.ts';
+import { DAY_MS, dayPhaseForHour, daysBetween, isoDate } from './time.ts';
 import { areaForLevel, buildOccupancy } from './world.ts';
 
 export interface CatchUpReport {
@@ -22,6 +22,8 @@ export interface CatchUpReport {
   placeablesDirty: number;
   placeablesBroken: number;
   anniversaries: string[];
+  /** Anniversari caduti mentre il gioco era chiuso (restano nei ricordi, senza premio). */
+  missedAnniversaries: string[];
   blessing: string | null;
   wispsAdded: number;
   weatherChanged: boolean;
@@ -33,6 +35,25 @@ const WEATHERS: Weather[] = ['clear', 'clear', 'fog', 'rain', 'storm'];
 function addMemory(s: SaveData, graveId: string, type: SaveData['memories'][number]['type'], now: Date) {
   s.memories.push({ id: newId('m'), graveId, type, at: now.toISOString() });
   if (s.memories.length > 400) s.memories.splice(0, s.memories.length - 400);
+}
+
+/**
+ * Gli anniversari di una morte caduti tra il giorno di `from` e quello di `to` (compresi): a mezzogiorno del giorno,
+ * dagli anni dopo la morte (il 29 febbraio, negli anni non bisestili, il 28).
+ */
+export function anniversariesBetween(deathDate: string, from: Date, to: Date): Date[] {
+  const death = new Date(deathDate);
+  if (Number.isNaN(death.getTime()) || to.getTime() <= from.getTime()) return [];
+  const out: Date[] = [];
+  const fromDay = isoDate(from), toDay = isoDate(to);
+  for (let y = Math.max(from.getFullYear(), death.getFullYear() + 1); y <= to.getFullYear(); y++) {
+    const d = new Date(y, death.getMonth(), death.getDate(), 12);
+    if (d.getMonth() !== death.getMonth()) d.setDate(0); // 29 febbraio → 28
+    // anche il giorno di partenza: i doppioni li scarta chi chiama (lastAnniversaryYear)
+    const day = isoDate(d);
+    if (day >= fromDay && day <= toDay) out.push(d);
+  }
+  return out;
 }
 
 /** Cella libera casuale nel recinto per un fuoco fatuo. */
@@ -88,23 +109,26 @@ export function runCatchUp(s: SaveData, now: Date): CatchUpReport {
   const onset = () => new Date(last.getTime() + rng.next() * Math.max(0, now.getTime() - last.getTime())).toISOString();
   const r: CatchUpReport = {
     elapsedDays, newDirty: 0, newBroken: 0, witheredFlowers: 0, placeablesDirty: 0,
-    placeablesBroken: 0, anniversaries: [], blessing: null, wispsAdded: 0, weatherChanged: false, xpGained: 0,
+    placeablesBroken: 0, anniversaries: [], missedAnniversaries: [], blessing: null, wispsAdded: 0, weatherChanged: false, xpGained: 0,
   };
 
   // casa del Custode: l'arnia fa durare i fiori, il giardinetto rallenta le erbacce
   const flowerDays = housePerk(s, 'beehive') ? HOUSE_PERKS.beehiveFlowerDays : SIM.flowerWitherDays;
   const weedPace = housePerk(s, 'garden') ? HOUSE_PERKS.gardenWeeds : 1;
   for (const g of s.graves) {
-    // Anniversario annuale della morte (dagli anni successivi).
-    const death = new Date(g.deathDate);
-    if (now.getMonth() === death.getMonth() && now.getDate() === death.getDate()
-      && now.getFullYear() > death.getFullYear() && g.lastAnniversaryYear !== now.getFullYear()) {
-      g.lastAnniversaryYear = now.getFullYear();
-      r.anniversaries.push(g.name);
-      addMemory(s, g.id, 'anniversary', now);
-      s.player.xp += XP.anniversary;
-      s.player.wisps += WISPS.anniversary;
-      r.xpGained += XP.anniversary;
+    // Anniversario annuale della morte (dagli anni successivi): quello di oggi dà la ricompensa;
+    // quelli caduti mentre il gioco era chiuso restano nei ricordi della tomba, senza premio
+    // (le notifiche servono proprio a far aprire il gioco quel giorno)
+    for (const at of anniversariesBetween(g.deathDate, last, now)) {
+      if (g.lastAnniversaryYear !== null && g.lastAnniversaryYear >= at.getFullYear()) continue;
+      g.lastAnniversaryYear = at.getFullYear();
+      addMemory(s, g.id, 'anniversary', at);
+      if (isoDate(at) === isoDate(now)) {
+        r.anniversaries.push(g.name);
+        s.player.xp += XP.anniversary;
+        s.player.wisps += WISPS.anniversary;
+        r.xpGained += XP.anniversary;
+      } else r.missedAnniversaries.push(g.name);
     }
     // Ciclo esclusivo: PULITA → (fiori) → appassiti = SPORCA → pulisci → PULITA.
     if (g.hasFlowers && g.flowersAt) {
@@ -142,7 +166,8 @@ export function runCatchUp(s: SaveData, now: Date): CatchUpReport {
   }
 
   // Benedizione narrativa del prete (offline).
-  if (s.graves.length > 0 && elapsedDays > 0 && rng.chance(SIM.blessingChance)) {
+  // (una possibilità per ogni giorno di assenza, al massimo una benedizione)
+  if (s.graves.length > 0 && elapsedDays > 0 && rng.chance(1 - (1 - SIM.blessingChance) ** Math.min(elapsedDays, 30))) {
     const g = rng.pick(s.graves);
     r.blessing = g.name;
     addMemory(s, g.id, 'blessing', now);
@@ -167,7 +192,11 @@ export function runCatchUp(s: SaveData, now: Date): CatchUpReport {
     s.world.lastWeatherDate = today;
     r.weatherChanged = true;
   }
-  s.world.lastSimulationAt = iso;
+  // il conto avanza solo dei giorni interi già consumati: chi rientra più volte al giorno
+  // non azzera ogni volta le ore accumulate (altrimenti erbacce, sporco e fuochi fatui
+  // maturati da chiuso non arriverebbero mai)
+  if (elapsedDays > 0) s.world.lastSimulationAt = new Date(last.getTime() + elapsedDays * DAY_MS).toISOString();
+  else if (!(last.getTime() <= now.getTime())) s.world.lastSimulationAt = iso; // orologio spostato indietro o data rovinata
   return r;
 }
 
@@ -196,6 +225,8 @@ export function liveTick(s: SaveData, now: Date, salt: number): LiveTickResult {
 export function catchUpMessage(r: CatchUpReport): string | null {
   if (r.anniversaries.length === 1) return `Oggi ricorre l’anniversario di ${r.anniversaries[0]}.`;
   if (r.anniversaries.length > 1) return `Oggi ricorrono ${r.anniversaries.length} anniversari funebri.`;
+  if (r.missedAnniversaries.length === 1) return `Mentre eri via è passato l’anniversario di ${r.missedAnniversaries[0]}.`;
+  if (r.missedAnniversaries.length > 1) return `Mentre eri via sono passati ${r.missedAnniversaries.length} anniversari.`;
   if (r.newBroken > 0) return `${r.newBroken} ${r.newBroken === 1 ? 'tomba si è rotta' : 'tombe si sono rotte'}: vanno riparate.`;
   if (r.placeablesBroken > 0) return `${r.placeablesBroken} ${r.placeablesBroken === 1 ? 'oggetto si è rotto' : 'oggetti si sono rotti'} per l’incuria.`;
   if (r.blessing) return `Il prete è passato a benedire ${r.blessing}.`;

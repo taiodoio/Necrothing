@@ -13,18 +13,21 @@
 // sola (il catalogo della Bottega) sono nella lingua giusta.
 
 import { IT } from './it/index.ts';
+import { TRANSLATIONS } from './langs.ts';
 
-export type Lang = 'it';
-export const LANGS: Record<Lang, string> = { it: 'Italiano' };
-const DICTS: Record<Lang, Record<string, string>> = { it: IT };
+/** Codice della lingua («it», «en»…). */
+export type Lang = string;
+/** Le lingue disponibili, col loro nome: l'italiano più quelle arrivate dal foglio. */
+export const LANGS: Record<Lang, string> = { it: 'Italiano', ...Object.fromEntries(Object.entries(TRANSLATIONS).map(([k, v]) => [k, v.name])) };
+const DICTS: Record<Lang, Record<string, string>> = { it: IT, ...Object.fromEntries(Object.entries(TRANSLATIONS).map(([k, v]) => [k, v.dict])) };
 const STORE_KEY = 'necro.lang';
 
 function startLang(): Lang {
   try {
-    const saved = globalThis.localStorage?.getItem(STORE_KEY) as Lang | null;
+    const saved = globalThis.localStorage?.getItem(STORE_KEY);
     if (saved && saved in DICTS) return saved;
   } catch { /* niente localStorage (test, anteprime) */ }
-  const nav = (globalThis.navigator?.language ?? 'it').slice(0, 2) as Lang;
+  const nav = (globalThis.navigator?.language ?? 'it').slice(0, 2);
   return nav in DICTS ? nav : 'it';
 }
 

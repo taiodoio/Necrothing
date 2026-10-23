@@ -101,7 +101,7 @@ export function setDrawerExtra(node: Node | null) {
 
 /** Il saldo dei fuochi fatui, come pastiglia. */
 export function wispPill(n: number): HTMLElement {
-  return h('span', { class: 'wisp-pill', 'aria-label': t('hud.wispsAria', { n }) }, icon('wisp', 16), n.toLocaleString('it-IT'));
+  return h('span', { class: 'wisp-pill', 'aria-label': t('hud.wispsAria', { n }) }, icon('wisp', 16), n.toLocaleString(currentLang()));
 }
 
 /** Immagine in testa al drawer (la Bottega animata): resta finché non si apre un altro pannello. */
@@ -213,5 +213,5 @@ export function openModal(content: Node, opts: { onClose?: () => void; label?: s
 export function fmtDate(iso: string | null): string {
   if (!iso) return '—';
   const d = new Date(iso.length === 10 ? iso + 'T12:00:00' : iso);
-  return d.toLocaleDateString('it-IT', { day: 'numeric', month: 'short', year: 'numeric' });
+  return d.toLocaleDateString(currentLang(), { day: 'numeric', month: 'short', year: 'numeric' });
 }

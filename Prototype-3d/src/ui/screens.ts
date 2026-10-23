@@ -21,7 +21,7 @@ import { graveThumb, placeableThumb } from './thumbs.ts';
 import { ACH_ICONS, icon } from './icons.ts';
 import { uiNext, uiPlay, uiPreview } from '../app/uiNext.ts';
 import { remindersAvailable } from '../app/reminders.ts';
-import { t, tList } from '../i18n/index.ts';
+import { currentLang, LANGS, setLang, t, tList } from '../i18n/index.ts';
 
 /** Interfaccia «viva»: un'icona per ogni scheda delle categorie. */
 const CAT_ICON: Record<PlaceableCategory | 'all', string> = { all: 'bag', light: 'lightOn', decoration: 'flower', structure: 'fence', ambient: 'tree', npc: 'ghost', extra: 'bike' };
@@ -200,7 +200,7 @@ export function unlockNeeds(s: SaveData, d: PlaceableDef, now: Date): UnlockNeed
   if (!early && d.minRank > rank.level) {
     const need = RANKS.find((r) => r.level === d.minRank)!;
     const missing = need.minXp - s.player.xp;
-    out.push({ icon: 'lock', short: t('shop.need.rank.short', { n: d.minRank }), long: t('shop.need.rank.long', { rank: d.minRank, name: need.name, level: rank.level, n: missing, xp: missing.toLocaleString('it-IT') }), progress: [s.player.xp, need.minXp] });
+    out.push({ icon: 'lock', short: t('shop.need.rank.short', { n: d.minRank }), long: t('shop.need.rank.long', { rank: d.minRank, name: need.name, level: rank.level, n: missing, xp: missing.toLocaleString(currentLang()) }), progress: [s.player.xp, need.minXp] });
   }
   if (!early && d.feat) {
     const [n, goal] = R.featProgress(s, d.feat);
@@ -260,7 +260,7 @@ export function openShop(ui: UI, cat: PlaceableCategory | 'house' = 'light', sel
     if (next) setDrawerExtra(wispPill(s.player.wisps));
     const pick = (id: string) => { selected = id; qty = 1; render(); };
     if (cat === 'house') {
-      setDrawerBody(h('div', {}, h('p', { class: 'muted' }, next ? t('shop.house.intro') : t('shop.house.introWisps', { n: s.player.wisps, amount: s.player.wisps.toLocaleString('it-IT') })), tabs,
+      setDrawerBody(h('div', {}, h('p', { class: 'muted' }, next ? t('shop.house.intro') : t('shop.house.introWisps', { n: s.player.wisps, amount: s.player.wisps.toLocaleString(currentLang()) })), tabs,
         houseShopGrid(s, selected, pick)));
     } else {
       const items = CATALOG_LIST.filter((d) => d.category === cat && !d.permanent);
@@ -295,7 +295,7 @@ export function openShop(ui: UI, cat: PlaceableCategory | 'house' = 'light', sel
         LOCK_LABEL[av] ? h('span', { class: 'lock' }, av === 'rank' || av === 'graves' || av === 'feat' ? icon('lock', 12) : null, lockText(s, d, av)) : null,
         (s.inventory[d.id] ?? 0) > 0 ? h('span', { class: 'badge' }, String(s.inventory[d.id])) : null);
       }));
-      const wisps = { n: s.player.wisps, amount: s.player.wisps.toLocaleString('it-IT') };
+      const wisps = { n: s.player.wisps, amount: s.player.wisps.toLocaleString(currentLang()) };
       setDrawerBody(h('div', {}, h('p', { class: 'muted' }, uiPreview()
         ? (next ? t('shop.intro.preview') : t('shop.intro.previewWisps', wisps))
         : t('shop.intro.classic', wisps)), tabs, grid));
@@ -333,7 +333,7 @@ export function openShop(ui: UI, cat: PlaceableCategory | 'house' = 'light', sel
         h('button', { onclick: () => { qty = Math.max(1, qty - 1); again(); } }, '−'),
         h('b', {}, String(qty)),
         h('button', { onclick: () => { qty = Math.min(max, qty + 1); again(); } }, '+')) : null,
-      next && av === 'ok' && d.cost ? h('p', { class: 'muted after-buy' }, t('shop.detail.afterBuy', { n: s.player.wisps - d.cost * qty, amount: (s.player.wisps - d.cost * qty).toLocaleString('it-IT') })) : null,
+      next && av === 'ok' && d.cost ? h('p', { class: 'muted after-buy' }, t('shop.detail.afterBuy', { n: s.player.wisps - d.cost * qty, amount: (s.player.wisps - d.cost * qty).toLocaleString(currentLang()) })) : null,
       (next ? (b: HTMLElement) => h('div', { class: 'row' }, h('button', { class: 'big-btn ghost', onclick: close }, t('shop.detail.close')), b) : (b: HTMLElement) => b)(h('button', {
         class: 'big-btn', disabled: av !== 'ok',
         onclick: () => {
@@ -559,6 +559,10 @@ export function openSettings(ui: UI) {
   });
   const body = h('div', { 'data-settings': 'true' },
     h('button', { class: 'big-btn ghost', style: 'margin-bottom:6px', onclick: () => openCustomize(ui) }, t('settings.customize')),
+    // la lingua cambia ricaricando: anche i testi calcolati all'avvio (catalogo) cambiano
+    Object.keys(LANGS).length > 1
+      ? h('div', { class: 'setting' }, t('settings.language'), seg(currentLang(), Object.entries(LANGS), (v) => { setLang(v); location.reload(); }))
+      : null,
     h('div', { class: 'section-title' }, t('settings.section.terrain')),
     terrainSection(ui),
     h('div', { class: 'section-title' }, t('settings.section.graphics')),
@@ -606,7 +610,7 @@ export function openSettings(ui: UI) {
 /** "Versione abc1234 · 13/10/2026, 14:40": per controllare che il sito pubblicato sia aggiornato. */
 function buildLabel(): string {
   if (typeof __BUILD__ === 'undefined') return t('settings.build.dev');
-  const when = new Date(__BUILD__.built).toLocaleString('it-IT', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+  const when = new Date(__BUILD__.built).toLocaleString(currentLang(), { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
   return t('settings.build.version', { commit: __BUILD__.commit, when });
 }
 

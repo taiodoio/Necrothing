@@ -12,7 +12,7 @@ import { housePartLP } from '../render/lowpoly/architecture.ts';
 import { memoryFruitLP } from '../render/lowpoly/memoryTree.ts';
 import type { LPModel } from '../render/lowpoly/kit.ts';
 import { LOWPOLY_MATERIALS } from '../render/modelCache.ts';
-import { t } from '../i18n/index.ts';
+import { currentLang, t } from '../i18n/index.ts';
 import { closeDrawer, confirmDialog, fmtDate, h, openDrawer, setDrawerBody, setDrawerHero, toast, wispPill } from './dom.ts';
 import { icon } from './icons.ts';
 import { memorials } from '../app/persistence.ts';
@@ -39,7 +39,7 @@ function houseNeeds(s: SaveData, it: HouseRoof | HousePart): UnlockNeed[] {
   const rank = rankForXp(s.player.xp);
   if (it.minRank > rank.level) {
     const need = RANKS.find((r) => r.level === it.minRank)!;
-    out.push({ icon: 'lock', short: t('house.ui.need.rankShort', { rank: it.minRank }), long: t('house.ui.need.rank', { rank: it.minRank, name: need.name, now: rank.level, xp: (need.minXp - s.player.xp).toLocaleString('it-IT') }), progress: [s.player.xp, need.minXp] });
+    out.push({ icon: 'lock', short: t('house.ui.need.rankShort', { rank: it.minRank }), long: t('house.ui.need.rank', { rank: it.minRank, name: need.name, now: rank.level, xp: (need.minXp - s.player.xp).toLocaleString(currentLang()) }), progress: [s.player.xp, need.minXp] });
   }
   if (s.player.wisps < it.cost) out.push({ icon: 'wisp', short: t('house.ui.need.wispsShort', { n: it.cost - s.player.wisps }), long: t('house.ui.need.wisps', { cost: it.cost, n: it.cost - s.player.wisps }), progress: [s.player.wisps, it.cost] });
   return out;
@@ -202,7 +202,7 @@ export function houseShopDetail(ui: UI, id: string, close: () => void, bought: (
     h('p', { class: 'muted', style: 'margin:0' }, it.description),
     'perk' in it ? h('div', { class: 'perk-row' }, icon('unlock', 18), h('p', {}, h('b', {}, `${t('house.ui.shop.perkLabel')} `), it.perk, ` ${t('house.ui.shop.perkNote')}`)) : h('p', { class: 'muted', style: 'margin:0;font-size:12px' }, t('house.ui.shop.cosmetic')),
     needRows(needs),
-    !has && !needs.length && it.cost ? h('p', { class: 'muted after-buy' }, t('house.ui.shop.after', { n: (s.player.wisps - it.cost).toLocaleString('it-IT') })) : null,
+    !has && !needs.length && it.cost ? h('p', { class: 'muted after-buy' }, t('house.ui.shop.after', { n: (s.player.wisps - it.cost).toLocaleString(currentLang()) })) : null,
     h('div', { class: 'row' },
       h('button', { class: 'big-btn ghost', onclick: close }, t('dialog.close')),
       h('button', {

@@ -39,7 +39,7 @@ import { AutoGovernor, detectTier, newAutoProfile, PROFILES, QUALITY_LABELS, typ
 import { Input } from './Input.ts';
 import { loadSave, persistenceOn, saveNow, scheduleSave } from './persistence.ts';
 import { closedCoffinLP } from '../render/lowpoly/memoryTree.ts';
-import { t, tList } from '../i18n/index.ts';
+import { currentLang, t, tList } from '../i18n/index.ts';
 
 export type Selection = { kind: 'grave' | 'placeable'; id: string } | null;
 
@@ -1782,7 +1782,7 @@ export class Game {
     return [
       t('game.debug.fps', { fps: this.fps.value, calls: this.fps.callsValue }),
       this.qualityInfo(),
-      t('game.debug.draw', { calls: info.calls, tris: info.triangles.toLocaleString('it-IT') }),
+      t('game.debug.draw', { calls: info.calls, tris: info.triangles.toLocaleString(currentLang()) }),
       t('game.debug.style', { style: this.state.settings.style, camera: this.state.settings.camera }),
       t('game.debug.seed', { seed: this.state.seed, phase: this.phase, weather: this.state.world.weather }),
       t('game.debug.counts', { graves: this.state.graves.length, items: this.state.placeables.length }),

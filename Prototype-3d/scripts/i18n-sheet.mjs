@@ -99,8 +99,17 @@ function importRows(inFile) {
     fs.writeFileSync(path.join(ROOT, 'src/i18n', `${code}.ts`), `// Testi in ${h}: generato da scripts/i18n-sheet.mjs dal foglio di traduzione (non modificare a mano).\n\nexport default {\n${body}\n} satisfies Record<string, string>;\n`);
     console.log(`${h}: ${entries.length} testi → src/i18n/${code}.ts`);
   }
+  writeLangs();
   console.log(`${changed} testi italiani aggiornati.`);
   if (unknown.length) console.log(`Chiavi nel foglio che non esistono nel codice (${unknown.length}): ${unknown.slice(0, 20).join(', ')}${unknown.length > 20 ? '…' : ''}`);
+}
+
+/** src/i18n/langs.ts: le lingue che hanno un file di testi, così compaiono nel gioco (e nelle Impostazioni). */
+function writeLangs() {
+  const langs = Object.entries(LANG_COLUMNS).filter(([, code]) => code !== 'it' && fs.existsSync(path.join(ROOT, 'src/i18n', `${code}.ts`)));
+  const imports = langs.map(([, code]) => `import ${code} from './${code}.ts';\n`).join('');
+  const body = langs.map(([name, code]) => `  ${code}: { name: ${quote(name)}, dict: ${code} },\n`).join('');
+  fs.writeFileSync(path.join(ROOT, 'src/i18n/langs.ts'), `// Lingue tradotte: generato da scripts/i18n-sheet.mjs dal foglio di traduzione (non modificare a mano).\n\n${imports}${imports ? '\n' : ''}export const TRANSLATIONS: Record<string, { name: string; dict: Record<string, string> }> = {\n${body}};\n`);
 }
 
 const [cmd, file] = process.argv.slice(2);

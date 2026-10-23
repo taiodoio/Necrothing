@@ -282,6 +282,8 @@ export default {
   'settings.title': 'Impostazioni',
   // breve: pulsante
   'settings.customize': 'Personalizza il Custode',
+  // compare solo quando c'è almeno una traduzione; i nomi delle lingue restano nella loro lingua
+  'settings.language': 'Lingua',
   'settings.section.terrain': 'Terreno',
   'settings.section.graphics': 'Resa grafica',
   'settings.quality': 'Qualità',

@@ -17,12 +17,14 @@ test('testi: ogni chiave usata con t() esiste in italiano', () => {
   assert.deepEqual(missing, []);
 });
 
-test('testi: i plurali hanno sempre la forma «other» e gli stessi segnaposto', () => {
+test('testi: i plurali hanno sempre la forma «other», e le altre forme non usano segnaposto in più', () => {
   for (const key of Object.keys(IT)) {
     const [base, form] = key.split('#');
     if (!form) continue;
     assert.ok(`${base}#other` in IT, `${base}#other manca`);
-    assert.deepEqual(placeholders(IT[key]), placeholders(IT[`${base}#other`]), `segnaposto diversi in ${key}`);
+    // il singolare può fare a meno del numero («Manca ancora un elemento»), non aggiungere segnaposto
+    const other = new Set(placeholders(IT[`${base}#other`]));
+    for (const p of placeholders(IT[key])) assert.ok(other.has(p), `{${p}} in ${key} ma non in ${base}#other`);
   }
 });
 

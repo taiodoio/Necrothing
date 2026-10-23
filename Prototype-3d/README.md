@@ -322,6 +322,28 @@ sporco, rotto, luci notturne; tombe pulite/con fiori/sporche/rotte.
 5. Controllalo in `/gallery.html?style=lowpoly` (anche `voxel`, `miniature`); `npm test`
    verifica che stia nell'ingombro e che le luci spente non emettano.
 
+## Testi e traduzioni
+
+Nessuna frase per il giocatore sta scritta nel codice: ogni testo ha una chiave e si
+legge con `t('chiave', { segnaposto })` da `src/i18n/index.ts`.
+
+- **Italiano** (lingua di riferimento): `src/i18n/it/*.ts`, un file per area
+  (catalogo, regole, schermate, gioco, HUD). Una chiave per riga; un commento
+  `// …` sopra la chiave è la nota per chi traduce, `// ── Gruppo ──` apre un gruppo.
+- **Plurali**: `chiave#one` / `chiave#other` (più le forme che una lingua chiede),
+  scelte con `Intl.PluralRules` dal parametro `n`. **Elenchi** di varianti a caso:
+  voci separate da `|` (`tList`). Testo che manca in una lingua: si usa l'italiano.
+- **Altre lingue**: `src/i18n/<codice>.ts` e l'elenco `src/i18n/langs.ts`, entrambi
+  generati da `scripts/i18n-sheet.mjs` dal foglio Google di revisione (non si toccano a
+  mano). Con più di una lingua compare la scelta in Impostazioni; cambiarla ricarica
+  l'app. La lingua iniziale è quella del telefono, se tradotta.
+- **Foglio**: `node scripts/i18n-sheet.mjs export righe.json` prepara le righe
+  (chiave, sezione, gruppo, nota, lunghezza, italiano, lingue);
+  `… import righe.json` riporta nel codice gli italiani cambiati e le traduzioni.
+- **Controllo**: `node scripts/i18n-check.mjs` elenca le frasi rimaste nel codice
+  (una riga con `// i18n-ok` si salta); `tests/i18n.test.mjs` lo esegue e verifica
+  che ogni chiave usata esista e che i plurali siano coerenti.
+
 ## Test
 
 `npm test` — 36 test: nuova partita valida, migrazione dei salvataggi v1, sepoltura e limite astratto, ciclo

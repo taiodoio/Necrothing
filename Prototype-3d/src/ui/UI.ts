@@ -12,7 +12,7 @@ import { nextRank, rankForXp, rankProgress } from '../game/progression.ts';
 import * as R from '../game/rules.ts';
 import type { BurialDraft } from '../game/rules.ts';
 import { DAY_PHASE_LABELS } from '../game/time.ts';
-import { t } from '../i18n/index.ts';
+import { currentLang, t } from '../i18n/index.ts';
 import { $, applyPageTexts, closeDrawer, drawerOpen, h, joinDot, toast } from './dom.ts';
 import { hydrateIcons, icon, iconUrl, installFrames } from './icons.ts';
 import { uiNext, uiPlay, uiPreview } from '../app/uiNext.ts';
@@ -102,7 +102,7 @@ export class UI {
     }
     // interfaccia nuova: il numero intero coi punti delle migliaia, abbreviato solo da 100.000 (125k, 1,2 mln)
     $('#hud-wisps').textContent = uiNext() ? shortWisps(p.wisps) : String(p.wisps);
-    if (uiNext()) $('.wisp-count').setAttribute('aria-label', t('hud.wispsAria', { n: p.wisps.toLocaleString('it-IT') }));
+    if (uiNext()) $('.wisp-count').setAttribute('aria-label', t('hud.wispsAria', { n: p.wisps.toLocaleString(currentLang()) }));
     this.refreshClock();
   }
 
@@ -115,7 +115,7 @@ export class UI {
 
   refreshClock() {
     const now = this.game.now();
-    $('#hud-clock').textContent = now.toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' });
+    $('#hud-clock').textContent = now.toLocaleTimeString(currentLang(), { hour: '2-digit', minute: '2-digit' });
     const phase = this.game.getPhase();
     const w = this.game.state.world.weather;
     const el = $('#hud-weather');

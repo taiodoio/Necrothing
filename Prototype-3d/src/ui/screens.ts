@@ -502,8 +502,8 @@ export async function confirmExhume(ui: UI, id: string, name: string, kind: 'gra
 }
 
 /**
- * «Altro»: pulsante secondario sopra l'azione principale; il menù delle azioni
- * secondarie si apre sopra di lui, in sovrimpressione (la freccia si gira).
+ * «Altro»: pulsante secondario sopra l'azione principale, con l'icona a sinistra
+ * come lei; il menù delle azioni secondarie si apre sopra di lui, in sovrimpressione.
  * Ogni voce ha la sua icona, quelle distruttive in rosso. Si chiude scegliendo
  * una voce, toccando di nuovo «Altro» o toccando fuori.
  */
@@ -519,7 +519,7 @@ export function moreActions(items: Array<{ icon: string; label: string; danger?:
   const list = h('div', { class: 'more-list', role: 'menu' }, ...items.filter((x) => x !== null).map((it) =>
     h('button', { class: `more-item${it.danger ? ' danger' : ''}`, role: 'menuitem', onclick: () => { setOpen(false); it.run(); } }, icon(it.icon, 22), h('span', {}, it.label))));
   const toggle = h('button', { class: 'big-btn ghost more-toggle', 'aria-expanded': 'false', 'aria-haspopup': 'menu', onclick: () => setOpen(list.hidden) },
-    h('span', {}, t('detail.more')), icon('chevron', 18));
+    icon('more', 22), t('detail.more'));
   list.hidden = true;
   wrap.append(list, toggle);
   return wrap;

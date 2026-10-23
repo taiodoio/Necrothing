@@ -135,8 +135,8 @@ const ICONS: Record<string, () => Poly[]> = {
   tree: () => [...fan([[10.4, 12.6], [13.6, 12.6], [14, 18.2], [18.4, 21.8], [13.4, 20.8], [12, 22.2], [10.6, 20.8], [5.6, 21.8], [10, 18.2]], T.wood, [11, 15]),
     ...disc(7.2, 10.8, 4.8, T.leaf, 10), ...disc(16.8, 10.8, 4.8, T.leaf, 10), ...disc(12, 6.4, 5.6, T.leaf, 12), ...disc(12, 11.4, 4.4, T.leaf, 10),
     ...[[7.6, 13.4], [16.2, 13], [12.2, 9.4]].flatMap(([x, y]) => [...bar(x, y - 2, x, y - 0.8, 0.6, T.woodDark), ...disc(x, y, 1.5, T.flame, 6)])],
-  // freccia del pulsante «Altro» (si gira quando si apre)
-  chevron: () => line([[5.4, 9], [12, 15.6], [18.6, 9]], 3.2, T.gold),
+  // «Altro»: tre pallini, come i puntini di un elenco che continua
+  more: () => [4, 12, 20].flatMap((x) => disc(x, 12, 3.1, T.gold, 8)),
   // cartolina col francobollo e due righe
   postcard: () => [...rrect(2.4, 5, 21.6, 19, 1.4, T.paper, [9, 9]), ...rrect(15, 7, 19.6, 12, 0.5, T.red, [16, 8]), ...bar(4.8, 9, 12.4, 9, 1.2, T.ink), ...bar(4.8, 12.4, 12.4, 12.4, 1.2, T.ink), ...bar(4.8, 15.8, 19.4, 15.8, 1.2, T.ink)],
   bell: () => [...fan([[7, 17.6], [7.6, 11], [9.6, 6.4], [12, 4.8], [14.4, 6.4], [16.4, 11], [17, 17.6], [19.6, 19.4], [4.4, 19.4]], T.gold, [10.5, 11]), ...disc(12, 20.8, 1.8, T.gold, 8), ...ring(12, 3.2, 0.7, 1.8, T.gold, 8)],

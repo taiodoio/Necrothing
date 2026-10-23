@@ -38,7 +38,7 @@
   content: ''; position: absolute; pointer-events: none; background: no-repeat center / contain;
   filter: drop-shadow(0 2px 2px rgba(0, 0, 0, 0.3));
 }
-.ui-next.ui-play .player-chip::after { right: -9px; bottom: -11px; width: 30px; height: 30px; background-image: var(--deco-pumpkin); rotate: 14deg; }
+.ui-next.ui-play .player-chip::after { right: -14px; bottom: -14px; width: 30px; height: 30px; background-image: var(--deco-pumpkin); rotate: 14deg; }
 .ui-next.ui-play .clock-block::before { left: -8px; top: -9px; width: 22px; height: 22px; background-image: var(--deco-skull); rotate: -16deg; }
 
 /* ── Menù di gioco: ogni voce nel suo riquadro, icone grandi e un po' storte ── */
@@ -80,6 +80,6 @@
 .ui-next.ui-play .scrim { background: rgba(12, 9, 18, 0.62); }
 
 /* ── Il Custode esce dal suo riquadro: testa e cappello interi, sopra il bordo ── */
-/* riquadro un po' più basso del box, in fondo: il ritratto (più grande) sporge sopra di circa un terzo della testa */
-.ui-next.ui-play .chip-avatar { position: relative; align-self: flex-end; width: 64px; height: 60px; overflow: visible; clip-path: inset(-70px -22px 0 -22px round 0 0 var(--r-s) var(--r-s)); }
-.ui-next.ui-play .chip-avatar img { position: absolute; left: 50%; bottom: 0; width: 106px; height: 106px; max-width: none; translate: -50% 0; object-fit: contain; }
+/* riquadro più basso del box, in fondo: il ritratto (più grande) sporge sopra col cappello */
+.ui-next.ui-play .chip-avatar { position: relative; align-self: flex-end; width: 52px; height: 46px; overflow: visible; clip-path: inset(-60px -18px 0 -18px round 0 0 var(--r-s) var(--r-s)); }
+.ui-next.ui-play .chip-avatar img { position: absolute; left: 50%; bottom: 0; width: 84px; height: 84px; max-width: none; translate: -50% 0; object-fit: contain; }

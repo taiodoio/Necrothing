@@ -8,6 +8,7 @@ import { createRng } from '../src/game/rng.ts';
 import { areaForLevel, buildOccupancy, canPlaceAt, computePrestige, detectDistricts, fenceCorners, nearestFreeSpot } from '../src/game/world.ts';
 import { CATALOG_LIST, rotatedFootprint } from '../src/game/catalog.ts';
 import { evaluateAchievements, rankForXp } from '../src/game/progression.ts';
+import { shortWisps } from '../src/ui/numbers.ts';
 import { DECAY, EXPANSION, RELEASE_LOCKS, WISPS, XP } from '../src/game/balance.ts';
 
 const NOW = new Date('2026-10-09T12:00:00Z');
@@ -1003,4 +1004,14 @@ test('promemoria: anniversari futuri e tombe che stanno per rompersi, uno al gio
   // già festeggiato quest'anno: non torna
   for (const g of s.graves) g.lastAnniversaryYear = 2026;
   assert.equal(planReminders(s, NOW, { days: 40 }).filter((r) => r.kind === 'anniversary').length, 0);
+});
+
+test('saldo nell’HUD: intero fino a 99.999, poi abbreviato', () => {
+  assert.equal(shortWisps(40), '40');
+  assert.equal(shortWisps(1250), '1.250');
+  assert.equal(shortWisps(99_999), '99.999');
+  assert.equal(shortWisps(100_000), '100k');
+  assert.equal(shortWisps(125_999), '125k');
+  assert.equal(shortWisps(1_000_560), '1 mln');
+  assert.equal(shortWisps(1_250_000), '1,2 mln');
 });

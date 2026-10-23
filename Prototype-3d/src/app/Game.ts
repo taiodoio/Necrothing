@@ -23,6 +23,9 @@ import { graveModel } from '../render/models/graves.ts';
 import { placeableKey, placeableModel, placeableSeed, seedCount, type PVis } from '../render/models/registry.ts';
 import { UI } from '../ui/UI.ts';
 import { confirmDialog, drawerOpen, floater, toast } from '../ui/dom.ts';
+import { npcNote, type NpcNote } from '../ui/npcNote.ts';
+import { ROAMER_LABELS } from '../game/spawn.ts';
+import type { CharacterKind } from '../view/characters.ts';
 import { Actors, graveSpots, type PetMode, type VisitStop } from '../view/Actors.ts';
 import { Atmosphere } from '../view/Atmosphere.ts';
 import { CameraRig } from '../view/CameraRig.ts';
@@ -416,13 +419,16 @@ export class Game {
 
   // ── Azioni ───────────────────────────────────────────────────────────
 
-  /** Esegue un'azione di gioco; ritorna false se fallita (con toast). */
-  act(fn: (s: SaveData, now: Date) => R.ActionResult | void, at?: THREE.Vector3): boolean {
+  /**
+   * Esegue un'azione di gioco; ritorna false se fallita (con toast). `quiet`: niente
+   * toast del messaggio (lo dicono già il «+1» sul posto o la notifica del personaggio).
+   */
+  act(fn: (s: SaveData, now: Date) => R.ActionResult | void, at?: THREE.Vector3, quiet = false): boolean {
     const now = this.now();
     try {
       const result = fn(this.state, now);
       if (result) {
-        if (result.message) toast(result.message);
+        if (result.message && !quiet) toast(result.message);
         if (at) this.showRewards(at, result);
       }
       this.afterChange();
@@ -551,7 +557,7 @@ export class Game {
       if (Math.hypot(p.x - a.x, p.z - a.z) < reach) {
         const id = w.id;
         if (reach > 0.65) this.effects.puff(p.clone().setY(0.8), '#8ff0dc');
-        this.act((s) => R.collectWisp(s, id), p.clone().setY(1));
+        this.act((s) => R.collectWisp(s, id), p.clone().setY(1), true); // basta il «+1» che vola
         this.ui.bumpWisps();
         return;
       }
@@ -964,9 +970,16 @@ export class Game {
     ];
   }
 
+  /** Un personaggio parla: notifica col ritratto (interfaccia nuova) o toast. */
+  private say(n: NpcNote) {
+    if (uiNext()) npcNote(n); else toast(n.text);
+  }
+  private sayText(kind: CharacterKind, name: string, text: string) { this.say({ kind, name, text }); }
+
   /** Dopo un comando l'animale ricorda cosa fa (salvato nella sua casetta). */
   private petCommand(id: string, message: string) {
-    toast(message);
+    const pet = this.actors.petAt(id);
+    if (pet) this.sayText(pet.kind, pet.label, message); else toast(message);
     const house = this.state.placeables.find((p) => p.id === id);
     const mode = this.actors.petAt(id)?.mode;
     if (house && mode && house.petMode !== mode) { house.petMode = mode; scheduleSave(this.state); }
@@ -1022,7 +1035,7 @@ export class Game {
           this.actors.setBat(true);
           this.batUntil = performance.now() + BAT.seconds * 1000;
           this.rig.follow = this.actors.avatar.pos;
-          toast('Il vampiro ti morde. Ti trasformi in un pipistrello!');
+          this.say({ kind: 'vampire', name: 'Vampiro', text: 'Il vampiro ti morde: ti trasformi in un pipistrello!' });
           this.ui.refreshSettingsButtons();
         }, 170);
       }, 800);
@@ -1070,11 +1083,11 @@ export class Game {
       const v = r.visit, left = Math.max(0, v.stops.length - v.i);
       const back = (kind: 'priest' | 'gravedigger', home: string) => (this.visitorHome(kind) ? home : 'da dove è venuto');
       if (r.kind === 'gravedigger') {
-        toast(v.stage === 'leave' || !left
+        this.sayText('gravedigger', 'Becchino', v.stage === 'leave' || !left
           ? (v.stops.length ? `Il becchino ha finito il giro (${v.i} cose ripulite) e torna ${back('gravedigger', 'a casa')}.` : `Il becchino ha controllato: niente da pulire. Torna ${back('gravedigger', 'a casa')}.`)
           : `Il becchino fa il giro e ripulisce metà delle cose sporche del cimitero: ${v.i} fatte, ancora ${left}. Poi torna ${back('gravedigger', 'a casa')}.`);
       } else {
-        toast(v.stage === 'leave' || !left
+        this.sayText('priest', 'Prete', v.stage === 'leave' || !left
           ? `Il prete ha benedetto il cimitero (più fuochi fatui fino a domani) e torna ${back('priest', 'al santuario')}.`
           : `Il prete prega sulle tombe e benedice il cimitero: più fuochi fatui fino a domani. Ancora ${left} ${left === 1 ? 'tomba' : 'tombe'}, poi torna ${back('priest', 'al santuario')}.`);
       }
@@ -1085,7 +1098,10 @@ export class Game {
     this.actors.faceTowards(r.pos);
     this.actors.cheer(0.9);
     let visit: R.ActionResult | null = null;
-    this.act((s, n) => (visit = R.interactRoamer(s, r.kind, n, { rare: r.rare, graveId: r.graveId, memoryId: r.memoryId, x: cell.x, y: cell.y })), at);
+    this.act((s, n) => (visit = R.interactRoamer(s, r.kind, n, { rare: r.rare, graveId: r.graveId, memoryId: r.memoryId, x: cell.x, y: cell.y })), at, !r.memoryId);
+    // la notifica col ritratto (il fantasma di un ricordo ha la sua scheda, sotto)
+    const met = visit as R.ActionResult | null;
+    if (met && !r.memoryId) this.say({ kind: r.kind === 'ghost' && r.rare ? 'ghostRare' : r.kind, name: ROAMER_LABELS[r.kind], text: met.message, wisps: met.wisps, xp: met.xp });
     this.effects.puff(r.pos, r.kind === 'ghost' ? '#cfeee6' : r.kind === 'zombie' ? '#9bd34a' : '#e8dfcc');
     this.actors.removeRoamer(id);
     // il fantasma di un ricordo dell'albero: dopo la ricompensa si apre la sua scheda
@@ -1173,9 +1189,14 @@ export class Game {
       const c = this.entityCells(id);
       const top = c ? cellCenter(c.x, c.y, c.fp).setY(1.4) : undefined;
       if (kind === 'gravedigger') { this.act((s, n) => { const r = R.gravediggerClean(s, id, n); if (r.xp) cleaned++; return r; }, top); }
-      else { this.act((s, n) => R.priestBless(s, id, n, !blessed), top); blessed = true; }
+      else {
+        let first: R.ActionResult | null = null;
+        this.act((s, n) => (first = R.priestBless(s, id, n, !blessed)), top, true);
+        if (!blessed && first) this.say({ kind: 'priest', name: 'Prete', text: (first as R.ActionResult).message, wisps: (first as R.ActionResult).wisps, xp: (first as R.ActionResult).xp });
+        blessed = true;
+      }
     }, () => {
-      if (kind === 'gravedigger' && cleaned) toast(`Il becchino ha finito il giro: ${cleaned} ${cleaned === 1 ? 'cosa ripulita' : 'cose ripulite'}.`);
+      if (kind === 'gravedigger' && cleaned) this.say({ kind: 'gravedigger', name: 'Becchino', text: `Ha finito il giro: ${cleaned} ${cleaned === 1 ? 'cosa ripulita' : 'cose ripulite'}.` });
     });
   }
 

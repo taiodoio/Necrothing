@@ -25,7 +25,7 @@
 .ui-play[data-theme="light"] { --pattern: var(--pattern-light); }
 
 /* ── Pattern tono su tono (zucche, foglie, teschi, bare) ──────────── */
-.ui-next.ui-play :is(.drawer, .drawer-foot, .player-chip, .clock-block, .slot, .tutorial, .dialog, .wisp-count, .edit-banner) {
+.ui-next.ui-play :is(.drawer, .drawer-foot, .player-chip, .clock-block, .slot, .tutorial, .dialog, .wisp-count, .edit-banner, .npc-note) {
   background-image: var(--pattern);
   background-size: 180px 180px;
 }

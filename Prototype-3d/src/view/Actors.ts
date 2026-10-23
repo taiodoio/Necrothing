@@ -1348,7 +1348,7 @@ export class Actors {
     return [...this.pets.values()].map((p) => ({ id: p.placeId, label: p.label, mode: p.mode, sleeping: p.act === 'sleep', broken: p.broken }));
   }
 
-  petAt(id: string) { const p = this.pets.get(id); return p ? { label: p.label, mode: p.mode, sleeping: p.act === 'sleep', broken: p.broken } : null; }
+  petAt(id: string) { const p = this.pets.get(id); return p ? { label: p.label, kind: p.rig.kind, mode: p.mode, sleeping: p.act === 'sleep', broken: p.broken } : null; }
 
   /** Punto sopra la testa dell'animale (per il menù), o sopra la casetta se dorme. */
   petTop(id: string): THREE.Vector3 | null {

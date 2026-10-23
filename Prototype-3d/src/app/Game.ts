@@ -24,6 +24,7 @@ import { placeableKey, placeableModel, placeableSeed, seedCount, type PVis } fro
 import { UI } from '../ui/UI.ts';
 import { confirmDialog, drawerOpen, floater, toast } from '../ui/dom.ts';
 import { npcNote, type NpcNote } from '../ui/npcNote.ts';
+import { npcPortrait } from '../ui/npcPortraits.ts';
 import { ROAMER_LABELS } from '../game/spawn.ts';
 import type { CharacterKind } from '../view/characters.ts';
 import { Actors, graveSpots, type PetMode, type VisitStop } from '../view/Actors.ts';
@@ -423,12 +424,14 @@ export class Game {
    * Esegue un'azione di gioco; ritorna false se fallita (con toast). `quiet`: niente
    * toast del messaggio (lo dicono già il «+1» sul posto o la notifica del personaggio).
    */
-  act(fn: (s: SaveData, now: Date) => R.ActionResult | void, at?: THREE.Vector3, quiet = false): boolean {
+  act(fn: (s: SaveData, now: Date) => R.ActionResult | void, at?: THREE.Vector3, quiet: boolean | 'rewarded' = false): boolean {
     const now = this.now();
     try {
       const result = fn(this.state, now);
       if (result) {
-        if (result.message && !quiet) toast(result.message);
+        // 'rewarded': zitto se c'è una ricompensa (la dice il «+N» sul posto), altrimenti il messaggio serve («È già in ordine»)
+        const silent = quiet === true || (quiet === 'rewarded' && !!(result.xp || result.wisps));
+        if (result.message && !silent) toast(result.message);
         if (at) this.showRewards(at, result);
       }
       this.afterChange();
@@ -609,9 +612,9 @@ export class Game {
     const instant: EntityAction[] = ['detail', 'shop', 'rotate', 'store', 'confirm', 'exhume', 'move', 'entrust', 'memories', 'registry', 'house'];
     const run = () => {
       switch (action) {
-        case 'clean': this.actors.work(); this.act((s, n) => (grave ? R.cleanGrave(s, id, n) : R.cleanPlaceable(s, id, n)), center); break;
-        case 'repair': this.actors.work(1.6); this.act((s, n) => (grave ? R.repairGrave(s, id, n) : R.repairPlaceable(s, id, n)), center); break;
-        case 'flowers': this.actors.work(0.8); this.act((s, n) => R.bringFlowers(s, id, n), center); break;
+        case 'clean': this.actors.work(); this.act((s, n) => (grave ? R.cleanGrave(s, id, n) : R.cleanPlaceable(s, id, n)), center, 'rewarded'); break;
+        case 'repair': this.actors.work(1.6); this.act((s, n) => (grave ? R.repairGrave(s, id, n) : R.repairPlaceable(s, id, n)), center, 'rewarded'); break;
+        case 'flowers': this.actors.work(0.8); this.act((s, n) => R.bringFlowers(s, id, n), center, 'rewarded'); break;
         case 'light': this.act((s) => R.toggleLight(s, id), center); break;
         case 'rotate': this.act((s) => R.rotateEntity(s, id)); break;
         case 'store': this.act((s) => R.storePlaceable(s, id)); this.select(null); break;
@@ -794,9 +797,9 @@ export class Game {
         this.rig.jumpTo(center);
         const area = areaForLevel(this.state.world.expansionLevel);
         const gate = [...gateCells(area)][1].split(',').map(Number);
-        toast('Il corteo funebre arriva…');
+        this.custodeSays('Silenzio…', 'Il corteo funebre arriva…');
         this.actors.startFuneral(center, { x: gate[0], y: gate[1] }, () => {
-          toast(result.message);
+          this.custodeSays('Riposa in pace.', result.message, result);
           this.showRewards(center.clone().setY(1.5), result);
           this.ui.refreshHud();
           void this.offerReminders(grave.name);
@@ -823,7 +826,7 @@ export class Game {
     return new THREE.Vector2(((x - r.left) / r.width) * 2 - 1, -((y - r.top) / r.height) * 2 + 1);
   }
 
-  private pick(x: number, y: number): { entityId?: string; wispId?: string; roamerId?: string; petId?: string; vampireId?: string } | null {
+  private pick(x: number, y: number): { entityId?: string; wispId?: string; roamerId?: string; petId?: string; vampireId?: string; talkerId?: string } | null {
     this.raycaster.setFromCamera(this.ndc(x, y), this.rig.camera);
     // la tomba affidata, mentre la sua bara è in viaggio, non c'è più
     const hits = this.raycaster.intersectObjects([...this.actors.pickables(), ...this.world.hitboxes], false)
@@ -832,10 +835,10 @@ export class Game {
       .filter((h) => !h.object.userData.vampireId || uiPreview());
     if (!hits.length) return null;
     // priorità: presenze erranti e animali > fuochi fatui > entità
-    const order = (o: THREE.Object3D) => (o.userData.roamerId || o.userData.petId || o.userData.vampireId ? 0 : o.userData.wispId ? 1 : 2);
+    const order = (o: THREE.Object3D) => (o.userData.roamerId || o.userData.petId || o.userData.vampireId || o.userData.talkerId ? 0 : o.userData.wispId ? 1 : 2);
     hits.sort((a, b) => order(a.object) - order(b.object) || a.distance - b.distance);
     const u = hits[0].object.userData;
-    return { entityId: u.entityId, wispId: u.wispId, roamerId: u.roamerId, petId: u.petId, vampireId: u.vampireId };
+    return { entityId: u.entityId, wispId: u.wispId, roamerId: u.roamerId, petId: u.petId, vampireId: u.vampireId, talkerId: u.talkerId };
   }
 
   groundCell(x: number, y: number) {
@@ -878,6 +881,7 @@ export class Game {
     if (hit?.roamerId) { this.tapRoamer(hit.roamerId); return; }
     if (hit?.petId && !this.editMode) { this.tapPet(hit.petId); return; }
     if (hit?.vampireId && !this.editMode) { this.tapVampire(hit.vampireId); return; }
+    if (hit?.talkerId && !this.editMode) { this.tapGardener(); return; }
     if (hit?.wispId) {
       const w = this.state.world.looseWisps.find((q) => q.id === hit.wispId);
       if (w && !this.editMode && this.actors.walkTo({ x: w.x, y: w.y })) { this.markWalk(); this.rig.follow = this.actors.avatar.pos; }
@@ -975,6 +979,10 @@ export class Game {
     if (uiNext()) npcNote(n); else toast(n.text);
   }
   private sayText(kind: CharacterKind, name: string, text: string) { this.say({ kind, name, text }); }
+  /** Il Custode commenta quello che fa, col suo ritratto (lo stesso dell'HUD). */
+  private custodeSays(say: string, text: string, r?: R.ActionResult | null) {
+    this.say({ kind: 'custode', name: this.state.player.name, say, text, wisps: r?.wisps && r.wisps > 0 ? r.wisps : undefined, xp: r?.xp || undefined, img: npcPortrait('custode', this.state.player.look) || undefined });
+  }
 
   /** Dopo un comando l'animale ricorda cosa fa (salvato nella sua casetta). */
   private petCommand(id: string, message: string) {
@@ -1010,6 +1018,17 @@ export class Game {
   batSecondsLeft(): number { return this.batUntil ? Math.max(0, Math.ceil((this.batUntil - performance.now()) / 1000)) : 0; }
 
   /** Toccando il vampiro: il suo menù, con «Fatti mordere». */
+  /** Lo scheletro giardiniere, toccato, risponde (niente ricompense: è compagnia). */
+  private tapGardener() {
+    const lines = [
+      'Rastrello le stesse foglie da trent’anni. Non ho fretta.',
+      'Queste foglie non finiscono mai… e meno male.',
+      'Attento a dove metti i piedi: ho appena rastrellato.',
+      'Un tempo avevo i calli. Adesso solo le ossa.',
+    ];
+    this.say({ kind: 'gardener', name: 'Scheletro giardiniere', text: lines[Math.floor(Math.random() * lines.length)] });
+  }
+
   private tapVampire(cryptId: string) {
     if (!this.actors.vampire(cryptId)) return;
     this.ui.openActorMenu('Vampiro', this.isBat ? 'Sei già un pipistrello' : 'Ha sete, ma è un gentiluomo', [
@@ -1023,7 +1042,7 @@ export class Game {
     if (!v || this.isBat) return;
     const near = () => this.actors.avatar.pos.distanceTo(v.pos) < 1.6;
     const bite = () => {
-      if (!near()) { if (tries > 0) this.getBitten(cryptId, tries - 1); else toast('Il vampiro si è allontanato. Riprova.'); return; }
+      if (!near()) { if (tries > 0) this.getBitten(cryptId, tries - 1); else this.say({ kind: 'vampire', name: 'Vampiro', say: 'Hmpf.', text: 'Il vampiro si è allontanato. Riprova.' }); return; }
       this.actors.holdVampire(cryptId, 1.8, this.actors.avatar.pos);
       this.actors.face(v.pos);
       // il morso, poi lo sbuffo di nuvolette: il cambio avviene mentre il Custode ne è coperto
@@ -1059,7 +1078,7 @@ export class Game {
       if (this.disposed) return;
       this.batEnding = false;
       this.actors.setBat(false);
-      toast(message);
+      this.custodeSays('Puff!', message);
       this.ui.refreshSettingsButtons();
     }, 170);
   }
@@ -1098,14 +1117,16 @@ export class Game {
     this.actors.faceTowards(r.pos);
     this.actors.cheer(0.9);
     let visit: R.ActionResult | null = null;
-    this.act((s, n) => (visit = R.interactRoamer(s, r.kind, n, { rare: r.rare, graveId: r.graveId, memoryId: r.memoryId, x: cell.x, y: cell.y })), at, !r.memoryId);
-    // la notifica col ritratto (il fantasma di un ricordo ha la sua scheda, sotto)
+    this.act((s, n) => (visit = R.interactRoamer(s, r.kind, n, { rare: r.rare, graveId: r.graveId, memoryId: r.memoryId, x: cell.x, y: cell.y })), at, true);
+    // la notifica col ritratto; il fantasma di un ricordo dell'albero ha in più «Vedi il ricordo»
     const met = visit as R.ActionResult | null;
-    if (met && !r.memoryId) this.say({ kind: r.kind === 'ghost' && r.rare ? 'ghostRare' : r.kind, name: ROAMER_LABELS[r.kind], text: met.message, wisps: met.wisps, xp: met.xp });
+    const memoryId = r.memoryId;
+    if (met) this.say({ kind: r.kind === 'ghost' && r.rare ? 'ghostRare' : r.kind, name: ROAMER_LABELS[r.kind], text: met.message, wisps: met.wisps, xp: met.xp,
+      action: memoryId ? { label: 'Vedi il ricordo', run: () => this.ui.openMemory(memoryId) } : undefined });
     this.effects.puff(r.pos, r.kind === 'ghost' ? '#cfeee6' : r.kind === 'zombie' ? '#9bd34a' : '#e8dfcc');
     this.actors.removeRoamer(id);
-    // il fantasma di un ricordo dell'albero: dopo la ricompensa si apre la sua scheda
-    if (r.memoryId && visit) this.ui.openMemory(r.memoryId, visit);
+    // interfaccia di prima: si apre subito la scheda del ricordo, con la visita in testa
+    if (!uiNext() && r.memoryId && visit) this.ui.openMemory(r.memoryId, visit);
   }
 
   // ── Campana delle anime e zombie che infangano ──────────────────────
@@ -1117,7 +1138,9 @@ export class Game {
     const center = cellCenter(c.x, c.y, c.fp);
     this.actors.faceTowards(center);
     this.actors.cheer(1.2);
-    if (!this.act((s, n) => R.ringBell(s, id, n), center.clone().setY(2.6))) return;
+    let rang: R.ActionResult | null = null;
+    if (!this.act((s, n) => (rang = R.ringBell(s, id, n)), center.clone().setY(2.6), true)) return;
+    if (rang) this.say({ kind: 'ghost', name: 'Anime', say: 'Din… don…', text: 'Le anime del cimitero accorrono alla campana.' });
     this.effects.puff(center.clone().setY(2.2), '#cfeee6');
     const graves = this.state.graves;
     for (let i = 0; i < SOUL_BELL.ghosts; i++) {
@@ -1236,14 +1259,16 @@ export class Game {
     const coffin = instantiate({ geometries: coffinModel.geometries, lights: [], height: 0.4, mats: LOWPOLY_MATERIALS, dedicated: true }, { castShadow: !this.world.staticShadows });
     this.rig.jumpTo(grave.clone().lerp(t.center, 0.5));
     this.rig.follow = null;
-    toast('Il corteo arriva per accompagnarlo all’albero…');
+    this.custodeSays('Addio…', 'Il corteo arriva per accompagnarlo all’albero…');
     this.riteIds = [graveId, t.id];
     this.actors.startRite({
       grave, graveFront: { x: g.x, y: g.y + 2 }, tree: t.center, treeFront: t.front, gate: { x: gate[0], y: gate[1] }, coffin,
       onLift: () => { this.world.setHidden(graveId, true); if (this.selection?.id === graveId) this.select(null); this.effects.puff(grave, '#8a7a62'); },
       onDone: () => {
         this.riteIds = null;
-        if (!this.act((s, n) => R.entrustGrave(s, graveId, n), t.center.clone().setY(3))) this.world.setHidden(graveId, false);
+        let kept: R.ActionResult | null = null;
+        if (!this.act((s, n) => (kept = R.entrustGrave(s, graveId, n)), t.center.clone().setY(3), true)) this.world.setHidden(graveId, false);
+        else if (kept) this.custodeSays('Riposa tra le radici.', (kept as R.ActionResult).message, kept);
         this.ui.refreshHud();
       },
     });
@@ -1415,7 +1440,7 @@ export class Game {
   toggleBike() {
     if (!this.ownsBike()) { toast('Prima compra la bicicletta in Bottega (Extra).'); return; }
     this.actors.setRiding(!this.actors.riding);
-    toast(this.actors.riding ? 'In sella: si va al doppio della velocità.' : 'Il Custode scende dalla bici.');
+    if (this.actors.riding) this.custodeSays('Si parte!', 'In sella: si va al doppio della velocità.'); else this.custodeSays('Ecco fatto.', 'Il Custode scende dalla bici.');
     this.ui.refreshSettingsButtons();
   }
 
@@ -1440,7 +1465,7 @@ export class Game {
   toggleBroom() {
     if (!this.ownsBroom()) { toast('Prima compra la scopa volante in Bottega (Extra).'); return; }
     this.actors.setFlying(!this.actors.flying);
-    toast(this.actors.flying ? 'A cavalcioni della scopa: si vola sopra tombe e recinti.' : 'Il Custode atterra e scende dalla scopa.');
+    if (this.actors.flying) this.custodeSays('Si vola!', 'A cavalcioni della scopa: si vola sopra tombe e recinti.'); else this.custodeSays('Terra!', 'Il Custode atterra e scende dalla scopa.');
     this.ui.refreshSettingsButtons();
   }
 
@@ -1449,7 +1474,7 @@ export class Game {
     if (!this.ownsStaff()) { toast('Il bastone mistico si sblocca raccogliendo 500 fuochi fatui.'); return; }
     this.state.settings.staffEquipped = !this.state.settings.staffEquipped;
     this.actors.setStaff(this.staffOn);
-    toast(this.staffOn ? 'Bastone impugnato: i fuochi fatui accorrono da lontano.' : 'Bastone posato.');
+    if (this.staffOn) this.custodeSays('A me!', 'Bastone impugnato: i fuochi fatui accorrono da lontano.'); else this.custodeSays('Riposo.', 'Bastone posato.');
     scheduleSave(this.state);
     this.ui.refreshSettingsButtons();
   }
@@ -1480,7 +1505,15 @@ export class Game {
   private collectBusiness(id: string) {
     const e = this.world.entities.get(id);
     const at = e ? e.group.position.clone().setY(e.height + 0.5) : undefined;
-    if (this.act((s, now) => R.collectBusiness(s, id, now), at)) {
+    let got: R.ActionResult | null = null;
+    if (this.act((s, now) => (got = R.collectBusiness(s, id, now)), at, true)) {
+      // chi lavora lì racconta l'incasso
+      const res = got as R.ActionResult | null, n = res?.wisps ?? 0, type = this.state.placeables.find((p) => p.id === id)?.type;
+      const pl = n === 1 ? 'fuoco fatuo' : 'fuochi fatui';
+      if (type === 'witch_corner') this.say({ kind: 'witch', name: 'Strega', text: `Ha venduto ${n} ${n === 1 ? 'pozione' : 'pozioni'} ai visitatori.`, wisps: n });
+      else if (type === 'zombie_bar') this.say({ kind: 'zombie', name: 'Bar degli zombie', say: 'Salute!', text: `Al bar si è brindato alla tua: ${n} ${pl} di incasso.`, wisps: n });
+      else if (type === 'brain_farm') this.say({ kind: 'zombie', name: 'Orto dei cervelli', say: 'Gnam!', text: `Gli zombie hanno raccolto cervelli per ${n} ${pl}.`, wisps: n });
+      else this.custodeSays('Che raccolto!', `L’orto dietro casa rende ${n} ${pl}.`, res);
       this.world.setEarnings(id, 0);
       this.ui.bumpWisps();
     }

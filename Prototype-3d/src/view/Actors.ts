@@ -31,6 +31,10 @@ const SPEED: Record<RoamerKind, number> = { ghost: 0.9, cat: 1.6, crow: 3.2, gra
 const RIG_FOR: Record<RoamerKind, CharacterKind> = { ghost: 'ghost', cat: 'cat', crow: 'crow', gravedigger: 'gravedigger', priest: 'priest', rat: 'rat', zombie: 'zombie' };
 const PET_KINDS: CharacterKind[] = ['petDog', 'petCat', 'petRabbit', 'petDuck', 'petCrow'];
 const PET_LABELS = ['Cane', 'Gatto', 'Coniglio', 'Papera', 'Corvo'];
+/** Con l'articolo, per le frasi: «Il cane ti raggiunge», «la papera tornerà fuori». */
+const PET_THE: Record<string, string> = { Cane: 'il cane', Gatto: 'il gatto', Coniglio: 'il coniglio', Papera: 'la papera', Corvo: 'il corvo' };
+const theLower = (label: string) => PET_THE[label] ?? label.toLowerCase();
+const theUpper = (label: string) => { const t = theLower(label); return t[0].toUpperCase() + t.slice(1); };
 /** Quale animale vive in una casetta (ogni animale ha la sua casetta in Bottega). */
 const petKind = (h: Placed) => visualOf(h.type, h.variant).variant;
 
@@ -312,7 +316,7 @@ export class Actors {
     this.remount();
     for (const r of this.roamers.values()) { rebuild(r); r.rig.root.add(r.hitbox); }
     for (const p of this.pets.values()) { rebuild(p); p.rig.root.add(p.hitbox); p.rig.root.visible = p.act !== 'sleep'; }
-    for (const p of this.presences) { rebuild(p); this.presenceHits.filter((h) => h.userData.vampireId === p.placeId && p.rig.kind === 'vampire').forEach((h) => p.rig.root.add(h)); this.attachProp(p); dimGhosts(p.rig.root, p.dim); if (p.size) p.rig.root.scale.setScalar(p.size); p.rig.root.visible = !p.hidden; }
+    for (const p of this.presences) { rebuild(p); this.presenceHits.filter((h) => (h.userData.vampireId === p.placeId && p.rig.kind === 'vampire') || (h.userData.talkerId === p.placeId && p.rig.kind === 'gardener')).forEach((h) => p.rig.root.add(h)); this.attachProp(p); dimGhosts(p.rig.root, p.dim); if (p.size) p.rig.root.scale.setScalar(p.size); p.rig.root.visible = !p.hidden; }
     if (this.funeral) for (const m of this.funeral.members) rebuild(m);
     if (this.rite) for (const m of this.rite.members) rebuild(m);
     for (const d of this.departing) rebuild(d);
@@ -963,11 +967,12 @@ export class Actors {
       dimGhosts(pr.rig.root, c.dim);
       if (c.hidden) pr.rig.root.visible = false;
       this.attachProp(pr);
-      // il vampiro si tocca: ci si può far mordere
-      if (c.kind === 'vampire') {
+      // il vampiro si tocca (ci si può far mordere); il giardiniere scheletro si tocca e risponde
+      if (c.kind === 'vampire' || c.kind === 'gardener') {
         const hit = new THREE.Mesh(new THREE.BoxGeometry(1.1, 1.8, 1.1), hitMat);
         hit.position.y = 0.8;
-        hit.userData.vampireId = p.id;
+        if (c.kind === 'vampire') hit.userData.vampireId = p.id;
+        else hit.userData.talkerId = p.id;
         pr.rig.root.add(hit);
         this.presenceHits.push(hit);
       }
@@ -1361,11 +1366,11 @@ export class Actors {
   callPet(id: string): string {
     const p = this.pets.get(id);
     if (!p) return '';
-    if (p.broken) return `La casetta è rotta: riparala e ${p.label.toLowerCase()} tornerà fuori.`;
+    if (p.broken) return `La casetta è rotta: riparala e ${theLower(p.label)} tornerà fuori.`;
     p.mode = 'follow';
     if (p.act === 'sleep') this.wake(p);
     else if (!['fetch', 'bring', 'happy', 'wait'].includes(p.act)) { p.act = 'follow'; p.path = []; }
-    return `${p.label} ti raggiunge e ti segue.`;
+    return `${theUpper(p.label)} ti raggiunge e ti segue.`;
   }
 
   /** A cuccia: torna alla casetta e resta a dormire finché non lo richiami. */
@@ -1375,7 +1380,7 @@ export class Actors {
     p.mode = 'home';
     if (this.bone.carrier === p) { this.bone.carrier = null; this.bone.obj.visible = false; }
     if (p.act !== 'sleep') this.goHome(p);
-    return `${p.label} va a cuccia.`;
+    return `${theUpper(p.label)} va a cuccia.`;
   }
 
   /** Libero: gira per il cimitero e ogni tanto torna in tana. */
@@ -1383,9 +1388,9 @@ export class Actors {
     const p = this.pets.get(id);
     if (!p) return '';
     p.mode = 'free';
-    if (p.act === 'sleep') { p.timer = 1.5; return `${p.label} esce a fare un giro.`; }
+    if (p.act === 'sleep') { p.timer = 1.5; return `${theUpper(p.label)} esce a fare un giro.`; }
     if (p.act === 'follow') { p.act = 'rest'; p.timer = 0.5; p.path = []; }
-    return `${p.label} va a zonzo per il cimitero.`;
+    return `${theUpper(p.label)} va a zonzo per il cimitero.`;
   }
 
   /** Coccole: il Custode si avvicina, l'animale aspetta e poi scodinzola. */

@@ -120,7 +120,6 @@ export default {
   // ── Menù contestuale (sopra l'oggetto toccato) ──
   // breve: pulsante (nell'interfaccia nuova è solo un'icona, il testo va ai lettori di schermo)
   'ctx.detail': 'Dettagli',
-  'ctx.exhume': 'Esuma',
   'ctx.done': 'Fatto',
   'ctx.entrust': 'Affida all’albero',
   'ctx.repair': 'Ripara',

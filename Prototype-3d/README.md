@@ -74,8 +74,10 @@ interagisci, `B` sali/scendi dalla bici, `F` sali/scendi dalla scopa, `Esc` chiu
 ### Dinamiche (portate dalla PWA, regole in `src/game/`)
 
 - **Sepoltura** in 6 passi (nome+categoria, **foto**, date+causa, epitaffio, lapide, riepilogo),
-  poi scegli il posto sulla mappa e arriva il **corteo funebre** (prete, dolenti,
-  becchino). Una sola cosa astratta al giorno. Lapidi più ricche sbloccate dal rango.
+  poi scegli il posto sulla mappa: la fossa resta delimitata da paletti e corda e arriva il
+  **corteo funebre** portando la bara (prete in testa, becchino e un dolente la portano). La
+  bara si posa sulla fossa, il becchino scava di lato, la bara scende e la lapide compare in
+  una nuvola di terra. Una sola cosa astratta al giorno. Lapidi più ricche sbloccate dal rango.
   - **Foto dell'oggetto** (facoltativa): «Scatta» apre la fotocamera, «Dalla galleria» una foto
     già fatta; ritaglio quadrato a 720 px. Scorrendo sulla foto (o con le frecce) si cambia
     filtro: Originale, Seppia, B/N, Rovinata (seppia sbiadita con grana, graffi, piega e bordi
@@ -86,7 +88,12 @@ interagisci, `B` sali/scendi dalla bici, `F` sali/scendi dalla scopa, `Esc` chiu
     «Riposa a Necrothing». Dal riepilogo (prima di scegliere il posto) e dal dettaglio della
     tomba; «Condividi» apre la condivisione del telefono (o scarica l'immagine).
   - Nel dettaglio della tomba il pulsante principale è l'azione che serve (ripara, pulisci,
-    porta/rinnova fiori); sopra, cartolina e «Affida all'albero».
+    porta/rinnova fiori); sopra, cartolina e «Affida all'albero»; in fondo, solo testo e icona,
+    **Riesuma**.
+- **Riesumazione** (dal dettaglio della tomba o del ricordo dell'Albero dei ricordi, con
+  conferma): il becchino arriva spingendo la carriola vuota, scava, la tomba sparisce in una
+  nuvola di terra e lui se ne va con la carriola piena. Il terreno torna libero e la tomba esce
+  dal registro; niente ricompense tolte, e le sepolture fatte contano ancora per gli sblocchi.
 - **Dove va il Custode**: toccando il terreno compare un cerchio dorato sulla meta; svanisce
   quando arriva o cambia meta.
 - **Ciclo delle tombe** (esclusivo): pulita → fiori → dopo 3 giorni appassiscono e la

@@ -19,7 +19,7 @@ import { shopHeader } from './shopHeader.ts';
 import { houseBoughtView, houseShopDetail, houseShopGrid } from './house.ts';
 import { graveThumb, placeableThumb } from './thumbs.ts';
 import { ACH_ICONS, icon } from './icons.ts';
-import { uiNext, uiPlay, uiPreview, uiTrial } from '../app/uiNext.ts';
+import { uiNext, uiPlay, uiPreview } from '../app/uiNext.ts';
 import { remindersAvailable } from '../app/reminders.ts';
 import { currentLang, LANGS, setLang, t, tList } from '../i18n/index.ts';
 
@@ -462,7 +462,7 @@ export function openDetail(ui: UI, id: string) {
         h('button', { class: 'big-btn ghost', onclick: async () => openPostcard(await postcardData(g, photoUrl, ui, g.seed % 4)) }, t('detail.grave.postcard')),
         R.memoryTree(s) ? h('button', { class: 'big-btn ghost', onclick: () => ui.openEntrust(id) }, t('detail.grave.entrust')) : null),
       h('button', { class: 'big-btn', onclick: () => { closeDrawer(true); game.performEntityAction(id, main.act); } }, icon(main.ic, 22), main.label),
-      uiTrial() ? exhumeButton(ui, id, g.name, 'grave') : null) });
+      exhumeButton(ui, id, g.name, 'grave')) });
     return;
   }
   const p = s.placeables.find((x) => x.id === id);

@@ -1105,14 +1105,16 @@ export class Game {
     this.actors.faceTowards(r.pos);
     this.actors.cheer(0.9);
     let visit: R.ActionResult | null = null;
-    this.act((s, n) => (visit = R.interactRoamer(s, r.kind, n, { rare: r.rare, graveId: r.graveId, memoryId: r.memoryId, x: cell.x, y: cell.y })), at, !r.memoryId);
-    // la notifica col ritratto (il fantasma di un ricordo ha la sua scheda, sotto)
+    this.act((s, n) => (visit = R.interactRoamer(s, r.kind, n, { rare: r.rare, graveId: r.graveId, memoryId: r.memoryId, x: cell.x, y: cell.y })), at, true);
+    // la notifica col ritratto; il fantasma di un ricordo dell'albero ha in più «Vedi il ricordo»
     const met = visit as R.ActionResult | null;
-    if (met && !r.memoryId) this.say({ kind: r.kind === 'ghost' && r.rare ? 'ghostRare' : r.kind, name: ROAMER_LABELS[r.kind], text: met.message, wisps: met.wisps, xp: met.xp });
+    const memoryId = r.memoryId;
+    if (met) this.say({ kind: r.kind === 'ghost' && r.rare ? 'ghostRare' : r.kind, name: ROAMER_LABELS[r.kind], text: met.message, wisps: met.wisps, xp: met.xp,
+      action: memoryId ? { label: 'Vedi il ricordo', run: () => this.ui.openMemory(memoryId) } : undefined });
     this.effects.puff(r.pos, r.kind === 'ghost' ? '#cfeee6' : r.kind === 'zombie' ? '#9bd34a' : '#e8dfcc');
     this.actors.removeRoamer(id);
-    // il fantasma di un ricordo dell'albero: dopo la ricompensa si apre la sua scheda
-    if (r.memoryId && visit) this.ui.openMemory(r.memoryId, visit);
+    // interfaccia di prima: si apre subito la scheda del ricordo, con la visita in testa
+    if (!uiNext() && r.memoryId && visit) this.ui.openMemory(r.memoryId, visit);
   }
 
   // ── Campana delle anime e zombie che infangano ──────────────────────

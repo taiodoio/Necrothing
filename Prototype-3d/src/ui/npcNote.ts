@@ -20,6 +20,8 @@ export interface NpcNote {
   say?: string;
   /** Il ritratto, se non quello del modello (il Custode col suo aspetto). */
   img?: string;
+  /** Un pulsante (es. «Vedi il ricordo»): la notifica resta un po' di più. */
+  action?: { label: string; run: () => void };
 }
 
 /** I versi, scelti a caso tra due o tre perché non stanchino. */
@@ -44,6 +46,8 @@ const VERSES: Partial<Record<CharacterKind, string[]>> = {
 const verse = (k: CharacterKind) => { const v = VERSES[k] ?? ['…']; return v[Math.floor(Math.random() * v.length)]; };
 
 const SHOW_MS = 5000;
+/** Con un pulsante c'è il tempo di toccarlo. */
+const ACTION_MS = 8000;
 /** Una notifica resta in vista almeno così prima che la successiva la sostituisca. */
 const MIN_MS = 1000;
 
@@ -82,14 +86,16 @@ function show(n: NpcNote) {
   const gain = (v: number, xp: boolean) => h('span', { class: `gain${xp ? ' xp' : ''}` }, xp ? null : icon('wisp', 12), `+${v}${xp ? ' XP' : ''}`);
   const say = h('b', { class: 'say' }, ...[...(n.say ?? verse(n.kind))].map((c, i) => h('span', { style: `animation-delay:${(i * 0.06).toFixed(2)}s` }, c === ' ' ? ' ' : c)));
   const url = n.img ?? npcPortrait(n.kind);
-  const el = h('div', { class: 'npc-note', role: 'status' },
+  const ms = n.action ? ACTION_MS : SHOW_MS;
+  const el = h('div', { class: `npc-note${n.action ? ' with-action' : ''}`, role: 'status' },
     url ? h('img', { src: url, alt: '' }) : null,
     // il guadagno accanto al nome: la frase resta su una riga quando può
     h('div', { class: 'npc-note-head' }, say, h('small', {}, n.name), n.wisps ? gain(n.wisps, false) : null, n.xp ? gain(n.xp, true) : null),
     h('p', {}, n.text),
+    n.action ? h('button', { class: 'npc-note-cta', onclick: () => { const a = n.action!; dismiss(); a.run(); } }, n.action.label, ' ›') : null,
     h('button', { class: 'npc-note-x', 'aria-label': 'Chiudi', onclick: () => dismiss() }, icon('close', 14)),
-    h('i', { class: 'npc-note-time', style: `animation-duration:${SHOW_MS}ms` }));
+    h('i', { class: 'npc-note-time', style: `animation-duration:${ms}ms` }));
   $('#game').append(el);
   $('#game').classList.add('has-note'); // i toast scendono sotto la notifica
-  current = { el, at: performance.now(), timer: window.setTimeout(() => dismiss(), SHOW_MS) };
+  current = { el, at: performance.now(), timer: window.setTimeout(() => dismiss(), ms) };
 }

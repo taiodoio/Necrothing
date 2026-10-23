@@ -45,7 +45,7 @@ export default {
   'rules.repair.nothing': 'Non c’è nulla da riparare.',
   'rules.repair.noFunds': 'Servono {amount} fuochi fatui per riparare.',
   'rules.repair.graveDone': 'Tomba riparata: torna come nuova.',
-  // dopo la riesumazione (anche «Esuma» in Modifica): la tomba sparisce col suo registro
+  // dopo la riesumazione (dal dettaglio, col becchino): la tomba sparisce col suo registro
   'rules.exhume.done': '{name} è stato riesumato: il posto è di nuovo libero.',
   'rules.exhume.memoryDone': '{name} non riposa più tra le radici dell’Albero dei ricordi.',
 

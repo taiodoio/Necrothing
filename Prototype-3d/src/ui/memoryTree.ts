@@ -13,7 +13,6 @@ import { t } from '../i18n/index.ts';
 import { closeDrawer, fmtDate, h, joinDot, openDrawer } from './dom.ts';
 import { icon } from './icons.ts';
 import { exhumeButton, MEMORY_LABELS } from './screens.ts';
-import { uiTrial } from '../app/uiNext.ts';
 import { modelThumb } from './thumbs.ts';
 import type { UI } from './UI.ts';
 
@@ -91,6 +90,6 @@ export function openMemory(ui: UI, id: string, visit?: R.ActionResult) {
       h('div', { class: 'row' },
         h('button', { class: 'big-btn ghost', onclick: () => openMemoryTree(ui) }, t('tree.memory.all')),
         tree ? h('button', { class: 'big-btn ghost', onclick: () => { closeDrawer(); game.focusEntity(tree.id); } }, t('tree.memory.showTree')) : null),
-      uiTrial() ? exhumeButton(ui, id, g.name, 'memory') : null),
+      exhumeButton(ui, id, g.name, 'memory')),
   });
 }

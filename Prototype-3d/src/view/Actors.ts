@@ -246,7 +246,7 @@ interface Funeral {
   target: THREE.Vector3;
   onDone: () => void;
   exit: THREE.Vector3;
-  /** Prova: il corteo porta la bara, il becchino scava, la bara scende e la lapide compare (`onReveal`). */
+  /** Sepoltura scavata: il corteo porta la bara, il becchino scava, la bara scende e la lapide compare (`onReveal`). */
   dig?: DugBurial;
 }
 
@@ -1552,7 +1552,7 @@ export class Actors {
   }
 
   /**
-   * Sepoltura scavata (prova): il posto è delimitato, il corteo entra portando
+   * Sepoltura scavata: il posto è delimitato, il corteo entra portando
    * la bara (becchino davanti, un dolente dietro, il prete in testa), la posa
    * sulla fossa; il becchino scava di lato, la bara scende e la lapide compare.
    */

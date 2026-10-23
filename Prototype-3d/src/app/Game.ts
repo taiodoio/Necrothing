@@ -5,7 +5,7 @@
 import * as THREE from 'three';
 import { BAT, BUSINESS, FOREST_MARGIN, GRAVE_FOOTPRINT, KEEPER_LAMP, LIVE_TICK_MS, SOUL_BELL, STAFF, ZOMBIE_MUD } from '../game/balance.ts';
 import { CATALOG, CATALOG_LIST, EDIT_ONLY, rotatedFootprint, TRACEABLE } from '../game/catalog.ts';
-import { applyTheme, uiNext, uiPreview, uiTrial } from './uiNext.ts';
+import { applyTheme, uiNext, uiPreview } from './uiNext.ts';
 import { watchLifecycle } from './platform.ts';
 import { askReminderPermission, clearReminders, remindersAvailable, syncReminders } from './reminders.ts';
 import type { GraveVisualState } from '../game/graves.ts';
@@ -44,7 +44,7 @@ import { currentLang, t, tList } from '../i18n/index.ts';
 export type Selection = { kind: 'grave' | 'placeable'; id: string } | null;
 
 export type EntityAction =
-  | 'detail' | 'clean' | 'repair' | 'flowers' | 'light' | 'shop' | 'rotate' | 'store' | 'confirm' | 'exhume' | 'move' | 'entrust' | 'memories' | 'ring' | 'registry' | 'house';
+  | 'detail' | 'clean' | 'repair' | 'flowers' | 'light' | 'shop' | 'rotate' | 'store' | 'confirm' | 'move' | 'entrust' | 'memories' | 'ring' | 'registry' | 'house';
 
 const PET_STATUS: Record<PetMode, string> = { free: t('game.pet.status.free'), follow: t('game.pet.status.follow'), home: t('game.pet.status.home') };
 
@@ -612,7 +612,7 @@ export class Game {
     const grave = this.state.graves.find((g) => g.id === id);
     // durante il rito la tomba affidata e l'albero restano dove sono finché il corteo non ha finito
     if (this.riteIds?.includes(id) && !['detail', 'memories', 'shop', 'registry', 'house'].includes(action)) { toast(t('game.rite.wait')); return; }
-    const instant: EntityAction[] = ['detail', 'shop', 'rotate', 'store', 'confirm', 'exhume', 'move', 'entrust', 'memories', 'registry', 'house'];
+    const instant: EntityAction[] = ['detail', 'shop', 'rotate', 'store', 'confirm', 'move', 'entrust', 'memories', 'registry', 'house'];
     const run = () => {
       switch (action) {
         case 'clean': this.actors.work(); this.act((s, n) => (grave ? R.cleanGrave(s, id, n) : R.cleanPlaceable(s, id, n)), center, 'rewarded'); break;
@@ -621,7 +621,6 @@ export class Game {
         case 'light': this.act((s) => R.toggleLight(s, id), center); break;
         case 'rotate': this.act((s) => R.rotateEntity(s, id)); break;
         case 'store': this.act((s) => R.storePlaceable(s, id)); this.select(null); break;
-        case 'exhume': this.act((s) => R.exhumeGrave(s, id)); this.select(null); break;
         case 'confirm': this.select(null); toast(t('game.place.confirmed')); break;
         case 'detail': this.ui.openDetail(id); break;
         case 'shop': this.ui.openShop(); break;
@@ -801,18 +800,17 @@ export class Game {
         const area = areaForLevel(this.state.world.expansionLevel);
         const gate = [...gateCells(area)][1].split(',').map(Number);
         this.custodeSays(t('say.custode.funeral.say'), t('say.custode.funeral.text'));
-        // prova (bench): la lapide non c'è ancora, il posto è delimitato; compare quando il becchino ha scavato
-        const dug = uiTrial();
-        if (dug) this.world.setHidden(grave.id, true);
+        // la lapide non c'è ancora, il posto è delimitato: compare quando il becchino ha scavato
+        this.world.setHidden(grave.id, true);
         this.actors.startFuneral(center, { x: gate[0], y: gate[1] }, () => {
           this.custodeSays(t('say.custode.buried.say'), result.message, result);
           this.showRewards(center.clone().setY(1.5), result);
           this.ui.refreshHud();
           void this.offerReminders(grave.name);
-        }, dug ? () => {
+        }, () => {
           this.world.setHidden(grave.id, false);
           this.effects.cloudPuff(center.clone().setY(this.world.heightAt(center.x, center.z)), DUST, DUST_GLOW);
-        } : undefined);
+        });
         this.ui.refreshPlacementBar();
       } catch (e) {
         toast(e instanceof Error ? e.message : t('game.burial.failed'));

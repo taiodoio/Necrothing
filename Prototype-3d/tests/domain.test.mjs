@@ -341,6 +341,36 @@ test('Albero dei ricordi: si sblocca a 20 tombe, accoglie una tomba (libera lo s
   assert.equal(none, 0);
 });
 
+test('riesumazione: tomba e ricordo dell’albero spariscono col loro registro, le sepolture contano ancora', () => {
+  const s = createNewGame(NOW, 42);
+  s.player.wisps = 1000;
+  s.player.xp = 99999;
+  R.buy(s, 'memory_tree', 1, NOW);
+  const at = spot(s, [5, 5]);
+  R.placeFromInventory(s, 'memory_tree', at.x, at.y, 0, NOW);
+  const [a, b] = s.graves;
+  R.entrustGrave(s, b.id, NOW);
+  const total = R.graveTotal(s);
+  const xp = s.player.xp, wisps = s.player.wisps;
+  // la tomba: via dal cimitero e dai ricordi, il posto torna libero
+  const res = R.exhumeGrave(s, a.id);
+  assert.match(res.message, new RegExp(a.name));
+  assert.ok(!s.graves.some((x) => x.id === a.id));
+  assert.ok(!s.memories.some((m) => m.graveId === a.id));
+  assert.ok(canPlaceAt(a.x, a.y, [2, 2], buildOccupancy(s), areaForLevel(s.world.expansionLevel)), 'il posto è di nuovo libero');
+  // il ricordo affidato: via dall'albero e dal registro
+  const res2 = R.exhumeMemory(s, b.id);
+  assert.match(res2.message, new RegExp(b.name));
+  assert.equal(s.entrusted.length, 0);
+  assert.ok(!s.memories.some((m) => m.graveId === b.id));
+  assert.throws(() => R.exhumeMemory(s, b.id));
+  // niente ricompense tolte né date; le sepolture fatte restano per gli sblocchi
+  assert.equal(s.player.xp, xp);
+  assert.equal(s.player.wisps, wisps);
+  assert.equal(s.player.counters.exhumed, 2);
+  assert.equal(R.graveTotal(s), total);
+});
+
 test('salvataggio vecchio senza ricordi affidati: lista vuota', async () => {
   const { normalizeSave } = await import('../src/game/state.ts');
   const s = createNewGame(NOW, 42);

@@ -48,3 +48,11 @@ export function setUiPlay(v: boolean) {
 let preview = false;
 export const uiPreview = () => preview;
 export function setUiPreview(v: boolean) { preview = v; }
+
+/**
+ * Prove da approvare, accese solo nel bench: «Riesuma» nel dettaglio della
+ * tomba e del ricordo, col becchino che arriva con la carriola e scava.
+ */
+let trial = false;
+export const uiTrial = () => trial;
+export function setUiTrial(v: boolean) { trial = v; }

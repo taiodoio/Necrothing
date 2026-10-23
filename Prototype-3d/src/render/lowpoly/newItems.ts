@@ -809,21 +809,27 @@ export function sunSlabLP(): LPModel {
 
 // ── Extra ───────────────────────────────────────────────────────────────
 
-/** Carriola del becchino: cassone di legno con la ruota, pala e terra. */
-export function wheelbarrowLP(): LPModel {
-  const lp = new LP('new:barrow');
+/** Carriola del becchino: cassone di legno con la ruota e la pala; piena, un mucchio di terra. */
+export function wheelbarrowLP(full = true, withShovel = true): LPModel {
+  const lp = new LP(`new:barrow:${full ? 'full' : 'empty'}:${withShovel ? 'shovel' : ''}`);
   lp.push([0, 0.18, 0]);
   const tray = new THREE.Shape(); tray.moveTo(-0.25, 0); tray.lineTo(0.25, 0); tray.lineTo(0.32, 0.22); tray.lineTo(-0.32, 0.22); tray.closePath();
   lp.push([0, 0, -0.05], Math.PI / 2).extrude(tray, 0.5, LPC.wood, { vary: 0.1 }).pop();
-  lp.box(0, 0.2, -0.05, 0.56, 0.06, 0.42, LPC.soil, { jitter: 0.02 });
+  if (full) {
+    lp.box(0, 0.2, -0.05, 0.56, 0.06, 0.42, LPC.soil, { jitter: 0.02 });
+    lp.blob(0, 0.26, -0.05, 0.26, 0.13, 0.2, LPC.soil, { jitter: 0.03 });
+    lp.blob(0.12, 0.33, 0.02, 0.07, 0.05, 0.06, LPC.stoneDark, { jitter: 0.02 }); // un pezzo di lapide
+  } else lp.box(0, 0.03, -0.05, 0.48, 0.02, 0.36, LPC.woodDark, { jitter: 0 }); // il fondo del cassone
   lp.pop();
   lp.push([0, 0.12, 0.38], 0, 0, Math.PI / 2).cyl(0, -0.03, 0, 0.12, 0.12, 0.06, 10, '#2a2420', { jitter: 0 }).pop();
   for (const s of [-1, 1]) {
     tube(lp, [s * 0.15, 0.18, 0.3], [s * 0.2, 0.3, -0.7], 0.018, LPC.woodDark);
     tube(lp, [s * 0.15, 0.18, -0.25], [s * 0.15, 0, -0.3], 0.018, LPC.woodDark);
   }
-  tube(lp, [0.05, 0.3, 0.2], [0.18, 0.75, -0.25], 0.015, LPC.wood);
-  lp.box(0.05, 0.25, 0.25, 0.12, 0.02, 0.16, LPC.ironLight, { jitter: 0 });
+  if (withShovel) {
+    tube(lp, [0.05, 0.3, 0.2], [0.18, 0.75, -0.25], 0.015, LPC.wood);
+    lp.box(0.05, 0.25, 0.25, 0.12, 0.02, 0.16, LPC.ironLight, { jitter: 0 });
+  }
   return lp.build();
 }
 

@@ -382,3 +382,7 @@ button.slot:active, .icon-btn:active, .ctx-actions button:active, .big-btn:activ
 /* lista dei ricordi dell'albero: righe toccabili come gli achievement */
 .memory-row { width: 100%; text-align: left; color: inherit; cursor: pointer; font: inherit; }
 .memory-row .ico { filter: none; }
+
+/* Azione terziaria: solo testo e icona, niente pulsante (es. «Riesuma» in fondo al dettaglio). */
+.link-btn { display: flex; align-items: center; justify-content: center; gap: 6px; width: auto; margin: 0 auto; padding: 8px 14px; background: none; border: 0; box-shadow: none; font: inherit; font-weight: 700; font-size: 14px; color: var(--danger, #c4513f); cursor: pointer; }
+.link-btn:active { opacity: 0.6; }

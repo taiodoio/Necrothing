@@ -19,7 +19,7 @@ import { shopHeader } from './shopHeader.ts';
 import { houseBoughtView, houseShopDetail, houseShopGrid } from './house.ts';
 import { graveThumb, placeableThumb } from './thumbs.ts';
 import { ACH_ICONS, icon } from './icons.ts';
-import { uiNext, uiPlay, uiPreview } from '../app/uiNext.ts';
+import { uiNext, uiPlay, uiPreview, uiTrial } from '../app/uiNext.ts';
 import { remindersAvailable } from '../app/reminders.ts';
 import { currentLang, LANGS, setLang, t, tList } from '../i18n/index.ts';
 
@@ -461,7 +461,8 @@ export function openDetail(ui: UI, id: string) {
       h('div', { class: 'row' },
         h('button', { class: 'big-btn ghost', onclick: async () => openPostcard(await postcardData(g, photoUrl, ui, g.seed % 4)) }, t('detail.grave.postcard')),
         R.memoryTree(s) ? h('button', { class: 'big-btn ghost', onclick: () => ui.openEntrust(id) }, t('detail.grave.entrust')) : null),
-      h('button', { class: 'big-btn', onclick: () => { closeDrawer(true); game.performEntityAction(id, main.act); } }, icon(main.ic, 22), main.label)) });
+      h('button', { class: 'big-btn', onclick: () => { closeDrawer(true); game.performEntityAction(id, main.act); } }, icon(main.ic, 22), main.label),
+      uiTrial() ? exhumeButton(ui, id, g.name, 'grave') : null) });
     return;
   }
   const p = s.placeables.find((x) => x.id === id);
@@ -483,6 +484,19 @@ export function openDetail(ui: UI, id: string) {
   }
   // il nome c'è già sotto l'immagine: niente titolo in testa
   openDrawer('', body);
+}
+
+/**
+ * «Riesuma» (nel dettaglio della tomba e del ricordo): chiede conferma, poi
+ * arriva il becchino con la carriola. Azione terziaria: solo testo e icona, in rosso e in fondo.
+ */
+export function exhumeButton(ui: UI, id: string, name: string, kind: 'grave' | 'memory'): HTMLElement {
+  return h('button', { class: 'link-btn', onclick: async () => {
+    const ok = await confirmDialog({ title: t('exhume.confirm.title', { name }), message: t(kind === 'grave' ? 'exhume.confirm.grave' : 'exhume.confirm.memory'), ok: t('exhume.confirm.ok'), danger: true });
+    if (!ok) return;
+    closeDrawer(true);
+    ui.game.exhume(id);
+  } }, icon('shovel', 18), t('detail.exhume'));
 }
 
 // ── Profilo & achievement ──────────────────────────────────────────────

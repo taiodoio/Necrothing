@@ -45,7 +45,9 @@ export default {
   'rules.repair.nothing': 'Non c’è nulla da riparare.',
   'rules.repair.noFunds': 'Servono {amount} fuochi fatui per riparare.',
   'rules.repair.graveDone': 'Tomba riparata: torna come nuova.',
-  'rules.exhume.done': 'Tomba rimossa. Il ricordo resta a te.',
+  // dopo la riesumazione (anche «Esuma» in Modifica): la tomba sparisce col suo registro
+  'rules.exhume.done': '{name} è stato riesumato: il posto è di nuovo libero.',
+  'rules.exhume.memoryDone': '{name} non riposa più tra le radici dell’Albero dei ricordi.',
 
   // ── Regole: becchino, prete, albero dei ricordi ──
   'rules.priest.blessRound': 'Il prete benedice il cimitero: più fuochi fatui fino a domani.',

@@ -16,6 +16,7 @@ import { $, closeDrawer, drawerOpen, h, toast } from './dom.ts';
 import { hydrateIcons, icon, iconUrl, installFrames } from './icons.ts';
 import { uiNext, uiPlay, uiPreview } from '../app/uiNext.ts';
 import { custodePortrait } from './lookThumbs.ts';
+import { shortWisps } from './numbers.ts';
 import * as S from './screens.ts';
 import * as H from './house.ts';
 import * as T from './memoryTree.ts';
@@ -39,8 +40,12 @@ export class UI {
     this.game = game;
     installFrames();
     if (uiNext()) {
-      // i fuochi fatui nel riquadro del Custode, sotto la barra del rango (col numero intero)
-      $('.chip-body').append($('.wisp-count'));
+      // riquadro del Custode compatto: sotto il nome, barra del rango e fuochi fatui sulla stessa riga;
+      // il rango è il numerino sull'angolo del ritratto (il nome del rango è nel profilo)
+      const row = h('div', { class: 'xp-row' });
+      $('.chip-body .xp-bar').before(row);
+      row.append($('.chip-body .xp-bar'), $('.wisp-count'));
+      $('#player-chip').append(h('span', { class: 'rank-badge', id: 'hud-rank-badge', 'aria-hidden': 'true' }));
       // le Impostazioni sono l'ultima voce del menù (niente più ingranaggio in alto)
       $('#settings-btn').remove();
       $('#slots').append(h('button', { class: 'slot', 'data-act': 'settings' }, h('i', { 'data-icon': 'gear' }), h('small', {}, 'Impostazioni')));
@@ -85,6 +90,7 @@ export class UI {
     const next = nextRank(p.xp);
     $('#hud-name').textContent = p.name;
     $('#hud-rank').textContent = `Rango ${rank.level} · ${rank.name}${next ? '' : ' ★'}`;
+    document.getElementById('hud-rank-badge')?.replaceChildren(String(rank.level));
     ($('#hud-xp') as HTMLElement).style.width = `${Math.round(rankProgress(p.xp) * 100)}%`;
     // interfaccia nuova: nel riquadro il ritratto vero del Custode (col suo aspetto)
     if (uiNext()) {
@@ -92,8 +98,9 @@ export class UI {
       const box = $('.chip-avatar');
       if (url && box.dataset.src !== url) { box.dataset.src = url; box.replaceChildren(h('img', { src: url, alt: '' })); }
     }
-    // interfaccia nuova: la targhetta ha spazio, il numero intero coi punti delle migliaia
-    $('#hud-wisps').textContent = uiNext() ? p.wisps.toLocaleString('it-IT') : String(p.wisps);
+    // interfaccia nuova: il numero intero coi punti delle migliaia, abbreviato solo da 100.000 (125k, 1,2 mln)
+    $('#hud-wisps').textContent = uiNext() ? shortWisps(p.wisps) : String(p.wisps);
+    if (uiNext()) $('.wisp-count').setAttribute('aria-label', `${p.wisps.toLocaleString('it-IT')} fuochi fatui`);
     this.refreshClock();
   }
 
@@ -113,9 +120,12 @@ export class UI {
     const key = `${phase}|${w}|${window.innerWidth < 420}`;
     if (el.dataset.key === key) return;
     el.dataset.key = key;
-    // interfaccia nuova: il riquadro è alto come quello del Custode, fase e meteo su due righe
+    // interfaccia nuova: sotto l'ora un'icona sola per fase e meteo (la luna con le stelle, il sole nella nebbia…)
     if (uiNext()) {
-      el.replaceChildren(h('span', {}, icon(PHASE_ICONS[phase], 14), DAY_PHASE_LABELS[phase]), h('span', {}, WEATHER_ICONS[w] ? icon(WEATHER_ICONS[w], 14) : null, WEATHER_LABELS[w]));
+      const label = `${DAY_PHASE_LABELS[phase]} · ${WEATHER_LABELS[w]}`;
+      el.replaceChildren(icon(`sky-${phase}-${w}`, 24));
+      el.setAttribute('aria-label', label);
+      el.title = label;
       return;
     }
     el.replaceChildren(icon(WEATHER_ICONS[w] || PHASE_ICONS[phase], 14), window.innerWidth < 420 ? WEATHER_LABELS[w] : `${DAY_PHASE_LABELS[phase]} · ${WEATHER_LABELS[w]}`);

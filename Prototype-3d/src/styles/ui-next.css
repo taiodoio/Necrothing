@@ -8,7 +8,7 @@
   --r: 16px; /* l'arrotondamento di tutto: pannelli, pulsanti, schede */
   --r-s: 12px; /* elementi piccoli dentro un pannello (miniature, schede, campi) */
   --hud: 60px; /* l'altezza di tutto ciò che sta sopra la scena: riquadri e pulsanti */
-  --hud-top: 84px; /* i riquadri in alto: Custode (coi fuochi fatui) e ora/meteo */
+  --hud-top: 64px; /* i riquadri in alto: Custode (coi fuochi fatui) e ora/meteo */
   --panel: #3a4150;
   --panel-2: #454d5e;
   --input: #2f3542;
@@ -84,23 +84,28 @@
 
 /* ── HUD ──────────────────────────────────────────────────────────── */
 .ui-next .hud-top { align-items: stretch; }
-/* il riquadro del Custode: nome, rango, barra e, sotto, i fuochi fatui; ora e meteo alti uguali */
-.ui-next .player-chip { padding: 6px 16px 6px 6px; height: var(--hud-top); min-height: 0; max-width: calc(100vw - 150px - var(--safe-l) - var(--safe-r)); gap: 10px; }
-.ui-next .chip-avatar { flex: none; width: 60px; height: 100%; border-radius: var(--r-s); background: var(--thumb); box-shadow: none; overflow: hidden; }
+/* riquadro del Custode compatto (64 px): nome; sotto, barra del rango e fuochi fatui; il rango sul ritratto.
+   Il riquadro prende tutto lo spazio libero; se manca, cede prima la barra, poi il nome (coi puntini), mai il saldo */
+.ui-next .player-chip { position: relative; flex: 1 1 auto; padding: 6px 16px 6px 6px; height: var(--hud-top); min-height: 0; max-width: none; gap: 10px; }
+.ui-next .chip-avatar { flex: none; width: 52px; height: 100%; border-radius: var(--r-s); background: var(--thumb); box-shadow: none; overflow: hidden; }
 .ui-next .chip-avatar img { width: 100%; height: 100%; object-fit: cover; display: block; }
-.ui-next .chip-body strong { font-size: 20px; line-height: 1; }
-.ui-next .chip-body small { display: block; font-size: 12px; max-width: none; } /* c'è posto anche sui telefoni stretti */
-.ui-next .xp-bar { height: 7px; border: 0; border-radius: 4px; background: var(--track); box-shadow: none; overflow: hidden; }
+.ui-next .chip-body { overflow: hidden; min-width: 0; gap: 6px; }
+.ui-next .chip-body strong { font-size: 19px; line-height: 1; }
+.ui-next #hud-rank { display: none; }
+.ui-next .xp-row { display: flex; align-items: center; gap: 10px; min-width: 0; }
+.ui-next .xp-bar { flex: 1 1 auto; min-width: 28px; height: 7px; border: 0; border-radius: 4px; background: var(--track); box-shadow: none; overflow: hidden; }
 .ui-next .xp-bar i { background: var(--primary); border-radius: 4px; transition: width 0.4s ease; }
-.ui-next .chip-body { overflow: hidden; min-width: 96px; gap: 3px; }
-.ui-next .chip-body .wisp-count { justify-self: start; height: auto; margin: 2px 0 0; padding: 0; border: 0; background: none !important; box-shadow: none;
-  color: var(--spectral); font-weight: 800; font-size: 17px; line-height: 1; gap: 5px; font-variant-numeric: tabular-nums; white-space: nowrap; text-shadow: none; }
+.ui-next .chip-body .wisp-count { flex: none; height: auto; margin: 0; padding: 0; border: 0; background: none !important; box-shadow: none;
+  color: var(--spectral); font-weight: 800; font-size: 16px; line-height: 1; gap: 5px; font-variant-numeric: tabular-nums; white-space: nowrap; text-shadow: none; }
 .ui-next .wisp-icon { --s: 18px; filter: none; animation: none; }
+.ui-next .rank-badge { position: absolute; z-index: 1; left: 44px; bottom: 2px; min-width: 20px; height: 20px; padding: 0 5px; border-radius: 10px;
+  background: var(--primary); color: #2a1d10; font: 800 12px/20px var(--pixel); text-align: center; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.4); pointer-events: none; }
+/* ora e cielo: l'ora grande come il saldo, sotto un'icona sola per fase e meteo; riquadro quadrato come i pulsanti */
 .ui-next .hud-right { align-items: stretch; }
-.ui-next .clock-block { height: var(--hud-top); min-height: 0; padding: 6px 14px; gap: 3px; align-content: center; }
-.ui-next .clock-block strong { font: 800 24px/1 var(--pixel); letter-spacing: 0; }
-.ui-next .clock-block small { display: grid; justify-items: end; gap: 2px; max-width: none; font-size: 12px; }
-.ui-next .clock-block small span { display: flex; align-items: center; gap: 4px; }
+.ui-next .clock-block { height: var(--hud-top); min-width: var(--hud-top); min-height: 0; padding: 6px 10px; gap: 4px; align-content: center; justify-items: center; }
+.ui-next .clock-block strong { font: 800 16px/1 var(--pixel); letter-spacing: 0; }
+.ui-next .clock-block small { display: grid; place-items: center; max-width: none; }
+.ui-next .clock-block small .pxi { --s: 24px; }
 .ui-next .icon-btn { width: var(--hud); height: var(--hud); }
 .ui-next .icon-btn.small { width: 44px; height: 44px; border-radius: var(--r-s); background: var(--panel-2); box-shadow: none; }
 /* quello che compare in alto al centro sta sotto l'HUD */

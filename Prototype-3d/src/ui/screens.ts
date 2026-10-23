@@ -14,9 +14,9 @@ import * as R from '../game/rules.ts';
 import { createNewGame, type FpsSetting, type SaveData, type ThemeSetting, type TimeOverride } from '../game/state.ts';
 import { computePrestige, detectDistricts, DISTRICT_LABELS, expansionStatus } from '../game/world.ts';
 import { newId } from '../game/rng.ts';
-import { $, closeDrawer, confirmDialog, fmtDate, h, openDrawer, setDrawerBody, setDrawerFooter, setDrawerHero, toast } from './dom.ts';
+import { $, closeDrawer, confirmDialog, fmtDate, h, type Modal, openDrawer, openModal, setDrawerBody, setDrawerExtra, setDrawerFooter, setDrawerHero, toast, wispPill } from './dom.ts';
 import { shopHeader } from './shopHeader.ts';
-import { houseBoughtFooter, houseShopDetail, houseShopGrid } from './house.ts';
+import { houseBoughtView, houseShopDetail, houseShopGrid } from './house.ts';
 import { graveThumb, placeableThumb } from './thumbs.ts';
 import { ACH_ICONS, icon } from './icons.ts';
 import { uiNext, uiPlay, uiPreview } from '../app/uiNext.ts';
@@ -240,60 +240,84 @@ export function openShop(ui: UI, cat: PlaceableCategory | 'house' = 'light', sel
   const game = ui.game;
   const s = game.state;
   const now = game.now();
+  const next = uiNext();
   let qty = 1;
+  // interfaccia nuova: l'oggetto scelto si guarda e si compra in un modale al centro
+  let modal: Modal | null = null;
+  const show = (node: Node) => {
+    if (!next) { setDrawerFooter(node); return; }
+    if (modal) modal.set(node);
+    else modal = openModal(node, { label: 'Acquisto', onClose: () => { modal = null; selected = null; render(); } });
+  };
+  const close = () => { if (modal) modal.close(); else { selected = null; render(); } };
   const render = () => {
+    drawShop();
+    if (!selected) { setDrawerFooter(null); return; }
+    show(cat === 'house' ? houseDetail(selected) : detail(selected));
+  };
+  /** Le schede e le carte (e il saldo in testata). */
+  const drawShop = () => {
     const tabs = h('div', { class: 'tabs' }, ...CATEGORY_ORDER.map((c) => h('button', { class: `tab ${c === cat ? 'active' : ''}`, onclick: () => { cat = c; selected = null; render(); } }, tabIcon(c), PLACEABLE_CATEGORY_LABELS[c])),
       // tetti e aggiunte della Casa del Custode
       uiPreview() ? h('button', { class: `tab ${cat === 'house' ? 'active' : ''}`, onclick: () => { cat = 'house'; selected = null; render(); } }, uiPlay() ? icon('house', 20) : null, 'Casa') : null);
-    if (cat === 'house') { renderHouse(tabs); return; }
-    const items = CATALOG_LIST.filter((d) => d.category === cat && !d.permanent);
-    const grid = h('div', { class: 'grid' }, ...items.map((d) => {
-      const av = R.shopAvailability(s, d.id, now);
-      if (uiNext()) {
-        // interfaccia nuova: bloccati col lucchetto sopra (e il perché sotto), non comprabili spenti, i tuoi con la spunta
-        const locked = av === 'rank' || av === 'season' || av === 'feat' || av === 'graves';
-        const owned = av === 'owned';
+    if (next) setDrawerExtra(wispPill(s.player.wisps));
+    const pick = (id: string) => { selected = id; qty = 1; render(); };
+    if (cat === 'house') {
+      setDrawerBody(h('div', {}, h('p', { class: 'muted' }, `${next ? '' : `Hai ${s.player.wisps.toLocaleString('it-IT')} fuochi fatui. `}Tetti e aggiunte compaiono subito sulla casa; dalla casa li togli e li rimetti quando vuoi.`), tabs,
+        houseShopGrid(s, selected, pick)));
+    } else {
+      const items = CATALOG_LIST.filter((d) => d.category === cat && !d.permanent);
+      const grid = h('div', { class: 'grid' }, ...items.map((d) => {
+        const av = R.shopAvailability(s, d.id, now);
+        if (next) {
+          // interfaccia nuova: bloccati col lucchetto sopra (e il perché sotto), non comprabili spenti, i tuoi con la spunta
+          const locked = av === 'rank' || av === 'season' || av === 'feat' || av === 'graves';
+          const owned = av === 'owned';
+          return h('button', {
+            class: `card ${selected === d.id ? 'selected' : ''} ${locked ? 'locked' : ''} ${av === 'funds' ? 'dim' : ''} ${owned ? 'owned' : ''}`,
+            onclick: () => pick(d.id),
+          },
+          h('span', { class: 'thumb' }, h('img', { src: placeableThumb(d.id, s.settings.style), alt: '' }),
+            locked ? h('span', { class: 'lock-over' }, icon('lock', 30)) : null,
+            owned ? h('span', { class: 'owned-tick' }, icon('check', 15)) : null),
+          h('b', {}, d.label),
+          // in prova: sotto la carta bloccata (o troppo cara) c'è proprio cosa serve
+          uiPreview() && !owned && av !== 'ok' ? needChip(unlockNeeds(s, d, now)[0] ?? { icon: 'lock', short: lockText(s, d, av), long: '' })
+            : locked ? h('span', { class: 'lock-why' }, av === 'rank' ? `Rango ${d.minRank}` : lockText(s, d, av))
+              : owned ? h('span', { class: 'price owned' }, 'Tuo')
+                : h('span', { class: 'price' }, String(d.cost), icon('wisp', 12)),
+          (s.inventory[d.id] ?? 0) > 0 ? h('span', { class: 'badge' }, String(s.inventory[d.id])) : null);
+        }
         return h('button', {
-          class: `card ${selected === d.id ? 'selected' : ''} ${locked ? 'locked' : ''} ${av === 'funds' ? 'dim' : ''} ${owned ? 'owned' : ''}`,
-          onclick: () => { selected = d.id; qty = 1; render(); },
+          class: `card ${selected === d.id ? 'selected' : ''} ${av !== 'ok' ? 'dim' : ''}`,
+          onclick: () => pick(d.id),
         },
-        h('span', { class: 'thumb' }, h('img', { src: placeableThumb(d.id, s.settings.style), alt: '' }),
-          locked ? h('span', { class: 'lock-over' }, icon('lock', 30)) : null,
-          owned ? h('span', { class: 'owned-tick' }, icon('check', 15)) : null),
+        h('img', { src: placeableThumb(d.id, s.settings.style), alt: '' }),
         h('b', {}, d.label),
-        // in prova: sotto la carta bloccata (o troppo cara) c'è proprio cosa serve
-        uiPreview() && !owned && av !== 'ok' ? needChip(unlockNeeds(s, d, now)[0] ?? { icon: 'lock', short: lockText(s, d, av), long: '' })
-          : locked ? h('span', { class: 'lock-why' }, av === 'rank' ? `Rango ${d.minRank}` : lockText(s, d, av))
-            : owned ? h('span', { class: 'price owned' }, 'Tuo')
-              : h('span', { class: 'price' }, String(d.cost), icon('wisp', 12)),
+        h('span', { class: 'price' }, String(d.cost), icon('wisp', 12)),
+        LOCK_LABEL[av] ? h('span', { class: 'lock' }, av === 'rank' || av === 'graves' || av === 'feat' ? icon('lock', 12) : null, lockText(s, d, av)) : null,
         (s.inventory[d.id] ?? 0) > 0 ? h('span', { class: 'badge' }, String(s.inventory[d.id])) : null);
-      }
-      return h('button', {
-        class: `card ${selected === d.id ? 'selected' : ''} ${av !== 'ok' ? 'dim' : ''}`,
-        onclick: () => { selected = d.id; qty = 1; render(); },
-      },
-      h('img', { src: placeableThumb(d.id, s.settings.style), alt: '' }),
-      h('b', {}, d.label),
-      h('span', { class: 'price' }, String(d.cost), icon('wisp', 12)),
-      LOCK_LABEL[av] ? h('span', { class: 'lock' }, av === 'rank' || av === 'graves' || av === 'feat' ? icon('lock', 12) : null, lockText(s, d, av)) : null,
-      (s.inventory[d.id] ?? 0) > 0 ? h('span', { class: 'badge' }, String(s.inventory[d.id])) : null);
-    }));
-    setDrawerBody(h('div', {}, h('p', { class: 'muted' }, uiPreview() ? `Hai ${s.player.wisps.toLocaleString('it-IT')} fuochi fatui. Sotto ogni oggetto bloccato c’è cosa serve per averlo.` : `Hai ${s.player.wisps.toLocaleString('it-IT')} fuochi fatui. Gli oggetti grigi richiedono rango, stagione o più fuochi fatui.`), tabs, grid));
+      }));
+      setDrawerBody(h('div', {}, h('p', { class: 'muted' }, uiPreview()
+        ? `${next ? '' : `Hai ${s.player.wisps.toLocaleString('it-IT')} fuochi fatui. `}Sotto ogni oggetto bloccato c’è cosa serve per averlo.`
+        : `Hai ${s.player.wisps.toLocaleString('it-IT')} fuochi fatui. Gli oggetti grigi richiedono rango, stagione o più fuochi fatui.`), tabs, grid));
+    }
     // la scheda scelta resta in vista (al centro, se si può), anche dopo aver toccato un oggetto
     const active = tabs.querySelector<HTMLElement>('.tab.active');
     if (active) tabs.scrollLeft = active.offsetLeft - (tabs.clientWidth - active.offsetWidth) / 2;
-    if (!selected) { setDrawerFooter(null); return; }
-    const d = CATALOG[selected];
+  };
+  /** La scheda dell'oggetto scelto, da cui si compra. */
+  const detail = (id: string): HTMLElement => {
+    const d = CATALOG[id];
     const av = R.shopAvailability(s, d.id, now);
     const max = Math.max(1, R.maxBuyable(s, d.id));
     qty = Math.min(qty, max);
-    // interfaccia nuova: il dettaglio sale dal basso con l'immagine grande, e si compra da lì
-    const next = uiNext();
-    const close = () => { selected = null; render(); };
-    setDrawerFooter(h('div', { class: next ? 'shop-detail' : '', style: next ? '' : 'display:grid;gap:8px' },
+    const again = () => show(detail(id));
+    return h('div', { class: next ? 'shop-detail' : '', style: next ? '' : 'display:grid;gap:8px' },
+      next ? wispPill(s.player.wisps) : null,
       next
         ? h('div', { class: 'shop-detail-top' }, h('img', { src: placeableThumb(d.id, s.settings.style), alt: '' }),
-          h('div', {}, h('h3', {}, d.label), h('p', { class: 'muted' }, `${PLACEABLE_CATEGORY_LABELS[d.category]} · ${d.unique ? 'pezzo unico' : `ne puoi comprare ${R.maxBuyable(s, d.id)}`}${(s.inventory[d.id] ?? 0) > 0 ? ` · ne hai ${s.inventory[d.id]}` : ''}`)))
+          h('h3', {}, d.label), h('p', { class: 'muted' }, `${PLACEABLE_CATEGORY_LABELS[d.category]} · ${d.unique ? 'pezzo unico' : `ne puoi comprare ${R.maxBuyable(s, d.id)}`}${(s.inventory[d.id] ?? 0) > 0 ? ` · ne hai ${s.inventory[d.id]}` : ''}`))
         : h('div', { class: 'row' }, h('b', {}, d.label), h('span', { class: 'muted', style: 'text-align:right' }, d.unique ? 'Pezzo unico' : `Max ${R.maxBuyable(s, d.id)}`)),
       h('p', { class: 'muted', style: 'margin:0' }, d.description),
       uiPreview() ? needRows(av === 'owned' ? [] : unlockNeeds(s, d, now)) : null,
@@ -301,50 +325,48 @@ export function openShop(ui: UI, cat: PlaceableCategory | 'house' = 'light', sel
       !uiPreview() && av === 'feat' ? h('div', { class: 'xp-bar', style: 'height:6px' }, h('i', { style: `width:${Math.round((R.featProgress(s, d.feat!)[0] / d.feat!.goal) * 100)}%` })) : null,
       (d.season || d.feat) && (!uiPreview() || av === 'ok' || av === 'owned') ? h('p', { class: 'muted', style: 'margin:0;font-size:12px' }, [d.season ? `Stagionale: si compra solo ${d.season.label}, poi resta tuo per sempre.` : '', d.feat ? `Traguardo: ${d.feat.label.toLowerCase()}.` : ''].filter(Boolean).join(' ')) : null,
       !d.unique && av === 'ok' ? h('div', { class: 'qty' },
-        h('button', { onclick: () => { qty = Math.max(1, qty - 1); render(); } }, '−'),
+        h('button', { onclick: () => { qty = Math.max(1, qty - 1); again(); } }, '−'),
         h('b', {}, String(qty)),
-        h('button', { onclick: () => { qty = Math.min(max, qty + 1); render(); } }, '+')) : null,
+        h('button', { onclick: () => { qty = Math.min(max, qty + 1); again(); } }, '+')) : null,
+      next && av === 'ok' && d.cost ? h('p', { class: 'muted after-buy' }, `Dopo l’acquisto te ne restano ${(s.player.wisps - d.cost * qty).toLocaleString('it-IT')}`) : null,
       (next ? (b: HTMLElement) => h('div', { class: 'row' }, h('button', { class: 'big-btn ghost', onclick: close }, 'Chiudi'), b) : (b: HTMLElement) => b)(h('button', {
         class: 'big-btn', disabled: av !== 'ok',
         onclick: () => {
-          if (game.act((st, n) => R.buy(st, d.id, qty, n))) {
-            // gli Extra non si posano: si usano (dalle icone accanto al mirino)
-            if (d.category === 'extra') {
-              game.refreshBike();
-              const how: Record<string, string> = {
-                bike: 'È tua! Per salire e scendere tocca l’icona della bici sulla mappa, sopra il mirino.',
-                broom: 'È tua! Per salire e scendere tocca l’icona della scopa sulla mappa, sopra la bici.',
-                mystic_staff: 'È tuo! Per impugnarlo o posarlo tocca l’icona del bastone sulla mappa, in cima alle altre.',
-              };
-              setDrawerFooter(h('div', { class: 'row' },
-                h('button', { class: 'big-btn ghost', onclick: () => render() }, 'Continua'),
-                h('button', { class: 'big-btn', onclick: () => { closeDrawer(); game.useExtra(d.id); } }, game.extraLabel(d.id))));
-              setDrawerBody(h('div', {}, h('div', { class: 'hero' }, h('img', { src: placeableThumb(d.id, s.settings.style), alt: '' }), h('h3', {}, d.label), h('p', { class: 'muted' }, how[d.id] ?? how.bike))));
-              return;
-            }
-            setDrawerFooter(h('div', { class: 'row' },
-              h('button', { class: 'big-btn ghost', onclick: () => render() }, 'Continua'),
-              h('button', { class: 'big-btn', onclick: () => { closeDrawer(); game.startItemPlacement(d.id); } }, 'Inserisci ora')));
-            setDrawerBody(h('div', {}, h('div', { class: 'hero' }, h('img', { src: placeableThumb(d.id, s.settings.style), alt: '' }), h('h3', {}, d.label), h('p', { class: 'muted' }, 'Acquistato: è nell’inventario.'))));
+          if (!game.act((st, n) => R.buy(st, d.id, qty, n))) return;
+          // gli Extra non si posano: si usano (dalle icone accanto al mirino)
+          const how: Record<string, string> = {
+            bike: 'È tua! Per salire e scendere tocca l’icona della bici sulla mappa, sopra il mirino.',
+            broom: 'È tua! Per salire e scendere tocca l’icona della scopa sulla mappa, sopra la bici.',
+            mystic_staff: 'È tuo! Per impugnarlo o posarlo tocca l’icona del bastone sulla mappa, in cima alle altre.',
+          };
+          const extra = d.category === 'extra';
+          if (extra) game.refreshBike();
+          const text = extra ? how[d.id] ?? how.bike : 'Acquistato: è nell’inventario.';
+          const go = extra
+            ? h('button', { class: 'big-btn', onclick: () => { modal?.close(true); closeDrawer(); game.useExtra(d.id); } }, game.extraLabel(d.id))
+            : h('button', { class: 'big-btn', onclick: () => { modal?.close(true); closeDrawer(); game.startItemPlacement(d.id); } }, 'Inserisci ora');
+          if (next) {
+            drawShop();
+            show(h('div', { class: 'shop-detail' }, wispPill(s.player.wisps),
+              h('div', { class: 'shop-detail-top' }, h('img', { src: placeableThumb(d.id, s.settings.style), alt: '' }), h('h3', {}, d.label), h('p', { class: 'muted' }, text)),
+              h('div', { class: 'row' }, h('button', { class: 'big-btn ghost', onclick: close }, 'Continua'), go)));
+            return;
           }
+          setDrawerFooter(h('div', { class: 'row' }, h('button', { class: 'big-btn ghost', onclick: () => render() }, 'Continua'), go));
+          setDrawerBody(h('div', {}, h('div', { class: 'hero' }, h('img', { src: placeableThumb(d.id, s.settings.style), alt: '' }), h('h3', {}, d.label), h('p', { class: 'muted' }, text))));
         },
       }, next && av === 'ok' && d.cost ? h('span', { style: 'display:inline-flex;align-items:center;gap:6px' }, `Compra · ${d.cost * qty}`, icon('wisp', 18)) : buyText(s, d, av, qty))),
       next ? null : h('button', { class: 'big-btn ghost', onclick: close }, 'Annulla'),
-    ));
+    );
   };
-  // la scheda «Casa»: le carte dei tetti e delle aggiunte, il dettaglio sotto
-  const renderHouse = (tabs: HTMLElement) => {
-    setDrawerBody(h('div', {}, h('p', { class: 'muted' }, `Hai ${s.player.wisps.toLocaleString('it-IT')} fuochi fatui. Tetti e aggiunte compaiono subito sulla casa; dalla casa li togli e li rimetti quando vuoi.`), tabs,
-      houseShopGrid(s, selected, (id) => { selected = id; render(); })));
-    const active = tabs.querySelector<HTMLElement>('.tab.active');
-    if (active) tabs.scrollLeft = active.offsetLeft - (tabs.clientWidth - active.offsetWidth) / 2;
-    if (!selected) { setDrawerFooter(null); return; }
-    const close = () => { selected = null; render(); };
-    setDrawerFooter(houseShopDetail(ui, selected, close, () => { render(); setDrawerFooter(houseBoughtFooter(ui, close)); }));
-  };
-  openDrawer('Bottega', h('div'));
+  // la scheda «Casa»: tetti e aggiunte, comprati dallo stesso modale
+  const houseDetail = (id: string) => houseShopDetail(ui, id, close, () => {
+    drawShop();
+    show(houseBoughtView(ui, id, close, () => modal?.close(true)));
+  });
+  openDrawer('Bottega', h('div'), { onClose: () => modal?.close(true) });
   // interfaccia nuova: in testa l'interno della bottega, con lo zombie al lavoro
-  if (uiNext()) setDrawerHero(shopHeader().el);
+  if (next) setDrawerHero(shopHeader().el);
   render();
 }
 
@@ -451,7 +473,8 @@ export function openDetail(ui: UI, id: string) {
     body.append(h('div', { class: 'field' }, h('label', {}, 'Scritta del cartello'), input),
       h('button', { class: 'big-btn', onclick: () => { game.act((st) => R.setText(st, id, input.value)); } }, 'Salva scritta'));
   }
-  openDrawer(d.label, body);
+  // il nome c'è già sotto l'immagine: niente titolo in testa
+  openDrawer('', body);
 }
 
 // ── Profilo & achievement ──────────────────────────────────────────────

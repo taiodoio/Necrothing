@@ -52,10 +52,13 @@ let onCloseCb: (() => void) | null = null;
 /** Se presente e restituisce (o promette) false, la chiusura (X, sfondo, Esc) viene annullata. */
 let beforeCloseCb: (() => boolean | Promise<boolean>) | null = null;
 
+/** Apre il drawer; con `title` vuoto la testata resta solo la X (quando il nome è già nel contenuto). */
 export function openDrawer(title: string, body: Node, opts: { footer?: Node; onClose?: () => void; beforeClose?: () => boolean | Promise<boolean> } = {}) {
   const drawer = $('#drawer');
   dropHero();
   $('#drawer-title').textContent = title;
+  drawer.classList.toggle('no-title', !title);
+  $('#drawer-extra').replaceChildren();
   const b = $('#drawer-body');
   b.replaceChildren(body);
   b.scrollTop = 0;
@@ -72,6 +75,16 @@ export function openDrawer(title: string, body: Node, opts: { footer?: Node; onC
 export function setDrawerFooter(node: Node | null) {
   const f = $('#drawer-foot');
   if (node) { f.hidden = false; f.replaceChildren(node); } else { f.hidden = true; f.replaceChildren(); }
+}
+
+/** Qualcosa accanto al titolo del drawer (il saldo in Bottega); null lo toglie. */
+export function setDrawerExtra(node: Node | null) {
+  $('#drawer-extra').replaceChildren(...(node ? [node] : []));
+}
+
+/** Il saldo dei fuochi fatui, come pastiglia. */
+export function wispPill(n: number): HTMLElement {
+  return h('span', { class: 'wisp-pill', 'aria-label': `${n} fuochi fatui` }, icon('wisp', 16), n.toLocaleString('it-IT'));
 }
 
 /** Immagine in testa al drawer (la Bottega animata): resta finché non si apre un altro pannello. */
@@ -117,7 +130,7 @@ export function closeDrawer(force = false) {
 
 // ── Dialogo di conferma ────────────────────────────────────────────────
 
-let dialogOpen = false;
+let dialogOpen = 0;
 
 /**
  * Conferma nello stile del gioco (al posto di `confirm()` del browser): cornice
@@ -126,9 +139,9 @@ let dialogOpen = false;
  */
 export function confirmDialog(opts: { title: string; message: string; ok?: string; cancel?: string; danger?: boolean }): Promise<boolean> {
   return new Promise((resolve) => {
-    dialogOpen = true;
+    dialogOpen++;
     const done = (yes: boolean) => {
-      dialogOpen = false;
+      dialogOpen--;
       document.removeEventListener('keydown', onKey, true);
       scrim.remove();
       resolve(yes);
@@ -143,6 +156,38 @@ export function confirmDialog(opts: { title: string; message: string; ok?: strin
     ($('#drawer').parentElement ?? document.body).append(scrim);
     document.addEventListener('keydown', onKey, true);
   });
+}
+
+// ── Modale ────────────────────────────────────────────────────────────
+
+export interface Modal {
+  /** Cambia il contenuto (es. dopo l'acquisto). */
+  set: (node: Node) => void;
+  /** Chiude; `quiet` salta onClose (quando si chiude anche il drawer). */
+  close: (quiet?: boolean) => void;
+}
+
+/**
+ * Finestra al centro dello schermo, sopra il drawer, con lo sfondo scurito:
+ * la usa la Bottega per l'acquisto. Sfondo ed Esc la chiudono.
+ */
+export function openModal(content: Node, opts: { onClose?: () => void; label?: string } = {}): Modal {
+  dialogOpen++;
+  let open = true;
+  const close = (quiet = false) => {
+    if (!open) return;
+    open = false;
+    dialogOpen--;
+    document.removeEventListener('keydown', onKey, true);
+    scrim.remove();
+    if (!quiet) opts.onClose?.();
+  };
+  const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') { e.stopPropagation(); e.preventDefault(); close(); } };
+  const box = h('div', { class: 'dialog modal', role: 'dialog', 'aria-modal': 'true', 'aria-label': opts.label, onclick: (e: Event) => e.stopPropagation() }, content);
+  const scrim = h('div', { class: 'dialog-scrim', onclick: () => close() }, box);
+  ($('#drawer').parentElement ?? document.body).append(scrim);
+  document.addEventListener('keydown', onKey, true);
+  return { set: (node) => box.replaceChildren(node), close };
 }
 
 export function fmtDate(iso: string | null): string {

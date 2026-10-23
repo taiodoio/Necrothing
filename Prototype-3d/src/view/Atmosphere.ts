@@ -285,8 +285,12 @@ export class Atmosphere {
 
   addAnchor(pos: THREE.Vector3, anchor: LightAnchor, on = true): AnchorHandle {
     const id = this.nextId++;
-    const mat = new THREE.SpriteMaterial({ map: getHaloTexture(), color: anchor.color, blending: THREE.AdditiveBlending, depthWrite: false, transparent: true, fog: false });
+    // l'alone nasce spento: lo accende update() alla luminosità giusta. Le sorgenti nate dopo
+    // l'aggiornamento del frame (fuochi fatui, personaggi con la lanterna) altrimenti venivano
+    // disegnate una volta a piena opacità: un lampo
+    const mat = new THREE.SpriteMaterial({ map: getHaloTexture(), color: anchor.color, blending: THREE.AdditiveBlending, depthWrite: false, transparent: true, fog: false, opacity: 0 });
     const sprite = new THREE.Sprite(mat);
+    sprite.visible = false;
     sprite.position.copy(pos);
     const s = 0.5 + anchor.halo * 1.6;
     sprite.scale.set(s, s, s);

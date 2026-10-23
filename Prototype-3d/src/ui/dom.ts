@@ -183,11 +183,14 @@ export function openModal(content: Node, opts: { onClose?: () => void; label?: s
     if (!quiet) opts.onClose?.();
   };
   const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') { e.stopPropagation(); e.preventDefault(); close(); } };
-  const box = h('div', { class: 'dialog modal', role: 'dialog', 'aria-modal': 'true', 'aria-label': opts.label, onclick: (e: Event) => e.stopPropagation() }, content);
-  const scrim = h('div', { class: 'dialog-scrim', onclick: () => close() }, box);
+  // la X in alto a sinistra, come nei pannelli; il contenuto si cambia senza toccarla
+  const body = h('div', { class: 'modal-body' }, content);
+  const x = h('button', { class: 'icon-btn small modal-close', 'aria-label': 'Chiudi', onclick: () => close() }, icon('close', 22));
+  const box = h('div', { class: 'dialog modal', role: 'dialog', 'aria-modal': 'true', 'aria-label': opts.label, onclick: (e: Event) => e.stopPropagation() }, x, body);
+  const scrim = h('div', { class: 'dialog-scrim modal-scrim', onclick: () => close() }, box);
   ($('#drawer').parentElement ?? document.body).append(scrim);
   document.addEventListener('keydown', onKey, true);
-  return { set: (node) => box.replaceChildren(node), close };
+  return { set: (node) => body.replaceChildren(node), close };
 }
 
 export function fmtDate(iso: string | null): string {

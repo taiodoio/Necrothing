@@ -86,16 +86,55 @@ function show(n: NpcNote) {
   const gain = (v: number, xp: boolean) => h('span', { class: `gain${xp ? ' xp' : ''}` }, xp ? null : icon('wisp', 12), `+${v}${xp ? ' XP' : ''}`);
   const say = h('b', { class: 'say' }, ...[...(n.say ?? verse(n.kind))].map((c, i) => h('span', { style: `animation-delay:${(i * 0.06).toFixed(2)}s` }, c === ' ' ? ' ' : c)));
   const url = n.img ?? npcPortrait(n.kind);
+  const img = url ? h('img', { alt: '' }) as HTMLImageElement : null;
+  if (img) void restingOnFloor(url).then((u) => { img.src = u; });
   const ms = n.action ? ACTION_MS : SHOW_MS;
   const el = h('div', { class: `npc-note${n.action ? ' with-action' : ''}`, role: 'status' },
-    url ? h('img', { src: url, alt: '' }) : null,
+    img,
     // il guadagno accanto al nome: la frase resta su una riga quando può
     h('div', { class: 'npc-note-head' }, say, h('small', {}, n.name), n.wisps ? gain(n.wisps, false) : null, n.xp ? gain(n.xp, true) : null),
     h('p', {}, n.text),
     n.action ? h('button', { class: 'npc-note-cta', onclick: () => { const a = n.action!; dismiss(); a.run(); } }, n.action.label, ' ›') : null,
-    h('button', { class: 'npc-note-x', 'aria-label': 'Chiudi', onclick: () => dismiss() }, icon('close', 14)),
-    h('i', { class: 'npc-note-time', style: `animation-duration:${ms}ms` }));
+    h('button', { class: 'npc-note-x', 'aria-label': 'Chiudi', onclick: () => dismiss() }, icon('close', 14)));
   $('#game').append(el);
   $('#game').classList.add('has-note'); // i toast scendono sotto la notifica
   current = { el, at: performance.now(), timer: window.setTimeout(() => dismiss(), ms) };
 }
+
+/**
+ * Il ritratto ritagliato in basso: ogni modello ha sotto i piedi (o sotto il
+ * busto) un margine trasparente diverso, e nella notifica sembrerebbe
+ * sospeso. Qui la figura tocca il bordo inferiore dell'immagine, centrata.
+ */
+const trimmed = new Map<string, Promise<string>>();
+function restingOnFloor(url: string): Promise<string> {
+  let p = trimmed.get(url);
+  if (p) return p;
+  p = new Promise<string>((resolve) => {
+    const im = new Image();
+    im.onload = () => {
+      try {
+        const w = im.naturalWidth, hh = im.naturalHeight;
+        const c = document.createElement('canvas'); c.width = w; c.height = hh;
+        const g = c.getContext('2d')!;
+        g.drawImage(im, 0, 0);
+        const d = g.getImageData(0, 0, w, hh).data;
+        let x0 = w, x1 = -1, y0 = hh, y1 = -1;
+        for (let y = 0; y < hh; y++) for (let x = 0; x < w; x++) {
+          if (d[(y * w + x) * 4 + 3] > 12) { if (x < x0) x0 = x; if (x > x1) x1 = x; if (y < y0) y0 = y; if (y > y1) y1 = y; }
+        }
+        if (x1 < 0) { resolve(url); return; }
+        // quadrato largo quanto la figura (o alto, se è più alta), figura in fondo e al centro
+        const bw = x1 - x0 + 1, bh = y1 - y0 + 1, side = Math.max(bw, bh);
+        const out = document.createElement('canvas'); out.width = side; out.height = side;
+        out.getContext('2d')!.drawImage(c, x0, y0, bw, bh, Math.round((side - bw) / 2), side - bh, bw, bh);
+        resolve(out.toDataURL('image/png'));
+      } catch { resolve(url); }
+    };
+    im.onerror = () => resolve(url);
+    im.src = url;
+  });
+  trimmed.set(url, p);
+  return p;
+}
+

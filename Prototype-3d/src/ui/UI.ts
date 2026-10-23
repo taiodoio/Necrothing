@@ -38,6 +38,15 @@ export class UI {
   constructor(game: Game) {
     this.game = game;
     installFrames();
+    if (uiNext()) {
+      // i fuochi fatui nel riquadro del Custode, sotto la barra del rango (col numero intero)
+      $('.chip-body').append($('.wisp-count'));
+      // le Impostazioni sono l'ultima voce del menù (niente più ingranaggio in alto)
+      $('#settings-btn').remove();
+      $('#slots').append(h('button', { class: 'slot', 'data-act': 'settings' }, h('i', { 'data-icon': 'gear' }), h('small', {}, 'Impostazioni')));
+      // Seppellisci a portata di dito, sopra il pulsante del menù (resta anche nel menù)
+      $('#fab').after(h('button', { class: 'fab bury-fab', id: 'bury-fab', 'aria-label': 'Seppellisci', onclick: () => { this.closeBubble(); this.bubbleAction('bury'); } }, h('i', { 'data-icon': 'bury' })));
+    }
     hydrateIcons();
     if (uiNext()) {
       $('#fab-icon').style.backgroundImage = iconUrl(fabIcon());
@@ -45,17 +54,13 @@ export class UI {
       // banner di Modifica: testo breve (intero anche sul telefono) e «Fine» come azione principale
       $('#edit-banner span').textContent = 'Tocca un elemento e trascinalo';
       $('#edit-done').classList.add('primary');
-      // i fuochi fatui escono dal riquadro del Custode: una targhetta loro, sotto, col numero intero
-      const chip = $('#player-chip'), left = h('div', { class: 'hud-left' });
-      chip.before(left);
-      left.append(chip, $('.wisp-count'));
     }
     $('#fab').addEventListener('click', () => this.toggleBubble());
     for (const b of document.querySelectorAll<HTMLButtonElement>('[data-act]')) {
       b.addEventListener('click', () => { this.closeBubble(); this.bubbleAction(b.dataset.act!); });
     }
     $('#player-chip').addEventListener('click', () => S.openPlayer(this));
-    $('#settings-btn').addEventListener('click', () => S.openSettings(this));
+    document.getElementById('settings-btn')?.addEventListener('click', () => S.openSettings(this));
     $('#drawer-close').addEventListener('click', () => closeDrawer());
     $('#scrim').addEventListener('click', () => closeDrawer());
     $('#edit-done').addEventListener('click', () => game.setEditMode(false));
@@ -108,6 +113,11 @@ export class UI {
     const key = `${phase}|${w}|${window.innerWidth < 420}`;
     if (el.dataset.key === key) return;
     el.dataset.key = key;
+    // interfaccia nuova: il riquadro è alto come quello del Custode, fase e meteo su due righe
+    if (uiNext()) {
+      el.replaceChildren(h('span', {}, icon(PHASE_ICONS[phase], 14), DAY_PHASE_LABELS[phase]), h('span', {}, WEATHER_ICONS[w] ? icon(WEATHER_ICONS[w], 14) : null, WEATHER_LABELS[w]));
+      return;
+    }
     el.replaceChildren(icon(WEATHER_ICONS[w] || PHASE_ICONS[phase], 14), window.innerWidth < 420 ? WEATHER_LABELS[w] : `${DAY_PHASE_LABELS[phase]} · ${WEATHER_LABELS[w]}`);
   }
 
@@ -179,6 +189,7 @@ export class UI {
       case 'shop': g.centerOnShop(); break;
       case 'photo': S.startPhoto(this); break;
       case 'gallery': S.openGallery(this); break;
+      case 'settings': S.openSettings(this); break;
     }
   }
 

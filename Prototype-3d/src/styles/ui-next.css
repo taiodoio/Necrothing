@@ -109,7 +109,9 @@
 /* ── Menù di gioco verticale ──────────────────────────────────────── */
 .ui-next .fab { width: var(--hud); height: var(--hud); }
 /* Seppellisci sopra il menù; col menù aperto lascia il posto alle voci */
-.ui-next .bury-fab { margin-bottom: 10px; pointer-events: auto; }
+.ui-next .bury-fab { margin-bottom: 2px; pointer-events: auto; } /* 6 px del menù + 2: lo stesso passo (8 px) dei pulsanti a destra */
+/* il menù di gioco sta sopra a tutto ciò che è sulla scena (menù contestuali degli oggetti, tutorial); sotto i pannelli */
+.ui-next .bubble { z-index: 8; }
 .ui-next .bubble.open .bury-fab { display: none; }
 .ui-next .slots { padding: 6px; gap: 2px; transition: transform 0.16s ease, opacity 0.16s ease; }
 .ui-next .slot { background: none; box-shadow: none; border-radius: var(--r-s); min-width: 170px; height: 46px; padding: 0 18px 0 6px; }

@@ -12,7 +12,7 @@ import { housePartLP } from '../render/lowpoly/architecture.ts';
 import { memoryFruitLP } from '../render/lowpoly/memoryTree.ts';
 import type { LPModel } from '../render/lowpoly/kit.ts';
 import { LOWPOLY_MATERIALS } from '../render/modelCache.ts';
-import { closeDrawer, confirmDialog, fmtDate, h, openDrawer, setDrawerBody, setDrawerHero, toast } from './dom.ts';
+import { closeDrawer, confirmDialog, fmtDate, h, openDrawer, setDrawerBody, setDrawerHero, toast, wispPill } from './dom.ts';
 import { icon } from './icons.ts';
 import { memorials } from '../app/persistence.ts';
 import { portrait } from './memorial.ts';
@@ -103,7 +103,8 @@ function openRegistryEntry(ui: UI, id: string, filter: RegFilter) {
   const head = h('img', { src: stone, alt: '' }) as HTMLElement;
   // la foto dell'oggetto, se c'è, come nella scheda della tomba
   if (g.photoId) void memorials.get(g.photoId).then((m) => { if (m && head.isConnected) head.replaceWith(portrait(m.dataUrl, stone)); }).catch(() => undefined);
-  openDrawer(g.name, h('div', {},
+  // il nome c'è già sotto l'immagine: niente titolo in testa
+  openDrawer('', h('div', {},
     h('div', { class: 'hero' }, head, h('h3', {}, g.name),
       g.epitaph ? h('div', { class: 'epitaph' }, `“${g.epitaph}”`) : null),
     h('dl', { class: 'kv' },
@@ -194,12 +195,13 @@ export function houseShopDetail(ui: UI, id: string, close: () => void, bought: (
   const has = s.house.owned.includes(id);
   const needs = has ? [] : houseNeeds(s, it);
   const kind = houseRoof(id) ? 'Tetto' : 'Aggiunta della casa';
-  return h('div', { class: 'shop-detail' },
+  return h('div', { class: 'shop-detail' }, wispPill(s.player.wisps),
     h('div', { class: 'shop-detail-top' }, h('img', { src: houseItemImg(s, id), alt: '' }),
-      h('div', {}, h('h3', {}, it.label), h('p', { class: 'muted' }, `${kind} · rango ${it.minRank}${id === 'veggie' ? ' · rende fuochi fatui ogni giorno' : ''}`))),
+      h('h3', {}, it.label), h('p', { class: 'muted' }, `${kind} · rango ${it.minRank}${id === 'veggie' ? ' · rende fuochi fatui ogni giorno' : ''}`)),
     h('p', { class: 'muted', style: 'margin:0' }, it.description),
     'perk' in it ? h('div', { class: 'perk-row' }, icon('unlock', 18), h('p', {}, h('b', {}, 'Vantaggio: '), it.perk, ' Vale finché l’aggiunta è in vista.')) : h('p', { class: 'muted', style: 'margin:0;font-size:12px' }, 'Solo estetico: cambia l’aspetto della casa.'),
     needRows(needs),
+    !has && !needs.length && it.cost ? h('p', { class: 'muted after-buy' }, `Dopo l’acquisto te ne restano ${(s.player.wisps - it.cost).toLocaleString('it-IT')}`) : null,
     h('div', { class: 'row' },
       h('button', { class: 'big-btn ghost', onclick: close }, 'Chiudi'),
       h('button', {
@@ -213,9 +215,13 @@ function openHouseShop(ui: UI, selected: string | null = null) {
   ui.openShop('house', selected);
 }
 
-/** Dopo l'acquisto: si va a vederla, o si continua a guardare. */
-export function houseBoughtFooter(ui: UI, back: () => void): HTMLElement {
-  return h('div', { class: 'row' },
-    h('button', { class: 'big-btn ghost', onclick: back }, 'Continua'),
-    h('button', { class: 'big-btn', onclick: () => { closeDrawer(); ui.game.focusHouse(); } }, icon('house', 20), 'Vai alla casa'));
+/** Dopo l'acquisto: si va a vederla, o si continua a guardare. `leave` chiude il modale prima di uscire dalla Bottega. */
+export function houseBoughtView(ui: UI, id: string, back: () => void, leave: () => void): HTMLElement {
+  const s = ui.game.state;
+  return h('div', { class: 'shop-detail' }, wispPill(s.player.wisps),
+    h('div', { class: 'shop-detail-top' }, h('img', { src: houseItemImg(s, id), alt: '' }), h('h3', {}, houseItem(id)!.label),
+      h('p', { class: 'muted' }, 'È tua: la vedi già sulla casa.')),
+    h('div', { class: 'row' },
+      h('button', { class: 'big-btn ghost', onclick: back }, 'Continua'),
+      h('button', { class: 'big-btn', onclick: () => { leave(); closeDrawer(); ui.game.focusHouse(); } }, icon('house', 20), 'Vai alla casa')));
 }

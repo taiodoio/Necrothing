@@ -175,15 +175,20 @@
 .ui-next .dialog-scrim { background: rgba(8, 10, 14, 0.5); }
 .ui-next .postcard-view { border-radius: var(--r-s); box-shadow: var(--shadow); }
 
-/* ── Bottega: il dettaglio sale dal basso con l'immagine grande ───── */
-.ui-next .shop-detail { display: grid; gap: 10px; }
-.ui-next .drawer-foot :is(.big-btn.ghost, .qty button) { background: var(--panel); }
-.ui-next .shop-detail-top { display: flex; gap: 14px; align-items: center; }
-.ui-next .shop-detail-top img { width: 104px; height: 104px; object-fit: contain; border-radius: var(--r); background: var(--panel); flex: none; }
-.ui-next .shop-detail-top h3 { margin: 0; font: 700 25px/1.05 var(--gothic); color: var(--gold-bright); }
-.ui-next .shop-detail-top .muted { margin: 4px 0 0; font-size: 13px; }
-.ui-next .shop-detail-close { position: absolute; top: 10px; right: 10px; }
+/* ── Bottega: l'acquisto in un modale al centro ───────────────────── */
+.ui-next .dialog.modal { width: min(92vw, 400px); max-height: calc(100dvh - 32px - var(--safe-b)); overflow-y: auto; padding: 16px; }
+.ui-next .dialog.modal .muted { color: var(--muted); font-size: 14px; }
+.ui-next .dialog.modal :is(.big-btn.ghost, .qty button) { background: var(--input); }
+.ui-next .wisp-pill { background: var(--panel); box-shadow: inset 0 1px 0 var(--line); }
+.ui-next .shop-detail { position: relative; display: grid; gap: 10px; }
+.ui-next .shop-detail > .wisp-pill { position: absolute; top: 0; right: 0; }
+.ui-next .shop-detail-top { display: grid; justify-items: center; gap: 4px; text-align: center; }
+.ui-next .shop-detail-top img { width: 132px; height: 132px; margin-bottom: 6px; object-fit: contain; border-radius: var(--r); background: var(--panel); }
+.ui-next .shop-detail-top h3 { margin: 0; font: 700 26px/1.05 var(--gothic); color: var(--gold-bright); }
+.ui-next .dialog.modal .shop-detail-top .muted { margin: 0; font-size: 13px; }
+.ui-next .dialog.modal .after-buy { margin: -2px 0 0; font-size: 12px; text-align: center; }
 .ui-next .drawer-foot { position: relative; }
+.ui-next .drawer-foot :is(.big-btn.ghost, .qty button) { background: var(--panel); }
 
 /* ── Strumento a traccia ──────────────────────────────────────────── */
 .ui-next .trace-bar b { display: flex; align-items: center; gap: 6px; }
@@ -208,6 +213,8 @@
   background: linear-gradient(to bottom, rgba(18, 14, 16, 0.72), rgba(18, 14, 16, 0) 42%); pointer-events: none; }
 .ui-next .drawer.with-hero .drawer-head > * { pointer-events: auto; }
 .ui-next .drawer.with-hero .drawer-head h2 { color: #ffe2a8; line-height: 44px; text-shadow: 0 2px 8px rgba(0, 0, 0, 0.5) !important; }
+.ui-next .drawer.with-hero .drawer-extra { margin: 5px 54px 0 auto; }
+.ui-next .drawer.with-hero .drawer-extra .wisp-pill { background: rgba(28, 23, 26, 0.6); box-shadow: none; backdrop-filter: blur(4px); }
 .ui-next .drawer.with-hero #drawer-close { position: absolute; top: 12px; right: 12px; background: rgba(28, 23, 26, 0.6); color: #f3ecdf; backdrop-filter: blur(4px); }
 
 /* ── Banner di Modifica ───────────────────────────────────────────── */

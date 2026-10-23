@@ -255,7 +255,8 @@ test('nebbia del bosco: più fitta all\'alba e di notte, col meteo nebbioso entr
   assert.ok(d('night', 'fog') > d('night') && d('night', 'storm') < d('night'));
   assert.equal(mistTarget('day', 'clear').creep, 0);
   assert.ok(mistTarget('day', 'fog').creep > 0, 'col meteo nebbia scavalca le inferriate');
-  assert.deepEqual(['low', 'medium', 'high'].map(mistLayers), [1, 2, 3]);
+  // nebbia ottimizzata (quella del gioco): in Alta 2 veli un po' più densi invece di 3
+  assert.deepEqual(['low', 'medium', 'high'].map((q) => mistLayers(q)), [1, 2, 2]);
   const scene = new THREE.Scene();
   const mist = new ForestMist(scene, 'medium');
   mist.setWorld(areaForLevel(0), 32, 44, () => 0);
@@ -264,7 +265,13 @@ test('nebbia del bosco: più fitta all\'alba e di notte, col meteo nebbioso entr
   mist.update(0.016, new THREE.Color('#151d29'));
   assert.ok(mist.group.visible);
   mist.setQuality('high');
+  assert.equal(mist.layerCount, 2);
+  assert.ok(mist.group.children[0].material.uniforms.tNoise.value, 'il rumore viene dalla texture');
+  // la versione precedente (confronto nel bench) torna a 3 veli
+  mist.setOptimized(false);
   assert.equal(mist.layerCount, 3);
+  mist.setOptimized(true);
+  assert.equal(mist.layerCount, 2);
   mist.update(0.016, new THREE.Color('#151d29'));
   const before = mist.group.children[0].material.uniforms.uOpacity.value;
   mist.setConditions('day', 'clear');

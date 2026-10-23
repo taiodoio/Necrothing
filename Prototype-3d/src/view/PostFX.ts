@@ -57,7 +57,7 @@ void main() {
 `;
 
 /**
- * Mezza risoluzione (in prova nel bench): la sfocatura si calcola su un quarto
+ * Mezza risoluzione (quella del gioco, in Media e Alta): la sfocatura si calcola su un quarto
  * dei pixel e quest'ultima passata la mescola con la scena nitida a piena
  * risoluzione, con la stessa maschera (morbida): al centro tutto nitido, ai
  * bordi tutto sfocato, nel mezzo una sfumatura senza anelli.
@@ -95,7 +95,7 @@ export class PostFX {
   private passV: THREE.ShaderMaterial;
   private maxBlur = 4;
   // mezza risoluzione: due target piccoli per le passate e la composizione finale
-  private halfRes = false;
+  private halfRes = true;
   private rtHalfA: THREE.WebGLRenderTarget;
   private rtHalfB: THREE.WebGLRenderTarget;
   private passHHalf: THREE.ShaderMaterial;
@@ -150,7 +150,7 @@ export class PostFX {
     this.rtScene.dispose(); // si rialloca al prossimo uso con i nuovi campioni
   }
 
-  /** Sfocatura a mezza risoluzione (interruttore nel bench). */
+  /** Sfocatura a mezza risoluzione (nel gioco sempre; il bench può tornare a quella piena per confronto). */
   get half() { return this.halfRes; }
   setHalfRes(on: boolean) {
     if (on === this.halfRes) return;

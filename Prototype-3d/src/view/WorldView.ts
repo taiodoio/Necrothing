@@ -605,9 +605,7 @@ export class WorldView {
 
   // ── Entità ───────────────────────────────────────────────────────────
 
-  private graveKey(g: Grave): string {
-    return `g:${g.graveType}:${graveVisualState(g)}:${g.seed % 4}`;
-  }
+  private graveKey(g: Grave): string { return graveKeyOf(g); }
 
   /** Entità nascoste (la tomba la cui bara è in viaggio verso l'albero): non si vedono né si toccano. */
   private hidden = new Set<string>();
@@ -653,11 +651,7 @@ export class WorldView {
   /** Tetto e aggiunte della Casa del Custode (la variante del suo modello). */
   private houseLook = 0;
 
-  pvis(p: Placed): PVis {
-    // le varianti diventate oggetti a sé si disegnano col modello della loro famiglia
-    const vis = visualOf(p.type, p.type === 'memory_tree' ? this.treeMemories : p.type === 'keeper_house' ? this.houseLook : p.variant);
-    return { type: vis.type, variant: vis.variant, dirty: p.dirty, broken: p.broken, lit: p.lit, seed: placeableSeed(vis.type, hashString(p.id)) };
-  }
+  pvis(p: Placed): PVis { return pvisFor(p, this.treeMemories, this.houseLook); }
 
   private syncPlaceable(p: Placed, corner?: number) {
     const v = this.pvis(p);
@@ -1206,4 +1200,32 @@ export class WorldView {
   stats() {
     return { entities: this.entities.size, wisps: this.wisps.size };
   }
+}
+
+const graveKeyOf = (g: Grave) => `g:${g.graveType}:${graveVisualState(g)}:${g.seed % 4}`;
+
+/** Come si disegna un oggetto piazzato: le varianti diventate oggetti a sé col modello della loro famiglia. */
+function pvisFor(p: Placed, treeMemories: number, houseLook: number): PVis {
+  const vis = visualOf(p.type, p.type === 'memory_tree' ? treeMemories : p.type === 'keeper_house' ? houseLook : p.variant);
+  return { type: vis.type, variant: vis.variant, dirty: p.dirty, broken: p.broken, lit: p.lit, seed: placeableSeed(vis.type, hashString(p.id)) };
+}
+
+/**
+ * I modelli di tombe e oggetti di un salvataggio, uno per lavoro (con le
+ * stesse chiavi del mondo): la schermata di caricamento li costruisce a
+ * pezzi, mostrando l'avanzamento, prima di aprire il cimitero.
+ */
+export function modelJobs(state: SaveData, style: ArtStyle): Array<() => void> {
+  const jobs = new Map<string, () => void>();
+  for (const g of state.graves) {
+    const key = graveKeyOf(g), st = graveVisualState(g);
+    jobs.set(key, () => { getModel(key, style, () => graveModel(g.graveType, st, g.seed % 4), g.seed % 4); });
+  }
+  const tree = Math.min(30, state.entrusted.length), house = houseVariant(state.house);
+  for (const p of state.placeables) {
+    if (!CATALOG[p.type]) continue;
+    const v = pvisFor(p, tree, house), key = placeableKey(v);
+    jobs.set(key, () => { getModel(key, style, () => placeableModel(v), v.seed); });
+  }
+  return [...jobs.values()];
 }

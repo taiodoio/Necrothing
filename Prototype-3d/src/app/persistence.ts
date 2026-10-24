@@ -48,15 +48,16 @@ export function clearSave() {
 
 // ── Foto (IndexedDB) ───────────────────────────────────────────────────
 // «photos»: le foto scattate nel cimitero; «memorials»: le foto degli
-// oggetti sepolti (la tomba le indica con photoId).
+// oggetti sepolti (la tomba le indica con photoId); «thumbs»: le miniature
+// già disegnate (Bottega, inventario), per non rifarle a ogni avvio.
 
-type Store = 'photos' | 'memorials';
+type Store = 'photos' | 'memorials' | 'thumbs';
 
 function db(): Promise<IDBDatabase> {
   return new Promise((resolve, reject) => {
-    const req = indexedDB.open('necrothing3d', 2);
+    const req = indexedDB.open('necrothing3d', 3);
     req.onupgradeneeded = () => {
-      for (const name of ['photos', 'memorials']) if (!req.result.objectStoreNames.contains(name)) req.result.createObjectStore(name, { keyPath: 'id' });
+      for (const name of ['photos', 'memorials', 'thumbs']) if (!req.result.objectStoreNames.contains(name)) req.result.createObjectStore(name, { keyPath: 'id' });
     };
     req.onsuccess = () => resolve(req.result);
     req.onerror = () => reject(req.error);
@@ -87,6 +88,35 @@ export const memorials = {
   put: (m: MemorialPhoto) => tx('memorials', 'readwrite', (s) => s.put(m)),
   list: () => tx<MemorialPhoto[]>('memorials', 'readonly', (s) => s.getAll() as IDBRequest<MemorialPhoto[]>),
   clear: () => tx('memorials', 'readwrite', (s) => s.clear()),
+};
+
+/**
+ * Miniature salvate: valgono solo per la build che le ha disegnate (un
+ * modello cambiato le rende vecchie). `id` è «build|chiave».
+ */
+interface ThumbRecord { id: string; url: string }
+const THUMB_BUILD = typeof __BUILD__ !== 'undefined' ? __BUILD__.commit : 'dev';
+
+export const thumbStore = {
+  /** Le miniature di questa build (quelle di build vecchie si cancellano). */
+  load: async (): Promise<Array<[string, string]>> => {
+    const all = await tx<ThumbRecord[]>('thumbs', 'readonly', (s) => s.getAll() as IDBRequest<ThumbRecord[]>);
+    const prefix = `${THUMB_BUILD}|`;
+    const mine = all.filter((r) => r.id.startsWith(prefix));
+    if (mine.length < all.length) void tx('thumbs', 'readwrite', (s) => s.clear()).then(() => Promise.all(mine.map((r) => tx('thumbs', 'readwrite', (s) => s.put(r))))).catch(() => undefined);
+    return mine.map((r) => [r.id.slice(prefix.length), r.url]);
+  },
+  /** Salva un gruppo di miniature in una volta. */
+  save: async (entries: Array<[string, string]>) => {
+    const d = await db();
+    await new Promise<void>((resolve, reject) => {
+      const t = d.transaction('thumbs', 'readwrite');
+      const s = t.objectStore('thumbs');
+      for (const [key, url] of entries) s.put({ id: `${THUMB_BUILD}|${key}`, url });
+      t.oncomplete = () => resolve();
+      t.onerror = () => reject(t.error);
+    });
+  },
 };
 
 /** Backup ZIP: stato, foto del cimitero e foto delle tombe ancora presenti. */

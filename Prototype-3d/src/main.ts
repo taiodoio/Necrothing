@@ -13,7 +13,11 @@ import './styles/ui-next.css';
 import './styles/ui-play.css';
 import './styles/ui-house.css';
 import { setUiNext, setUiPlay, setUiPreview } from './app/uiNext.ts';
+import { bootScreen, nextPaint, runSliced } from './app/boot.ts';
+import { loadSave } from './app/persistence.ts';
+import { modelJobs } from './view/WorldView.ts';
 import { warmHeroes } from './ui/heroWarm.ts';
+import { restoreThumbs, warmThumbs } from './ui/thumbWarm.ts';
 import { installPlayDecor } from './ui/playDecor.ts';
 import { t } from './i18n/index.ts';
 
@@ -28,14 +32,35 @@ setUiPlay(true);
 setUiPreview(true);
 installPlayDecor();
 
-try {
-  const game = new Game(canvas);
-  (window as unknown as { necro: Game }).necro = game;
-  game.start();
-  // le testate animate (albero, casa) si preparano nei momenti liberi
-  warmHeroes(game.state);
-} catch (error) {
-  console.error('Impossibile inizializzare la scena 3D:', error);
-  const el = document.querySelector<HTMLElement>('#fatal');
-  if (el) { el.hidden = false; el.textContent = t('boot.webglFailed'); }
-}
+const boot = bootScreen();
+void (async () => {
+  try {
+    await nextPaint();
+    boot.stage('boot.step.gate', 0.08);
+    // i caratteri (il titolo gotico) e le miniature salvate nell'avvio precedente
+    await Promise.all([Promise.race([document.fonts?.ready, new Promise((r) => setTimeout(r, 1200))]), restoreThumbs()]);
+    // i modelli del cimitero salvato, a pezzi, con la barra che avanza
+    boot.stage('boot.step.stones', 0.16);
+    const save = loadSave();
+    if (save) await runSliced(modelJobs(save, 'lowpoly'), (k) => boot.progress(0.16 + k * 0.44));
+    // il terreno, il bosco, il sottobosco e tutto il resto: un blocco unico
+    boot.stage('boot.step.ground', 0.62);
+    await nextPaint();
+    const game = new Game(canvas);
+    (window as unknown as { necro: Game }).necro = game;
+    // luci e shader: il primo disegno, poi via la schermata
+    boot.stage('boot.step.lanterns', 0.92);
+    await nextPaint();
+    game.start();
+    await nextPaint();
+    await boot.finish();
+    // nei momenti liberi: le testate animate (albero, casa) e le miniature che mancano
+    warmHeroes(game.state);
+    warmThumbs(game.state);
+  } catch (error) {
+    console.error('Impossibile inizializzare la scena 3D:', error);
+    document.getElementById('boot')?.remove();
+    const el = document.querySelector<HTMLElement>('#fatal');
+    if (el) { el.hidden = false; el.textContent = t('boot.webglFailed'); }
+  }
+})();

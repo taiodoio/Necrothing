@@ -7,60 +7,49 @@
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="description" content="Necrothing — il cimitero degli oggetti morti, in voxel." data-i18n-content="page.description" />
     <title data-i18n="page.title">Necrothing — Cimitero degli oggetti</title>
+    <link rel="preload" as="image" href="./boot/scena.webp" type="image/webp" />
     <style>
-      /* schermata di caricamento: qui e non nei CSS del gioco, così compare subito */
-      #boot { position: fixed; inset: 0; z-index: 9999; display: grid; place-items: center; align-content: center; gap: 12px; padding: 24px;
-        background: radial-gradient(120% 80% at 50% 32%, #3a3047 0%, #231d2c 55%, #15121b 100%); color: #f3ecdf;
-        font-family: "Nunito", system-ui, sans-serif; text-align: center; transition: opacity 0.6s ease; }
+      /* schermata di caricamento: qui e non nei CSS del gioco, così compare subito.
+         Sfondo e logo sono immagini (public/boot); logo in alto e barra in basso stanno
+         agganciati ai bordi dello schermo, la scena si ritaglia (cover) sui formati diversi. */
+      #boot { position: fixed; inset: 0; z-index: 9999; overflow: hidden; color: #f3ecdf; font-family: "Nunito", system-ui, sans-serif;
+        background: #0b0c1c url(./boot/scena.webp) center 30% / cover no-repeat; /* sugli schermi più corti si taglia più sentiero che cielo */ transition: opacity 0.6s ease; }
       #boot.done { opacity: 0; pointer-events: none; }
-      .boot-wisp { position: relative; width: 46px; height: 66px; animation: bootFloat 2.6s ease-in-out infinite alternate; }
-      .boot-wisp svg { position: relative; display: block; width: 100%; height: 100%; filter: drop-shadow(0 0 10px rgba(130, 240, 210, 0.7)); }
-      .boot-wisp::before { content: ''; position: absolute; inset: -30px -34px -20px; border-radius: 50%;
-        background: radial-gradient(circle at 50% 62%, rgba(120, 240, 210, 0.32), rgba(120, 240, 210, 0) 62%); animation: bootPulse 1.8s ease-in-out infinite alternate; }
-      @keyframes bootFloat { from { transform: translateY(5px) rotate(-3deg); } to { transform: translateY(-8px) rotate(3deg); } }
-      @keyframes bootPulse { from { opacity: 0.55; transform: scale(0.9); } to { opacity: 1; transform: scale(1.08); } }
-      .boot-title { margin: 8px 0 0; font: 700 56px/1 "Grenze Gotisch", Georgia, serif; color: #ffe2a8; text-shadow: 0 3px 0 rgba(0, 0, 0, 0.35); }
-      .boot-sub { margin: 0; color: #bdb5c8; font-size: 15px; font-weight: 700; }
-      .boot-bar { position: relative; width: min(240px, 62vw); height: 10px; margin-top: 26px; border-radius: 99px; overflow: hidden;
-        background: #2c2836; box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(201, 147, 64, 0.35); }
+      /* un velo scuro in alto (il logo si stacca dal cielo), uno in basso (frase e barra si leggono) e i bordi più scuri */
+      #boot::before { content: ''; position: absolute; inset: 0; pointer-events: none;
+        background: linear-gradient(rgba(4, 4, 14, 0.82) 0%, rgba(4, 4, 14, 0.55) 14%, rgba(4, 4, 14, 0.18) 28%, rgba(4, 4, 14, 0) 40%),
+          linear-gradient(0deg, rgba(6, 4, 12, 0.85) 0%, rgba(6, 4, 12, 0.6) 12%, rgba(6, 4, 12, 0) 30%),
+          radial-gradient(ellipse 85% 70% at 50% 52%, rgba(0, 0, 0, 0) 55%, rgba(6, 4, 12, 0.35) 100%); }
+      .boot-logo { position: absolute; left: 50%; top: calc(env(safe-area-inset-top, 0px) + 5vh); width: min(92vw, 560px, 46vh); aspect-ratio: 1200 / 401;
+        transform: translateX(-50%); container-type: inline-size; }
+      .boot-logo img { display: block; width: 100%; height: 100%; }
+      /* il sottotitolo sulla targa (centro della targa: 49,8% della larghezza), scritto nella lingua del gioco */
+      .boot-sub { position: absolute; left: 20.74%; width: 58.06%; top: 75.7%; height: 10.5%; margin: 0; display: flex; align-items: center; justify-content: center;
+        white-space: nowrap; overflow: hidden; font: 700 2.9cqw/1 "Cinzel", Georgia, serif; letter-spacing: 0.06em; text-transform: uppercase;
+        background: linear-gradient(#fff4dc 15%, #f3d6a2 55%, #c99a62); -webkit-background-clip: text; background-clip: text; color: transparent;
+        filter: drop-shadow(0 1px 0 #1a0b08); opacity: 0; transition: opacity 0.3s ease; }
+      .boot-sub.on { opacity: 1; }
+      .boot-load { position: absolute; left: 50%; bottom: calc(env(safe-area-inset-bottom, 0px) + 7vh); width: min(78vw, 420px); transform: translateX(-50%); text-align: center; }
+      .boot-step { min-height: 1.3em; margin: 0 0 14px; color: #efe3d0; font-size: 16px; font-weight: 700; text-shadow: 0 2px 6px rgba(0, 0, 0, 0.85); }
+      .boot-bar { position: relative; height: 12px; border-radius: 99px; overflow: hidden; background: rgba(30, 20, 22, 0.85);
+        box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.6), 0 0 0 1.5px #3a1e18, 0 0 0 2.5px rgba(201, 147, 64, 0.6); }
       .boot-fill { position: absolute; inset: 0; border-radius: inherit; transform-origin: left; transform: scaleX(0);
-        background: linear-gradient(90deg, #c99340, #f0c46e); transition: transform 0.45s ease-out; }
+        background: linear-gradient(90deg, #c99340, #f0c46e); box-shadow: 0 0 10px rgba(255, 200, 110, 0.7); transition: transform 0.45s ease-out; }
       .boot-bar::after { content: ''; position: absolute; top: 0; bottom: 0; left: -40%; width: 40%;
         background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.35), transparent); animation: bootShine 1.4s linear infinite; }
       @keyframes bootShine { to { transform: translateX(350%); } }
-      .boot-step { min-height: 1.3em; margin: 2px 0 0; color: #e6dccb; font-size: 14px; font-weight: 600; }
-      .boot-yard { position: absolute; left: 0; right: 0; bottom: 0; width: 100%; height: 30vh; max-height: 260px; pointer-events: none; }
-      @media (prefers-reduced-motion: reduce) { .boot-wisp, .boot-wisp::before, .boot-bar::after { animation: none; } }
+      .boot-pct { margin: 10px 0 0; color: #ffe2a8; font-size: 20px; font-weight: 800; font-variant-numeric: tabular-nums; text-shadow: 0 2px 0 rgba(0, 0, 0, 0.6); }
+      @media (prefers-reduced-motion: reduce) { .boot-bar::after { animation: none; } }
     </style>
   </head>
   <body>
     <div id="boot" role="status" aria-live="polite" aria-label="Caricamento del cimitero">
-      <div class="boot-wisp" aria-hidden="true">
-        <svg viewBox="0 0 46 66"><defs><radialGradient id="bw" cx="50%" cy="68%" r="60%"><stop offset="0" stop-color="#f4fffc" /><stop offset="0.45" stop-color="#a6f3df" /><stop offset="1" stop-color="#3fbfa2" /></radialGradient></defs>
-          <path d="M23 1 C27 13 31 15 37 26 C44 38 43 50 36 57 C31 62 15 62 10 57 C3 50 2 39 9 29 C12 25 13 30 16 33 C15 22 20 14 23 1 Z" fill="url(#bw)" />
-          <ellipse cx="23" cy="47" rx="7.5" ry="9" fill="#f6fffd" opacity="0.85" /></svg>
+      <h1 class="boot-logo"><img src="./boot/logo.webp" alt="Necrothing" /><span class="boot-sub">il cimitero degli oggetti</span></h1>
+      <div class="boot-load">
+        <p class="boot-step">Si apre il cancello…</p>
+        <div class="boot-bar" aria-hidden="true"><i class="boot-fill"></i></div>
+        <p class="boot-pct">0%</p>
       </div>
-      <h1 class="boot-title">Necrothing</h1>
-      <p class="boot-sub">il cimitero degli oggetti</p>
-      <div class="boot-bar" aria-hidden="true"><i class="boot-fill"></i></div>
-      <p class="boot-step">Si apre il cancello…</p>
-      <!-- in fondo, la sagoma del cimitero: recinto, lapidi, una croce, un albero secco -->
-      <svg class="boot-yard" viewBox="0 0 400 140" preserveAspectRatio="xMidYMax meet" aria-hidden="true">
-        <g fill="#110d16">
-          <path d="M0 112 L0 90 L400 90 L400 112 Z" />
-          <g>
-            <rect x="0" y="80" width="400" height="3" /><rect x="0" y="66" width="400" height="2.5" />
-            <path d="M8 90 V60 l2-5 l2 5 V90 Z M28 90 V60 l2-5 l2 5 V90 Z M48 90 V60 l2-5 l2 5 V90 Z M68 90 V60 l2-5 l2 5 V90 Z M88 90 V60 l2-5 l2 5 V90 Z M108 90 V60 l2-5 l2 5 V90 Z M128 90 V60 l2-5 l2 5 V90 Z M148 90 V60 l2-5 l2 5 V90 Z M168 90 V60 l2-5 l2 5 V90 Z M188 90 V60 l2-5 l2 5 V90 Z M208 90 V60 l2-5 l2 5 V90 Z M228 90 V60 l2-5 l2 5 V90 Z M248 90 V60 l2-5 l2 5 V90 Z M268 90 V60 l2-5 l2 5 V90 Z M288 90 V60 l2-5 l2 5 V90 Z M308 90 V60 l2-5 l2 5 V90 Z M328 90 V60 l2-5 l2 5 V90 Z M348 90 V60 l2-5 l2 5 V90 Z M368 90 V60 l2-5 l2 5 V90 Z M388 90 V60 l2-5 l2 5 V90 Z" />
-            <rect x="96" y="54" width="9" height="36" /><rect x="94" y="51" width="13" height="4" /><rect x="296" y="54" width="9" height="36" /><rect x="294" y="51" width="13" height="4" />
-          </g>
-          <path d="M330 92 C331 70 329 52 322 38 M324 44 L310 30 M326 52 L340 40 M323 40 L326 24 M313 34 L306 31 M337 43 L346 41" stroke="#110d16" stroke-width="4" stroke-linecap="round" fill="none" />
-        </g>
-        <g fill="#0b080f">
-          <path d="M0 140 L0 104 C60 96 120 100 200 98 C280 96 340 100 400 104 L400 140 Z" />
-          <path d="M44 104 V84 a12 12 0 0 1 24 0 V104 Z" /><path d="M80 104 V91 h7 v-9 h6 v9 h7 v6 h-7 V104 Z" /><path d="M120 104 V88 a9 9 0 0 1 18 0 V104 Z" />
-          <path d="M252 102 V80 l11-9 l11 9 V102 Z" /><path d="M292 102 V86 a10 10 0 0 1 20 0 V102 Z" /><path d="M352 104 V90 h6 v-8 h5 v8 h6 v5 h-6 V104 Z" />
-        </g>
-      </svg>
     </div>
     <main id="game" aria-label="Cimitero di Necrothing" data-i18n-aria="page.main.aria">
       <canvas id="world" aria-label="Scena di gioco 3D" data-i18n-aria="page.world.aria"></canvas>

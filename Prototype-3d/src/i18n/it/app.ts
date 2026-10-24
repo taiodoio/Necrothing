@@ -4,8 +4,10 @@ export default {
   // ── Avvio ──
   // si legge al posto del gioco quando la scena 3D non parte
   'boot.webglFailed': 'La scena 3D non si è aperta in questo browser (WebGL non disponibile?).',
-  // schermata di caricamento: sotto il nome del gioco
+  // schermata di caricamento: sulla targa sotto il logo (in maiuscolo; se è lunga si rimpicciolisce per starci)
   'boot.tagline': 'il cimitero degli oggetti',
+  // sotto la barra di caricamento
+  'boot.percent': '{n}%',
   // per chi usa il lettore di schermo
   'boot.aria': 'Caricamento del cimitero',
   // sotto la barra: una frase per ogni fase del caricamento (aprire, modelli, terreno, luci, fine)

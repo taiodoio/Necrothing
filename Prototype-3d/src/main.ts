@@ -3,6 +3,7 @@ import '@fontsource/pixelify-sans/400.css';
 import '@fontsource/pixelify-sans/600.css';
 import '@fontsource/pixelify-sans/700.css';
 import '@fontsource/jacquard-24/400.css';
+import '@fontsource/cinzel/700.css';
 import '@fontsource/grenze-gotisch/600.css';
 import '@fontsource/grenze-gotisch/700.css';
 import '@fontsource/nunito/600.css';
@@ -38,7 +39,8 @@ void (async () => {
     await nextPaint();
     boot.stage('boot.step.gate', 0.08);
     // i caratteri (il titolo gotico) e le miniature salvate nell'avvio precedente
-    await Promise.all([Promise.race([document.fonts?.ready, new Promise((r) => setTimeout(r, 1200))]), restoreThumbs()]);
+    await Promise.all([Promise.race([document.fonts?.load('700 20px Cinzel').then(() => document.fonts.ready), new Promise((r) => setTimeout(r, 1200))]), restoreThumbs()]);
+    boot.showTagline();
     // i modelli del cimitero salvato, a pezzi, con la barra che avanza
     boot.stage('boot.step.stones', 0.16);
     const save = loadSave();

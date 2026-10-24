@@ -1,8 +1,9 @@
-// Schermata di caricamento: il nome del gioco, un fuoco fatuo che ondeggia,
-// la barra e una frase per fase. Il markup è già in index.html (compare
-// prima del codice); qui la si fa avanzare e alla fine sfuma via. La barra
-// e il fuoco fatuo si muovono con le animazioni CSS, che vanno avanti anche
-// mentre il codice lavora (la costruzione del cimitero blocca il resto).
+// Schermata di caricamento: la scena del cimitero di sera, il logo con il
+// sottotitolo sulla targa (nella lingua del gioco), una frase per fase, la
+// barra e la percentuale. Il markup è già in index.html (compare prima del
+// codice); qui la si fa avanzare e alla fine sfuma via. Il luccichio della
+// barra è un'animazione CSS: va avanti anche mentre il codice lavora (la
+// costruzione del cimitero blocca il resto).
 
 import { t } from '../i18n/index.ts';
 
@@ -13,6 +14,8 @@ export interface BootScreen {
   progress(p: number): void;
   /** Barra piena, frase di saluto, poi la schermata sfuma. */
   finish(): Promise<void>;
+  /** Il sottotitolo tradotto sulla targa, quando il suo carattere è pronto. */
+  showTagline(): void;
 }
 
 /** Lascia disegnare la pagina (la barra, la frase) prima del prossimo lavoro pesante. */
@@ -23,14 +26,25 @@ export function bootScreen(): BootScreen {
   const el = document.getElementById('boot');
   const fill = el?.querySelector<HTMLElement>('.boot-fill');
   const line = el?.querySelector<HTMLElement>('.boot-step');
+  const pct = el?.querySelector<HTMLElement>('.boot-pct');
+  const sub = el?.querySelector<HTMLElement>('.boot-sub');
   let at = 0;
   const set = (p: number) => {
     at = Math.max(at, Math.min(1, p)); // la barra non torna mai indietro
     if (fill) fill.style.transform = `scaleX(${at.toFixed(3)})`;
+    if (pct) pct.textContent = t('boot.percent', { n: Math.round(at * 100) });
   };
   if (el) el.setAttribute('aria-label', t('boot.aria'));
-  el?.querySelector<HTMLElement>('.boot-sub')?.replaceChildren(t('boot.tagline'));
   return {
+    showTagline: () => {
+      if (!sub) return;
+      sub.textContent = t('boot.tagline');
+      // una lingua dal sottotitolo lungo: il testo si stringe finché sta nella targa
+      sub.style.fontSize = '';
+      let size = parseFloat(getComputedStyle(sub).fontSize);
+      while (sub.scrollWidth > sub.clientWidth && size > 6) { size -= 0.5; sub.style.fontSize = `${size}px`; }
+      sub.classList.add('on');
+    },
     stage: (key, to) => { if (line) line.textContent = t(key); set(to); },
     progress: set,
     finish: async () => {

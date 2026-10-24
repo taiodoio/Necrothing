@@ -56,8 +56,9 @@ function fruitSpots(crowns: Array<{ c: THREE.Vector3; s: number }>, n: number): 
 /**
  * Albero dei ricordi, ingombro 5×5 (origine al centro della base); fronte verso +z.
  * `memories`: quanti ricordi gli sono stati affidati (frutti accesi, fino a 30).
+ * `fruits`, se c'è, riceve il centro di ogni frutto acceso (per gli aloni della testata dell'albero).
  */
-export function memoryTreeLP(memories: number, seed = 1): LPModel {
+export function memoryTreeLP(memories: number, seed = 1, fruits?: THREE.Vector3[]): LPModel {
   const lp = new LP(`lp:memorytree:${seed}:${Math.min(30, memories)}`);
   const r = lp.rng;
   lp.push([0, 0, 0], 0, 0, 0, 1.4); // grande: domina il cimitero
@@ -178,6 +179,7 @@ export function memoryTreeLP(memories: number, seed = 1): LPModel {
     lp.box(p.x, p.y - drop, p.z, 0.008, drop, 0.008, '#3a3330', { jitter: 0, ao: 0 });
     if (lit) {
       lp.blob(p.x, p.y - drop - 0.08, p.z, 0.085, 0.11, 0.085, MEMORY_GLOW, { bucket: 'glow', jitter: 0.008, vary: 0.05 });
+      fruits?.push(new THREE.Vector3(p.x, p.y - drop - 0.08, p.z).multiplyScalar(1.4));
       lp.push([p.x, p.y - drop + 0.02, p.z]).cyl(0, 0, 0, 0.035, 0.06, 0.035, 5, '#6b5a3a', { jitter: 0 }).pop(); // calice
     } else {
       lp.blob(p.x, p.y - drop - 0.04, p.z, 0.04, 0.06, 0.04, '#7d8f6c', { jitter: 0.006 });

@@ -304,10 +304,12 @@ export default {
   'tree.list.count#one': '{n} ricordo affidato · uno per ogni frutto acceso',
   'tree.list.count#other': '{n} ricordi affidati · uno per ogni frutto acceso',
   'tree.list.none': 'Non gli hai ancora affidato nulla.',
-  'tree.list.title': 'Gli hai affidato',
   'tree.list.hint': 'Apri la scheda di una tomba e scegli «Affida all’albero»: il corteo porterà qui la bara e la terra la accoglierà. Lo spazio della tomba si libera, il ricordo resta.',
-  // riga dell'elenco: {category} è la categoria dell'oggetto
-  'tree.list.row': '{category} · affidato il {date}',
+  // cartellino appeso al ramo: {category} è la categoria dell'oggetto, {date} il giorno in cui è stato affidato
+  'tree.list.tag': '{category} · {date}',
+  // sul cartellino: quante volte il suo fantasma è tornato
+  'tree.list.returned#one': 'tornato una volta',
+  'tree.list.returned#other': 'tornato {n} volte',
   'tree.memory.title': 'Ricordo',
   'tree.memory.visit': 'Il fantasma di {name} è tornato a trovarti',
   'tree.memory.visitWisps': '+{n} fuochi fatui',

@@ -40,6 +40,29 @@
 .ui-next.ui-play .reg-list > .reg-row:nth-child(4n + 1) { rotate: -0.4deg; }
 .ui-next.ui-play .reg-list > .reg-row:nth-child(4n + 3) { rotate: 0.35deg; }
 
+/* ── Albero dei ricordi: testata di notte e cartellini appesi ai rami ── */
+.ui-next .tree-hero { background: radial-gradient(120% 90% at 50% 105%, #3b2f4f 0%, #231d30 45%, #15121d 100%); }
+.ui-next .tree-hero::after { content: ''; position: absolute; inset: 0; pointer-events: none;
+  background: linear-gradient(90deg, rgba(12, 9, 14, 0.35), rgba(12, 9, 14, 0) 40%), radial-gradient(ellipse 85% 110% at 55% 55%, rgba(12, 9, 14, 0) 60%, rgba(12, 9, 14, 0.4) 100%); }
+.ui-next .mt-intro { margin: 2px 0 6px; }
+.ui-next .mt-row { position: relative; display: grid; grid-template-columns: 1fr 1fr; column-gap: 12px; align-items: start; padding-bottom: 14px; }
+.ui-next .mt-branch, .ui-next .mt-knots { position: absolute; left: 0; top: 0; width: 100%; height: 84px; overflow: visible; pointer-events: none; }
+.ui-next .mt-branch { z-index: 1; filter: drop-shadow(0 3px 3px rgba(0, 0, 0, 0.35)); }
+.ui-next .mt-knots { z-index: 2; }
+.ui-next .mt-tag { position: relative; grid-row: 1; justify-self: center; padding: 20px 10px 12px; border: 0; border-radius: 6px 6px 14px 14px; background: #efe5d2; color: #3a2a22; text-align: center;
+  box-shadow: 0 6px 12px rgba(0, 0, 0, 0.35); transform-origin: 50% calc(-1 * var(--len)); rotate: var(--tilt); animation: mtSway 5s ease-in-out infinite alternate; }
+.ui-next .mt-tag:nth-child(odd) { animation-delay: -2.3s; }
+.ui-next .mt-tag:active { filter: brightness(0.94); }
+@keyframes mtSway { from { rotate: calc(var(--tilt) - 0.8deg); } to { rotate: calc(var(--tilt) + 0.8deg); } }
+@media (prefers-reduced-motion: reduce) { .ui-next .mt-tag { animation: none; } }
+/* lo spago (dal ramo al foro) e il foro con l'occhiello */
+.ui-next .mt-tag::before { content: ''; position: absolute; left: 50%; top: calc(-1 * var(--len)); width: 1.5px; height: calc(var(--len) + 9px); background: #cbb48a; translate: -50% 0; }
+.ui-next .mt-tag::after { content: ''; position: absolute; left: 50%; top: 7px; width: 8px; height: 8px; border-radius: 50%; background: var(--sheet, #2a2633); translate: -50% 0; box-shadow: 0 0 0 2px #c99340; }
+.ui-next .mt-tag img { display: block; width: 64px; height: 64px; margin: -6px auto; object-fit: contain; filter: drop-shadow(0 0 6px rgba(240, 170, 60, 0.65)); }
+.ui-next .mt-tag b { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden; overflow-wrap: anywhere; font: 700 20px/1.05 var(--gothic); color: #3a2a22; }
+.ui-next .mt-tag small { display: block; margin-top: 3px; color: #7a6656; font-size: 11.5px; font-weight: 700; }
+.ui-next .mt-seen { display: inline-flex; align-items: center; gap: 2px; margin-top: 5px; color: #8a5a18; font-size: 11px; font-weight: 800; }
+
 /* ── Personalizza la casa ─────────────────────────────────────────── */
 .ui-next .house-hero img { width: 180px; height: 180px; object-fit: contain; }
 

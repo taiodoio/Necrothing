@@ -21,6 +21,15 @@ const scene = new THREE.Scene();
 const camera = new THREE.OrthographicCamera(-1, 1, 1, -1, 0.1, 100);
 const cache = new Map<string, string>();
 
+/** Miniature salvate in un avvio precedente (si rimettono in cache al caricamento). */
+export function seedThumbs(entries: Array<[string, string]>) {
+  for (const [k, v] of entries) if (!cache.has(k)) cache.set(k, v);
+}
+
+/** Chi riceve ogni miniatura nuova (per salvarla sul telefono); null = nessuno. */
+let sink: ((key: string, url: string) => void) | null = null;
+export function onNewThumb(fn: ((key: string, url: string) => void) | null) { sink = fn; }
+
 function setup() {
   if (renderer) return renderer;
   const canvas = document.createElement('canvas');
@@ -52,6 +61,7 @@ function snapshot(key: string, group: THREE.Group, fp: [number, number]): string
   const url = r.domElement.toDataURL('image/png');
   scene.remove(group);
   cache.set(key, url);
+  sink?.(key, url);
   return url;
 }
 

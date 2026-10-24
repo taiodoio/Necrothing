@@ -13,6 +13,7 @@ import './styles/ui-next.css';
 import './styles/ui-play.css';
 import './styles/ui-house.css';
 import { setUiNext, setUiPlay, setUiPreview } from './app/uiNext.ts';
+import { warmHeroes } from './ui/heroWarm.ts';
 import { installPlayDecor } from './ui/playDecor.ts';
 import { t } from './i18n/index.ts';
 
@@ -31,6 +32,8 @@ try {
   const game = new Game(canvas);
   (window as unknown as { necro: Game }).necro = game;
   game.start();
+  // le testate animate (albero, casa) si preparano nei momenti liberi
+  warmHeroes(game.state);
 } catch (error) {
   console.error('Impossibile inizializzare la scena 3D:', error);
   const el = document.querySelector<HTMLElement>('#fatal');

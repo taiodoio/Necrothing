@@ -420,7 +420,6 @@ export default {
   // testo alternativo dell'immagine
   'postcard.dialog.alt': 'Cartolina per {name}',
   // breve: pulsante
-  'postcard.close': 'Chiudi',
   // breve: pulsante
   'postcard.share': 'Condividi',
   // notifica (dove non si può condividere, la cartolina si scarica)

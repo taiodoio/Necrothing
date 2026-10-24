@@ -188,7 +188,7 @@
 .ui-next .look-thumb { border-radius: 10px; background: var(--thumb); overflow: hidden; }
 .ui-next .swatch { border: 0; border-radius: 10px; box-shadow: inset 0 0 0 1.5px var(--edge); }
 .ui-next .swatch.active { box-shadow: 0 0 0 2.5px var(--primary); }
-.ui-next .dialog-scrim { background: rgba(8, 10, 14, 0.5); }
+.ui-next .dialog-scrim { background: rgba(8, 10, 14, 0.74); } /* scuro: il dialogo si legge bene sopra la scheda */
 .ui-next .postcard-view { border-radius: var(--r-s); box-shadow: var(--shadow); }
 
 /* ── Bottega: l'acquisto in un modale al centro ───────────────────── */
@@ -196,6 +196,10 @@
 /* sotto il modale la scena e il pannello si leggono appena: l'attenzione resta sull'acquisto */
 .ui-next .dialog-scrim.modal-scrim { background: rgba(6, 7, 10, 0.78); }
 .ui-next .modal-close { position: absolute; z-index: 1; top: 12px; left: 12px; }
+/* titolo del modale accanto alla X */
+.ui-next .dialog.modal .modal-title { display: flex; align-items: center; min-height: 40px; margin: 0 0 12px 52px; font: 700 26px/1.05 var(--gothic); color: var(--gold-bright); }
+.ui-next .postcard-dialog { display: grid; gap: 14px; }
+.ui-next .postcard-dialog .postcard-view { width: 100%; max-width: none; max-height: calc(100dvh - 200px - var(--safe-b)); object-fit: contain; }
 .ui-next .dialog.modal .muted { color: var(--muted); font-size: 14px; }
 .ui-next .dialog.modal :is(.big-btn.ghost, .qty button) { background: var(--input); }
 .ui-next .wisp-pill { background: var(--panel); box-shadow: inset 0 1px 0 var(--line); }

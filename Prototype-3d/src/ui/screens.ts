@@ -39,8 +39,11 @@ const EPITAPHS = tList('burial.epitaph.suggestions');
 /** La foto della sepoltura in corso (resta se si torna indietro dal posizionamento). */
 let burialPhoto = new BurialPhoto();
 
-/** Dati della cartolina per una tomba (o una bozza): date, etichette, lapide in miniatura e foto. */
-export async function postcardData(g: { name: string; birthDate: string | null; deathDate: string | null; deathCause: R.BurialDraft['deathCause']; deathCauseText?: string | null; category: R.BurialDraft['category']; epitaph: string | null; graveType: NonNullable<R.BurialDraft['graveType']> }, photo: string | null, ui: UI, seed = 1): Promise<PostcardData> {
+/**
+ * Dati della cartolina per una tomba (o una bozza): date, etichette, lapide in
+ * miniatura e foto. Per un ricordo affidato all'albero `medal` è il suo frutto, al posto della lapide.
+ */
+export async function postcardData(g: { name: string; birthDate: string | null; deathDate: string | null; deathCause: R.BurialDraft['deathCause']; deathCauseText?: string | null; category: R.BurialDraft['category']; epitaph: string | null; graveType: NonNullable<R.BurialDraft['graveType']> }, photo: string | null, ui: UI, seed = 1, medal?: string): Promise<PostcardData> {
   const style = ui.game.state.settings.style;
   return {
     name: g.name,
@@ -49,7 +52,7 @@ export async function postcardData(g: { name: string; birthDate: string | null; 
     category: g.category ? CATEGORY_LABELS[g.category] : '—',
     epitaph: g.epitaph || null,
     photo: photo ? await loadImage(photo) : null,
-    headstone: await loadImage(graveThumb(g.graveType, style, 'flowers', seed)),
+    headstone: await loadImage(medal ?? graveThumb(g.graveType, style, 'flowers', seed)),
   };
 }
 
@@ -504,24 +507,28 @@ export async function confirmExhume(ui: UI, id: string, name: string, kind: 'gra
 /**
  * «Altro»: pulsante secondario sopra l'azione principale, con l'icona a sinistra
  * come lei; il menù delle azioni secondarie si apre sopra di lui, in sovrimpressione.
- * Ogni voce ha la sua icona, quelle distruttive in rosso. Si chiude scegliendo
- * una voce, toccando di nuovo «Altro» o toccando fuori.
+ * Ogni voce ha la sua icona, quelle distruttive in rosso. Dietro, la scheda si
+ * scurisce perché il menù si legga bene. Si chiude scegliendo una voce,
+ * toccando di nuovo «Altro» o toccando fuori.
  */
 export function moreActions(items: Array<{ icon: string; label: string; danger?: boolean; run: () => void } | null>): HTMLElement {
   const wrap = h('div', { class: 'more' });
   const setOpen = (open: boolean) => {
     list.hidden = !open;
+    scrim.hidden = !open;
     toggle.setAttribute('aria-expanded', String(open));
     if (open) setTimeout(() => document.addEventListener('pointerdown', outside, true));
     else document.removeEventListener('pointerdown', outside, true);
   };
-  const outside = (e: Event) => { if (!wrap.contains(e.target as Node)) setOpen(false); };
+  const outside = (e: Event) => { if (!wrap.contains(e.target as Node) || e.target === scrim) setOpen(false); };
+  const scrim = h('div', { class: 'more-scrim' });
   const list = h('div', { class: 'more-list', role: 'menu' }, ...items.filter((x) => x !== null).map((it) =>
     h('button', { class: `more-item${it.danger ? ' danger' : ''}`, role: 'menuitem', onclick: () => { setOpen(false); it.run(); } }, icon(it.icon, 22), h('span', {}, it.label))));
   const toggle = h('button', { class: 'big-btn ghost more-toggle', 'aria-expanded': 'false', 'aria-haspopup': 'menu', onclick: () => setOpen(list.hidden) },
     icon('more', 22), t('detail.more'));
   list.hidden = true;
-  wrap.append(list, toggle);
+  scrim.hidden = true;
+  wrap.append(scrim, list, toggle);
   return wrap;
 }
 

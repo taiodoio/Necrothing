@@ -1,9 +1,11 @@
-// Cartolina funebre da condividere: nome, date, causa, epitaffio, la foto
-// dell'oggetto incorniciata con la sua lapide in piccolo, e il nome del
-// gioco (il link o il QR arriveranno con la pubblicazione negli store).
+// Cartolina funebre da condividere, nello stile del gioco: nome, date,
+// causa, epitaffio, la foto dell'oggetto incorniciata con la sua lapide in un
+// medaglione, e il nome del gioco (il link o il QR arriveranno con la pubblicazione negli store).
 // Disegnata su una tela 1080×1350 (4:5, va bene per chat e social).
 
 import { t } from '../i18n/index.ts';
+import { drawLpIcon } from './lpIcons.ts';
+import { patternTileUrl } from './playDecor.ts';
 
 export interface PostcardData {
   name: string;
@@ -18,9 +20,11 @@ export interface PostcardData {
 
 export const POSTCARD_W = 1080, POSTCARD_H = 1350;
 
-const GOLD = '#d8b26a', GOLD_HI = '#f1d39c', INK = '#07080b', PAPER = '#e8dcc4', MUTED = '#9a8f7c';
-const GOTHIC = '"Jacquard 24", "Pixelify Sans", serif'; // i18n-ok
-const PIXEL = '"Pixelify Sans", system-ui, sans-serif'; // i18n-ok
+// i colori del tema scuro del gioco (ui-play.css)
+const SHEET = '#2a2633', PANEL = '#3a3545', PANEL2 = '#474154', THUMB = '#2c2836';
+const PAPER = '#f3ecdf', MUTED = '#bdb5c8', GOLD = '#c99340', GOLD_HI = '#ffe2a8', PRIMARY = '#f0c46e';
+const GOTHIC = '"Grenze Gotisch", "Nunito", serif'; // i18n-ok
+const SANS = '"Nunito", system-ui, sans-serif'; // i18n-ok
 
 /** Il testo più grande che entra in `max` pixel (scende fino a `min`). */
 function fit(g: CanvasRenderingContext2D, text: string, font: (px: number) => string, size: number, max: number, min = size * 0.5) {
@@ -45,81 +49,98 @@ function wrap(g: CanvasRenderingContext2D, text: string, max: number, lines: num
   return out;
 }
 
-/** Cornice a pixel: bordo scuro, filo d'oro, interno scuro (come le cornici della UI). */
-function pixelFrame(g: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, t: number) {
-  g.fillStyle = INK; g.fillRect(x, y, w, h);
-  g.fillStyle = GOLD; g.fillRect(x + t, y + t, w - 2 * t, h - 2 * t);
-  g.fillStyle = INK; g.fillRect(x + 2 * t, y + 2 * t, w - 4 * t, h - 4 * t);
-}
+const rrect = (g: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, r: number) => { g.beginPath(); g.roundRect(x, y, w, h, r); };
+const loadSvg = (url: string) => new Promise<HTMLImageElement | null>((res) => { const im = new Image(); im.onload = () => res(im); im.onerror = () => res(null); im.src = url; });
 
-/** Croce d'angolo a pixel. */
-function corner(g: CanvasRenderingContext2D, x: number, y: number, s: number) {
-  g.fillStyle = GOLD;
-  g.fillRect(x - s * 1.5, y - s / 2, s * 3, s); g.fillRect(x - s / 2, y - s * 1.5, s, s * 3);
-  g.fillStyle = GOLD_HI; g.fillRect(x - s / 2, y - s / 2, s, s);
-}
-
+/**
+ * Cartolina nello stile del gioco: il foglio viola scuro col motivo tono su
+ * tono (zucche, foglie, teschi, bare), un riquadro arrotondato col filo d'oro,
+ * le decorazioni low-poly negli angoli, il nome in Grenze Gotisch, la foto (o
+ * la lapide) in una cornice arrotondata con la lapide in un medaglione.
+ */
 export async function drawPostcard(d: PostcardData): Promise<HTMLCanvasElement> {
-  await Promise.all([document.fonts.load(`400 80px ${GOTHIC}`), document.fonts.load(`400 30px ${PIXEL}`), document.fonts.load(`600 30px ${PIXEL}`)]).catch(() => undefined);
+  await Promise.all([document.fonts.load(`700 80px ${GOTHIC}`), document.fonts.load(`700 30px ${SANS}`), document.fonts.load(`800 30px ${SANS}`), document.fonts.load(`600 30px ${SANS}`)]).catch(() => undefined);
   const W = POSTCARD_W, H = POSTCARD_H;
   const c = document.createElement('canvas');
   c.width = W; c.height = H;
   const g = c.getContext('2d')!;
   g.imageSmoothingEnabled = true;
-  // carta scura con un alone caldo dall'alto e un po' di grana
-  g.fillStyle = '#101318'; g.fillRect(0, 0, W, H);
-  const glow = g.createRadialGradient(W / 2, H * 0.3, 40, W / 2, H * 0.3, W * 0.9);
-  glow.addColorStop(0, 'rgba(120,90,50,0.28)'); glow.addColorStop(1, 'rgba(0,0,0,0)');
+  // il foglio, con una luce calda dall'alto
+  g.fillStyle = SHEET; g.fillRect(0, 0, W, H);
+  const glow = g.createRadialGradient(W / 2, H * 0.28, 60, W / 2, H * 0.28, W * 0.95);
+  glow.addColorStop(0, 'rgba(255, 226, 168, 0.12)'); glow.addColorStop(1, 'rgba(0, 0, 0, 0)');
   g.fillStyle = glow; g.fillRect(0, 0, W, H);
-  for (let i = 0; i < 2400; i++) { g.fillStyle = `rgba(255,240,210,${Math.random() * 0.04})`; g.fillRect(Math.random() * W, Math.random() * H, 2, 2); }
-  // cornice della cartolina
-  g.strokeStyle = INK; g.lineWidth = 12; g.strokeRect(22, 22, W - 44, H - 44);
-  g.strokeStyle = GOLD; g.lineWidth = 6; g.strokeRect(28, 28, W - 56, H - 56);
-  g.strokeStyle = 'rgba(216,178,106,0.45)'; g.lineWidth = 2; g.strokeRect(48, 48, W - 96, H - 96);
-  for (const [x, y] of [[48, 48], [W - 48, 48], [48, H - 48], [W - 48, H - 48]]) corner(g, x, y, 10);
+  // il motivo tono su tono dei pannelli, più grande (la cartolina è larga quasi tre telefoni)
+  const tile = await loadSvg(patternTileUrl('rgba(14, 8, 4, 0.34)'));
+  if (tile) {
+    const pat = g.createPattern(tile, 'repeat');
+    if (pat) { pat.setTransform(new DOMMatrix().scale(1.7)); g.fillStyle = pat; g.fillRect(0, 0, W, H); }
+  }
+  // il riquadro: pannello arrotondato col filo d'oro
+  const M = 40, R = 56;
+  g.save(); g.shadowColor = 'rgba(8, 5, 14, 0.55)'; g.shadowBlur = 40; g.shadowOffsetY = 12;
+  rrect(g, M, M, W - 2 * M, H - 2 * M, R); g.fillStyle = 'rgba(58, 53, 69, 0.55)'; g.fill();
+  g.restore();
+  rrect(g, M, M, W - 2 * M, H - 2 * M, R); g.lineWidth = 5; g.strokeStyle = GOLD; g.stroke();
+  rrect(g, M + 16, M + 16, W - 2 * M - 32, H - 2 * M - 32, R - 14); g.lineWidth = 2; g.strokeStyle = 'rgba(255, 226, 168, 0.22)'; g.stroke();
+  // decorazioni negli angoli, come nell'interfaccia
+  const deco = (name: string, x: number, y: number, s: number, a: number) => { g.save(); g.translate(x, y); g.rotate(a); drawLpIcon(g, name, -s / 2, -s / 2, s); g.restore(); };
+  deco('pumpkin', M + 18, M + 18, 104, -0.25);
+  deco('leaf', W - M - 16, M + 16, 92, 0.5);
+  deco('skull', M + 16, H - M - 18, 92, -0.15);
+  deco('coffin', W - M - 18, H - M - 20, 96, 0.3);
   g.textAlign = 'center'; g.textBaseline = 'alphabetic';
   // intestazione
-  g.fillStyle = MUTED; g.font = `400 34px ${PIXEL}`;
-  g.fillText(t('postcard.inMemoryOf'), W / 2, 122);
-  const px = fit(g, d.name, (p) => `400 ${p}px ${GOTHIC}`, 104, W - 180, 56);
-  g.fillStyle = '#000'; g.fillText(d.name, W / 2, 222 + 5);
-  g.fillStyle = GOLD_HI; g.fillText(d.name, W / 2, 222);
-  void px;
-  // foto incorniciata (senza foto: la lapide al suo posto, grande)
-  const S = 560, fx = (W - S) / 2, fy = 268, T = 8;
-  pixelFrame(g, fx - 3 * T, fy - 3 * T, S + 6 * T, S + 6 * T, T);
+  g.fillStyle = MUTED; g.font = `700 32px ${SANS}`;
+  g.fillText(t('postcard.inMemoryOf').toUpperCase(), W / 2, 150);
+  fit(g, d.name, (p) => `700 ${p}px ${GOTHIC}`, 118, W - 260, 60);
+  g.save(); g.shadowColor = 'rgba(0, 0, 0, 0.5)'; g.shadowOffsetY = 5; g.shadowBlur = 10;
+  g.fillStyle = GOLD_HI; g.fillText(d.name, W / 2, 262);
+  g.restore();
+  // la foto (senza foto: la lapide, grande) in una cornice arrotondata
+  const S = 540, fx = (W - S) / 2, fy = 304, FR = 42;
+  g.save(); g.shadowColor = 'rgba(8, 5, 14, 0.6)'; g.shadowBlur = 30; g.shadowOffsetY = 10;
+  rrect(g, fx - 10, fy - 10, S + 20, S + 20, FR + 8); g.fillStyle = PRIMARY; g.fill();
+  g.restore();
+  rrect(g, fx, fy, S, S, FR); g.fillStyle = THUMB; g.fill();
   const big = d.photo ?? d.headstone;
   if (big) {
-    if (!d.photo) { g.fillStyle = '#1a1e26'; g.fillRect(fx, fy, S, S); }
-    g.drawImage(big, fx, fy, S, S);
+    g.save(); rrect(g, fx, fy, S, S, FR); g.clip();
+    // senza foto, un alone caldo dietro la lapide (o il frutto dell'albero)
+    if (!d.photo) { const glow = g.createRadialGradient(W / 2, fy + S * 0.56, 0, W / 2, fy + S * 0.56, S * 0.5); glow.addColorStop(0, 'rgba(255, 214, 120, 0.3)'); glow.addColorStop(1, 'rgba(255, 214, 120, 0)'); g.fillStyle = glow; g.fillRect(fx, fy, S, S); }
+    g.drawImage(big, fx, fy, S, S); g.restore();
   }
-  // la lapide in piccolo, in basso a destra sopra la cornice
+  // con la foto, la lapide in un medaglione in basso a destra
   if (d.photo && d.headstone) {
-    const hs = 136;
-    g.save(); g.shadowColor = 'rgba(0,0,0,0.7)'; g.shadowBlur = 14; g.shadowOffsetY = 5;
-    g.drawImage(d.headstone, fx + S - hs * 0.6, fy + S - hs * 0.66, hs, hs);
+    const r = 92, cx = fx + S - 24, cy = fy + S - 24;
+    g.save(); g.shadowColor = 'rgba(8, 5, 14, 0.6)'; g.shadowBlur = 18; g.shadowOffsetY = 6;
+    g.beginPath(); g.arc(cx, cy, r + 8, 0, Math.PI * 2); g.fillStyle = PRIMARY; g.fill();
     g.restore();
+    g.beginPath(); g.arc(cx, cy, r, 0, Math.PI * 2); g.fillStyle = PANEL2; g.fill();
+    g.drawImage(d.headstone, cx - r * 0.95, cy - r * 0.98, r * 1.9, r * 1.9);
   }
   // date, causa, epitaffio
-  let y = fy + S + 3 * T + 70;
-  g.fillStyle = PAPER; g.font = `600 38px ${PIXEL}`;
+  let y = fy + S + 88;
+  g.fillStyle = PAPER; g.font = `800 42px ${SANS}`;
   g.fillText(d.dates, W / 2, y);
   y += 50;
-  g.fillStyle = MUTED; g.font = `400 30px ${PIXEL}`;
+  g.fillStyle = MUTED; g.font = `700 30px ${SANS}`;
   g.fillText(t('postcard.causeCategory', { cause: d.cause, category: d.category }), W / 2, y);
   if (d.epitaph) {
-    y += 64;
-    g.fillStyle = '#cfc6b2'; g.font = `400 34px ${PIXEL}`;
-    for (const line of wrap(g, t('postcard.epitaph', { text: d.epitaph }), W - 220, 2)) { g.fillText(line, W / 2, y); y += 44; }
+    y += 62;
+    g.fillStyle = '#e6dccb'; g.font = `600 34px ${SANS}`;
+    for (const line of wrap(g, t('postcard.epitaph', { text: d.epitaph }), W - 260, 2)) { g.fillText(line, W / 2, y); y += 44; }
   }
-  // il nome del gioco
-  const fy2 = H - 150;
-  g.fillStyle = 'rgba(216,178,106,0.5)'; g.fillRect(W / 2 - 220, fy2 - 70, 440, 2);
-  corner(g, W / 2, fy2 - 69, 7);
-  g.fillStyle = GOLD; g.font = `400 54px ${GOTHIC}`;
-  g.fillText(t('postcard.restsAt'), W / 2, fy2);
-  g.fillStyle = MUTED; g.font = `400 28px ${PIXEL}`;
-  g.fillText(t('postcard.tagline'), W / 2, fy2 + 46);
+  // il nome del gioco, sotto un filo col fuoco fatuo
+  const by = H - 128;
+  g.fillStyle = 'rgba(201, 147, 64, 0.55)';
+  g.fillRect(W / 2 - 250, by - 84, 200, 3); g.fillRect(W / 2 + 50, by - 84, 200, 3);
+  drawLpIcon(g, 'wisp', W / 2 - 24, by - 108, 48);
+  g.fillStyle = PRIMARY; g.font = `700 60px ${GOTHIC}`;
+  g.fillText(t('postcard.restsAt'), W / 2, by);
+  g.fillStyle = MUTED; g.font = `700 28px ${SANS}`;
+  g.fillText(t('postcard.tagline'), W / 2, by + 42);
+  void PANEL;
   return c;
 }
 

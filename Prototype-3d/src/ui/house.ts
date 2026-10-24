@@ -17,6 +17,7 @@ import { closeDrawer, confirmDialog, fmtDate, h, openDrawer, setDrawerBody, setD
 import { icon } from './icons.ts';
 import { memorials } from '../app/persistence.ts';
 import { portrait } from './memorial.ts';
+import { houseHeader } from './houseHeader.ts';
 import { registryHeader } from './registryHeader.ts';
 import { needChip, needRows, type UnlockNeed } from './screens.ts';
 import { graveThumb, modelThumb, placeableThumb } from './thumbs.ts';
@@ -25,8 +26,6 @@ import type { UI } from './UI.ts';
 const asModel = (m: LPModel, height: number) => ({ geometries: m.geometries, lights: m.lights, height, mats: LOWPOLY_MATERIALS, dedicated: true });
 const fruitImg = () => modelThumb('frutto-ricordo', asModel(memoryFruitLP(), 1), [1, 1]);
 
-/** La casa com'è adesso (o con un tetto diverso), in miniatura. */
-const houseImg = (s: SaveData, roof = s.house.roof) => placeableThumb('keeper_house', s.settings.style, houseVariant({ ...s.house, roof }));
 /** Miniatura di un tetto (la casa nuda con quel tetto) o di un'aggiunta da sola. */
 export function houseItemImg(s: SaveData, id: string): string {
   if (houseRoof(id)) return placeableThumb('keeper_house', s.settings.style, houseVariant({ owned: [id], roof: id, hidden: [] }));
@@ -135,6 +134,7 @@ export function openHouse(ui: UI) {
   const game = ui.game;
   const s = game.state;
   const render = () => {
+    header.setVariant(houseVariant(s.house));
     // solo quello che si ha: il resto si vede (e si compra) in Bottega, scheda «Casa»
     const roofs = HOUSE_ROOFS.filter((r) => s.house.owned.includes(r.id));
     const parts = HOUSE_PARTS.filter((p) => s.house.owned.includes(p.id));
@@ -145,8 +145,7 @@ export function openHouse(ui: UI) {
         h('b', {}, it.label),
         h('span', { class: 'price owned' }, active ? t('house.ui.card.shown') : t('house.ui.card.hidden')));
     setDrawerBody(h('div', {},
-      h('div', { class: 'hero house-hero' }, h('img', { src: houseImg(s), alt: '' }),
-        h('p', { class: 'muted', style: 'margin:0' }, t('house.ui.hint'))),
+      h('p', { class: 'muted', style: 'margin:0 0 10px' }, t('house.ui.hint')),
       perksBox(s),
       roofs.length > 1 ? h('div', {}, h('div', { class: 'section-title' }, t('house.ui.roof')),
         h('div', { class: 'grid' }, ...roofs.map((r) => card(r, s.house.roof === r.id, () => {
@@ -167,6 +166,9 @@ export function openHouse(ui: UI) {
       h('button', { class: 'big-btn ghost', onclick: () => closeDrawer() }, t('dialog.close')),
       h('button', { class: 'big-btn', onclick: () => openHouseShop(ui) }, icon('shop', 20), t('house.ui.more'))),
   });
+  // in testata la casa di notte, com'è adesso: si aggiorna togliendo o rimettendo le aggiunte
+  const header = houseHeader(houseVariant(s.house));
+  setDrawerHero(header.el);
   render();
 }
 

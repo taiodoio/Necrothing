@@ -10,9 +10,13 @@ import { memoryFruitLP, memoryTreeLP } from '../render/lowpoly/memoryTree.ts';
 import { LOWPOLY_MATERIALS } from '../render/modelCache.ts';
 import type { LPModel } from '../render/lowpoly/kit.ts';
 import { t } from '../i18n/index.ts';
-import { closeDrawer, fmtDate, h, joinDot, openDrawer } from './dom.ts';
+import { closeDrawer, fmtDate, h, joinDot, openDrawer, setDrawerHero } from './dom.ts';
+import { memoryTags } from './memoryTags.ts';
+import { treeHeader } from './treeHeader.ts';
 import { icon } from './icons.ts';
-import { confirmExhume, MEMORY_LABELS, moreActions } from './screens.ts';
+import { memorials } from '../app/persistence.ts';
+import { openPostcard } from './memorial.ts';
+import { confirmExhume, MEMORY_LABELS, moreActions, postcardData } from './screens.ts';
 import { modelThumb } from './thumbs.ts';
 import type { UI } from './UI.ts';
 
@@ -44,19 +48,18 @@ export function openEntrust(ui: UI, graveId: string) {
   });
 }
 
-/** Toccando l'albero: la lista di ciò che gli è stato affidato. */
+/**
+ * Toccando l'albero: in testata l'albero di notte (animato), sotto i ricordi
+ * affidati, ognuno col suo cartellino appeso a un ramo.
+ */
 export function openMemoryTree(ui: UI) {
-  const game = ui.game;
-  const s = game.state;
+  const s = ui.game.state;
   const list = [...s.entrusted].reverse();
   openDrawer(t('tree.title'), h('div', {},
-    h('div', { class: 'hero' }, h('img', { src: treeImg(s.entrusted.length), alt: '' }),
-      h('p', { class: 'muted', style: 'margin:0' }, list.length ? t('tree.list.count', { n: list.length }) : t('tree.list.none'))),
-    list.length ? h('div', { class: 'section-title' }, t('tree.list.title')) : h('p', { class: 'muted' }, t('tree.list.hint')),
-    ...list.map((e) => h('button', { class: 'ach got memory-row', onclick: () => openMemory(ui, e.grave.id, undefined, true) },
-      h('div', { class: 'ico' }, h('img', { src: fruitImg(), width: 36, height: 36, alt: '' })),
-      h('div', {}, h('b', {}, e.grave.name), h('p', {}, t('tree.list.row', { category: CATEGORY_LABELS[e.grave.category], date: fmtDate(e.entrustedAt) }))))),
+    h('p', { class: 'muted mt-intro' }, list.length ? t('tree.list.count', { n: list.length }) : t('tree.list.none')),
+    list.length ? memoryTags(list, fruitImg(), (id) => openMemory(ui, id, undefined, true)) : h('p', { class: 'muted' }, t('tree.list.hint')),
   ));
+  setDrawerHero(treeHeader(s.entrusted.length).el);
 }
 
 /**
@@ -88,7 +91,13 @@ export function openMemory(ui: UI, id: string, visit?: R.ActionResult, fromList 
       h('ul', { class: 'timeline' }, ...mem.map((m) => h('li', {}, h('time', {}, fmtDate(m.at)), m.type === 'ghost' && m.at >= e.entrustedAt ? t('tree.memory.ghostNear') : MEMORY_LABELS[m.type])))) : null,
   ), {
     footer: h('div', { style: 'display:grid;gap:6px' },
-      moreActions([{ icon: 'shovel', label: t('tree.memory.free'), danger: true, run: () => confirmExhume(ui, id, g.name, 'memory') }]),
+      moreActions([
+        { icon: 'postcard', label: t('detail.grave.postcard'), run: async () => {
+          const photo = g.photoId ? (await memorials.get(g.photoId).catch(() => null))?.dataUrl ?? null : null;
+          openPostcard(await postcardData(g, photo, ui, g.seed % 4, fruitImg()));
+        } },
+        { icon: 'shovel', label: t('tree.memory.free'), danger: true, run: () => confirmExhume(ui, id, g.name, 'memory') },
+      ]),
       h('button', { class: 'big-btn', onclick: () => openMemoryTree(ui) }, t('tree.memory.back'))),
     beforeClose: fromList ? () => { openMemoryTree(ui); return false; } : undefined,
   });

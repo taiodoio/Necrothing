@@ -8,7 +8,8 @@ import { lpIconUrl } from './lpIcons.ts';
  * Tessera del pattern: zucca, foglia, teschio, bara, pipistrello e qualche
  * stellina, solo il contorno, in un colore appena più scuro dello sfondo.
  */
-function patternTile(stroke: string): string {
+/** La tessera come data-URI (per disegnarla su un canvas: la cartolina). */
+export function patternTileUrl(stroke: string): string {
   const g = (x: number, y: number, a: number, body: string) => `<g transform="translate(${x} ${y}) rotate(${a})">${body}</g>`;
   const pumpkin = '<ellipse rx="15" ry="11"/><ellipse rx="6.5" ry="11"/><path d="M1 -11 q1 -6 6 -8"/>';
   const leaf = '<path d="M0 -17 C11 -9 11 8 0 17 C-11 8 -11 -9 0 -17 Z M0 -12 L0 17 M0 -2 l6 -5 M0 5 l-6 -5"/>';
@@ -21,8 +22,10 @@ function patternTile(stroke: string): string {
     g(98, 92, -8, bat), g(98, 18, 0, star), g(16, 96, 0, star), g(186, 88, 0, star), g(104, 176, 0, star),
   ].join('');
   const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="200" height="200" viewBox="0 0 200 200"><g fill="none" stroke="${stroke}" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">${body}</g></svg>`;
-  return `url("data:image/svg+xml,${encodeURIComponent(svg)}")`;
+  return `data:image/svg+xml,${encodeURIComponent(svg)}`;
 }
+
+const patternTile = (stroke: string) => `url("${patternTileUrl(stroke)}")`;
 
 export function installPlayDecor() {
   const st = document.documentElement.style;

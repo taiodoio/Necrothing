@@ -98,8 +98,8 @@ export interface NightHero {
   scene: THREE.Scene;
   /** Un oggetto del cimitero (tipo del catalogo) sul prato, per dare l'ambientazione. */
   prop(type: string, x: number, z: number, ry?: number, variant?: number): THREE.Group;
-  /** Una tomba sul prato. */
-  grave(type: GraveType, x: number, z: number, ry?: number): THREE.Group;
+  /** Una tomba sul prato (`scale` per rimpicciolirla dove la camera è vicina). */
+  grave(type: GraveType, x: number, z: number, ry?: number, scale?: number): THREE.Group;
   /** Il recinto del cimitero lungo z = `fenceZ` e, dietro, il bosco. */
   backdrop(fenceZ: number): void;
   halo(color: string, opacity: number): THREE.Sprite;
@@ -242,10 +242,11 @@ export function nightHero(cls: string, clear: [number, number, number], build: (
     }
     return o;
   };
-  const grave = (type: GraveType, x: number, z: number, ry = 0) => {
+  const grave = (type: GraveType, x: number, z: number, ry = 0, scale = 1) => {
     const o = instantiate(getModel(`g:${type}:clean:1`, 'lowpoly', () => graveModel(type, 'clean', 1), 1), { castShadow: false });
     o.position.set(x, 0, z);
     o.rotation.y = ry;
+    o.scale.setScalar(scale);
     scene.add(o);
     return o;
   };

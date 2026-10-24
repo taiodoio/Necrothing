@@ -13,12 +13,10 @@ import { animateRig, buildRig } from '../view/characters.ts';
 import { boxOf, nightHero, type HeroHandle } from './heroScene.ts';
 
 const LEAVES = ['#5f7d6c', '#6e8f7b', '#7a9483', '#c9772f'];
-/** Tombe sparse sul prato: tipo, x, z, rotazione. */
-const STONES: Array<[GraveType, number, number, number]> = [
-  ['celtic_cross', -2.5, -1.3, 0.4], ['stone_simple', -4.3, -3.2, -0.3], ['gothic', 3.9, -2.3, -0.5], ['rectangular', -6, -1.6, 0.2], ['victorian', 5.8, -3.6, -0.2], ['obelisk', -1.2, -3.9, 0.1],
-];
+/** Tombe sul prato, in fila come in un cimitero: tipo, x, z, rotazione (appena storta). */
+const STONES: Array<[GraveType, number, number, number]> = [['stone_simple', -6.2, -2.6, 0.05], ['celtic_cross', -4.6, -2.6, -0.04], ['rectangular', -3, -2.6, 0.03], ['gothic', 4.4, -2.6, -0.05]];
 /** Sullo sfondo, qualche pezzo di cimitero (non quello vero: solo per l'ambientazione). */
-const BACKDROP: Array<[string, number, number, number]> = [['lamp_post_gothic', -3.4, -2.3, 0.3], ['cypress', 2.6, -3.9, 0], ['angel_statue', -5.2, -4, 0.3], ['lamp_post_gothic', 6.6, -1.4, -0.2]];
+const BACKDROP: Array<[string, number, number, number]> = [['lamp_post_gothic', -1.9, -2.2, 0.3], ['cypress', 2.8, -3.9, 0], ['angel_statue', -4.6, -4.1, 0], ['lamp_post_gothic', 6, -2.2, -0.2]];
 
 /** Il modello dell'albero (e dove stanno i frutti) per tanti ricordi: si tiene l'ultimo, così riaprendo la testata è già pronto. */
 let cached: { n: number; model: LPModel; fruits: THREE.Vector3[] } | null = null;

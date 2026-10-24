@@ -57,10 +57,10 @@ export function houseHeader(variant: number): HouseHeader {
     hero.backdrop(-5);
     hero.prop('cypress', -4.4, -3.6);
     hero.prop('lamp_post_gothic', -2.7, -2, 0.3);
-    hero.grave('stone_simple', -4.6, -2.2, 0.3);
-    hero.grave('celtic_cross', 3.9, -2.6, -0.3);
-    hero.grave('rectangular', 5.4, -1.2, -0.4);
-    hero.grave('gothic', -6.2, -0.8, 0.2);
+    hero.grave('stone_simple', -4.6, -2.4, 0.1, 0.62);
+    hero.grave('celtic_cross', 4, -2.8, -0.1, 0.62);
+    hero.grave('rectangular', 5.5, -2.8, -0.05, 0.62);
+    hero.grave('gothic', -6, -2.4, 0.05, 0.62);
     setVariant = (v) => { build(v); hero.reframe(); };
 
     // lucciole nel cortile

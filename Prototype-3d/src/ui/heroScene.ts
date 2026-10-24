@@ -8,7 +8,8 @@ import * as THREE from 'three';
 import { createRng } from '../game/rng.ts';
 import { getModel, instantiate, lightWorldPos, type CachedModel } from '../render/modelCache.ts';
 import { graveModel } from '../render/models/graves.ts';
-import { sceneryFlowers, sceneryLeaves, sceneryPebbles, sceneryRock, sceneryTuft } from '../render/models/nature.ts';
+import { fencePillar, fenceSegment } from '../render/models/fence.ts';
+import { deadTree, pine, sceneryBush, sceneryFlowers, sceneryLeaves, sceneryPebbles, sceneryRock, sceneryTuft } from '../render/models/nature.ts';
 import { placeableKey, placeableModel } from '../render/models/registry.ts';
 import type { GraveType } from '../game/graves.ts';
 import { lowNoise } from '../view/terrain.ts';
@@ -50,6 +51,22 @@ const SCENERY = {
 };
 const SCENERY_MIX: Array<[number, keyof typeof SCENERY]> = [[0.7, 'tuft'], [0.8, 'flowers'], [0.9, 'pebbles'], [0.95, 'rock'], [1, 'leaves']];
 
+/** Il recinto e il bosco attorno al cimitero, come nel gioco (stesse chiavi: i modelli sono già in memoria). */
+const BACK = {
+  fence: () => getModel('fseg:1', 'lowpoly', () => fenceSegment(1), 1),
+  pillar: () => getModel('fpil:1', 'lowpoly', () => fencePillar(1), 2),
+  pine: (v: number) => getModel(`wpine:${v}`, 'lowpoly', () => pine(v + 40), v, true, 1),
+  dead: (v: number) => getModel(`wdead:${v}`, 'lowpoly', () => deadTree({ seed: v + 90 }, true), v, true, 1),
+  bush: (v: number) => getModel(`bush:${v % 4}`, 'lowpoly', () => sceneryBush(v % 4), v),
+};
+
+/** Prepara in anticipo i modelli delle testate (recinto, bosco, sottobosco): aprendole non resta da costruire niente. */
+export function warmBackdrop() {
+  BACK.fence(); BACK.pillar();
+  for (let v = 0; v < 4; v++) { BACK.pine(v); BACK.dead(v); BACK.bush(v); }
+  for (let v = 0; v < 12; v++) for (const k of Object.keys(SCENERY) as Array<keyof typeof SCENERY>) SCENERY[k](v);
+}
+
 /** Cielo: un fondale con la sfumatura dall'orizzonte (viola caldo) all'alto (quasi nero). */
 function skyDrop(): THREE.Mesh {
   const geo = new THREE.PlaneGeometry(120, 40, 1, 8).translate(0, 18, -40);
@@ -83,6 +100,8 @@ export interface NightHero {
   prop(type: string, x: number, z: number, ry?: number, variant?: number): THREE.Group;
   /** Una tomba sul prato. */
   grave(type: GraveType, x: number, z: number, ry?: number): THREE.Group;
+  /** Il recinto del cimitero lungo z = `fenceZ` e, dietro, il bosco. */
+  backdrop(fenceZ: number): void;
   halo(color: string, opacity: number): THREE.Sprite;
   /** Luci puntiformi dalle ancore di un modello (finestre, lanterne), già al loro posto sotto `parent`. */
   modelLights(model: CachedModel, parent: THREE.Object3D, boost?: number): THREE.PointLight[];
@@ -157,25 +176,70 @@ export function nightHero(cls: string, clear: [number, number, number], build: (
   const field = meadow();
   scene.add(field);
   disposables.push(field.geometry, field.material as THREE.Material);
-  // sottobosco sparso (i modelli sono quelli del gioco, condivisi: non si liberano)
+  // tante copie degli stessi modelli: una mesh a istanze per modello (le geometrie sono del gioco, condivise)
+  const batches = new Map<CachedModel, THREE.Matrix4[]>();
+  const put = (model: CachedModel, x: number, z: number, ry: number, sc = 1, sy = sc) => {
+    let list = batches.get(model);
+    if (!list) batches.set(model, (list = []));
+    list.push(new THREE.Matrix4().compose(new THREE.Vector3(x, 0, z), new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), ry), new THREE.Vector3(sc, sy, sc)));
+  };
+  const flush = () => {
+    for (const [model, mats] of batches) for (const [bucket, geo] of Object.entries(model.geometries)) {
+      if (!geo) continue;
+      const mesh = new THREE.InstancedMesh(geo, model.mats[bucket as keyof typeof model.mats], mats.length);
+      mats.forEach((mm, i) => mesh.setMatrixAt(i, mm));
+      mesh.instanceMatrix.needsUpdate = true;
+      mesh.computeBoundingSphere();
+      scene.add(mesh);
+      disposables.push({ dispose: () => mesh.dispose() }); // solo le matrici: la geometria resta al gioco
+    }
+    batches.clear();
+  };
+  // sottobosco sparso sul prato
   const [cx, cz, r] = clear;
   const rg = createRng(17);
-  for (let i = 0; i < 90; i++) {
-    const x = rg.range(-10, 10), z = rg.range(-9, 4);
+  for (let i = 0; i < 160; i++) {
+    const x = rg.range(-11, 11), z = rg.range(-9, 4.5);
     if (Math.hypot(x - cx, z - cz) < r) continue;
     const roll = rg.next();
-    const kind = SCENERY_MIX.find(([p]) => roll < p)![1];
-    const o = instantiate(SCENERY[kind](rg.int(12)), { castShadow: false });
-    o.position.set(x, 0, z);
-    o.rotation.y = rg.range(0, Math.PI * 2);
-    scene.add(o);
+    let kind = SCENERY_MIX.find(([p]) => roll < p)![1];
+    if (kind === 'rock' && z > -2) kind = 'pebbles'; // le rocce solo in fondo: davanti alla camera sembrerebbero massi
+    put(SCENERY[kind](rg.int(12)), x, z, rg.range(0, Math.PI * 2));
   }
+  const backdrop = (fenceZ: number) => {
+    // il recinto: tratti di un metro e un pilastro ogni tre, come attorno al cimitero
+    for (let x = -18; x < 18; x++) {
+      put(BACK.fence(), x + 0.5, fenceZ, 0);
+      if (x % 3 === 0) put(BACK.pillar(), x, fenceZ, 0);
+    }
+    // dietro, il bosco: più fitto lontano dal recinto, a macchie, con cespugli a ridosso
+    const rb = createRng(23);
+    for (let z = fenceZ - 1.3; z > fenceZ - 16; z -= 1.25) {
+      for (let x = -20; x < 20; x += 1.25) {
+        const d = fenceZ - z;
+        const clump = lowNoise(x, z, 31, 5);
+        if (rb.next() > (0.38 + Math.min(0.4, d * 0.04)) * (0.5 + clump)) continue;
+        const px = x + rb.range(-0.5, 0.5), pz = z + rb.range(-0.5, 0.5), v = rb.int(4), k = rb.next(), sc = 0.85 + rb.next() * 0.55;
+        if (d < 2.2 && k < 0.4) put(BACK.bush(v), px, pz, rb.range(0, 6.28), 1 + rb.next() * 0.4);
+        else put(k < 0.68 ? BACK.pine(v) : BACK.dead(v), px, pz, rb.range(0, 6.28), sc, sc * (0.9 + rb.next() * 0.35));
+      }
+    }
+    flush();
+  };
   const prop = (type: string, x: number, z: number, ry = 0, variant = 0) => {
     const v = { type, variant, dirty: false, broken: false, lit: true, seed: 1 };
-    const o = instantiate(getModel(placeableKey(v), 'lowpoly', () => placeableModel(v), 1), { castShadow: false });
+    const model = getModel(placeableKey(v), 'lowpoly', () => placeableModel(v), 1);
+    const o = instantiate(model, { castShadow: false });
     o.position.set(x, 0, z);
     o.rotation.y = ry;
     scene.add(o);
+    // i lampioni e le lanterne si accendono, con l'alone
+    for (const a of model.lights) {
+      const l = new THREE.PointLight(a.color, a.intensity * 2, a.range, 1.6);
+      lightWorldPos(a, l.position);
+      o.add(l);
+      if (a.halo > 0) { const hs = halo('#ffc070', 0.5); lightWorldPos(a, hs.position); hs.scale.setScalar(0.4 + a.halo * 0.4); o.add(hs); }
+    }
     return o;
   };
   const grave = (type: GraveType, x: number, z: number, ry = 0) => {
@@ -242,7 +306,7 @@ export function nightHero(cls: string, clear: [number, number, number], build: (
   }
 
   build({
-    scene, prop, grave, halo,
+    scene, prop, grave, backdrop, halo,
     modelLights: (model, parent, boost = 1) => model.lights.map((a) => {
       const l = new THREE.PointLight(a.color, a.intensity * 2.2 * boost, a.range * 0.9, 1.6);
       lightWorldPos(a, l.position);
@@ -252,6 +316,7 @@ export function nightHero(cls: string, clear: [number, number, number], build: (
     track: (...d) => { disposables.push(...d); },
     reframe: () => place(),
     start: (framing, step) => {
+      flush();
       frameFn = framing; stepFn = step;
       requestAnimationFrame(() => {
         resize(true);

@@ -54,14 +54,13 @@ export function houseHeader(variant: number): HouseHeader {
     };
     build(variant);
     // attorno e dietro, qualche pezzo di cimitero (non quello vero: solo per l'ambientazione)
-    for (let x = -12; x <= 12; x++) hero.prop('fence_iron', x, -6.5);
-    hero.prop('dead_tree', -5.6, -4.6, 0.6);
-    hero.prop('cypress', 5.6, -4.8);
+    hero.backdrop(-5);
+    hero.prop('cypress', -4.4, -3.6);
     hero.prop('lamp_post_gothic', -2.7, -2, 0.3);
-    hero.grave('stone_simple', -4.6, -2.6, 0.3);
-    hero.grave('celtic_cross', 3.9, -2.8, -0.3);
-    hero.prop('angel_statue', 6.2, -4.5, -0.4);
-    hero.prop('mausoleum', -1.5, -10, 0.15);
+    hero.grave('stone_simple', -4.6, -2.2, 0.3);
+    hero.grave('celtic_cross', 3.9, -2.6, -0.3);
+    hero.grave('rectangular', 5.4, -1.2, -0.4);
+    hero.grave('gothic', -6.2, -0.8, 0.2);
     setVariant = (v) => { build(v); hero.reframe(); };
 
     // lucciole nel cortile

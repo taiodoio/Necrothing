@@ -1,5 +1,5 @@
 // Testata animata della Casa del Custode: la casa vista di fronte, di notte,
-// sul prato a collinette (vedi heroScene), com'è adesso: tetto e aggiunte in
+// sul prato (vedi heroScene), com'è adesso: tetto e aggiunte in
 // vista. Le finestre accese tremolano, il camino fuma se c'è il fumo, le
 // lucciole girano nel cortile e ogni tanto un corvo attraversa il cielo.
 
@@ -22,7 +22,6 @@ export function houseHeader(variant: number): HouseHeader {
   const handle = nightHero('house-hero', [0, -0.4, 3.2], (hero) => {
     const { scene } = hero;
     const holder = new THREE.Group();
-    holder.rotation.y = -0.18; // appena di tre quarti: si vedono il fianco e il camino
     scene.add(holder);
     let house: THREE.Group | null = null, anim: Animated | null = null;
     let lights: Array<{ l: THREE.PointLight; base: number; flicker: number; ph: number }> = [];
@@ -70,7 +69,7 @@ export function houseHeader(variant: number): HouseHeader {
     scene.add(crow.root);
     const CROW_EVERY = 16, CROW_LEN = 6;
 
-    hero.start(() => ({ box, fill: 0.8, sx: 0.64, base: 0.06, elev: 9 }), (t) => {
+    hero.start(() => ({ box, fill: 0.94, sx: 0.63, base: 0.05, elev: 7 }), (t) => {
       anim?.update(t);
       for (const L of lights) L.l.intensity = L.base * (1 - L.flicker * 0.5 + Math.sin(t * 9 + L.ph) * L.flicker * 0.25 + Math.sin(t * 23 + L.ph * 2) * L.flicker * 0.2);
       for (const [i, s] of halos.entries()) (s.material as THREE.SpriteMaterial).opacity = 0.45 + Math.sin(t * 7 + i * 2) * 0.06;

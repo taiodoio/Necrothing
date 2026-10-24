@@ -1,6 +1,6 @@
 // Testate animate di notte (Albero dei ricordi, Casa del Custode): il cielo
-// con la luna e le stelle, un prato a collinette fino all'orizzonte (piano
-// attorno al soggetto, così poggia a terra), le luci, gli aloni e il giro di
+// con la luna e le stelle, un prato piano fino all'orizzonte (il soggetto ci
+// poggia sopra), le luci, gli aloni e il giro di
 // animazione. Ogni testata ci mette il suo soggetto. Come la testata del
 // Registro: un renderer piccolo tutto suo, acceso solo finché è a schermo.
 
@@ -15,15 +15,13 @@ const GRASS = ['#2f4233', '#354a36', '#3a5038', '#2b3d2f'];
 
 type Disposable = { dispose: () => void };
 
-/** Altezza del prato: piano entro `r` dal centro, collinette attorno, colline più alte verso il fondo. */
+/** Altezza del prato: piano fino all'orizzonte, appena mosso (niente colline); del tutto piano entro `r` dal soggetto. */
 function groundAt(x: number, z: number, cx: number, cz: number, r: number): number {
   const flat = THREE.MathUtils.smoothstep(Math.hypot(x - cx, z - cz), r, r + 2.5);
-  const near = 0.28 * Math.sin(x * 0.55 + 1.3) * Math.cos(z * 0.6 - 0.4) + 0.18 * Math.sin(x * 1.1 + z * 0.7);
-  const back = Math.max(0, cz - z - 3) * (0.13 + 0.07 * Math.sin(x * 0.27 + 2)) + Math.max(0, cz - z - 10) * 0.08 * (1 + Math.sin(x * 0.18 - 1));
-  return flat * (near + back);
+  return flat * (0.05 * Math.sin(x * 0.55 + 1.3) * Math.cos(z * 0.6 - 0.4) + 0.03 * Math.sin(x * 1.1 + z * 0.7));
 }
 
-/** Il prato: una griglia low-poly a facce piatte, più chiara in cima ai dossi. */
+/** Il prato: una griglia low-poly a facce piatte, con le zolle di verdi diversi. */
 function meadow(height: (x: number, z: number) => number): THREE.Mesh {
   const geo = new THREE.PlaneGeometry(70, 46, 70, 40).rotateX(-Math.PI / 2).translate(0, 0, -15);
   const pos = geo.attributes.position as THREE.BufferAttribute;
@@ -114,7 +112,7 @@ export function nightHero(cls: string, flat: [number, number, number], build: (h
 
   const scene = new THREE.Scene();
   scene.background = new THREE.Color(SKY_TOP);
-  scene.fog = new THREE.Fog(HAZE, 16, 42); // le colline lontane sfumano più scure del cielo: si stagliano
+  scene.fog = new THREE.Fog(HAZE, 16, 42); // il prato lontano sfuma più scuro del cielo: l'orizzonte si legge
   scene.add(new THREE.HemisphereLight('#9aa2d6', '#2c2632', 1.5));
   const moonLight = new THREE.DirectionalLight('#b4c6ee', 1.6);
   moonLight.position.set(-6, 8, 7);
@@ -132,7 +130,7 @@ export function nightHero(cls: string, flat: [number, number, number], build: (h
     return new THREE.Sprite(m);
   };
 
-  // la luna che sorge a sinistra dietro le colline (in alto c'è il titolo), e le stelle
+  // la luna che sorge a sinistra sull'orizzonte (in alto c'è il titolo), e le stelle
   const moon = new THREE.Mesh(new THREE.CircleGeometry(1.3, 24), new THREE.MeshBasicMaterial({ color: '#f1e8cc', fog: false }));
   moon.position.set(-16, 9.5, -38);
   const moonHalo = halo('#cfd8ff', 0.35);

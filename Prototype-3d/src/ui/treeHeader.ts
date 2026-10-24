@@ -1,7 +1,7 @@
 // Testata animata dell'albero dei ricordi: l'albero di notte sul prato a
-// collinette (vedi heroScene), con qualche lapide sparsa. I frutti accesi
+// piano (vedi heroScene), con qualche lapide sparsa. I frutti accesi
 // pulsano piano, le lucciole girano attorno alla chioma, ogni tanto cade una
-// foglia e un fantasma attraversa le colline.
+// foglia e un fantasma passa dietro l'albero.
 
 import * as THREE from 'three';
 import type { GraveType } from '../game/graves.ts';
@@ -13,9 +13,9 @@ import { animateRig, buildRig } from '../view/characters.ts';
 import { boxOf, nightHero, type HeroHandle } from './heroScene.ts';
 
 const LEAVES = ['#5f7d6c', '#6e8f7b', '#7a9483', '#c9772f'];
-/** Lapidi sulle colline: tipo, x, z, rotazione, inclinazione. */
+/** Lapidi sparse sul prato: tipo, x, z, rotazione, inclinazione. */
 const STONES: Array<[GraveType, number, number, number, number]> = [
-  ['celtic_cross', -2.6, -1.8, 0.4, 0.06], ['stone_simple', -4.2, -4.5, -0.3, -0.08], ['gothic', 6.4, -3.2, -0.5, 0.05], ['rectangular', 0.2, -6.5, 0.2, 0.07],
+  ['celtic_cross', -2.4, -1.4, 0.4, 0.06], ['stone_simple', -3.6, -3.6, -0.3, -0.08], ['gothic', 4.6, -2.4, -0.5, 0.05], ['rectangular', -0.6, -5.5, 0.2, 0.07],
 ];
 
 /** Crea la testata per un albero con `memories` frutti accesi; si ferma quando esce dal documento. */
@@ -70,12 +70,12 @@ export function treeHeader(memories: number): HeroHandle {
       scene.add(m);
       return { m, t0: i * 1.9, life: 6 + (i % 3), x: (rf() - 0.5) * 4.4, z: 0.6 + rf() * 1.8 };
     });
-    // il fantasma che ogni tanto attraversa le colline, dietro l'albero
+    // il fantasma che ogni tanto passa sul prato, dietro l'albero
     const ghost = buildRig('ghost', 'lowpoly');
     scene.add(ghost.root);
     const GHOST_EVERY = 22, GHOST_LEN = 11, GZ = -3.5;
 
-    hero.start(() => ({ box, fill: 0.86, sx: 0.65, base: 0.08, elev: 6 }), (t) => {
+    hero.start(() => ({ box, fill: 1.06, sx: 0.62, base: 0.07, elev: 6 }), (t) => {
       for (const f of fruitHalos) {
         const k = 0.5 + 0.5 * Math.sin(t * f.sp + f.ph);
         (f.s.material as THREE.SpriteMaterial).opacity = 0.35 + k * 0.45;

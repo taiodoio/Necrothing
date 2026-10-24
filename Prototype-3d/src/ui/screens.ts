@@ -39,8 +39,11 @@ const EPITAPHS = tList('burial.epitaph.suggestions');
 /** La foto della sepoltura in corso (resta se si torna indietro dal posizionamento). */
 let burialPhoto = new BurialPhoto();
 
-/** Dati della cartolina per una tomba (o una bozza): date, etichette, lapide in miniatura e foto. */
-export async function postcardData(g: { name: string; birthDate: string | null; deathDate: string | null; deathCause: R.BurialDraft['deathCause']; deathCauseText?: string | null; category: R.BurialDraft['category']; epitaph: string | null; graveType: NonNullable<R.BurialDraft['graveType']> }, photo: string | null, ui: UI, seed = 1): Promise<PostcardData> {
+/**
+ * Dati della cartolina per una tomba (o una bozza): date, etichette, lapide in
+ * miniatura e foto. Per un ricordo affidato all'albero `medal` è il suo frutto, al posto della lapide.
+ */
+export async function postcardData(g: { name: string; birthDate: string | null; deathDate: string | null; deathCause: R.BurialDraft['deathCause']; deathCauseText?: string | null; category: R.BurialDraft['category']; epitaph: string | null; graveType: NonNullable<R.BurialDraft['graveType']> }, photo: string | null, ui: UI, seed = 1, medal?: string): Promise<PostcardData> {
   const style = ui.game.state.settings.style;
   return {
     name: g.name,
@@ -49,7 +52,7 @@ export async function postcardData(g: { name: string; birthDate: string | null; 
     category: g.category ? CATEGORY_LABELS[g.category] : '—',
     epitaph: g.epitaph || null,
     photo: photo ? await loadImage(photo) : null,
-    headstone: await loadImage(graveThumb(g.graveType, style, 'flowers', seed)),
+    headstone: await loadImage(medal ?? graveThumb(g.graveType, style, 'flowers', seed)),
   };
 }
 

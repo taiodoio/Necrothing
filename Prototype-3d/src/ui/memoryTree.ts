@@ -12,7 +12,9 @@ import type { LPModel } from '../render/lowpoly/kit.ts';
 import { t } from '../i18n/index.ts';
 import { closeDrawer, fmtDate, h, joinDot, openDrawer } from './dom.ts';
 import { icon } from './icons.ts';
-import { confirmExhume, MEMORY_LABELS, moreActions } from './screens.ts';
+import { memorials } from '../app/persistence.ts';
+import { openPostcard } from './memorial.ts';
+import { confirmExhume, MEMORY_LABELS, moreActions, postcardData } from './screens.ts';
 import { modelThumb } from './thumbs.ts';
 import type { UI } from './UI.ts';
 
@@ -88,7 +90,13 @@ export function openMemory(ui: UI, id: string, visit?: R.ActionResult, fromList 
       h('ul', { class: 'timeline' }, ...mem.map((m) => h('li', {}, h('time', {}, fmtDate(m.at)), m.type === 'ghost' && m.at >= e.entrustedAt ? t('tree.memory.ghostNear') : MEMORY_LABELS[m.type])))) : null,
   ), {
     footer: h('div', { style: 'display:grid;gap:6px' },
-      moreActions([{ icon: 'shovel', label: t('tree.memory.free'), danger: true, run: () => confirmExhume(ui, id, g.name, 'memory') }]),
+      moreActions([
+        { icon: 'postcard', label: t('detail.grave.postcard'), run: async () => {
+          const photo = g.photoId ? (await memorials.get(g.photoId).catch(() => null))?.dataUrl ?? null : null;
+          openPostcard(await postcardData(g, photo, ui, g.seed % 4, fruitImg()));
+        } },
+        { icon: 'shovel', label: t('tree.memory.free'), danger: true, run: () => confirmExhume(ui, id, g.name, 'memory') },
+      ]),
       h('button', { class: 'big-btn', onclick: () => openMemoryTree(ui) }, t('tree.memory.back'))),
     beforeClose: fromList ? () => { openMemoryTree(ui); return false; } : undefined,
   });

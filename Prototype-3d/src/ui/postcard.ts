@@ -104,7 +104,12 @@ export async function drawPostcard(d: PostcardData): Promise<HTMLCanvasElement> 
   g.restore();
   rrect(g, fx, fy, S, S, FR); g.fillStyle = THUMB; g.fill();
   const big = d.photo ?? d.headstone;
-  if (big) { g.save(); rrect(g, fx, fy, S, S, FR); g.clip(); g.drawImage(big, fx, fy, S, S); g.restore(); }
+  if (big) {
+    g.save(); rrect(g, fx, fy, S, S, FR); g.clip();
+    // senza foto, un alone caldo dietro la lapide (o il frutto dell'albero)
+    if (!d.photo) { const glow = g.createRadialGradient(W / 2, fy + S * 0.56, 0, W / 2, fy + S * 0.56, S * 0.5); glow.addColorStop(0, 'rgba(255, 214, 120, 0.3)'); glow.addColorStop(1, 'rgba(255, 214, 120, 0)'); g.fillStyle = glow; g.fillRect(fx, fy, S, S); }
+    g.drawImage(big, fx, fy, S, S); g.restore();
+  }
   // con la foto, la lapide in un medaglione in basso a destra
   if (d.photo && d.headstone) {
     const r = 92, cx = fx + S - 24, cy = fy + S - 24;

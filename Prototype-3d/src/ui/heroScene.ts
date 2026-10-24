@@ -6,44 +6,49 @@
 
 import * as THREE from 'three';
 import { createRng } from '../game/rng.ts';
-import { lightWorldPos, type CachedModel } from '../render/modelCache.ts';
+import { getModel, instantiate, lightWorldPos, type CachedModel } from '../render/modelCache.ts';
+import { graveModel } from '../render/models/graves.ts';
+import { sceneryFlowers, sceneryLeaves, sceneryPebbles, sceneryRock, sceneryTuft } from '../render/models/nature.ts';
+import { placeableKey, placeableModel } from '../render/models/registry.ts';
+import type { GraveType } from '../game/graves.ts';
+import { lowNoise } from '../view/terrain.ts';
 
 const FPS = 30;
 const FOV = 30;
 const HORIZON = '#3d3152', SKY_TOP = '#120f1a', HAZE = '#2a2236';
-const GRASS = ['#2f4233', '#354a36', '#3a5038', '#2b3d2f'];
 
 type Disposable = { dispose: () => void };
 
-/** Altezza del prato: piano fino all'orizzonte, appena mosso (niente colline); del tutto piano entro `r` dal soggetto. */
-function groundAt(x: number, z: number, cx: number, cz: number, r: number): number {
-  const flat = THREE.MathUtils.smoothstep(Math.hypot(x - cx, z - cz), r, r + 2.5);
-  return flat * (0.05 * Math.sin(x * 0.55 + 1.3) * Math.cos(z * 0.6 - 0.4) + 0.03 * Math.sin(x * 1.1 + z * 0.7));
+/** I colori del prato del gioco (view/terrain.ts, low-poly): verdi scuri con macchie di muschio e d'erba secca. */
+const GRASS_A = new THREE.Color('#354839'), GRASS_B = new THREE.Color('#3f5536'), MOSS = new THREE.Color('#61745a'), DRY = new THREE.Color('#8d805c');
+
+/** Il prato: piano fino all'orizzonte, coi colori a macchie ampie come nel gioco. */
+function meadow(): THREE.Mesh {
+  const geo = new THREE.PlaneGeometry(80, 50, 80, 50).rotateX(-Math.PI / 2).translate(0, 0, -18);
+  const pos = geo.attributes.position as THREE.BufferAttribute;
+  const col = new Float32Array(pos.count * 3);
+  const c = new THREE.Color();
+  for (let i = 0; i < pos.count; i++) {
+    const x = pos.getX(i), z = pos.getZ(i);
+    const n1 = lowNoise(x, z, 5, 9), n2 = lowNoise(x, z, 11, 13);
+    c.copy(GRASS_A).lerp(GRASS_B, n1);
+    if (n2 > 0.62) c.lerp(DRY, (n2 - 0.62) * 0.8);
+    if (n2 < 0.3) c.lerp(MOSS, (0.3 - n2) * 0.7);
+    col.set([c.r, c.g, c.b], i * 3);
+  }
+  geo.setAttribute('color', new THREE.BufferAttribute(col, 3));
+  return new THREE.Mesh(geo, new THREE.MeshLambertMaterial({ vertexColors: true }));
 }
 
-/** Il prato: una griglia low-poly a facce piatte, con le zolle di verdi diversi. */
-function meadow(height: (x: number, z: number) => number): THREE.Mesh {
-  const geo = new THREE.PlaneGeometry(70, 46, 70, 40).rotateX(-Math.PI / 2).translate(0, 0, -15);
-  const pos = geo.attributes.position as THREE.BufferAttribute;
-  const rnd = createRng(31).next;
-  for (let i = 0; i < pos.count; i++) {
-    const x = pos.getX(i) + (rnd() - 0.5) * 0.4, z = pos.getZ(i) + (rnd() - 0.5) * 0.4;
-    pos.setXYZ(i, x, height(x, z) + (rnd() - 0.5) * 0.06, z);
-  }
-  const flat = geo.toNonIndexed();
-  geo.dispose();
-  const p = flat.attributes.position as THREE.BufferAttribute;
-  const col = new Float32Array(p.count * 3);
-  const c = new THREE.Color();
-  for (let f = 0; f < p.count; f += 3) {
-    const y = (p.getY(f) + p.getY(f + 1) + p.getY(f + 2)) / 3;
-    c.set(GRASS[Math.floor(rnd() * GRASS.length)]).offsetHSL(0, 0, Math.min(0.06, y * 0.02));
-    for (let k = 0; k < 3; k++) col.set([c.r, c.g, c.b], (f + k) * 3);
-  }
-  flat.setAttribute('color', new THREE.BufferAttribute(col, 3));
-  flat.computeVertexNormals();
-  return new THREE.Mesh(flat, new THREE.MeshLambertMaterial({ vertexColors: true, flatShading: true }));
-}
+/** Il sottobosco del prato del gioco: ciuffi d'erba, fiorellini, sassolini, qualche roccia e foglia. */
+const SCENERY = {
+  tuft: (v: number) => getModel(`tuft:${v % 6}`, 'lowpoly', () => sceneryTuft(v % 6), v),
+  flowers: (v: number) => getModel(`flowers:${v % 4}`, 'lowpoly', () => sceneryFlowers(v % 4), v),
+  pebbles: (v: number) => getModel(`pebbles:${v % 3}`, 'lowpoly', () => sceneryPebbles(v % 3), v),
+  rock: (v: number) => getModel(`wrock:${v % 3}`, 'lowpoly', () => sceneryRock(v % 3), v),
+  leaves: (v: number) => getModel(`leaves:${v % 3}`, 'lowpoly', () => sceneryLeaves(v % 3), v),
+};
+const SCENERY_MIX: Array<[number, keyof typeof SCENERY]> = [[0.7, 'tuft'], [0.8, 'flowers'], [0.9, 'pebbles'], [0.95, 'rock'], [1, 'leaves']];
 
 /** Cielo: un fondale con la sfumatura dall'orizzonte (viola caldo) all'alto (quasi nero). */
 function skyDrop(): THREE.Mesh {
@@ -74,8 +79,10 @@ export interface Framing { box: THREE.Box3; fill: number; sx: number; base: numb
 
 export interface NightHero {
   scene: THREE.Scene;
-  /** Altezza del prato in un punto. */
-  ground(x: number, z: number): number;
+  /** Un oggetto del cimitero (tipo del catalogo) sul prato, per dare l'ambientazione. */
+  prop(type: string, x: number, z: number, ry?: number, variant?: number): THREE.Group;
+  /** Una tomba sul prato. */
+  grave(type: GraveType, x: number, z: number, ry?: number): THREE.Group;
   halo(color: string, opacity: number): THREE.Sprite;
   /** Luci puntiformi dalle ancore di un modello (finestre, lanterne), già al loro posto sotto `parent`. */
   modelLights(model: CachedModel, parent: THREE.Object3D, boost?: number): THREE.PointLight[];
@@ -89,11 +96,12 @@ export interface NightHero {
 export interface HeroHandle { el: HTMLElement; stop: () => void }
 
 /**
- * Prepara la testata (classe CSS `cls`) col prato piano attorno a (cx, cz)
- * entro `flatR`; `build` ci mette il soggetto e avvia l'animazione. Senza
- * WebGL resta il fondo dipinto in CSS.
+ * Prepara la testata (classe CSS `cls`) col prato e il suo sottobosco, che
+ * lascia libero il cerchio `clear` (x, z, raggio) dove sta il soggetto;
+ * `build` ci mette il soggetto e avvia l'animazione. Senza WebGL resta il
+ * fondo dipinto in CSS.
  */
-export function nightHero(cls: string, flat: [number, number, number], build: (hero: NightHero) => void): HeroHandle {
+export function nightHero(cls: string, clear: [number, number, number], build: (hero: NightHero) => void): HeroHandle {
   const el = document.createElement('div');
   el.className = `drawer-hero night-hero ${cls}`;
   const canvas = document.createElement('canvas');
@@ -146,11 +154,37 @@ export function nightHero(cls: string, flat: [number, number, number], build: (h
   scene.add(new THREE.Points(starGeo, starMat));
   disposables.push(starGeo, starMat, moon.geometry, moon.material as THREE.Material);
 
-  const [cx, cz, r] = flat;
-  const ground = (x: number, z: number) => groundAt(x, z, cx, cz, r);
-  const field = meadow(ground);
+  const field = meadow();
   scene.add(field);
   disposables.push(field.geometry, field.material as THREE.Material);
+  // sottobosco sparso (i modelli sono quelli del gioco, condivisi: non si liberano)
+  const [cx, cz, r] = clear;
+  const rg = createRng(17);
+  for (let i = 0; i < 90; i++) {
+    const x = rg.range(-10, 10), z = rg.range(-9, 4);
+    if (Math.hypot(x - cx, z - cz) < r) continue;
+    const roll = rg.next();
+    const kind = SCENERY_MIX.find(([p]) => roll < p)![1];
+    const o = instantiate(SCENERY[kind](rg.int(12)), { castShadow: false });
+    o.position.set(x, 0, z);
+    o.rotation.y = rg.range(0, Math.PI * 2);
+    scene.add(o);
+  }
+  const prop = (type: string, x: number, z: number, ry = 0, variant = 0) => {
+    const v = { type, variant, dirty: false, broken: false, lit: true, seed: 1 };
+    const o = instantiate(getModel(placeableKey(v), 'lowpoly', () => placeableModel(v), 1), { castShadow: false });
+    o.position.set(x, 0, z);
+    o.rotation.y = ry;
+    scene.add(o);
+    return o;
+  };
+  const grave = (type: GraveType, x: number, z: number, ry = 0) => {
+    const o = instantiate(getModel(`g:${type}:clean:1`, 'lowpoly', () => graveModel(type, 'clean', 1), 1), { castShadow: false });
+    o.position.set(x, 0, z);
+    o.rotation.y = ry;
+    scene.add(o);
+    return o;
+  };
 
   const camera = new THREE.PerspectiveCamera(FOV, 2.3, 0.1, 80);
   let frameFn: () => Framing = () => ({ box: new THREE.Box3(new THREE.Vector3(-1, 0, -1), new THREE.Vector3(1, 2, 1)), fill: 0.9, sx: 0.5, base: 0.1, elev: 8 });
@@ -208,7 +242,7 @@ export function nightHero(cls: string, flat: [number, number, number], build: (h
   }
 
   build({
-    scene, ground, halo,
+    scene, prop, grave, halo,
     modelLights: (model, parent, boost = 1) => model.lights.map((a) => {
       const l = new THREE.PointLight(a.color, a.intensity * 2.2 * boost, a.range * 0.9, 1.6);
       lightWorldPos(a, l.position);

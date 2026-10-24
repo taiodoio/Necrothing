@@ -1,21 +1,22 @@
 // Testata animata dell'albero dei ricordi: l'albero di notte sul prato a
-// piano (vedi heroScene), con qualche lapide sparsa. I frutti accesi
+// del gioco (vedi heroScene), con qualche tomba e, dietro, un po' di cimitero. I frutti accesi
 // pulsano piano, le lucciole girano attorno alla chioma, ogni tanto cade una
 // foglia e un fantasma passa dietro l'albero.
 
 import * as THREE from 'three';
 import type { GraveType } from '../game/graves.ts';
 import { createRng } from '../game/rng.ts';
-import { graveModel } from '../render/models/graves.ts';
 import { memoryTreeLP } from '../render/lowpoly/memoryTree.ts';
-import { getModel, instantiate, LOWPOLY_MATERIALS } from '../render/modelCache.ts';
+import { instantiate, LOWPOLY_MATERIALS } from '../render/modelCache.ts';
 import { animateRig, buildRig } from '../view/characters.ts';
 import { boxOf, nightHero, type HeroHandle } from './heroScene.ts';
 
 const LEAVES = ['#5f7d6c', '#6e8f7b', '#7a9483', '#c9772f'];
-/** Lapidi sparse sul prato: tipo, x, z, rotazione, inclinazione. */
-const STONES: Array<[GraveType, number, number, number, number]> = [
-  ['celtic_cross', -2.4, -1.4, 0.4, 0.06], ['stone_simple', -3.6, -3.6, -0.3, -0.08], ['gothic', 4.6, -2.4, -0.5, 0.05], ['rectangular', -0.6, -5.5, 0.2, 0.07],
+/** Tombe sparse sul prato: tipo, x, z, rotazione. */
+const STONES: Array<[GraveType, number, number, number]> = [['celtic_cross', -2.5, -1.3, 0.4], ['stone_simple', -4.3, -3.2, -0.3], ['gothic', 3.9, -2.3, -0.5]];
+/** Sullo sfondo, qualche pezzo di cimitero (non quello vero: solo per l'ambientazione). */
+const BACKDROP: Array<[string, number, number, number]> = [
+  ['lamp_post_gothic', -3.3, -2.5, 0.3], ['dead_tree', -6.2, -6.5, 0.8], ['cypress', 5, -5.5, 0], ['half_pine', 7.6, -8, 0.4], ['angel_statue', -1.6, -7.5, 0.2], ['mausoleum', 2.6, -10, -0.2],
 ];
 
 /** Crea la testata per un albero con `memories` frutti accesi; si ferma quando esce dal documento. */
@@ -37,12 +38,10 @@ export function treeHeader(memories: number): HeroHandle {
     const crown = new THREE.PointLight('#aabce8', 16, 12, 1.2);
     crown.position.set(-1.8, 7.8, 5.4);
     scene.add(canopy, hollow, crown);
-    for (const [type, x, z, ry, tilt] of STONES) {
-      const g = instantiate(getModel(`g:${type}:clean:1`, 'lowpoly', () => graveModel(type, 'clean', 1), 1), { castShadow: false });
-      g.position.set(x, hero.ground(x, z) - 0.05, z);
-      g.rotation.set(0, ry, tilt);
-      scene.add(g);
-    }
+    for (const [type, x, z, ry] of STONES) hero.grave(type, x, z, ry);
+    for (const [type, x, z, ry] of BACKDROP) hero.prop(type, x, z, ry);
+    // l'inferriata del cimitero, dietro
+    for (let x = -10; x <= 10; x++) hero.prop('fence_iron', x, -5);
     const box = boxOf(tree);
 
     // un alone per ogni frutto acceso: pulsano piano, ognuno col suo passo
@@ -73,7 +72,7 @@ export function treeHeader(memories: number): HeroHandle {
     // il fantasma che ogni tanto passa sul prato, dietro l'albero
     const ghost = buildRig('ghost', 'lowpoly');
     scene.add(ghost.root);
-    const GHOST_EVERY = 22, GHOST_LEN = 11, GZ = -3.5;
+    const GHOST_EVERY = 22, GHOST_LEN = 11, GZ = -3.8;
 
     hero.start(() => ({ box, fill: 1.06, sx: 0.62, base: 0.07, elev: 6 }), (t) => {
       for (const f of fruitHalos) {
@@ -97,7 +96,7 @@ export function treeHeader(memories: number): HeroHandle {
       ghost.root.visible = g < 1;
       if (g < 1) {
         const x = -9 + g * 18;
-        ghost.root.position.set(x, hero.ground(x, GZ) + 0.5 + Math.sin(t * 2) * 0.12, GZ);
+        ghost.root.position.set(x, 0.5 + Math.sin(t * 2) * 0.12, GZ);
         ghost.root.rotation.y = Math.PI / 2 - 0.4;
         animateRig(ghost, 'fly', t, t * 2);
       }

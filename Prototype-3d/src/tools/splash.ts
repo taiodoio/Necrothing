@@ -66,8 +66,11 @@ export async function stage(game: Game) {
   s.placeables.push(place('tall_grass', px - 2, gy + 2), place('tall_grass', px + 3, gy + 3), place('bushes', px - 4, gy + 4), place('bushes', px + 4, gy + 1), place('tall_grass', px - 3, gy + 6), place('glow_pumpkin', px + 2, gy + 4));
   // tutto è disposto per offset dal centro del varco (dx a destra, dz verso l'interno negativo), dentro il «cono» che si vede dal cancello
   const at = (type: string, dx: number, dz: number, fp: [number, number] = [1, 1]) => place(type, Math.round(gx + 2.5 + dx - fp[0] / 2), Math.round(gy + 1 + dz - fp[1] / 2));
+  // la camera è appena dentro il cancello, alta, e guarda giù lungo il sentiero: la scena sale a strati
+  // (primo piano sfocato, il Custode, le presenze e le tombe, in fondo la casa, l'albero e la luna)
   const graves: Array<[GraveType, number, number]> = [
-    ['gothic', -2.4, -6.2], ['victorian', 1.8, -6.6], ['celtic_cross', -2.7, -9.8], ['angel', -2.4, -13.2], ['stone_simple', 1.9, -11.8], ['obelisk', -4.4, -5.4],
+    ['stone_simple', -2, -3.4], ['gothic', -2.3, -8.2], ['victorian', 1.9, -8.6], ['celtic_cross', -2.6, -12], ['angel', -3.4, -15.4], ['stone_simple', 2.6, -16.4],
+    ['rectangular', 2.2, -4.2], ['obelisk', -4.8, -10.4], ['marble_cross', 4.6, -7.4],
   ];
   for (const [graveType, dx, dz] of graves) {
     const p = at('grave', dx, dz, [2, 2]);
@@ -75,24 +78,24 @@ export async function stage(game: Game) {
   }
   s.placeables.push(
     // in fondo l'albero dei ricordi, a sinistra la casa del Custode, a destra l'orto dei cervelli (esce un po' dal bordo)
-    at('memory_tree', -0.3, -19, [5, 5]),
-    at('keeper_house', -5, -15, [4, 4]),
-    at('brain_farm', 3.9, -14.4, [4, 3]),
-    at('zombies_dance', 2.4, -9.4, [2, 2]),
+    at('memory_tree', -0.4, -24, [5, 5]),
+    at('keeper_house', -4.8, -19.5, [4, 4]),
+    at('brain_farm', 3.6, -14.6, [4, 3]),
+    at('zombies_dance', 2.1, -11.8, [2, 2]),
     // lo scheletro giardiniere rastrella vicino al sentiero
-    at('gardener_corner', -1.3, -8.2),
-    // lampioni e lanterne lungo il sentiero, zucche accese
-    at('lamp_post_gothic', -1.7, -5.2), at('lamp_post_gothic', 1.3, -5.6),
-    at('lantern_stone', -1.6, -10.8), at('lantern_stone', 1, -10.6),
-    at('glow_pumpkin', -3.4, -2), at('glow_pumpkin', 3.4, -2.4), at('skull_candle', -1.6, -5),
+    at('gardener_corner', -1.4, -10.4),
+    // lampioni e lanterne lungo il sentiero, zucche e candele accese
+    at('lamp_post_gothic', -1.7, -5), at('lamp_post_gothic', 1.4, -8.8),
+    at('lantern_stone', -1.6, -13.8), at('lantern_stone', 1.1, -14.2),
+    at('glow_pumpkin', -1.5, -2.6), at('glow_pumpkin', 1.6, -5.8),
     // erba, aiuole, alberi
-    at('tall_grass', -3.7, -5.2), at('tall_grass', 3.9, -4), at('tall_grass', -1.8, -13.5), at('tall_grass', 1.9, -14.5), at('tall_grass', 0.9, -5.6),
-    at('flowerbed', -4.2, -9, [2, 2]), at('poison_shrooms', 3.1, -9),
-    at('dead_tree', -6.2, -9), at('cypress', 6, -15), at('half_pine', -7, -18), at('dead_tree', 6.8, -6),
+    at('tall_grass', -1.6, -1.6), at('tall_grass', 1.6, -2.2), at('tall_grass', -3.6, -6.2), at('tall_grass', 3.8, -9.4), at('tall_grass', -1.8, -17), at('tall_grass', 1.9, -18.4),
+    at('flowerbed', -4.2, -13.2, [2, 2]), at('poison_shrooms', 3.4, -4.6), at('bushes', -6, -7), at('bushes', 6.4, -11),
+    at('dead_tree', -6.6, -12), at('cypress', 6.2, -19), at('half_pine', -7.6, -21), at('dead_tree', 7, -5), at('cypress', -5.6, -3),
   );
   for (let i = 0; i < 6; i++) s.entrusted.push({ grave: { ...template, id: `splash-e${i}` } as Grave, entrustedAt: iso(), ghostVisits: 0 });
   // fuochi fatui sparsi sul prato
-  s.world.looseWisps = [[-1.2, -3], [1.8, -6], [-1.9, -9.5], [0.8, -15], [3, -13], [-3.5, -13]].map(([dx, dz], i) => { const p = at('w', dx, dz); return { id: `splash-w${i}`, x: p.x, y: p.y }; });
+  s.world.looseWisps = [[-2.7, -10.8], [1.5, -9.8], [-2.1, -14], [0.6, -19], [3, -16.6], [-3.4, -17.4], [2.2, -7]].map(([dx, dz], i) => { const p = at('w', dx, dz); return { id: `splash-w${i}`, x: p.x, y: p.y }; });
   s.world.weather = 'clear';
   const gm = game as unknown as { actors: { setPresenceTier(t: string): void }; scene: THREE.Scene };
   gm.actors.setPresenceTier('high'); // tutti gli zombie dell'orto
@@ -106,7 +109,7 @@ export async function stage(game: Game) {
   const barrow = lpMesh(wheelbarrowLP(true, false));
   barrow.position.set(0, 0, 0.8);
   digger.root.add(barrow);
-  digger.root.position.set(gate.x + 0.3, 0, gate.z - 12.8);
+  digger.root.position.set(gate.x + 0.2, 0, gate.z - 16.2);
   digger.root.rotation.y = -Math.PI / 2 - 0.35; // se ne va verso sinistra, un po' di spalle
   gm.scene.add(digger.root);
   extras.push({ obj: digger.root, update: (t) => {
@@ -146,12 +149,15 @@ export async function stage(game: Game) {
   }
   const g = gate;
   // da fuori, poco dietro il cancello (i pilastri ai lati, fuori fuoco); il Custode due passi oltre, sul sentiero
-  const keeper: [number, number] = [g.x - 0.42, g.z - 1.5];
-  const base = { keeper, faceTo: [g.x + 1.2, g.z - 9] as [number, number], nearK: 0.3, farK: 7 };
-  const cam: [number, number, number] = [g.x - 0.25, 2.7, g.z + 5.3], look: [number, number, number] = [g.x - 0.2, 0.25, g.z - 12];
+  const keeper: [number, number] = [g.x - 0.45, g.z - 7];
+  const base = { keeper, faceTo: [g.x + 1.1, g.z - 14] as [number, number], nearK: 0.45, farK: 5.5, light: 'sera' as const };
   Object.assign(SHOTS, {
-    sera: { ...base, cam, look, fov: 62, focus: 7.1, blur: 12, light: 'sera' },
-    crepuscolo: { ...base, cam, look, fov: 62, focus: 7.1, blur: 12, light: 'crepuscolo' },
+    // A: dall'alto, appena dentro il cancello: si vede tutto il sentiero fino all'albero
+    alta: { ...base, cam: [g.x - 0.3, 3.4, g.z - 0.4], look: [g.x - 0.3, 0.2, g.z - 15], fov: 60, focus: 7.4, blur: 12 },
+    // B: più bassa e più indietro sul sentiero, il Custode più vicino all'orizzonte
+    bassa: { ...base, cam: [g.x - 0.3, 2.2, g.z - 0.2], look: [g.x - 0.3, 0.9, g.z - 16], fov: 58, focus: 5.6, blur: 12 },
+    // C: a metà, un po' più indietro: il Custode più piccolo, più cielo per il titolo
+    media: { ...base, cam: [g.x - 0.25, 2.8, g.z - 0.3], look: [g.x - 0.3, 0.75, g.z - 16], fov: 60, focus: 7.3, blur: 12 },
   } satisfies Record<string, Shot>);
 }
 

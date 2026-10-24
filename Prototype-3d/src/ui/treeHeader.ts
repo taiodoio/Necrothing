@@ -14,9 +14,9 @@ import { boxOf, nightHero, type HeroHandle } from './heroScene.ts';
 
 const LEAVES = ['#5f7d6c', '#6e8f7b', '#7a9483', '#c9772f'];
 /** Tombe sul prato, in fila come in un cimitero: tipo, x, z, rotazione (appena storta). */
-const STONES: Array<[GraveType, number, number, number]> = [['stone_simple', -6.2, -2.6, 0.05], ['celtic_cross', -4.6, -2.6, -0.04], ['rectangular', -3, -2.6, 0.03], ['gothic', 4.4, -2.6, -0.05]];
-/** Sullo sfondo, qualche pezzo di cimitero (non quello vero: solo per l'ambientazione). */
-const BACKDROP: Array<[string, number, number, number]> = [['lamp_post_gothic', -1.9, -2.2, 0.3], ['cypress', 2.8, -3.9, 0], ['angel_statue', -4.6, -4.1, 0], ['lamp_post_gothic', 6, -2.2, -0.2]];
+const STONES: Array<[GraveType, number, number, number]> = [['stone_simple', -7.6, -2.6, 0.05], ['celtic_cross', -5.4, -2.6, -0.04], ['rectangular', -3.2, -2.6, 0.03], ['gothic', 4.8, -2.6, -0.05]];
+/** Due lampioni accesi ai lati (solo ambientazione, non il cimitero vero). */
+const BACKDROP: Array<[string, number, number, number]> = [['lamp_post_gothic', -1.6, -2.4, 0.3], ['lamp_post_gothic', 6.8, -2.4, -0.2]];
 
 /** Il modello dell'albero (e dove stanno i frutti) per tanti ricordi: si tiene l'ultimo, così riaprendo la testata è già pronto. */
 let cached: { n: number; model: LPModel; fruits: THREE.Vector3[] } | null = null;

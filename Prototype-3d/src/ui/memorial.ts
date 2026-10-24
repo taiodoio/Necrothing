@@ -5,7 +5,7 @@
 
 import { memorials } from '../app/persistence.ts';
 import { newId } from '../game/rng.ts';
-import { $, h, toast } from './dom.ts';
+import { h, openModal, toast } from './dom.ts';
 import { icon } from './icons.ts';
 import { t } from '../i18n/index.ts';
 import { applyPhotoFilter, PHOTO_FILTER_LABELS, squareCrop, type PhotoFilter } from './photoFilters.ts';
@@ -104,22 +104,18 @@ export function photoStep(photo: BurialPhoto, rerender: () => void): HTMLElement
 }
 
 /**
- * Finestra della cartolina sopra al resto (il drawer sotto resta com'è):
- * l'immagine, «Chiudi» e «Condividi» (dove non si può condividere, si scarica).
+ * La cartolina in un modale sopra al resto (sfondo scuro, X in alto a sinistra
+ * come gli altri modali; il drawer sotto resta com'è): l'immagine e «Condividi»
+ * (dove non si può condividere, si scarica).
  */
 export async function openPostcard(data: PostcardData) {
   const card = await drawPostcard(data);
-  const close = () => { scrim.remove(); document.removeEventListener('keydown', onKey, true); };
-  const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') { e.stopPropagation(); close(); } };
   const share = async () => {
     const r = await sharePostcard(card, data.name);
     if (r === 'downloaded') toast(t('postcard.saved'));
   };
-  const box = h('div', { class: 'dialog postcard-dialog', role: 'dialog', 'aria-modal': 'true', onclick: (e: Event) => e.stopPropagation() },
-    h('h3', {}, t('postcard.dialog.title')),
+  openModal(h('div', { class: 'postcard-dialog' },
+    h('h3', { class: 'modal-title' }, t('postcard.dialog.title')),
     h('img', { class: 'postcard-view', src: card.toDataURL('image/png'), alt: t('postcard.dialog.alt', { name: data.name }) }),
-    h('div', { class: 'row' }, h('button', { class: 'big-btn ghost', onclick: close }, t('postcard.close')), h('button', { class: 'big-btn', onclick: share }, t('postcard.share'))));
-  const scrim = h('div', { class: 'dialog-scrim', onclick: close }, box);
-  ($('#drawer').parentElement ?? document.body).append(scrim);
-  document.addEventListener('keydown', onKey, true);
+    h('button', { class: 'big-btn', onclick: share }, icon('postcard', 22), t('postcard.share'))), { label: t('postcard.dialog.title') });
 }

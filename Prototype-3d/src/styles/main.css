@@ -236,8 +236,8 @@ button.slot:active, .icon-btn:active, .ctx-actions button:active, .big-btn:activ
 .swipe-dots i { width: 8px; height: 8px; background: #2a2e36; box-shadow: 0 0 0 2px #07080b; }
 .swipe-dots i.on { background: var(--gold); }
 .portrait.empty > .pic { display: grid; place-items: center; align-content: center; gap: 6px; color: var(--muted); font-size: 13px; text-align: center; }
-.postcard-dialog { max-height: calc(100% - 24px); overflow-y: auto; }
-.postcard-dialog .postcard-view { width: auto; max-width: 100%; max-height: 60vh; }
+.dialog.postcard-dialog { max-height: calc(100% - 24px); overflow-y: auto; }
+.dialog.postcard-dialog .postcard-view { width: auto; max-width: 100%; max-height: 60vh; }
 .postcard-view { display: block; width: 100%; max-width: 360px; margin: 0 auto; box-shadow: 0 0 0 2px #07080b, 0 8px 18px rgba(0, 0, 0, 0.6); }
 
 /* ── Dialogo di conferma (al posto di confirm() del browser) ───── */

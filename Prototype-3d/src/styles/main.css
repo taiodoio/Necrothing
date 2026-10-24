@@ -336,6 +336,8 @@ button.slot:active, .icon-btn:active, .ctx-actions button:active, .big-btn:activ
 .debug { position: absolute; z-index: 5; left: calc(10px + var(--safe-l)); top: calc(80px + var(--safe-t)); padding: 4px 6px; font: 12px/1.45 var(--pixel); pointer-events: none; white-space: pre; }
 .fatal { position: absolute; inset: 30% 10% auto; z-index: 20; padding: 14px; text-align: center; border-image-source: var(--frame-danger); }
 .tutorial { position: absolute; z-index: 7; left: 50%; transform: translateX(-50%); bottom: calc(96px + var(--safe-b)); width: min(92vw, 420px); padding: 4px 8px 8px; font-size: 14.5px; line-height: 1.4; display: grid; gap: 8px; }
+.welcome-scrim { position: absolute; inset: 0; z-index: 10; background: rgba(8, 10, 14, 0.55); }
+.tutorial.welcome { z-index: 11; }
 .tutorial b { display: flex; align-items: center; gap: 6px; color: var(--gold-bright); font: 400 26px/1 var(--gothic); text-shadow: 0 2px 0 #000; }
 
 @media (max-width: 380px) {

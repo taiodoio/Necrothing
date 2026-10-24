@@ -407,14 +407,16 @@ export class UI {
     setTimeout(() => {
       this.game.centerOnShop();
       this.game.select(null);
-      const card = h('div', { class: 'tutorial' },
+      // il benvenuto è un modale: sopra tutto (anche menù e pulsanti), col fondo scurito
+      const scrim = h('div', { class: 'welcome-scrim' });
+      const card = h('div', { class: 'tutorial welcome', role: 'dialog', 'aria-modal': 'true' },
         h('b', {}, t('hud.tutorial.title')),
         h('span', {}, t('hud.tutorial.shop')),
         h('span', { class: 'muted' }, t('hud.tutorial.graves')),
-        h('button', { class: 'big-btn', onclick: () => { s.shopTutorialDone = true; card.remove(); this.tutorial = null; this.game.recenter(); this.game.afterChange(); } }, t('hud.tutorial.ok')),
+        h('button', { class: 'big-btn', onclick: () => { s.shopTutorialDone = true; scrim.remove(); card.remove(); this.tutorial = null; this.game.recenter(); this.game.afterChange(); } }, t('hud.tutorial.ok')),
       );
       this.tutorial = card;
-      $('#game').append(card);
+      $('#game').append(scrim, card);
     }, 1200);
   }
 

@@ -1,6 +1,6 @@
 // Lista dell'albero dei ricordi: un ramo per riga, una volta da sinistra e
 // una da destra, con due cartellini appesi allo spago. Ogni ramo è un po'
-// diverso (curva, spessore, nodi, rametti, foglie), ma sempre lo stesso per
+// diverso (curva, spessore, rametti, foglie), ma sempre lo stesso per
 // la stessa riga: riaprendo la lista non cambia.
 
 import { CATEGORY_LABELS } from '../game/graves.ts';
@@ -28,22 +28,16 @@ interface Branch { y: (x: number) => number; half: (x: number) => number; el: SV
 
 /**
  * Un ramo che entra da un lato e si assottiglia verso l'altro: la linea
- * centrale scende verso la punta (il peso) e ondeggia; sul ramo, nodi che
- * lo gonfiano, un moncherino spezzato, rametti e foglie.
+ * centrale scende verso la punta (il peso) e ondeggia; sul ramo, venature,
+ * un moncherino spezzato, rametti e foglie.
  */
 function branch(r: Rng, fromLeft: boolean, reach: number): Branch {
   const base = r.range(22, 34), droop = r.range(8, 22), arch = r.range(-8, 10), wob = r.range(3, 6.5), freq = r.range(1.4, 2.6), ph = r.range(0, Math.PI * 2);
   const thick = r.range(20, 27), tipThick = r.range(3, 4.5);
   const x0 = fromLeft ? -14 : W + 14, x1 = fromLeft ? reach : W - reach, dir = fromLeft ? 1 : -1;
-  // i nodi: dove il ramo si gonfia (posizione lungo il ramo, quanto, quanto largo)
-  const knots = Array.from({ length: 2 + r.int(2) }, () => ({ at: r.range(0.12, 0.75), k: r.range(0.22, 0.45), w: r.range(0.035, 0.06) }));
   const tOf = (x: number) => Math.min(1, Math.max(0, (x - x0) / (x1 - x0)));
   const y = (x: number) => { const u = tOf(x); return base + droop * u * u - arch * Math.sin(u * Math.PI) + wob * Math.sin(u * Math.PI * freq + ph) * u; };
-  const half = (x: number) => {
-    const u = tOf(x);
-    const swell = knots.reduce((s, kn) => s + kn.k * Math.exp(-(((u - kn.at) / kn.w) ** 2)), 0);
-    return ((thick + (tipThick - thick) * Math.pow(u, 0.75)) / 2) * (1 + swell);
-  };
+  const half = (x: number) => (thick + (tipThick - thick) * Math.pow(tOf(x), 0.75)) / 2;
   const el = svg('svg', { viewBox: `0 0 ${W} ${BH}`, preserveAspectRatio: 'none', class: 'mt-branch', 'aria-hidden': 'true' }) as SVGSVGElement;
   const N = 40, top: string[] = [], bot: string[] = [];
   const bumps = Array.from({ length: N + 1 }, () => r.range(-1.1, 1.1));
@@ -78,12 +72,6 @@ function branch(r: Rng, fromLeft: boolean, reach: number): Branch {
   for (let i = 0; i < 6; i++) {
     const xa = x0 + (x1 - x0) * r.range(0.05, 0.7), l = r.range(14, 34) * dir, off = r.range(-0.45, 0.25);
     el.append(svg('path', { d: `M${f1(xa)},${f1(y(xa) + half(xa) * off)} L${f1(xa + l)},${f1(y(xa + l) + half(xa + l) * off)}`, stroke: dark, 'stroke-width': 1.2, opacity: 0.45, 'stroke-linecap': 'round' }));
-  }
-  // sui nodi: l'occhio scuro della corteccia con l'anello chiaro attorno
-  for (const kn of knots) {
-    const x = x0 + (x1 - x0) * kn.at, hh = half(x);
-    el.append(svg('ellipse', { cx: f1(x), cy: f1(y(x) - hh * 0.1), rx: f1(hh * 0.55), ry: f1(hh * 0.42), fill: 'none', stroke: '#8a6a50', 'stroke-width': 1.3, opacity: 0.7 }),
-      svg('ellipse', { cx: f1(x), cy: f1(y(x) - hh * 0.1), rx: f1(hh * 0.28), ry: f1(hh * 0.2), fill: dark }));
   }
   // un moncherino spezzato, col legno chiaro del taglio
   if (r.chance(0.7)) {

@@ -6,6 +6,7 @@
 import * as THREE from 'three';
 import type { CustodeLook } from '../game/look.ts';
 import { buildRig, type CharacterKind } from '../view/characters.ts';
+import { alive, drewSomething } from './offscreen.ts';
 
 const SIZE = 192;
 /**
@@ -26,6 +27,8 @@ const ortho = new THREE.OrthographicCamera(-1, 1, 1, -1, 0.05, 60);
 const done = new Map<string, string>();
 
 function setup() {
+  renderer?.dispose();
+  renderer = null;
   renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, preserveDrawingBuffer: true });
   renderer.setPixelRatio(1);
   renderer.setSize(SIZE, SIZE, false);
@@ -51,8 +54,16 @@ export function npcPortrait(kind: CharacterKind, look?: CustodeLook): string {
   const ready = done.get(key);
   if (ready !== undefined) return ready;
   let url = '';
+  // un secondo tentativo con un renderer nuovo, se il primo esce vuoto (contesto perso)
+  for (let attempt = 0; attempt < 2 && !url; attempt++) url = draw(kind, look, attempt > 0);
+  // vuota non si tiene: alla prossima notifica si riprova
+  if (url) done.set(key, url);
+  return url;
+}
+
+function draw(kind: CharacterKind, look: CustodeLook | undefined, fresh: boolean): string {
   try {
-    if (!renderer) setup();
+    if (fresh || !alive(renderer)) setup();
     const rig = buildRig(kind, 'lowpoly', look);
     rig.root.rotation.y = 0.32; // girati come il Custode nel suo ritratto
     // le parti additive (il velo dei fantasmi) sono fatte per brillare sul buio della scena:
@@ -91,10 +102,9 @@ export function npcPortrait(kind: CharacterKind, look?: CustodeLook): string {
       camera.lookAt(center.x, cy, center.z);
       renderer!.render(scene!, camera);
     }
-    url = renderer!.domElement.toDataURL('image/png');
+    const url = drewSomething(renderer!) ? renderer!.domElement.toDataURL('image/png') : '';
     renderer!.setSize(SIZE, SIZE, false);
     scene!.remove(rig.root);
-  } catch { url = ''; }
-  done.set(key, url);
-  return url;
+    return url;
+  } catch { return ''; }
 }

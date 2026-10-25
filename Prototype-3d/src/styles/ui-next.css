@@ -245,6 +245,9 @@
 
 /* ── Banner di Modifica ───────────────────────────────────────────── */
 .ui-next .edit-banner { filter: none; padding: 6px 6px 6px 14px; gap: 10px; font-size: 14px; font-weight: 700; }
+/* banner e barre di piazzamento larghi quanto la fila dell'HUD in alto (e la notifica dei personaggi) */
+.ui-next :is(.edit-banner, .area-banner, .tutorial:not(.welcome)) { left: calc(10px + var(--safe-l)); right: calc(10px + var(--safe-r)); width: auto; max-width: none; transform: none; }
+.ui-next .edit-banner span { flex: 1; }
 .ui-next .edit-banner .pill { min-height: 44px; padding: 4px 18px; font-size: 15px; font-weight: 800; border-radius: var(--r-s); }
 
 /* ── Bottega: carte bloccate, non comprabili, tue ─────────────────── */

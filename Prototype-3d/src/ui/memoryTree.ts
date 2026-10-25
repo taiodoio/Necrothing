@@ -15,7 +15,7 @@ import { memoryTags } from './memoryTags.ts';
 import { treeHeader } from './treeHeader.ts';
 import { icon } from './icons.ts';
 import { memorials } from '../app/persistence.ts';
-import { openPostcard } from './memorial.ts';
+import { openPostcard, portrait } from './memorial.ts';
 import { confirmExhume, MEMORY_LABELS, moreActions, postcardData } from './screens.ts';
 import { modelThumb } from './thumbs.ts';
 import type { UI } from './UI.ts';
@@ -74,10 +74,13 @@ export function openMemory(ui: UI, id: string, visit?: R.ActionResult, fromList 
   const g = e.grave;
   const mem = s.memories.filter((m) => m.graveId === id).slice(-10).reverse();
   const visits = e.ghostVisits;
+  // la foto (se c'è) prende il posto del frutto, che resta in piccolo in basso a destra (come nel dettaglio della tomba)
+  const head = h('img', { src: fruitImg(), alt: '' }) as HTMLElement;
+  if (g.photoId) void memorials.get(g.photoId).then((m) => { if (m && head.isConnected) head.replaceWith(portrait(m.dataUrl, fruitImg())); }).catch(() => undefined);
   openDrawer(t('tree.memory.title'), h('div', {},
     visit ? h('div', { class: 'ach got', style: 'margin-bottom:10px' }, h('div', { class: 'ico' }, icon('wisp', 30)),
       h('div', {}, h('b', {}, t('tree.memory.visit', { name: g.name })), h('p', {}, joinDot([visit.wisps ? t('tree.memory.visitWisps', { n: visit.wisps }) : '', visit.xp ? t('tree.memory.visitXp', { n: visit.xp }) : ''])))) : null,
-    h('div', { class: 'hero' }, h('img', { src: fruitImg(), alt: '' }), h('h3', {}, g.name),
+    h('div', { class: 'hero' }, head, h('h3', {}, g.name),
       g.epitaph ? h('div', { class: 'epitaph' }, t('tree.memory.epitaph', { text: g.epitaph })) : null,
       h('p', { class: 'muted', style: 'margin:0' }, t('tree.memory.rest', { date: fmtDate(e.entrustedAt) }))),
     h('dl', { class: 'kv' },

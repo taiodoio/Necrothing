@@ -12,6 +12,13 @@ import { icon } from './icons.ts';
 
 /** Larghezza di riferimento del ramo (la lista sul telefono), altezza della sua fascia, spazio tra le colonne. */
 const W = 358, BH = 84, GAP = 12;
+/**
+ * Quanto il disegno esce ai lati della riga, fino al bordo del pannello (il
+ * margine interno della lista, vedi .mt-branch): Safari taglia l'SVG ai suoi
+ * confini anche con overflow visibile, quindi è l'SVG stesso a essere più largo.
+ */
+const BLEED = 12;
+const VIEW = `${-BLEED} 0 ${W + BLEED * 2} ${BH}`;
 const COLS = [(W - GAP) / 4, W - (W - GAP) / 4];
 const BARK = ['#6e5340', '#5f4636', '#735a44'], BARK_DARK = ['#3f2d22', '#47332a'];
 const LEAVES = ['#557a4a', '#6b8f52', '#7d9a55', '#4e6e45'], AUTUMN = ['#c9772f', '#b8652a', '#d49a3a'];
@@ -34,11 +41,11 @@ interface Branch { y: (x: number) => number; half: (x: number) => number; el: SV
 function branch(r: Rng, fromLeft: boolean, reach: number): Branch {
   const base = r.range(22, 34), droop = r.range(8, 22), arch = r.range(-8, 10), wob = r.range(3, 6.5), freq = r.range(1.4, 2.6), ph = r.range(0, Math.PI * 2);
   const thick = r.range(20, 27), tipThick = r.range(3, 4.5);
-  const x0 = fromLeft ? -14 : W + 14, x1 = fromLeft ? reach : W - reach, dir = fromLeft ? 1 : -1;
+  const x0 = fromLeft ? -BLEED - 4 : W + BLEED + 4, x1 = fromLeft ? reach : W - reach, dir = fromLeft ? 1 : -1;
   const tOf = (x: number) => Math.min(1, Math.max(0, (x - x0) / (x1 - x0)));
   const y = (x: number) => { const u = tOf(x); return base + droop * u * u - arch * Math.sin(u * Math.PI) + wob * Math.sin(u * Math.PI * freq + ph) * u; };
   const half = (x: number) => (thick + (tipThick - thick) * Math.pow(tOf(x), 0.75)) / 2;
-  const el = svg('svg', { viewBox: `0 0 ${W} ${BH}`, preserveAspectRatio: 'none', class: 'mt-branch', 'aria-hidden': 'true' }) as SVGSVGElement;
+  const el = svg('svg', { viewBox: VIEW, preserveAspectRatio: 'none', class: 'mt-branch', 'aria-hidden': 'true' }) as SVGSVGElement;
   const N = 40, top: string[] = [], bot: string[] = [];
   const bumps = Array.from({ length: N + 1 }, () => r.range(-1.1, 1.1));
   for (let i = 0; i <= N; i++) {
@@ -112,7 +119,7 @@ export function memoryTags(list: EntrustedMemory[], fruit: string, open: (id: st
     const far = COLS[cols[pair.length - 1]];
     const reach = (fromLeft ? far : W - far) + r.range(40, 70);
     const b = branch(r, fromLeft, Math.min(W + 6, reach));
-    const knots = svg('svg', { viewBox: `0 0 ${W} ${BH}`, preserveAspectRatio: 'none', class: 'mt-knots', 'aria-hidden': 'true' });
+    const knots = svg('svg', { viewBox: VIEW, preserveAspectRatio: 'none', class: 'mt-knots', 'aria-hidden': 'true' });
     const row = h('div', { class: 'mt-row' }, b.el, knots);
     pair.forEach((e, k) => {
       const x = COLS[cols[k]];

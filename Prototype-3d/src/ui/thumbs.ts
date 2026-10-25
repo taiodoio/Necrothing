@@ -14,6 +14,7 @@ import { getModel, instantiate, type CachedModel } from '../render/modelCache.ts
 import { graveModel } from '../render/models/graves.ts';
 import { placeableKey, placeableModel, type PVis } from '../render/models/registry.ts';
 import { createAnimated } from '../render/lowpoly/animated.ts';
+import { alive, drewSomething } from './offscreen.ts';
 
 const SIZE = 160;
 let renderer: THREE.WebGLRenderer | null = null;
@@ -30,24 +31,28 @@ export function seedThumbs(entries: Array<[string, string]>) {
 let sink: ((key: string, url: string) => void) | null = null;
 export function onNewThumb(fn: ((key: string, url: string) => void) | null) { sink = fn; }
 
-function setup() {
-  if (renderer) return renderer;
+scene.add(new THREE.HemisphereLight('#e7e3d6', '#3a3a32', 2.2));
+const sun = new THREE.DirectionalLight('#fff1dc', 2.2);
+sun.position.set(-4, 8, 6);
+scene.add(sun);
+
+/** Il renderer delle miniature; se il suo contesto è andato perso se ne fa uno nuovo. */
+function setup(fresh = false) {
+  if (!fresh && alive(renderer)) return renderer;
+  renderer?.dispose();
+  renderer = null;
   const canvas = document.createElement('canvas');
   renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true, preserveDrawingBuffer: true });
   renderer.setSize(SIZE, SIZE, false);
   renderer.setPixelRatio(1);
   renderer.outputColorSpace = THREE.SRGBColorSpace;
-  scene.add(new THREE.HemisphereLight('#e7e3d6', '#3a3a32', 2.2));
-  const sun = new THREE.DirectionalLight('#fff1dc', 2.2);
-  sun.position.set(-4, 8, 6);
-  scene.add(sun);
   return renderer;
 }
 
 function snapshot(key: string, group: THREE.Group, fp: [number, number]): string {
   const hit = cache.get(key);
   if (hit) return hit;
-  const r = setup();
+  let r = setup();
   scene.add(group);
   const box = new THREE.Box3().setFromObject(group);
   const size = box.getSize(new THREE.Vector3());
@@ -58,8 +63,12 @@ function snapshot(key: string, group: THREE.Group, fp: [number, number]): string
   camera.position.set(center.x + 20, center.y + 18, center.z + 28);
   camera.lookAt(center);
   r.render(scene, camera);
+  // vuota (contesto perso): si riprova con un renderer nuovo, e se resta vuota non si tiene
+  if (!drewSomething(r)) { r = setup(true); r.render(scene, camera); }
+  const ok = drewSomething(r);
   const url = r.domElement.toDataURL('image/png');
   scene.remove(group);
+  if (!ok) return url;
   cache.set(key, url);
   sink?.(key, url);
   return url;

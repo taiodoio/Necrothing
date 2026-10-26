@@ -81,12 +81,10 @@ export default {
   'hud.staff.take': 'Impugna il bastone mistico',
   // banner di Modifica, interfaccia nuova (breve: deve stare intero sul telefono)
   'hud.edit.banner': 'Tocca un elemento e trascinalo',
-  // notifica entrando in Modifica
-  'hud.edit.toast': 'Modifica: tocca un elemento e trascinalo.',
 
   // ── Barra di posizionamento ──
   // tracciando sentieri e recinti, prima di cominciare
-  'hud.trace.hint': 'Trascina il dito sul terreno per tracciare; alza il dito e riparti per fare un angolo. Due dita spostano la vista.',
+  'hud.trace.hint': 'Trascina il dito sul terreno per tracciare: quando giri, il tracciato piega da solo. Due dita spostano la vista.',
   // tracciando: pezzi pronti da posare
   'hud.trace.ok': '{n} da posare',
   // tracciando: pezzi che non si hanno
@@ -141,6 +139,9 @@ export default {
   'ctx.bell.ring': 'Suona la campana',
   'ctx.light.off': 'Spegni',
   'ctx.light.on': 'Accendi',
+  // menù e scheda di bar, orto, angolo della strega: l'incasso pronto
+  'ctx.collect#one': 'Riscuoti {n} fuoco fatuo',
+  'ctx.collect#other': 'Riscuoti {n} fuochi fatui',
   // per i lettori di schermo: azione con un costo
   'ctx.costAria': '{label} ({cost} fuochi fatui)',
   // sotto il nome della tomba: tipo di lapide e stato

@@ -13,7 +13,7 @@ import * as R from '../game/rules.ts';
 import type { BurialDraft } from '../game/rules.ts';
 import { DAY_PHASE_LABELS } from '../game/time.ts';
 import { currentLang, t } from '../i18n/index.ts';
-import { $, applyPageTexts, closeDrawer, drawerOpen, h, joinDot, toast } from './dom.ts';
+import { $, applyPageTexts, closeDrawer, drawerOpen, h, joinDot } from './dom.ts';
 import { hydrateIcons, icon, iconUrl, installFrames } from './icons.ts';
 import { uiNext, uiPlay, uiPreview } from '../app/uiNext.ts';
 import { openDeceased } from './deceased.ts';
@@ -196,7 +196,8 @@ export class UI {
       case 'edit':
         if (g.editMode) { g.setEditMode(false); break; }
         if (!g.state.settings.editIntroSeen) S.openEditIntro(this);
-        else { g.setEditMode(true); toast(t('hud.edit.toast')); }
+        // il banner di Modifica dice già cosa fare: niente toast
+        else g.setEditMode(true);
         break;
       case 'inventory': S.openInventory(this); break;
       case 'shop': g.centerOnShop(); break;
@@ -269,6 +270,41 @@ export class UI {
     return h('button', { class: a.cls ?? '', disabled: !!a.disabled, onclick: run }, icon(a.icon, 20), a.label);
   }
 
+  /**
+   * Le azioni di un oggetto fuori da Modifica (le stesse nel menù sulla mappa
+   * e nella sua scheda), con il sottotitolo che le accompagna partendo da `sub`.
+   */
+  placeableActions(id: string, sub = '') {
+    const s = this.game.state;
+    const p = s.placeables.find((x) => x.id === id);
+    const actions: Array<{ act: EntityAction; label: string; icon: string; cls?: string; cost?: number }> = [];
+    let pet: ReturnType<Game['petMenu']> = [];
+    if (!p) return { actions, pet, sub };
+    const def = CATALOG[p.type];
+    // bar, orto, angolo della strega, casa con l'orto: l'incasso pronto prima di tutto
+    const pending = R.businessPending(s, p.id, this.game.now());
+    if (pending > 0) actions.push({ act: 'collect', label: t('ctx.collect', { n: pending }), icon: 'wisp', cls: 'primary' });
+    if (p.type === 'shop') actions.push({ act: 'shop', label: t('ctx.shop'), icon: 'shop', cls: 'primary' });
+    // casa del Custode: il registro e la personalizzazione; l'orto pronto si riscuote toccando
+    if (p.type === 'keeper_house') {
+      actions.push({ act: 'registry', label: t('ctx.registry'), icon: 'book', cls: 'primary' }, { act: 'house', label: t('ctx.house'), icon: 'house' });
+      sub = t('ctx.registry.sub', { n: s.graves.length + s.entrusted.length });
+    }
+    if (p.type === 'memory_tree') { actions.push({ act: 'memories', label: t('ctx.memories'), icon: 'tree', cls: 'primary' }); sub = t('ctx.tree.sub', { n: s.entrusted.length }); }
+    if (p.type === 'soul_bell' && !p.broken) {
+      const ready = R.bellReady(s, p.id, this.game.now());
+      if (ready) actions.push({ act: 'ring', label: t('ctx.bell.ring'), icon: 'bell', cls: 'primary' });
+      sub = t('hud.join', { a: sub, b: ready ? t('ctx.bell.ready') : t('ctx.bell.rung') });
+    }
+    actions.push({ act: 'detail', label: t('ctx.detail'), icon: 'search' });
+    if (p.broken) actions.push({ act: 'repair', label: t('ctx.repair'), icon: 'hammer', cls: 'primary', cost: R.placeableRepairPrice(s, p.type) });
+    else if (p.dirty) actions.push({ act: 'clean', label: t('ctx.clean'), icon: 'broom' });
+    if (def.light && !p.broken) actions.push({ act: 'light', label: p.lit ? t('ctx.light.off') : t('ctx.light.on'), icon: p.lit ? 'lightOff' : 'lightOn' });
+    // la casetta porta anche il menù del suo animale (utile quando dorme in tana)
+    if (isPetHouse(p.type)) { pet = this.game.petMenu(p.id); sub = t('hud.join', { a: sub, b: this.game.petStatus(p.id) }); }
+    return { actions, pet, sub };
+  }
+
   refreshContext() {
     const sel = this.game.selection;
     if (!sel && this.ctxAnchor) return; // resta aperto il menù del personaggio
@@ -311,24 +347,10 @@ export class UI {
         if (!def.permanent) actions.push({ act: 'store', label: t('ctx.store'), icon: 'bag', cls: 'danger' });
         actions.push({ act: 'confirm', label: t('ctx.done'), icon: 'check', cls: 'primary' });
       } else {
-        if (p.type === 'shop') actions.push({ act: 'shop', label: t('ctx.shop'), icon: 'shop', cls: 'primary' });
-        // casa del Custode: il registro e la personalizzazione; l'orto pronto si riscuote toccando
-        if (p.type === 'keeper_house') {
-          actions.push({ act: 'registry', label: t('ctx.registry'), icon: 'book', cls: 'primary' }, { act: 'house', label: t('ctx.house'), icon: 'house' });
-          sub = t('ctx.registry.sub', { n: s.graves.length + s.entrusted.length });
-        }
-        if (p.type === 'memory_tree') { actions.push({ act: 'memories', label: t('ctx.memories'), icon: 'tree', cls: 'primary' }); sub = t('ctx.tree.sub', { n: s.entrusted.length }); }
-        if (p.type === 'soul_bell' && !p.broken) {
-          const ready = R.bellReady(s, p.id, this.game.now());
-          if (ready) actions.push({ act: 'ring', label: t('ctx.bell.ring'), icon: 'bell', cls: 'primary' });
-          sub = t('hud.join', { a: sub, b: ready ? t('ctx.bell.ready') : t('ctx.bell.rung') });
-        }
-        actions.push({ act: 'detail', label: t('ctx.detail'), icon: 'search' });
-        if (p.broken) actions.push({ act: 'repair', label: t('ctx.repair'), icon: 'hammer', cls: 'primary', cost: R.placeableRepairPrice(s, p.type) });
-        else if (p.dirty) actions.push({ act: 'clean', label: t('ctx.clean'), icon: 'broom' });
-        if (def.light && !p.broken) actions.push({ act: 'light', label: p.lit ? t('ctx.light.off') : t('ctx.light.on'), icon: p.lit ? 'lightOff' : 'lightOn' });
-        // la casetta porta anche il menù del suo animale (utile quando dorme in tana)
-        if (isPetHouse(p.type)) { petActions = this.game.petMenu(p.id); sub = t('hud.join', { a: sub, b: this.game.petStatus(p.id) }); }
+        const own = this.placeableActions(p.id, sub);
+        actions.push(...own.actions);
+        petActions = own.pet;
+        sub = own.sub;
       }
     }
     this.ctxId = sel.id;

@@ -45,7 +45,7 @@ import { currentLang, t, tList } from '../i18n/index.ts';
 export type Selection = { kind: 'grave' | 'placeable'; id: string } | null;
 
 export type EntityAction =
-  | 'detail' | 'clean' | 'repair' | 'flowers' | 'light' | 'shop' | 'rotate' | 'store' | 'confirm' | 'move' | 'entrust' | 'memories' | 'ring' | 'registry' | 'house';
+  | 'detail' | 'clean' | 'repair' | 'flowers' | 'light' | 'shop' | 'rotate' | 'store' | 'confirm' | 'move' | 'entrust' | 'memories' | 'ring' | 'registry' | 'house' | 'collect';
 
 const PET_STATUS: Record<PetMode, string> = { free: t('game.pet.status.free'), follow: t('game.pet.status.follow'), home: t('game.pet.status.home') };
 
@@ -614,7 +614,7 @@ export class Game {
     const grave = this.state.graves.find((g) => g.id === id);
     // durante il rito la tomba affidata e l'albero restano dove sono finché il corteo non ha finito
     if (this.riteIds?.includes(id) && !['detail', 'memories', 'shop', 'registry', 'house'].includes(action)) { toast(t('game.rite.wait')); return; }
-    const instant: EntityAction[] = ['detail', 'shop', 'rotate', 'store', 'confirm', 'move', 'entrust', 'memories', 'registry', 'house'];
+    const instant: EntityAction[] = ['detail', 'shop', 'rotate', 'store', 'confirm', 'move', 'entrust', 'memories', 'registry', 'house', 'collect'];
     const run = () => {
       switch (action) {
         case 'clean': this.actors.work(); this.act((s, n) => (grave ? R.cleanGrave(s, id, n) : R.cleanPlaceable(s, id, n)), center, 'rewarded'); break;
@@ -632,6 +632,7 @@ export class Game {
         case 'ring': this.ringBell(id); break;
         case 'registry': this.ui.openRegistry(); break;
         case 'house': this.ui.openHouse(); break;
+        case 'collect': this.collectBusiness(id); break;
       }
     };
     if (instant.includes(action)) { run(); return; }

@@ -281,6 +281,9 @@ export class UI {
     let pet: ReturnType<Game['petMenu']> = [];
     if (!p) return { actions, pet, sub };
     const def = CATALOG[p.type];
+    // bar, orto, angolo della strega, casa con l'orto: l'incasso pronto prima di tutto
+    const pending = R.businessPending(s, p.id, this.game.now());
+    if (pending > 0) actions.push({ act: 'collect', label: t('ctx.collect', { n: pending }), icon: 'wisp', cls: 'primary' });
     if (p.type === 'shop') actions.push({ act: 'shop', label: t('ctx.shop'), icon: 'shop', cls: 'primary' });
     // casa del Custode: il registro e la personalizzazione; l'orto pronto si riscuote toccando
     if (p.type === 'keeper_house') {

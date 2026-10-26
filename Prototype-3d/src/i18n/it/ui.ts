@@ -139,6 +139,9 @@ export default {
   'ctx.bell.ring': 'Suona la campana',
   'ctx.light.off': 'Spegni',
   'ctx.light.on': 'Accendi',
+  // menù e scheda di bar, orto, angolo della strega: l'incasso pronto
+  'ctx.collect#one': 'Riscuoti {n} fuoco fatuo',
+  'ctx.collect#other': 'Riscuoti {n} fuochi fatui',
   // per i lettori di schermo: azione con un costo
   'ctx.costAria': '{label} ({cost} fuochi fatui)',
   // sotto il nome della tomba: tipo di lapide e stato

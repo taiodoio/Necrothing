@@ -509,8 +509,8 @@ function itemFooter(ui: UI, id: string): HTMLElement | null {
     icon: a.icon,
     label: a.act === 'repair' ? t('detail.grave.repair', { price: a.cost ?? 0 }) : a.label,
     run: () => { closeDrawer(true); game.performEntityAction(id, a.act); },
-    // prima ciò che va sistemato, poi la funzione dell'oggetto, poi la luce
-    rank: a.act === 'repair' ? 0 : a.act === 'clean' ? 1 : a.cls === 'primary' ? 2 : 3,
+    // prima l'incasso pronto, poi ciò che va sistemato, poi la funzione dell'oggetto, poi la luce
+    rank: a.act === 'collect' ? -1 : a.act === 'repair' ? 0 : a.act === 'clean' ? 1 : a.cls === 'primary' ? 2 : 3,
   }));
   const pets: Array<Act & { rank: number }> = pet.filter((a) => !a.disabled).map((a) => ({
     icon: a.icon, label: a.label, rank: a.cls === 'primary' ? 4 : 5,

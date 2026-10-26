@@ -255,8 +255,8 @@ export default {
   'detail.item.business': 'Incasso',
   'detail.business.closed': 'Chiuso finché non lo ripari',
   // {n} fuochi fatui pronti da riscuotere; tra parentesi quanto rende al giorno e il massimo accumulabile
-  'detail.business.ready#one': '+{n} pronti: tocca l’etichetta per riscuoterli ({min}–{max} fuochi fatui al giorno, fino a {cap})',
-  'detail.business.ready#other': '+{n} pronti: tocca l’etichetta per riscuoterli ({min}–{max} fuochi fatui al giorno, fino a {cap})',
+  'detail.business.ready#one': '+{n} pronto da riscuotere ({min}–{max} fuochi fatui al giorno, fino a {cap})',
+  'detail.business.ready#other': '+{n} pronti da riscuotere ({min}–{max} fuochi fatui al giorno, fino a {cap})',
   'detail.business.tomorrow': 'Il prossimo incasso arriva domani ({min}–{max} fuochi fatui al giorno, fino a {cap})',
   'detail.sign.placeholder': 'Scrivi qualcosa…',
   'detail.sign.label': 'Scritta del cartello',

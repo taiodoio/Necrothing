@@ -18,7 +18,8 @@ import { $, closeDrawer, confirmDialog, fmtDate, h, type Modal, openDrawer, open
 import { shopHeader } from './shopHeader.ts';
 import { houseBoughtView, houseShopDetail, houseShopGrid } from './house.ts';
 import { graveThumb, placeableThumb } from './thumbs.ts';
-import { ACH_ICONS, icon } from './icons.ts';
+import { ACH_COUNT, ACH_ICONS, icon } from './icons.ts';
+import { lpBadgeUrl } from './lpIcons.ts';
 import { uiNext, uiPlay, uiPreview } from '../app/uiNext.ts';
 import { remindersAvailable } from '../app/reminders.ts';
 import { currentLang, LANGS, setLang, t, tList } from '../i18n/index.ts';
@@ -27,7 +28,7 @@ import { currentLang, LANGS, setLang, t, tList } from '../i18n/index.ts';
 const CAT_ICON: Record<PlaceableCategory | 'all', string> = { all: 'bag', light: 'lightOn', decoration: 'flower', structure: 'fence', ambient: 'tree', npc: 'ghost', extra: 'bike' };
 const tabIcon = (c: PlaceableCategory | 'all') => (uiPlay() ? icon(CAT_ICON[c], 20) : null);
 import type { UI } from './UI.ts';
-import { openCustomize } from './customize.ts';
+import { CustodePreview, openCustomize } from './customize.ts';
 import { openDeceased } from './deceased.ts';
 import { BurialPhoto, loadImage, openPostcard, photoStep, portrait } from './memorial.ts';
 import type { PostcardData } from './postcard.ts';
@@ -204,7 +205,7 @@ export function unlockNeeds(s: SaveData, d: PlaceableDef, now: Date): UnlockNeed
   if (!early && d.minRank > rank.level) {
     const need = RANKS.find((r) => r.level === d.minRank)!;
     const missing = need.minXp - s.player.xp;
-    out.push({ icon: 'lock', short: t('shop.need.rank.short', { n: d.minRank }), long: t('shop.need.rank.long', { rank: d.minRank, name: need.name, level: rank.level, n: missing, xp: missing.toLocaleString(currentLang()) }), progress: [s.player.xp, need.minXp] });
+    out.push({ icon: 'rank', short: t('shop.need.rank.short', { n: d.minRank }), long: t('shop.need.rank.long', { rank: d.minRank, name: need.name, level: rank.level, n: missing, xp: missing.toLocaleString(currentLang()) }), progress: [s.player.xp, need.minXp] });
   }
   if (!early && d.feat) {
     const [n, goal] = R.featProgress(s, d.feat);
@@ -567,45 +568,97 @@ export function moreActions(items: Array<{ icon: string; label: string; danger?:
 
 // ── Profilo & achievement ──────────────────────────────────────────────
 
+/** La scheda aperta nella pagina del Custode (resta quella scelta finché si gioca). */
+let playerTab: 'keeper' | 'achievements' = 'keeper';
+
 export function openPlayer(ui: UI) {
+  const s = ui.game.state;
+  const got = new Set(s.achievements.map((a) => a.id));
+  const body = h('div', { class: 'player-page' });
+  // il Custode che gira in cima (come nella personalizzazione): una scena sola, chiusa cambiando scheda o pannello
+  let preview: CustodePreview | null = null;
+  const drop = () => { preview?.dispose(); preview = null; };
+  const tab = (id: typeof playerTab, ic: string, label: string, n?: string) =>
+    h('button', { class: `tab ${playerTab === id ? 'active' : ''}`, onclick: () => { playerTab = id; render(); } }, icon(ic, 20), label, n ? h('span', { class: 'tab-n' }, n) : null);
+  const render = () => {
+    drop();
+    const tabs = h('div', { class: 'tabs' }, tab('keeper', 'keeper', t('player.tab.keeper')), tab('achievements', 'trophy', t('player.tab.achievements'), `${got.size}/${ACHIEVEMENTS.length}`));
+    if (playerTab === 'keeper') {
+      preview = new CustodePreview(s.player.look);
+      body.replaceChildren(tabs, h('div', { class: 'look-stage pl-stage' }, preview.canvas), keeperTab(ui));
+      // «Modifica aspetto» è l'azione principale della scheda
+      setDrawerFooter(h('button', { class: 'big-btn', onclick: () => { drop(); openCustomize(ui); } }, icon('shirt', 22), t('player.customize')));
+    } else {
+      body.replaceChildren(tabs, achievementsTab(s, got));
+      setDrawerFooter(null);
+    }
+  };
+  openDrawer(t('player.title'), body, { full: true, onClose: drop });
+  render();
+}
+
+/** Una riga di dati: l'icona dell'elemento (la stessa in tutto il gioco), l'etichetta e il valore; sotto, se serve, una barra. */
+const statRow = (ic: string, label: string, value: string, extra?: HTMLElement | null, long = false) =>
+  h('div', { class: `pl-stat${long ? ' long' : ''}` }, icon(ic, 26), h('div', { class: 'pl-stat-text' }, h('span', {}, label), h('b', {}, value), extra ?? null));
+
+/** Il Custode: il nome (la matita accanto al campo apre la tastiera), poi i dati; sotto, il cimitero. */
+function keeperTab(ui: UI): HTMLElement {
   const game = ui.game;
   const s = game.state;
   const p = s.player;
   const rank = rankForXp(p.xp);
   const next = nextRank(p.xp);
-  const prestige = computePrestige(s);
   const exp = expansionStatus(s);
   const districts = detectDistricts(s.graves);
-  const name = h('input', { value: p.name, maxLength: 24, onchange: (e: Event) => { p.name = (e.target as HTMLInputElement).value.trim() || t('player.defaultName'); game.afterChange(); } });
-  const got = new Set(s.achievements.map((a) => a.id));
+  const lang = currentLang();
+  const name = h('input', {
+    class: 'pl-name', value: p.name, maxLength: 24, 'aria-label': t('player.name'), enterkeyhint: 'done',
+    onchange: (e: Event) => { const el = e.target as HTMLInputElement; p.name = el.value.trim() || t('player.defaultName'); el.value = p.name; game.afterChange(); },
+    onkeydown: (e: KeyboardEvent) => { if (e.key === 'Enter') (e.target as HTMLInputElement).blur(); },
+  }) as HTMLInputElement;
+  const pen = h('button', { class: 'icon-btn pl-pen', 'aria-label': t('player.editName'), onclick: () => { name.focus(); name.setSelectionRange(name.value.length, name.value.length); } }, icon('edit', 22));
+  const fence = exp.unlocked > exp.level
+    ? t('player.fence.unlocked', { label: exp.label, size: exp.size, max: EXPANSION[exp.unlocked].size })
+    : exp.next ? t('player.fence.next', { label: exp.label, size: exp.size, prestige: exp.next.minPrestige, n: exp.toNext })
+      : t('player.fence.value', { label: exp.label, size: exp.size });
+  return h('div', {},
+    h('div', { class: 'pl-name-row' }, name, pen),
+    h('div', { class: 'pl-stats' },
+      statRow('rank', t('player.rank'), t('player.rank.value', { level: rank.level, name: rank.name })),
+      statRow('xp', t('player.xp'), next ? `${p.xp.toLocaleString(lang)} / ${next.minXp.toLocaleString(lang)}` : p.xp.toLocaleString(lang),
+        h('div', { class: 'xp-bar pl-bar' }, h('i', { style: `width:${Math.round(rankProgress(p.xp) * 100)}%` }))),
+      statRow('wisp', t('player.wisps'), p.wisps.toLocaleString(lang)),
+      statRow('prestige', t('player.prestige'), String(computePrestige(s)))),
+    h('div', { class: 'section-title' }, t('player.section.cemetery')),
+    h('div', { class: 'pl-stats' },
+      statRow('fence', t('player.fence'), fence, null, true),
+      statRow('district', t('player.districts'), districts.length ? districts.map((d) => DISTRICT_LABELS[d.theme]).join(', ') : t('player.districts.none'), null, true)));
+}
+
+/** I traguardi: in testa quanti se ne hanno, poi una carta per ciascuno col suo medaglione (prima quelli ottenuti). */
+function achievementsTab(s: SaveData, got: Set<string>): HTMLElement {
   const tiers = { gold: t('player.tier.gold'), silver: t('player.tier.silver'), bronze: t('player.tier.bronze') };
-  openDrawer(t('player.title'), h('div', {},
-    h('div', { class: 'field' }, h('label', {}, t('player.name')), name),
-    h('button', { class: 'big-btn', style: 'margin:4px 0 10px', onclick: () => openCustomize(ui) }, t('player.customize')),
-    h('dl', { class: 'kv' },
-      h('dt', {}, t('player.rank')), h('dd', {}, t('player.rank.value', { level: rank.level, name: rank.name })),
-      h('dt', {}, t('player.xp')), h('dd', {}, `${p.xp}${next ? ` / ${next.minXp}` : ''}`),
-      h('dt', {}, t('player.wisps')), h('dd', {}, t('player.wisps.value', { n: p.wisps })),
-      h('dt', {}, t('player.prestige')), h('dd', {}, String(prestige)),
-      h('dt', {}, t('player.fence')), h('dd', {}, exp.unlocked > exp.level
-        ? t('player.fence.unlocked', { label: exp.label, size: exp.size, max: EXPANSION[exp.unlocked].size })
-        : exp.next ? t('player.fence.next', { label: exp.label, size: exp.size, prestige: exp.next.minPrestige, n: exp.toNext })
-          : t('player.fence.value', { label: exp.label, size: exp.size })),
-      h('dt', {}, t('player.districts')), h('dd', {}, districts.length ? districts.map((d) => DISTRICT_LABELS[d.theme]).join(', ') : t('player.districts.none')),
-    ),
-    h('div', { class: 'xp-bar', style: 'height:6px;margin-bottom:10px' }, h('i', { style: `width:${Math.round(rankProgress(p.xp) * 100)}%` })),
-    h('div', { class: 'section-title' }, t('player.achievements', { got: got.size, total: ACHIEVEMENTS.length })),
-    ...(['gold', 'silver', 'bronze'] as const).flatMap((tier) => ACHIEVEMENTS.filter((a) => a.tier === tier).map((a) => {
+  const order = { gold: 0, silver: 1, bronze: 2 };
+  const list = [...ACHIEVEMENTS].sort((a, b) => Number(got.has(b.id)) - Number(got.has(a.id)) || order[a.tier] - order[b.tier]);
+  return h('div', {},
+    h('div', { class: 'ach-sum' }, h('b', {}, t('player.achievements', { got: got.size, total: ACHIEVEMENTS.length })),
+      h('div', { class: 'xp-bar' }, h('i', { style: `width:${Math.round((got.size / ACHIEVEMENTS.length) * 100)}%` }))),
+    h('div', { class: 'ach-list' }, ...list.map((a) => {
       const done = got.has(a.id);
       const prog = achievementProgress(a, s);
-      return h('div', { class: `ach ${done ? 'got' : ''} tier-${tier}` }, // i18n-ok: classe
-        h('div', { class: 'ico' }, icon(done ? (ACH_ICONS[a.id] ?? 'trophy') : 'lock', 30)),
-        h('div', {}, h('b', {}, a.name), h('p', {}, t('player.achievement.line', { description: a.description, tier: tiers[tier] })), !done && prog > 0 ? h('div', { class: 'bar' }, h('i', { style: `width:${Math.round(prog * 100)}%` })) : null));
-    })),
-  ), { full: true });
+      const n = ACH_COUNT[a.id];
+      return h('div', { class: `ach-card ${done ? 'got' : ''}` },
+        h('div', { class: 'ach-badge' }, h('img', { src: lpBadgeUrl(ACH_ICONS[a.id] ?? 'trophy', done ? a.tier : 'locked'), alt: '' }), n ? h('span', { class: 'ach-n' }, String(n)) : null),
+        h('div', {}, h('b', {}, a.name), h('p', {}, a.description),
+          h('span', { class: `ach-tier tier-${a.tier}` }, tiers[a.tier]), // i18n-ok: classe
+          !done && prog > 0 ? h('div', { class: 'xp-bar ach-bar' }, h('i', { style: `width:${Math.round(prog * 100)}%` })) : null));
+    })));
 }
 
 // ── Impostazioni ───────────────────────────────────────────────────────
+
+/** La scheda aperta nelle Impostazioni. */
+let settingsTab: 'game' | 'graphics' | 'save' | 'info' = 'game';
 
 export function openSettings(ui: UI) {
   const game = ui.game;
@@ -637,53 +690,65 @@ export function openSettings(ui: UI) {
       (e.target as HTMLInputElement).value = ''; // lo stesso file si può riscegliere
     },
   });
-  const body = h('div', { 'data-settings': 'true' },
-    h('button', { class: 'big-btn ghost', style: 'margin-bottom:6px', onclick: () => openCustomize(ui) }, t('settings.customize')),
-    // la lingua cambia ricaricando: anche i testi calcolati all'avvio (catalogo) cambiano
-    Object.keys(LANGS).length > 1
-      ? h('div', { class: 'setting' }, t('settings.language'), seg(currentLang(), Object.entries(LANGS), (v) => { setLang(v); location.reload(); }))
-      : null,
-    h('div', { class: 'section-title' }, t('settings.section.terrain')),
-    terrainSection(ui),
-    h('div', { class: 'section-title' }, t('settings.section.graphics')),
-    h('div', { class: 'setting' }, t('settings.quality'), seg(s.quality, [['auto', t('settings.quality.auto')], ['low', t('settings.quality.low')], ['medium', t('settings.quality.medium')], ['high', t('settings.quality.high')]], (v) => game.setQuality(v))),
-    s.quality === 'auto' ? h('p', { class: 'muted', style: 'margin:-2px 0 4px;font-size:12px' }, t('settings.quality.autoHint')) : null,
-    uiNext() ? h('div', { class: 'setting' }, t('settings.theme'), seg<ThemeSetting>(s.theme, [['auto', t('settings.theme.auto')], ['light', t('settings.theme.light')], ['dark', t('settings.theme.dark')]], (v) => game.setTheme(v))) : null,
-    h('div', { class: 'setting' }, t('settings.fps'), seg<FpsSetting>(s.fps, [['auto', t('settings.fps.auto')], ['30', t('settings.fps.30')], ['60', t('settings.fps.60')]], (v) => game.setFps(v))),
-    h('p', { class: 'muted', style: 'margin:-2px 0 4px;font-size:12px' }, s.fps === 'auto' ? t('settings.fps.autoHint') : s.fps === '30' ? t('settings.fps.30Hint') : t('settings.fps.60Hint')),
-    h('div', { class: 'setting' }, t('settings.time'), seg<TimeOverride>(s.timeOverride, [['auto', t('settings.time.auto')], ['day', t('settings.time.day')], ['dusk', t('settings.time.dusk')], ['night', t('settings.time.night')]], (v) => game.setTimeOverride(v))),
-    h('label', { class: 'setting' }, t('settings.edgeBlur'), edgeBlur),
-    h('label', { class: 'setting' }, t('settings.weather'), h('input', { type: 'checkbox', checked: s.weatherEffects, onchange: (e: Event) => game.setWeatherEffects((e.target as HTMLInputElement).checked) })),
-    h('label', { class: 'setting' }, t('settings.debug'), h('input', { type: 'checkbox', checked: s.showDebug, onchange: (e: Event) => { s.showDebug = (e.target as HTMLInputElement).checked; game.afterChange(); } })),
-    h('div', { class: 'section-title' }, t('settings.section.notifications')),
-    remindersAvailable()
-      ? h('label', { class: 'setting' }, t('settings.reminders'), h('input', { type: 'checkbox', checked: s.reminders === true, onchange: (e: Event) => void game.setReminders((e.target as HTMLInputElement).checked) }))
-      : null,
-    h('p', { class: 'muted' }, remindersAvailable()
-      ? t('settings.reminders.app')
-      : t('settings.reminders.browser')),
-    h('div', { class: 'section-title' }, t('settings.section.backup')),
-    h('div', { class: 'row' },
-      h('button', { class: 'big-btn ghost', onclick: async () => {
-        const blob = await exportBackup(game.state);
-        const a = h('a', { href: URL.createObjectURL(blob), download: `necrothing-${new Date().toISOString().slice(0, 10)}.necro3d` });
-        a.click();
-        setTimeout(() => URL.revokeObjectURL(a.href), 2000);
-      } }, t('settings.backup.export')),
-      h('button', { class: 'big-btn ghost', onclick: () => fileInput.click() }, t('settings.backup.import'))),
-    fileInput,
-    h('div', { class: 'section-title' }, t('settings.section.info')),
-    h('p', { class: 'muted' }, t('settings.info')),
-    h('p', { class: 'muted', 'data-build': 'true' }, buildLabel()),
-    h('div', { class: 'row' },
-      h('a', { class: 'big-btn ghost', href: './gallery.html', style: 'display:grid;place-items:center;text-decoration:none' }, t('settings.assetGallery')),
+  const sections: Record<typeof settingsTab, Array<HTMLElement | null>> = {
+    game: [
+      // la lingua cambia ricaricando: anche i testi calcolati all'avvio (catalogo) cambiano
+      Object.keys(LANGS).length > 1
+        ? h('div', { class: 'setting' }, t('settings.language'), seg(currentLang(), Object.entries(LANGS), (v) => { setLang(v); location.reload(); }))
+        : null,
+      h('div', { class: 'section-title' }, t('settings.section.terrain')),
+      terrainSection(ui),
+      h('div', { class: 'section-title' }, t('settings.section.notifications')),
+      remindersAvailable()
+        ? h('label', { class: 'setting' }, t('settings.reminders'), h('input', { type: 'checkbox', checked: s.reminders === true, onchange: (e: Event) => void game.setReminders((e.target as HTMLInputElement).checked) }))
+        : null,
+      h('p', { class: 'muted' }, remindersAvailable() ? t('settings.reminders.app') : t('settings.reminders.browser')),
+    ],
+    graphics: [
+      h('div', { class: 'setting' }, t('settings.quality'), seg(s.quality, [['auto', t('settings.quality.auto')], ['low', t('settings.quality.low')], ['medium', t('settings.quality.medium')], ['high', t('settings.quality.high')]], (v) => game.setQuality(v))),
+      s.quality === 'auto' ? h('p', { class: 'muted', style: 'margin:-2px 0 4px;font-size:12px' }, t('settings.quality.autoHint')) : null,
+      uiNext() ? h('div', { class: 'setting' }, t('settings.theme'), seg<ThemeSetting>(s.theme, [['auto', t('settings.theme.auto')], ['light', t('settings.theme.light')], ['dark', t('settings.theme.dark')]], (v) => game.setTheme(v))) : null,
+      h('div', { class: 'setting' }, t('settings.fps'), seg<FpsSetting>(s.fps, [['auto', t('settings.fps.auto')], ['30', t('settings.fps.30')], ['60', t('settings.fps.60')]], (v) => game.setFps(v))),
+      h('p', { class: 'muted', style: 'margin:-2px 0 4px;font-size:12px' }, s.fps === 'auto' ? t('settings.fps.autoHint') : s.fps === '30' ? t('settings.fps.30Hint') : t('settings.fps.60Hint')),
+      h('div', { class: 'setting' }, t('settings.time'), seg<TimeOverride>(s.timeOverride, [['auto', t('settings.time.auto')], ['day', t('settings.time.day')], ['dusk', t('settings.time.dusk')], ['night', t('settings.time.night')]], (v) => game.setTimeOverride(v))),
+      h('label', { class: 'setting' }, t('settings.edgeBlur'), edgeBlur),
+      h('label', { class: 'setting' }, t('settings.weather'), h('input', { type: 'checkbox', checked: s.weatherEffects, onchange: (e: Event) => game.setWeatherEffects((e.target as HTMLInputElement).checked) })),
+      h('label', { class: 'setting' }, t('settings.debug'), h('input', { type: 'checkbox', checked: s.showDebug, onchange: (e: Event) => { s.showDebug = (e.target as HTMLInputElement).checked; game.afterChange(); } })),
+    ],
+    save: [
+      h('div', { class: 'section-title' }, t('settings.section.backup')),
+      h('div', { class: 'row' },
+        h('button', { class: 'big-btn ghost', onclick: async () => {
+          const blob = await exportBackup(game.state);
+          const a = h('a', { href: URL.createObjectURL(blob), download: `necrothing-${new Date().toISOString().slice(0, 10)}.necro3d` });
+          a.click();
+          setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+        } }, t('settings.backup.export')),
+        h('button', { class: 'big-btn ghost', onclick: () => fileInput.click() }, t('settings.backup.import'))),
+      fileInput,
+      h('div', { class: 'section-title' }, t('settings.newGame')),
       h('button', { class: 'big-btn ghost', style: 'color:var(--danger)', onclick: async () => {
         if (!await confirmDialog({ title: t('settings.newGame'), message: t('settings.newGame.confirm'), ok: t('settings.newGame.ok'), danger: true })) return;
         game.replaceState(createNewGame(new Date()));
         closeDrawer();
         toast(t('settings.newGame.done'));
-      } }, t('settings.newGame'))),
-  );
+      } }, t('settings.newGame')),
+    ],
+    info: [
+      h('p', { class: 'muted' }, t('settings.info')),
+      h('p', { class: 'muted', 'data-build': 'true' }, buildLabel()),
+      h('a', { class: 'big-btn ghost', href: './gallery.html', style: 'display:grid;place-items:center;text-decoration:none' }, t('settings.assetGallery')),
+    ],
+  };
+  const TABS: Array<[typeof settingsTab, string, string]> = [['game', 'shovel', t('settings.tab.game')], ['graphics', 'lightOn', t('settings.tab.graphics')], ['save', 'book', t('settings.tab.save')], ['info', 'search', t('settings.tab.info')]];
+  // tutte le sezioni restano nel pannello (i controlli tengono il loro stato), si mostra solo quella scelta
+  const panes = Object.fromEntries(TABS.map(([id]) => [id, h('div', { class: 'settings-pane', hidden: id !== settingsTab }, ...sections[id])])) as unknown as Record<typeof settingsTab, HTMLElement>;
+  const tabBar = h('div', { class: 'tabs even' }, ...TABS.map(([id, ic, label]) => h('button', { class: `tab ${id === settingsTab ? 'active' : ''}`, onclick: (e: Event) => {
+    settingsTab = id;
+    for (const b of Array.from(tabBar.children)) b.classList.toggle('active', b === e.currentTarget);
+    for (const [k, el] of Object.entries(panes)) el.hidden = k !== id;
+  } }, icon(ic, 20), label)));
+  const body = h('div', { 'data-settings': 'true' }, tabBar, ...Object.values(panes));
   openDrawer(t('settings.title'), body, { full: true });
 }
 

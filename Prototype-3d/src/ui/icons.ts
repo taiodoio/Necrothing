@@ -641,16 +641,21 @@ export function hydrateIcons(root: ParentNode = document) {
   }
 }
 
-/** Icone degli achievement (per id). */
+/** Icone degli achievement (per id): ognuno la sua; i traguardi «a quantità» hanno anche il numero sul medaglione. */
 export const ACH_ICONS: Record<string, string> = {
-  first_burial: 'bury', five_graves: 'bury', ten_graves: 'bury', twentyfive_graves: 'bury',
-  abstract_grief: 'wisp', variety_5: 'variant', all_categories: 'variant',
+  first_burial: 'shovel', five_graves: 'district', ten_graves: 'district', twentyfive_graves: 'district',
+  abstract_grief: 'heart', variety_5: 'variant', all_categories: 'book',
   florist: 'flower', green_thumb: 'flower', gardener_master: 'flower',
   caretaker: 'broom', caretaker_silver: 'broom', fixer: 'hammer',
-  haunted: 'ghost', ghost_whisperer: 'ghost', socialite: 'keeper', decorator: 'variant',
-  spender: 'wisp', photographer: 'photo', mausoleum_built: 'shop',
-  district_gothic: 'gallery', district_natural: 'gallery', district_tech: 'gallery', master_planner: 'top',
-  expansion: 'fence', rank_3: 'shovel', rank_5: 'trophy',
+  haunted: 'ghost', ghost_whisperer: 'ghost', socialite: 'paw', decorator: 'pumpkin',
+  spender: 'wisp', photographer: 'photo', mausoleum_built: 'mausoleum',
+  district_gothic: 'bat', district_natural: 'tree', district_tech: 'gear', master_planner: 'top',
+  expansion: 'fence', rank_3: 'rank', rank_5: 'prestige',
+};
+/** Il numero sul medaglione dei traguardi a quantità (5 tombe, 10 fiori…). */
+export const ACH_COUNT: Record<string, number> = {
+  five_graves: 5, ten_graves: 10, twentyfive_graves: 25, variety_5: 5, green_thumb: 10, gardener_master: 50,
+  caretaker_silver: 15, fixer: 5, ghost_whisperer: 5, socialite: 10, decorator: 5, spender: 50, photographer: 3, rank_3: 3,
 };
 
 /** Frame 9×9 a "gradino" per border-image (fill = interno del pannello). */

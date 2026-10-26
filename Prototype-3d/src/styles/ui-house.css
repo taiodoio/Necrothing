@@ -149,3 +149,45 @@
 .ui-next .bat-btn { position: relative; box-shadow: var(--shadow), 0 0 0 2px #a86ad0; }
 .ui-next .bat-btn .bat-left { position: absolute; right: -6px; bottom: -6px; min-width: 22px; height: 20px; padding: 0 5px; border-radius: 10px;
   display: grid; place-items: center; background: #a86ad0; color: #fff; font: 800 11px/1 var(--sans, sans-serif); font-style: normal; }
+
+/* ── Pagina del Custode: il Custode che gira in cima, il nome, i dati a tutta larghezza, il cimitero sotto ── */
+.ui-next .player-page .tabs { margin-bottom: 0; }
+.ui-next .pl-stage { position: relative; top: 0; margin: 0 -10px 12px; border-radius: 0; }
+.ui-next .pl-name-row { display: grid; grid-template-columns: 1fr auto; gap: 8px; align-items: center; margin-bottom: 12px; }
+.ui-next .pl-name { width: 100%; min-width: 0; height: 48px; padding: 0 14px; border: 0; border-radius: 12px; background: var(--input); color: var(--gold-bright); font: 700 22px/1 var(--gothic); outline: none; }
+.ui-next .pl-pen { width: 48px; height: 48px; }
+.ui-next .pl-stats { display: grid; gap: 2px; border-radius: var(--r); background: var(--panel-2); padding: 4px 14px; margin-bottom: 12px; }
+.ui-next .pl-stat { display: grid; grid-template-columns: 28px 1fr; gap: 12px; align-items: center; padding: 10px 0; }
+.ui-next .pl-stat + .pl-stat { border-top: 1px solid var(--line); }
+.ui-next .pl-stat-text { display: grid; grid-template-columns: auto 1fr; gap: 2px 12px; align-items: baseline; min-width: 0; }
+.ui-next .pl-stat-text span { color: var(--muted); font-size: 14px; font-weight: 700; }
+.ui-next .pl-stat-text b { color: var(--paper); font-size: 15px; font-weight: 800; text-align: right; overflow-wrap: anywhere; }
+.ui-next .pl-stat.long .pl-stat-text { grid-template-columns: 1fr; }
+.ui-next .pl-stat.long .pl-stat-text b { text-align: left; font-weight: 700; line-height: 1.3; }
+.ui-next .pl-stat-text .pl-bar { grid-column: 1 / -1; display: block; height: 6px; margin-top: 6px; }
+
+/* schede che dividono lo spazio in parti uguali (Impostazioni) */
+.ui-next .tabs.even { display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; overflow: visible; }
+.ui-next .tabs.even .tab { justify-content: center; padding: 4px 6px; gap: 5px; font-size: 13px; }
+
+/* ── Traguardi: carte separate col medaglione grande ── */
+.ui-next .ach-sum { display: grid; gap: 6px; margin: 4px 2px 12px; }
+.ui-next .ach-sum b { color: var(--gold-bright); font: 700 18px/1.1 var(--gothic); }
+.ui-next .ach-sum .xp-bar { display: block; height: 8px; }
+.ui-next .ach-list { display: grid; gap: 10px; }
+.ui-next .ach-card { display: grid; grid-template-columns: 64px 1fr; gap: 12px; align-items: center; padding: 10px 12px 10px 8px; border-radius: var(--r); background: var(--panel-2); }
+.ui-next .ach-card:not(.got) { background: color-mix(in srgb, var(--panel-2) 55%, transparent); }
+.ui-next .ach-card:not(.got) b { color: var(--muted); }
+.ui-next .ach-badge { position: relative; width: 64px; height: 64px; }
+.ui-next .ach-badge img { width: 100%; height: 100%; filter: drop-shadow(0 3px 3px rgba(0, 0, 0, 0.35)); }
+.ui-next .ach-card:not(.got) .ach-badge img { opacity: 0.75; }
+.ui-next .ach-n { position: absolute; right: 0; top: 2px; min-width: 22px; height: 20px; padding: 0 5px; border-radius: 999px; display: grid; place-items: center;
+  background: var(--primary); color: var(--on-primary); font-size: 11.5px; font-weight: 800; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.4); }
+.ui-next .ach-card:not(.got) .ach-n { background: var(--track); color: var(--paper); }
+.ui-next .ach-card b { display: block; color: var(--paper); font-size: 15px; font-weight: 800; }
+.ui-next .ach-card p { margin: 2px 0 4px; color: var(--muted); font-size: 13px; }
+.ui-next .ach-tier { display: inline-block; padding: 1px 8px; border-radius: 999px; font-size: 11px; font-weight: 800; }
+.ui-next .ach-tier.tier-gold { background: rgba(240, 196, 110, 0.2); color: #e7b65a; }
+.ui-next .ach-tier.tier-silver { background: rgba(195, 202, 214, 0.18); color: #c3cad6; }
+.ui-next .ach-tier.tier-bronze { background: rgba(200, 138, 84, 0.2); color: #d39a66; }
+.ui-next .ach-bar { display: block; height: 5px; margin-top: 6px; }

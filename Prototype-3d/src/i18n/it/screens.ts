@@ -265,11 +265,18 @@ export default {
 
   // ── Profilo e traguardi ──
   'player.title': 'Il Custode',
+  // schede della pagina del Custode
+  'player.tab.keeper': 'Custode',
+  'player.tab.achievements': 'Traguardi',
+  // per i lettori di schermo: la matita accanto al nome
+  'player.editName': 'Cambia nome',
+  // sezione sotto i dati: lo stato del cimitero (recinto e distretti)
+  'player.section.cemetery': 'Il tuo cimitero',
   // nome del giocatore se il campo resta vuoto
   'player.defaultName': 'Custode',
   'player.name': 'Nome',
   // breve: pulsante
-  'player.customize': 'Personalizza aspetto',
+  'player.customize': 'Modifica aspetto',
   'player.rank': 'Rango',
   // numero e nome del rango
   'player.rank.value': '{level} · {name}',
@@ -287,22 +294,22 @@ export default {
   'player.fence.next#other': '{label} · {size}×{size} — prossima area a {prestige} di prestigio (mancano {n})',
   'player.districts': 'Distretti',
   'player.districts.none': 'Nessuno (4 tombe coerenti vicine)',
-  // titolo della sezione traguardi
-  'player.achievements': 'Achievement · {got}/{total}',
-  // descrizione del traguardo e il suo livello (oro, argento, bronzo)
-  'player.achievement.line': '{description} · {tier}',
+  // in testa alla scheda dei traguardi
+  'player.achievements': '{got} traguardi su {total}',
   'player.tier.gold': 'Oro',
   'player.tier.silver': 'Argento',
   'player.tier.bronze': 'Bronzo',
 
   // ── Impostazioni ──
   'settings.title': 'Impostazioni',
-  // breve: pulsante
-  'settings.customize': 'Personalizza il Custode',
+  // schede delle Impostazioni
+  'settings.tab.game': 'Gioco',
+  'settings.tab.graphics': 'Grafica',
+  'settings.tab.save': 'Dati',
+  'settings.tab.info': 'Info',
   // compare solo quando c'è almeno una traduzione; i nomi delle lingue restano nella loro lingua
   'settings.language': 'Lingua',
   'settings.section.terrain': 'Terreno',
-  'settings.section.graphics': 'Resa grafica',
   'settings.quality': 'Qualità',
   // breve: pulsanti della qualità grafica
   'settings.quality.auto': 'Auto',
@@ -345,7 +352,6 @@ export default {
   'settings.backup.restored': 'Backup ripristinato.',
   // notifica
   'settings.backup.importFailed': 'Import fallito.',
-  'settings.section.info': 'Info',
   'settings.info': 'Necrothing 3D · prototipo procedurale (Three.js). Tutti i modelli sono generati dal codice. Scorciatoie: WASD muovi · E interagisci · C vista · V stile.',
   // breve: pulsante (pagina di prova con tutti i modelli)
   'settings.assetGallery': 'Galleria asset',

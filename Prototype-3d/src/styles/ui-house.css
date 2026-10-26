@@ -156,6 +156,7 @@
 .ui-next .pl-name-row { display: grid; grid-template-columns: 1fr auto; gap: 8px; align-items: center; margin-bottom: 12px; }
 .ui-next .pl-name { width: 100%; min-width: 0; height: 48px; padding: 0 14px; border: 0; border-radius: 12px; background: var(--input); color: var(--gold-bright); font: 700 22px/1 var(--gothic); outline: none; }
 .ui-next .pl-pen { width: 48px; height: 48px; }
+.ui-next .pl-look { width: 100%; margin-bottom: 14px; }
 .ui-next .pl-stats { display: grid; gap: 2px; border-radius: var(--r); background: var(--panel-2); padding: 4px 14px; margin-bottom: 12px; }
 .ui-next .pl-stat { display: grid; grid-template-columns: 28px 1fr; gap: 12px; align-items: center; padding: 10px 0; }
 .ui-next .pl-stat + .pl-stat { border-top: 1px solid var(--line); }

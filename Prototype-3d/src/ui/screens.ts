@@ -585,12 +585,9 @@ export function openPlayer(ui: UI) {
     const tabs = h('div', { class: 'tabs' }, tab('keeper', 'keeper', t('player.tab.keeper')), tab('achievements', 'trophy', t('player.tab.achievements'), `${got.size}/${ACHIEVEMENTS.length}`));
     if (playerTab === 'keeper') {
       preview = new CustodePreview(s.player.look);
-      body.replaceChildren(tabs, h('div', { class: 'look-stage pl-stage' }, preview.canvas), keeperTab(ui));
-      // «Modifica aspetto» è l'azione principale della scheda
-      setDrawerFooter(h('button', { class: 'big-btn', onclick: () => { drop(); openCustomize(ui); } }, icon('shirt', 22), t('player.customize')));
+      body.replaceChildren(tabs, h('div', { class: 'look-stage pl-stage' }, preview.canvas), keeperTab(ui, () => { drop(); openCustomize(ui); }));
     } else {
       body.replaceChildren(tabs, achievementsTab(s, got));
-      setDrawerFooter(null);
     }
   };
   openDrawer(t('player.title'), body, { full: true, onClose: drop });
@@ -601,8 +598,11 @@ export function openPlayer(ui: UI) {
 const statRow = (ic: string, label: string, value: string, extra?: HTMLElement | null, long = false) =>
   h('div', { class: `pl-stat${long ? ' long' : ''}` }, icon(ic, 26), h('div', { class: 'pl-stat-text' }, h('span', {}, label), h('b', {}, value), extra ?? null));
 
-/** Il Custode: il nome (la matita accanto al campo apre la tastiera), poi i dati; sotto, il cimitero. */
-function keeperTab(ui: UI): HTMLElement {
+/**
+ * Il Custode: il nome (la matita accanto al campo apre la tastiera e diventa
+ * una spunta che conferma e la chiude), «Modifica aspetto», i dati; sotto, il cimitero.
+ */
+function keeperTab(ui: UI, openLook: () => void): HTMLElement {
   const game = ui.game;
   const s = game.state;
   const p = s.player;
@@ -611,18 +611,40 @@ function keeperTab(ui: UI): HTMLElement {
   const exp = expansionStatus(s);
   const districts = detectDistricts(s.graves);
   const lang = currentLang();
+  const pen = h('button', { class: 'icon-btn pl-pen', type: 'button' }) as HTMLButtonElement;
+  /** Matita a riposo, spunta mentre si scrive. */
+  const penState = (editing: boolean) => {
+    pen.replaceChildren(icon(editing ? 'check' : 'edit', 22));
+    pen.setAttribute('aria-label', editing ? t('player.saveName') : t('player.editName'));
+    pen.classList.toggle('active', editing);
+  };
   const name = h('input', {
     class: 'pl-name', value: p.name, maxLength: 24, 'aria-label': t('player.name'), enterkeyhint: 'done',
-    onchange: (e: Event) => { const el = e.target as HTMLInputElement; p.name = el.value.trim() || t('player.defaultName'); el.value = p.name; game.afterChange(); },
+    onfocus: () => penState(true),
+    // uscendo dal campo (spunta, Invio o tocco altrove) il nome si salva e la tastiera si chiude
+    onblur: (e: Event) => {
+      const el = e.target as HTMLInputElement;
+      const v = el.value.trim() || t('player.defaultName');
+      el.value = v;
+      if (v !== p.name) { p.name = v; game.afterChange(); }
+      penState(false);
+    },
     onkeydown: (e: KeyboardEvent) => { if (e.key === 'Enter') (e.target as HTMLInputElement).blur(); },
   }) as HTMLInputElement;
-  const pen = h('button', { class: 'icon-btn pl-pen', 'aria-label': t('player.editName'), onclick: () => { name.focus(); name.setSelectionRange(name.value.length, name.value.length); } }, icon('edit', 22));
+  // il tocco sulla spunta non deve togliere il fuoco al campo prima del clic: lo decide il clic
+  pen.addEventListener('pointerdown', (e) => e.preventDefault());
+  pen.addEventListener('click', () => {
+    if (document.activeElement === name) name.blur();
+    else { name.focus(); name.setSelectionRange(name.value.length, name.value.length); }
+  });
+  penState(false);
   const fence = exp.unlocked > exp.level
     ? t('player.fence.unlocked', { label: exp.label, size: exp.size, max: EXPANSION[exp.unlocked].size })
     : exp.next ? t('player.fence.next', { label: exp.label, size: exp.size, prestige: exp.next.minPrestige, n: exp.toNext })
       : t('player.fence.value', { label: exp.label, size: exp.size });
   return h('div', {},
     h('div', { class: 'pl-name-row' }, name, pen),
+    h('button', { class: 'big-btn pl-look', onclick: openLook }, icon('shirt', 22), t('player.customize')),
     h('div', { class: 'pl-stats' },
       statRow('rank', t('player.rank'), t('player.rank.value', { level: rank.level, name: rank.name })),
       statRow('xp', t('player.xp'), next ? `${p.xp.toLocaleString(lang)} / ${next.minXp.toLocaleString(lang)}` : p.xp.toLocaleString(lang),

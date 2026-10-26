@@ -1,0 +1,224 @@
+/* Design system «Lumini» (anteprima, non nel gioco): la UI di Necrothing
+   legata al tema del gioco. Notte color prugna, legno scuro con chiodi,
+   oro delle candele, pergamena per i cartellini, edera agli angoli.
+   Tutto in CSS/SVG: gli ornamenti più carichi si potranno salvare in PNG. */
+
+.ds {
+  /* ── Colori ── */
+  --night: #120e16;
+  --plum-900: #1a1420;
+  --plum-800: #231b2a;
+  --plum-700: #2d2436;
+  --plum-600: #3a2f46;
+  --plum-500: #4b3e59;
+  --wood-900: #1f140d;
+  --wood-800: #332115;
+  --wood-700: #4a2f1d;
+  --wood-600: #613f27;
+  --wood-500: #7a5233;
+  --wood-hi: #a97b4e;
+  --parch-100: #f7ecd3;
+  --parch-200: #ecdbb5;
+  --parch-300: #d8bf8d;
+  --ink: #3a2a1c;
+  --ink-soft: #6e5843;
+  --gold-100: #fff1cc;
+  --gold-200: #ffe2a8;
+  --gold-300: #f2c66d;
+  --gold-500: #c99340;
+  --gold-700: #8a6020;
+  --spectral: #9ff0d6;
+  --ember: #ff9a5a;
+  --danger: #ff8a75;
+  --leaf: #7da35a;
+  --text: #f3ecdf;
+  --muted: #b5a998;
+  --line: rgba(255, 233, 184, 0.1);
+  /* ── Forme e ombre ── */
+  --r-xs: 6px;
+  --r-s: 10px;
+  --r-m: 14px;
+  --r-l: 20px;
+  --elev-1: 0 2px 6px rgba(0, 0, 0, 0.35);
+  --elev-2: 0 14px 34px rgba(0, 0, 0, 0.6);
+  --glow-gold: 0 0 0 2px var(--gold-300), 0 0 18px rgba(242, 198, 109, 0.45);
+  --inset: inset 0 2px 6px rgba(0, 0, 0, 0.45), inset 0 -1px 0 rgba(255, 233, 184, 0.06);
+  /* ── Caratteri ── */
+  --f-display: "Grenze Gotisch", serif;
+  --f-label: "Cinzel", serif;
+  --f-body: "Nunito", system-ui, sans-serif;
+  /* ── Materiali ── */
+  --wood: repeating-linear-gradient(0deg, rgba(255, 255, 255, 0.035) 0 2px, rgba(0, 0, 0, 0) 2px 7px),
+    repeating-linear-gradient(90deg, rgba(0, 0, 0, 0) 0 46px, rgba(0, 0, 0, 0.16) 46px 48px),
+    linear-gradient(180deg, var(--wood-500), var(--wood-700));
+  --wood-dark: repeating-linear-gradient(0deg, rgba(255, 255, 255, 0.03) 0 2px, rgba(0, 0, 0, 0) 2px 6px), linear-gradient(180deg, var(--wood-700), var(--wood-800));
+  --parch: radial-gradient(120% 90% at 30% 20%, var(--parch-100), var(--parch-200) 60%, var(--parch-300));
+  font-family: var(--f-body);
+  font-weight: 700;
+  color: var(--text);
+}
+.ds * { box-sizing: border-box; }
+.ds .pxi { flex: none; }
+
+/* ── Superfici ─────────────────────────────────────────────────────── */
+/* tavola di legno coi chiodi agli angoli */
+.ds .wood { background: var(--wood); box-shadow: inset 0 1px 0 rgba(255, 220, 170, 0.28), inset 0 -2px 0 rgba(0, 0, 0, 0.35), 0 3px 0 var(--wood-900), var(--elev-1); }
+/* posizionata per i chiodi, ma senza peso: chi la usa può essere assoluto */
+.ds :where(.wood) { position: relative; }
+.ds .nails::before, .ds .nails::after { content: ''; position: absolute; top: 6px; width: 6px; height: 6px; border-radius: 50%;
+  background: radial-gradient(circle at 35% 35%, #e9d3a8, #8c6a3e 60%, #3a2614); box-shadow: 0 1px 0 rgba(0, 0, 0, 0.5); }
+.ds .nails::before { left: 7px; } .ds .nails::after { right: 7px; }
+.ds .nails > .n2 { position: absolute; inset: 0; pointer-events: none; }
+.ds .nails > .n2::before, .ds .nails > .n2::after { content: ''; position: absolute; bottom: 6px; width: 6px; height: 6px; border-radius: 50%;
+  background: radial-gradient(circle at 35% 35%, #e9d3a8, #8c6a3e 60%, #3a2614); }
+.ds .nails > .n2::before { left: 7px; } .ds .nails > .n2::after { right: 7px; }
+.ds .recess { background: var(--plum-900); box-shadow: var(--inset); border-radius: var(--r-m); }
+.ds .parch { background: var(--parch); color: var(--ink); }
+
+/* ── Cornice dei modali ────────────────────────────────────────────── */
+.ds-modal { position: absolute; inset: calc(14px + env(safe-area-inset-top)) 10px 12px; display: flex; flex-direction: column;
+  border-radius: var(--r-l); background: radial-gradient(130% 80% at 50% 0%, #2f2539, var(--plum-800) 55%, #1b1520);
+  border: 3px solid var(--wood-700); box-shadow: inset 0 0 0 1.5px rgba(242, 198, 109, 0.35), inset 0 0 0 5px rgba(0, 0, 0, 0.25), var(--elev-2); }
+.ds-modal.center { inset: auto 18px; top: 50%; translate: 0 -50%; }
+.ds-modal .body { flex: 1; min-height: 0; overflow: hidden; padding: 12px 14px 0; display: flex; flex-direction: column; gap: 12px; }
+.ds-scrim { position: absolute; inset: 0; background: rgba(10, 6, 12, 0.55); backdrop-filter: blur(2px); }
+/* angoli con l'edera (SVG), fuori dal bordo */
+.ds-ivy { position: absolute; width: 96px; height: 96px; pointer-events: none; z-index: 3; filter: drop-shadow(0 2px 2px rgba(0, 0, 0, 0.5)); }
+.ds-ivy.tl { left: -12px; top: -14px; }
+.ds-ivy.br { right: -12px; bottom: -14px; transform: rotate(180deg); }
+.ds-ivy.bl { left: -12px; bottom: -14px; transform: scaleY(-1); }
+.ds-candle { position: absolute; z-index: 3; pointer-events: none; }
+
+/* testata incorniciata (la scena 3D del gioco) */
+.ds-hero { position: relative; margin: 10px 10px 0; height: 172px; border-radius: 14px; overflow: hidden; flex: none;
+  border: 2px solid var(--wood-800); box-shadow: inset 0 0 0 1px rgba(242, 198, 109, 0.3), 0 2px 0 rgba(0, 0, 0, 0.4); background: #1b1618; }
+.ds-hero .drawer-hero { position: absolute !important; inset: 0; height: 100% !important; margin: 0 !important; }
+.ds-hero::after { content: ''; position: absolute; inset: 0; pointer-events: none; box-shadow: inset 0 0 26px rgba(10, 6, 12, 0.75); border-radius: 12px; }
+/* targa del titolo, a cavallo del bordo inferiore della testata */
+.ds-plaque { position: relative; z-index: 2; align-self: center; margin-top: -24px; padding: 6px 30px 8px; border-radius: 10px;
+  font: 700 26px/1 var(--f-display); color: var(--gold-200); text-shadow: 0 2px 0 rgba(0, 0, 0, 0.5); letter-spacing: 0.01em; white-space: nowrap; }
+.ds-plaque.flat { margin-top: 0; }
+.ds-close { position: absolute; z-index: 4; top: 18px; right: 18px; width: 44px; height: 44px; border-radius: 12px; display: grid; place-items: center; }
+.ds-balance { position: absolute; z-index: 4; top: 18px; left: 18px; display: inline-flex; align-items: center; gap: 4px; padding: 6px 12px 6px 8px; border-radius: 999px;
+  background: rgba(18, 12, 20, 0.82); box-shadow: inset 0 0 0 1.5px rgba(159, 240, 214, 0.45); font: 900 16px/1 var(--f-body); color: var(--spectral); }
+
+/* ── Schede (tab) ──────────────────────────────────────────────────── */
+.ds-tabs { display: flex; gap: 4px; padding: 5px; border-radius: 16px; background: var(--plum-900); box-shadow: var(--inset); flex: none; }
+.ds-tab { flex: 1; min-width: 0; height: 44px; border-radius: 12px; display: flex; align-items: center; justify-content: center; gap: 6px; color: var(--muted); font: 800 13px var(--f-body); }
+.ds-tab.on { flex: 2.2; color: #2f1d0c; background: linear-gradient(#ffe2a0, #f0bf5f 60%, #d89a3c); box-shadow: inset 0 1.5px 0 rgba(255, 255, 255, 0.55), inset 0 -2px 0 rgba(120, 70, 20, 0.4), 0 2px 0 #6e4519; }
+.ds-tab:not(.on) .pxi { opacity: 0.75; }
+
+/* ── Riquadri degli oggetti ────────────────────────────────────────── */
+.ds-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; overflow: hidden; }
+.ds-tile { position: relative; border-radius: var(--r-m); padding: 6px 6px 8px; text-align: center; background: linear-gradient(180deg, var(--plum-600), var(--plum-700));
+  box-shadow: inset 0 1px 0 rgba(255, 233, 184, 0.12), inset 0 0 0 1px rgba(0, 0, 0, 0.25), var(--elev-1); }
+.ds-tile .thumb { position: relative; height: 82px; display: grid; place-items: center; }
+.ds-tile .thumb::before { content: ''; position: absolute; left: 14%; right: 14%; bottom: 6px; height: 16px; border-radius: 50%; background: radial-gradient(closest-side, rgba(0, 0, 0, 0.45), rgba(0, 0, 0, 0)); }
+.ds-tile .thumb img { position: relative; width: 86px; height: 86px; object-fit: contain; }
+.ds-tile b { display: block; font: 800 12.5px/1.15 var(--f-body); color: var(--text); margin-top: 2px; min-height: 2.3em; display: grid; place-items: center; }
+.ds-tile small { display: inline-flex; align-items: center; gap: 3px; font: 800 12px var(--f-body); color: var(--muted); }
+.ds-tile small.price { color: var(--spectral); }
+.ds-tile.sel { box-shadow: var(--glow-gold), inset 0 1px 0 rgba(255, 233, 184, 0.15); background: linear-gradient(180deg, #4a3c58, var(--plum-700)); }
+.ds-tile.locked .thumb img { filter: grayscale(0.7) brightness(0.65); }
+.ds-tile.locked b { color: var(--muted); }
+.ds-badge { position: absolute; z-index: 2; top: 6px; right: 6px; min-width: 24px; height: 24px; padding: 0 6px; border-radius: 999px; display: grid; place-items: center;
+  font: 900 13px/1 var(--f-body); color: #2f1d0c; background: linear-gradient(#ffe2a0, #e9b45a); box-shadow: 0 1px 0 #6e4519, 0 2px 4px rgba(0, 0, 0, 0.4); }
+.ds-lockchip { position: absolute; z-index: 2; top: 6px; left: 6px; width: 26px; height: 26px; border-radius: 8px; display: grid; place-items: center; background: rgba(18, 12, 20, 0.75); }
+
+/* ── Pulsanti ──────────────────────────────────────────────────────── */
+.ds-btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 54px; padding: 0 18px; white-space: nowrap; border-radius: 14px; border: 0;
+  font: 900 18px/1 var(--f-body); color: #2f1d0c; background: linear-gradient(#ffe6a8, #f2c063 55%, #d99b3d);
+  box-shadow: inset 0 2px 0 rgba(255, 255, 255, 0.55), inset 0 -3px 0 rgba(120, 70, 20, 0.45), 0 3px 0 #6e4519, 0 8px 16px rgba(0, 0, 0, 0.4); }
+.ds-btn.wood { color: var(--parch-100); background: var(--wood); box-shadow: inset 0 1px 0 rgba(255, 220, 170, 0.28), inset 0 -2px 0 rgba(0, 0, 0, 0.35), 0 3px 0 var(--wood-900), 0 8px 16px rgba(0, 0, 0, 0.35); }
+.ds-btn.ghost { color: var(--text); background: var(--plum-600); box-shadow: inset 0 1px 0 rgba(255, 233, 184, 0.12), 0 3px 0 rgba(0, 0, 0, 0.45); }
+.ds-btn.off { color: #4a361f; background: linear-gradient(#b8975f, #93733f); box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.25), 0 3px 0 #4d3416; }
+.ds-btn .gain { display: inline-flex; align-items: center; gap: 3px; padding: 4px 9px 4px 7px; border-radius: 999px; background: rgba(47, 29, 12, 0.85); color: var(--spectral); font-size: 15px; }
+.ds-btn small { font-size: 12px; }
+.ds-iconbtn { width: 46px; height: 46px; border-radius: 12px; display: grid; place-items: center; }
+
+/* ── Testi ─────────────────────────────────────────────────────────── */
+.ds h1, .ds .t-display { margin: 0; font: 700 30px/1.05 var(--f-display); color: var(--gold-200); text-shadow: 0 2px 0 rgba(0, 0, 0, 0.45); }
+.ds .t-label { font: 700 12px/1 var(--f-label); letter-spacing: 0.14em; text-transform: uppercase; color: var(--gold-300); }
+.ds .t-body { font: 600 14.5px/1.4 var(--f-body); color: var(--text); }
+.ds .t-muted { font: 600 13px/1.35 var(--f-body); color: var(--muted); }
+.ds .t-epitaph { font: italic 600 15px/1.35 var(--f-body); color: var(--parch-200); }
+.ds .divider { display: flex; align-items: center; gap: 10px; color: var(--gold-500); }
+.ds .divider::before, .ds .divider::after { content: ''; flex: 1; height: 1px; background: linear-gradient(90deg, rgba(201, 147, 64, 0), rgba(201, 147, 64, 0.6), rgba(201, 147, 64, 0)); }
+
+/* ── Pillole, prezzi, barra ────────────────────────────────────────── */
+.ds-pill { display: inline-flex; align-items: center; gap: 5px; padding: 4px 12px 4px 8px; border-radius: 999px; background: var(--plum-900); box-shadow: var(--inset); font: 800 12.5px var(--f-body); color: var(--text); }
+.ds-pill.gold { color: var(--gold-200); background: color-mix(in srgb, #f0b45a 18%, var(--plum-900)); }
+.ds-price { display: inline-flex; align-items: center; gap: 3px; font: 900 15px var(--f-body); color: var(--spectral); }
+.ds-progress { height: 10px; border-radius: 999px; background: var(--plum-900); box-shadow: var(--inset); overflow: hidden; }
+.ds-progress > i { display: block; height: 100%; border-radius: 999px; background: linear-gradient(#ffe6a8, #e3a84d); box-shadow: 0 0 10px rgba(242, 198, 109, 0.5); }
+
+/* ── Pannello in fondo (dettaglio dell'oggetto scelto) ─────────────── */
+.ds-dock { flex: none; margin: 10px -14px 0; padding: 14px 16px 16px; display: grid; grid-template-columns: 74px 1fr; gap: 6px 12px; align-items: center;
+  background: linear-gradient(180deg, var(--plum-700), var(--plum-800)); border-top: 4px solid var(--wood-700); border-radius: 0 0 17px 17px; box-shadow: 0 -8px 18px rgba(0, 0, 0, 0.35); }
+.ds-dock .mini { grid-row: span 2; width: 74px; height: 74px; border-radius: 12px; display: grid; place-items: center; }
+.ds-dock .mini img { width: 78px; height: 78px; object-fit: contain; }
+.ds-dock h3 { margin: 0; font: 700 22px/1 var(--f-display); color: var(--gold-200); }
+.ds-dock p { margin: 2px 0 0; }
+.ds-dock .actions { grid-column: 1 / -1; display: grid; grid-template-columns: auto 1fr; gap: 10px; margin-top: 6px; }
+
+/* ── Dati con le icone tonde e cronologia ──────────────────────────── */
+.ds-facts { display: grid; }
+.ds-facts > div { display: grid; grid-template-columns: 34px 92px 1fr; gap: 10px; align-items: center; padding: 6px 0; border-bottom: 1px solid var(--line); }
+.ds-facts .ico { width: 34px; height: 34px; border-radius: 50%; display: grid; place-items: center; background: var(--plum-600); box-shadow: inset 0 1px 0 rgba(255, 233, 184, 0.12); }
+.ds-facts span { font: 700 13.5px var(--f-body); color: var(--muted); }
+.ds-facts b { font: 800 14px var(--f-body); color: var(--text); }
+.ds-log > div { display: grid; grid-template-columns: 26px 1fr auto; gap: 8px; align-items: center; padding: 6px 0; border-bottom: 1px solid var(--line); font: 700 14px var(--f-body); }
+.ds-log time { color: var(--muted); font-size: 12.5px; }
+
+/* ── Riquadro «Per sbloccarlo» ─────────────────────────────────────── */
+.ds-lock { padding: 12px 14px; display: grid; gap: 9px; }
+.ds-lock .row { display: grid; grid-template-columns: 24px 1fr; gap: 10px; align-items: start; font: 700 14px/1.35 var(--f-body); }
+.ds-lock .legend { display: flex; justify-content: space-between; font: 700 12px var(--f-body); color: var(--muted); margin-top: -2px; }
+
+/* ── HUD «legnosa» ─────────────────────────────────────────────────── */
+.ds-hud { position: absolute; inset: 0; pointer-events: none; }
+.ds-player { position: absolute; left: 10px; top: calc(12px + env(safe-area-inset-top)); width: 222px; height: 76px; border-radius: 16px; display: grid; grid-template-columns: 64px 1fr; gap: 10px; align-items: center; padding: 6px 12px 6px 6px; }
+.ds-player .face { width: 64px; height: 64px; border-radius: 12px; overflow: visible; position: relative; background: radial-gradient(circle at 50% 40%, #4b3e59, #241c2b); box-shadow: inset 0 0 0 2px var(--gold-500), inset 0 2px 8px rgba(0, 0, 0, 0.6); }
+.ds-player .face img { position: absolute; left: 50%; bottom: 0; width: 76px; translate: -50% 0; }
+.ds-player .lvl { position: absolute; left: -6px; bottom: -6px; width: 28px; height: 28px; border-radius: 50%; display: grid; place-items: center; font: 900 14px var(--f-body); color: #2f1d0c;
+  background: linear-gradient(#ffe6a8, #e3a84d); box-shadow: 0 0 0 2px var(--wood-800), 0 2px 4px rgba(0, 0, 0, 0.5); }
+.ds-player .name { font: 700 21px/1 var(--f-display); color: var(--gold-100); text-shadow: 0 2px 0 rgba(0, 0, 0, 0.45); }
+.ds-player .meta { display: flex; align-items: center; gap: 8px; margin-top: 6px; }
+.ds-player .xp { flex: 1; height: 8px; border-radius: 999px; background: rgba(20, 12, 8, 0.7); box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.6); overflow: hidden; }
+.ds-player .xp i { display: block; height: 100%; width: 62%; background: linear-gradient(#ffe6a8, #e3a84d); }
+.ds-player .deco { position: absolute; right: -10px; bottom: -14px; }
+.ds-sign { position: absolute; right: 12px; top: calc(4px + env(safe-area-inset-top)); width: 86px; padding-top: 14px; }
+.ds-sign .ropes { position: absolute; left: 14px; right: 14px; top: 0; height: 18px; border-left: 2px solid #8a6a46; border-right: 2px solid #8a6a46; }
+.ds-sign .board { height: 70px; border-radius: 12px; display: grid; place-items: center; align-content: center; gap: 2px; }
+.ds-sign b { font: 900 17px/1 var(--f-body); color: var(--parch-100); text-shadow: 0 1px 0 rgba(0, 0, 0, 0.5); }
+.ds-round { position: absolute; width: 60px; height: 60px; border-radius: 50%; display: grid; place-items: center; background: radial-gradient(circle at 50% 35%, #3d3248, #1f1826);
+  box-shadow: 0 0 0 4px var(--wood-600), 0 0 0 5.5px var(--wood-900), inset 0 2px 0 rgba(255, 233, 184, 0.12), 0 6px 12px rgba(0, 0, 0, 0.5); }
+.ds-round.big { width: 72px; height: 72px; }
+.ds-round .leaf { position: absolute; right: -8px; top: -10px; }
+
+/* ── Cartellino che si gira (albero dei ricordi) ───────────────────── */
+.ds-flip { position: absolute; inset: 0; z-index: 20; display: grid; place-items: center; perspective: 1100px; }
+.ds-flip .card3d { position: relative; width: 300px; height: 486px; transform-style: preserve-3d; transition: transform 0.7s cubic-bezier(0.3, 1.3, 0.5, 1); }
+.ds-flip .face { position: absolute; inset: 0; backface-visibility: hidden; border-radius: 10px 10px 26px 26px; padding: 34px 20px 18px; box-shadow: 0 18px 40px rgba(0, 0, 0, 0.6); display: flex; flex-direction: column; align-items: center; gap: 8px; text-align: center; }
+.ds-flip .face.back { transform: rotateY(180deg); align-items: stretch; text-align: left; }
+.ds-flip .hole { position: absolute; left: 50%; top: 12px; width: 16px; height: 16px; translate: -50% 0; border-radius: 50%; background: var(--plum-800); box-shadow: 0 0 0 3px #c99340; }
+.ds-flip .string { position: absolute; left: 50%; bottom: 100%; width: 2px; height: 120px; translate: -50% 12px; background: #cbb48a; transform: translateZ(-1px); }
+.ds-flip .face .name { font: 700 30px/1.05 var(--f-display); color: var(--ink); }
+.ds-flip .face .sub { font: 800 13px var(--f-body); color: var(--ink-soft); }
+.ds-flip .face.back .kv { display: grid; grid-template-columns: auto 1fr; gap: 5px 12px; font: 700 13.5px/1.3 var(--f-body); }
+.ds-flip .face.back .kv dt { color: var(--ink-soft); }
+.ds-flip .face.back .kv dd { margin: 0; color: var(--ink); font-weight: 800; }
+.ds-flip .face.back .log > div { display: grid; grid-template-columns: 22px 1fr auto; gap: 8px; align-items: center; padding: 4px 0; border-bottom: 1px dashed rgba(58, 42, 28, 0.25); font: 700 13px var(--f-body); color: var(--ink); }
+.ds-flip .face.back .log time { color: var(--ink-soft); font-size: 12px; }
+.ds-flip .tagbtn { display: inline-flex; align-items: center; justify-content: center; gap: 6px; height: 42px; border-radius: 12px; font: 900 14px var(--f-body); }
+.ds-flip .tagbtn.dark { color: var(--parch-100); background: #4a3426; box-shadow: 0 2px 0 #24170f; }
+.ds-flip .tagbtn.free { color: #9c3a2c; background: rgba(156, 58, 44, 0.12); box-shadow: inset 0 0 0 1.5px rgba(156, 58, 44, 0.45); }
+
+/* ── Pagina del design system ──────────────────────────────────────── */
+.ds-sheet { padding: 28px; display: grid; gap: 26px; background: var(--night); }
+.ds-sheet section { display: grid; gap: 12px; padding: 18px; border-radius: 18px; background: var(--plum-800); box-shadow: inset 0 0 0 1px var(--line); }
+.ds-sheet h2 { margin: 0; font: 700 26px var(--f-display); color: var(--gold-200); }
+.ds-sheet .row { display: flex; flex-wrap: wrap; gap: 14px; align-items: center; }
+.ds-sheet .sw { width: 112px; display: grid; gap: 4px; font: 700 11.5px var(--f-body); color: var(--muted); }
+.ds-sheet .sw i { height: 54px; border-radius: 12px; box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.08); }
+.ds-sheet .note { font: 600 13px/1.4 var(--f-body); color: var(--muted); max-width: 70ch; }

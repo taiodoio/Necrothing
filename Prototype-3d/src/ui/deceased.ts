@@ -9,11 +9,11 @@ import * as R from '../game/rules.ts';
 import type { Grave, MemoryType } from '../game/state.ts';
 import { t } from '../i18n/index.ts';
 import { memorials } from '../app/persistence.ts';
-import { closeDrawer, fmtDate, h, openDrawer, setDrawerHero } from './dom.ts';
+import { closeDrawer, fmtDate, h, openDrawer } from './dom.ts';
 import { icon } from './icons.ts';
 import { openPostcard, portrait } from './memorial.ts';
 import { fruitImg, openMemoryTree } from './memoryTree.ts';
-import { annivHero, type AnnivStyle } from './anniversary.ts';
+import { annivHero } from './anniversary.ts';
 import { confirmExhume, MEMORY_LABELS, moreActions, postcardData } from './screens.ts';
 import { graveThumb } from './thumbs.ts';
 import type { UI } from './UI.ts';
@@ -25,8 +25,6 @@ export interface DeceasedOpts {
   from?: DeceasedFrom;
   /** Oggi è il suo anniversario (anni dalla morte): la testata decorata, per tutto il giorno. */
   anniversary?: { years: number };
-  /** Proposte di testata per l'anniversario (solo per le anteprime). */
-  annivStyle?: AnnivStyle;
   /** Torna all'elenco da cui si è aperta (Registro), invece di chiudere. */
   back?: () => void;
 }
@@ -105,11 +103,11 @@ export function openDeceased(ui: UI, id: string, opts: DeceasedOpts = {}) {
   }
 
   const anniv = opts.anniversary && !kept
-    ? annivHero(opts.annivStyle ?? 'wreath', { grave: g, years: opts.anniversary.years, medal, where, photo: g.photoId ? memorials.get(g.photoId).then((m) => m?.dataUrl ?? null).catch(() => null) : Promise.resolve(null) })
+    ? annivHero({ grave: g, years: opts.anniversary.years, medal, where, photo: g.photoId ? memorials.get(g.photoId).then((m) => m?.dataUrl ?? null).catch(() => null) : Promise.resolve(null) })
     : null;
   // il nome c'è già sotto l'immagine: niente titolo in testa
   openDrawer('', h('div', { class: 'deceased' },
-    anniv ? anniv.body : h('div', { class: 'hero' }, head, h('h3', {}, g.name), where,
+    anniv ?? h('div', { class: 'hero' }, head, h('h3', {}, g.name), where,
       g.epitaph ? h('div', { class: 'epitaph' }, t('detail.epitaph.quoted', { text: g.epitaph })) : null),
     facts,
     timeline,
@@ -117,5 +115,4 @@ export function openDeceased(ui: UI, id: string, opts: DeceasedOpts = {}) {
     beforeClose: opts.back ? () => { opts.back!(); return false; } : from === 'tree' ? () => { openMemoryTree(ui); return false; } : undefined,
     footer: h('div', { style: 'display:grid;gap:6px' }, moreActions(more), main),
   });
-  if (anniv?.hero) setDrawerHero(anniv.hero);
 }

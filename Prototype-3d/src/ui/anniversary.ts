@@ -1,21 +1,14 @@
-// Il giorno dell'anniversario della morte: la scheda della tomba ha una
-// testata decorata (per tutto il giorno) e arriva una notifica con «Vedi la
-// tomba». In prova tre testate: la corona di fiori col nastro, la tomba di
-// notte coi lumini accesi (3D), la lapide di marmo col medaglione di porcellana.
+// Il giorno dell'anniversario della morte: la scheda della tomba ha la
+// corona di fiori col nastro al posto della foto (per tutto il giorno) e
+// arriva una notifica col lumino e «Vedi la tomba».
 
-import * as THREE from 'three';
 import type { Grave } from '../game/state.ts';
 import { createRng } from '../game/rng.ts';
 import { t } from '../i18n/index.ts';
-import { getModel, instantiate } from '../render/modelCache.ts';
-import { graveModel } from '../render/models/graves.ts';
 import { h } from './dom.ts';
-import { boxOf, nightHero } from './heroScene.ts';
 import { icon } from './icons.ts';
 import { lpIconPng } from './lpIcons.ts';
 import { npcNote } from './npcNote.ts';
-
-export type AnnivStyle = 'wreath' | 'night' | 'cameo';
 
 interface AnnivInput {
   grave: Grave;
@@ -34,7 +27,6 @@ function svg(tag: string, attrs: Record<string, string | number>) {
   return el;
 }
 const f1 = (n: number) => n.toFixed(1);
-const year = (iso: string | null) => (iso ? iso.slice(0, 4) : '');
 
 /** La foto (quando arriva) al posto della lapide in un'immagine già nel documento. */
 function photoInto(img: HTMLImageElement, photo: Promise<string | null>) {
@@ -90,8 +82,13 @@ function wreathSvg(years: number) {
     svg('path', { d: `M72,${y0} Q150,${y0 - 12} 228,${y0} L228,${y1} Q150,${y1 - 12} 72,${y1}Z`, fill: '#9a2a3a' }),
     svg('path', { d: `M72,${y0 + 3} Q150,${y0 - 9} 228,${y0 + 3}`, stroke: '#d9a95a', 'stroke-width': 1.4, fill: 'none' }),
     svg('path', { d: `M72,${y1 - 3} Q150,${y1 - 15} 228,${y1 - 3}`, stroke: '#d9a95a', 'stroke-width': 1.4, fill: 'none' }));
-  const label = svg('text', { x: 150, y: y1 - 10, 'text-anchor': 'middle', class: 'an-ribbon-text' });
-  label.textContent = t('anniv.ordinal', { n: years });
+  // la scritta segue la curva della banda: la linea di base scende verso i capi come i bordi
+  const id = `an-rib-${Math.random().toString(36).slice(2, 8)}`;
+  el.append(svg('path', { id, d: `M72,${y1 - 9} Q150,${y1 - 21} 228,${y1 - 9}`, fill: 'none' }));
+  const label = svg('text', { class: 'an-ribbon-text', 'text-anchor': 'middle' });
+  const along = svg('textPath', { href: `#${id}`, startOffset: '50%' });
+  along.textContent = t('anniv.ordinal', { n: years });
+  label.append(along);
   el.append(label);
   return el;
 }
@@ -108,115 +105,13 @@ function wreath(a: AnnivInput) {
     a.grave.epitaph ? h('div', { class: 'epitaph' }, t('detail.epitaph.quoted', { text: a.grave.epitaph })) : null);
 }
 
-// ── B: la tomba di notte coi lumini (testata 3D) ───────────────────────
-
-function nightHeader(a: AnnivInput) {
-  const handle = nightHero('anniv-hero', [0, 0, 2.6], (hero) => {
-    const { scene } = hero;
-    const g = a.grave;
-    const tomb = instantiate(getModel(`g:${g.graveType}:flowers:1`, 'lowpoly', () => graveModel(g.graveType, 'flowers', 1), 1), { castShadow: false });
-    scene.add(tomb);
-    // qualche tomba e un lampione dietro, il recinto e il bosco
-    hero.grave('stone_simple', -4.6, -2.6, 0.05, 0.9);
-    hero.grave('celtic_cross', 4.4, -2.8, -0.04, 0.9);
-    hero.prop('lamp_post_gothic', -2.6, -2.2, 0.3);
-    hero.backdrop(-5);
-    // i lumini davanti alla tomba: vetro rosso, fiamma con l'alone e una luce calda che tremola
-    const cupGeo = new THREE.CylinderGeometry(0.075, 0.062, 0.17, 10);
-    const lidGeo = new THREE.CylinderGeometry(0.08, 0.08, 0.03, 10);
-    const cup = new THREE.MeshStandardMaterial({ color: '#c0343f', emissive: '#6a0d18', roughness: 0.4 });
-    const lid = new THREE.MeshStandardMaterial({ color: '#d9a95a', metalness: 0.6, roughness: 0.4 });
-    hero.track(cupGeo, lidGeo, cup, lid);
-    const spots: Array<[number, number]> = [[-0.55, 0.75], [-0.2, 0.95], [0.2, 0.92], [0.58, 0.72], [0.85, 0.35], [-0.85, 0.38]];
-    const flames = spots.map(([x, z], i) => {
-      const o = new THREE.Group();
-      const c = new THREE.Mesh(cupGeo, cup); c.position.y = 0.085;
-      const l = new THREE.Mesh(lidGeo, lid); l.position.y = 0.18;
-      const halo = hero.halo('#ffb35a', 0.9); halo.position.y = 0.27; halo.scale.setScalar(0.32);
-      const light = new THREE.PointLight('#ffa850', 0.9, 2.2, 1.6); light.position.y = 0.3;
-      o.add(c, l, halo, light);
-      o.position.set(x, 0, z);
-      scene.add(o);
-      return { halo, light, ph: i * 1.3 };
-    });
-    // lucciole e petali che cadono
-    const rf = createRng(3).next;
-    const flies = Array.from({ length: 8 }, () => {
-      const s = hero.halo('#ffd36b', 0.8); s.scale.setScalar(0.2); scene.add(s);
-      return { s, x: (rf() - 0.5) * 6, y: 0.5 + rf() * 2.2, z: (rf() - 0.5) * 2 + 0.4, ph: rf() * 6, sp: 0.3 + rf() * 0.4 };
-    });
-    const petalGeo = new THREE.PlaneGeometry(0.12, 0.08);
-    hero.track(petalGeo);
-    const falls = Array.from({ length: 8 }, (_, i) => {
-      const mat = new THREE.MeshLambertMaterial({ color: ['#f6b8c8', '#fff1e2', '#e8798e'][i % 3], side: THREE.DoubleSide });
-      hero.track(mat);
-      const m = new THREE.Mesh(petalGeo, mat); scene.add(m);
-      return { m, t0: i * 1.4, life: 6 + (i % 3), x: (rf() - 0.5) * 4, z: 0.2 + rf() * 1.4 };
-    });
-    const box = boxOf(tomb);
-    hero.start(() => ({ box, fill: 0.62, sx: 0.5, base: 0.16, elev: 12 }), (tt) => {
-      for (const f of flames) {
-        const k = 0.85 + Math.sin(tt * 9 + f.ph) * 0.08 + Math.sin(tt * 23 + f.ph * 2) * 0.06;
-        f.light.intensity = 0.9 * k;
-        f.halo.scale.setScalar(0.3 * k);
-      }
-      for (const f of flies) {
-        f.s.position.set(f.x + Math.sin(tt * f.sp + f.ph) * 0.8, f.y + Math.sin(tt * f.sp * 1.3 + f.ph * 2) * 0.3, f.z + Math.cos(tt * f.sp * 0.8 + f.ph) * 0.5);
-        (f.s.material as THREE.SpriteMaterial).opacity = Math.max(0, Math.sin(tt * 1.4 + f.ph * 3)) * 0.9;
-      }
-      for (const p of falls) {
-        const u = ((tt + p.t0) % p.life) / p.life;
-        p.m.visible = u < 0.97;
-        p.m.position.set(p.x + Math.sin(u * 9 + p.t0) * 0.4, 3 - u * 3, p.z);
-        p.m.rotation.set(u * 11 + p.t0, u * 7, Math.sin(u * 8) * 0.8);
-      }
-    });
-  });
-  handle.el.append(h('div', { class: 'an-hero-ribbon' }, t('anniv.ordinal', { n: a.years })));
-  return handle.el;
-}
-
-function night(a: AnnivInput) {
-  const img = h('img', { alt: '' }) as HTMLImageElement;
-  const round = h('div', { class: 'an-round small', hidden: true }, img);
-  void a.photo.then((u) => { if (u) { img.src = u; round.hidden = false; } });
-  return {
-    hero: nightHeader(a),
-    body: h('div', { class: 'an an-night' }, round,
-      h('div', { class: 'an-ago' }, t('anniv.ago', { n: a.years })),
-      h('h3', {}, a.grave.name), a.where,
-      a.grave.epitaph ? h('div', { class: 'epitaph' }, t('detail.epitaph.quoted', { text: a.grave.epitaph })) : null),
-  };
-}
-
-// ── C: lapide di marmo col medaglione di porcellana ─────────────────────
-
-function cameo(a: AnnivInput) {
-  const g = a.grave;
-  const img = h('img', { src: a.medal, alt: '' }) as HTMLImageElement;
-  photoInto(img, a.photo);
-  const from = year(g.birthDate), to = year(g.deathDate);
-  return h('div', { class: 'an an-cameo' },
-    h('div', { class: 'an-stage' }, ...petals(6),
-      h('div', { class: 'an-slab' },
-        h('div', { class: 'an-oval' }, img),
-        h('b', { class: 'an-engraved' }, g.name),
-        h('span', { class: 'an-years' }, from ? `${from} — ${to}` : t('anniv.died', { year: to })),
-        g.epitaph ? h('i', { class: 'an-slab-epitaph' }, g.epitaph) : null,
-        h('span', { class: 'an-plaque' }, t('anniv.ordinal', { n: a.years }))),
-      h('span', { class: 'an-foot l' }, lumino(44)),
-      h('span', { class: 'an-foot r' }, icon('flower', 40), icon('flower', 34))),
-    h('div', { class: 'an-ago' }, t('anniv.ago', { n: a.years })), a.where);
-}
-
-/** La testata dell'anniversario nello stile scelto: il corpo (al posto della foto) e, per la versione 3D, la testata del pannello. */
-export function annivHero(style: AnnivStyle, a: AnnivInput): { body: HTMLElement; hero?: HTMLElement } {
-  if (style === 'night') return night(a);
-  return { body: style === 'cameo' ? cameo(a) : wreath(a) };
+/** La testata dell'anniversario: la corona al posto della foto, col nastro, i lumini e i petali. */
+export function annivHero(a: AnnivInput): HTMLElement {
+  return wreath(a);
 }
 
 /** La notifica del giorno dell'anniversario, con «Vedi la tomba». */
-export function annivNote(name: string, years: number, see: () => void, iconName = 'lumino') {
-  npcNote({ kind: 'custode', name: t('anniv.note.name'), say: t('anniv.note.say'), text: t('anniv.note.text', { n: years, name }), img: lpIconPng(iconName), icon: true,
+export function annivNote(name: string, years: number, see: () => void) {
+  npcNote({ kind: 'custode', name: t('anniv.note.name'), say: t('anniv.note.say'), text: t('anniv.note.text', { n: years, name }), img: lpIconPng('lumino'), icon: true,
     action: { label: t('note.seeGrave'), run: see } });
 }

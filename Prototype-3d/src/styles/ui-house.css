@@ -76,7 +76,7 @@
 .ui-next .dc-log time { color: var(--muted); font-size: 12.5px; }
 .ui-next .dc-more { margin: 4px 0 0; font-size: 12.5px; }
 
-/* ── Anniversario (in prova): tre testate decorate ────────────────── */
+/* ── Anniversario (in prova): la corona di fiori al posto della foto ── */
 .ui-next .an { display: grid; justify-items: center; gap: 6px; text-align: center; margin-bottom: 4px; }
 .ui-next .an h3 { margin: 0; font-size: 32px; line-height: 1; color: var(--gold-bright); }
 .ui-next .an-ago { font: 700 17px/1.1 var(--gothic); color: #ffd98a; letter-spacing: 0.02em; }
@@ -92,9 +92,8 @@
 .ui-next .an-round { width: 100%; height: 100%; border-radius: 50%; overflow: hidden; background: var(--thumb); box-shadow: 0 0 0 3px #c99340, 0 0 0 6px rgba(255, 233, 184, 0.35), 0 8px 18px rgba(0, 0, 0, 0.45); }
 .ui-next .an-round img { width: 100%; height: 100%; object-fit: contain; }
 .ui-next .an-round img.is-photo { object-fit: cover; }
-/* la notifica con l'icona (anniversario): l'icona centrata, non appoggiata in basso come i ritratti */
-.ui-next .npc-note.icon img { left: 8px; bottom: auto; top: 50%; width: 46px; translate: 0 -50%; }
-/* A: corona */
+/* la notifica col lumino (anniversario): più grande, esce un po' dal bordo in alto come i ritratti dei personaggi */
+.ui-next .npc-note.icon img { left: 2px; bottom: auto; top: -16px; width: 66px; }
 .ui-next .an-wreath .an-stage { background: radial-gradient(closest-side, rgba(240, 180, 90, 0.28), rgba(240, 180, 90, 0) 100%); }
 .ui-next .an-wreath-box { position: relative; width: min(78vw, 300px); aspect-ratio: 1; }
 .ui-next .an-wreath-box .an-round { position: absolute; inset: 22%; width: auto; height: auto; }
@@ -102,29 +101,6 @@
 .ui-next .an-ribbon-text { font: 700 19px var(--gothic); fill: #ffe9b8; letter-spacing: 0.02em; }
 .ui-next .an-side { position: absolute; bottom: 14px; }
 .ui-next .an-side.l { left: 4%; } .ui-next .an-side.r { right: 4%; }
-/* B: notte coi lumini */
-.ui-next .anniv-hero { height: calc(210px + var(--safe-t)) !important; }
-.ui-next .an-hero-ribbon { position: absolute; left: 50%; bottom: 12px; translate: -50% 0; padding: 4px 26px 5px; font: 700 18px/1.1 var(--gothic); color: #ffe9b8; white-space: nowrap;
-  background: linear-gradient(#a2303f, #7e1f2e); box-shadow: inset 0 1.5px 0 #d9a95a, inset 0 -1.5px 0 #d9a95a, 0 4px 8px rgba(0, 0, 0, 0.45);
-  clip-path: polygon(0 0, 100% 0, calc(100% - 12px) 50%, 100% 100%, 0 100%, 12px 50%); }
-.ui-next .an-night .an-round.small { width: 104px; height: 104px; margin-bottom: 4px; }
-/* C: lapide col medaglione */
-.ui-next .an-slab { position: relative; width: min(74vw, 280px); display: grid; justify-items: center; gap: 4px; padding: 26px 20px 20px;
-  border-radius: 140px 140px 14px 14px / 96px 96px 14px 14px; color: #4a4850;
-  background: repeating-linear-gradient(118deg, rgba(0, 0, 0, 0) 0 46px, rgba(110, 110, 125, 0.13) 47px 48px, rgba(0, 0, 0, 0) 49px 97px),
-    radial-gradient(130% 90% at 30% 15%, #f1efea, #d3d1cc 55%, #b2b0ab);
-  box-shadow: inset 0 0 0 7px rgba(255, 255, 255, 0.28), inset 0 0 0 9px rgba(0, 0, 0, 0.12), 0 12px 24px rgba(0, 0, 0, 0.5); }
-.ui-next .an-oval { width: 118px; height: 150px; padding: 5px; border-radius: 50%; margin-bottom: 6px;
-  background: linear-gradient(135deg, #ffe9b8, #c99340 40%, #8a6020 65%, #f0c46e); box-shadow: 0 4px 8px rgba(0, 0, 0, 0.35); }
-.ui-next .an-oval img { width: 100%; height: 100%; border-radius: 50%; object-fit: contain; background: #e4ddcd; }
-.ui-next .an-oval img.is-photo { object-fit: cover; filter: sepia(0.35) contrast(1.05); }
-.ui-next .an-engraved { font: 700 28px/1.05 var(--gothic); color: #4a4850; text-shadow: 0 1px 0 rgba(255, 255, 255, 0.75), 0 -1px 0 rgba(0, 0, 0, 0.3); }
-.ui-next .an-years { font-size: 13px; font-weight: 800; letter-spacing: 0.18em; color: #5d5b63; }
-.ui-next .an-slab-epitaph { font-size: 13.5px; color: #5d5b63; max-width: 26ch; }
-.ui-next .an-plaque { margin-top: 6px; padding: 3px 14px 4px; border-radius: 5px; font: 700 15px/1.2 var(--gothic); color: #3a2410;
-  background: linear-gradient(#e8bd72, #b07a34); box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.5), inset 0 -1px 0 rgba(0, 0, 0, 0.25), 0 2px 3px rgba(0, 0, 0, 0.3); }
-.ui-next .an-foot { position: absolute; bottom: 2px; display: flex; align-items: flex-end; }
-.ui-next .an-foot.l { left: calc(50% - min(37vw, 140px) - 14px); } .ui-next .an-foot.r { right: calc(50% - min(37vw, 140px) - 18px); }
 
 /* ── Vantaggi della casa ──────────────────────────────────────────── */
 .ui-next .perks { display: grid; gap: 6px; margin: 10px 0 4px; padding: 10px 12px; border-radius: var(--r-s); background: var(--input); }

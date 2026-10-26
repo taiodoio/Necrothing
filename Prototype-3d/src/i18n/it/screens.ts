@@ -462,12 +462,10 @@ export default {
   // breve: pulsante
   'deceased.goTree': 'Vai all’albero',
   // ── Anniversario della morte (in prova): testata decorata e notifica ──
-  // sul nastro, sulla targa: «3° anniversario»
+  // sul nastro della corona: «3° anniversario»
   'anniv.ordinal': '{n}° anniversario',
   'anniv.ago#one': 'Oggi, un anno fa',
   'anniv.ago#other': 'Oggi, {n} anni fa',
-  // sulla lapide, senza data di nascita
-  'anniv.died': '† {year}',
   // notifica: chi parla (al posto del nome del personaggio)
   'anniv.note.name': 'Anniversario',
   // notifica: la frase in grande

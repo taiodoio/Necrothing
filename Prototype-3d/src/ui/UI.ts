@@ -399,8 +399,9 @@ export class UI {
         h('b', {}, icon(def.rotatable ? 'fence' : 'edit', 18), def.label, h('span', { class: 'trace-count' }, `${tr.ok}/${tr.have}`)),
         h('span', { class: tr.short ? 'muted warn' : 'muted' }, hint),
         tr.short ? h('button', { class: 'pill', onclick: () => this.game.buyTraceShortfall() }, t('hud.trace.buyShort', { n: tr.short, cost: tr.short * def.cost }), icon('wisp', 14)) : null,
+        // la X per uscire sta in alto a destra, come in tutti i pannelli
+        h('button', { class: 'pill exit', 'aria-label': t('hud.place.exit'), title: t('hud.place.exit'), onclick: () => this.game.cancelPlacement() }, icon('close', 18)),
         h('div', { class: 'row' },
-          h('button', { class: 'pill exit', 'aria-label': t('hud.place.exit'), title: t('hud.place.exit'), onclick: () => this.game.cancelPlacement() }, icon('close', 18)),
           h('button', { class: 'pill', disabled: !tr.segs, onclick: () => this.game.undoTrace() }, t('hud.trace.undo')),
           h('button', { class: 'pill primary', disabled: !tr.ok, onclick: () => this.game.confirmPlacement() }, t('hud.place.confirm')),
         ),

@@ -195,9 +195,9 @@
 .ui-next .dialog.modal { position: relative; width: min(92vw, 400px); max-height: calc(100dvh - 32px - var(--safe-b)); overflow-y: auto; padding: 16px; }
 /* sotto il modale la scena e il pannello si leggono appena: l'attenzione resta sull'acquisto */
 .ui-next .dialog-scrim.modal-scrim { background: rgba(6, 7, 10, 0.78); }
-.ui-next .modal-close { position: absolute; z-index: 1; top: 12px; left: 12px; }
+.ui-next .modal-close { position: absolute; z-index: 1; top: 12px; right: 12px; }
 /* titolo del modale accanto alla X */
-.ui-next .dialog.modal .modal-title { display: flex; align-items: center; min-height: 40px; margin: 0 0 12px 52px; font: 700 26px/1.05 var(--gothic); color: var(--gold-bright); }
+.ui-next .dialog.modal .modal-title { display: flex; align-items: center; min-height: 40px; margin: 0 52px 12px 0; font: 700 26px/1.05 var(--gothic); color: var(--gold-bright); }
 .ui-next .postcard-dialog { display: grid; gap: 14px; }
 .ui-next .postcard-dialog .postcard-view { width: 100%; max-width: none; max-height: calc(100dvh - 200px - var(--safe-b)); object-fit: contain; }
 .ui-next .dialog.modal .muted { color: var(--muted); font-size: 14px; }
@@ -205,7 +205,7 @@
 .ui-next .wisp-pill { background: var(--panel); box-shadow: inset 0 1px 0 var(--line); }
 .ui-next .shop-detail { position: relative; display: grid; gap: 10px; }
 /* nel modale la pastiglia è più scura del fondo, col bordo verde acqua: si vede subito */
-.ui-next .shop-detail > .wisp-pill { position: absolute; top: 0; right: 0; background: rgba(0, 0, 0, 0.32); box-shadow: inset 0 0 0 1.5px color-mix(in srgb, var(--spectral) 45%, transparent); }
+.ui-next .shop-detail > .wisp-pill { position: absolute; top: 0; left: 0; background: rgba(0, 0, 0, 0.32); box-shadow: inset 0 0 0 1.5px color-mix(in srgb, var(--spectral) 45%, transparent); }
 /* le frasi sotto l'immagine centrate come nome e categoria (le righe dei requisiti restano allineate) */
 .ui-next .shop-detail > p { text-align: center; }
 .ui-next .shop-detail-top { display: grid; justify-items: center; gap: 4px; text-align: center; }
@@ -223,7 +223,6 @@
 .ui-next .trace-bar > .pill { justify-self: start; display: inline-flex; align-items: center; gap: 5px; color: var(--spectral); }
 .ui-next .trace-bar .row { display: flex; gap: 8px; }
 .ui-next .trace-bar .row .pill { flex: 1; white-space: nowrap; }
-.ui-next .trace-bar .row .pill.exit { flex: none; width: 48px; }
 
 /* ── Testata animata della Bottega ────────────────────────────────── */
 .ui-next .drawer.with-hero { overflow: hidden; }
@@ -323,3 +322,7 @@
   .ui-next .drawer { left: 50%; right: auto; width: 560px; translate: -50% -50%; }
 }
 @media (prefers-reduced-motion: reduce) { .ui-next .drawer { animation: none; } }
+
+/* ── La X per uscire dal tracciato sta in alto a destra, come in pannelli e modali ── */
+.ui-next .trace-bar > b, .ui-next .trace-bar > .muted { padding-right: 52px; }
+.ui-next .trace-bar > .pill.exit { position: absolute; top: 10px; right: 10px; width: 44px; min-height: 40px; justify-content: center; color: inherit; }

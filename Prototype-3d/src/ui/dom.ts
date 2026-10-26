@@ -225,7 +225,7 @@ export function openModal(content: Node, opts: { onClose?: () => void; label?: s
     if (!quiet) opts.onClose?.();
   };
   const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') { e.stopPropagation(); e.preventDefault(); close(); } };
-  // la X in alto a sinistra, come nei pannelli; il contenuto si cambia senza toccarla
+  // la X in alto a destra, come nei pannelli; il contenuto si cambia senza toccarla
   const body = h('div', { class: 'modal-body' }, content);
   const x = h('button', { class: 'icon-btn small modal-close', 'aria-label': t('dialog.close'), onclick: () => close() }, icon('close', 22));
   const box = h('div', { class: 'dialog modal', role: 'dialog', 'aria-modal': 'true', 'aria-label': opts.label, onclick: (e: Event) => e.stopPropagation() }, x, body);

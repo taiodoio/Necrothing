@@ -777,6 +777,31 @@ test('backup ZIP: stato, foto del cimitero e foto delle tombe tornano identici; 
   assert.throws(() => unpackBackup(new TextEncoder().encode('{"format":"altro"}')), /non riconosciuto/);
 });
 
+test('backup ricompresso a mano: dentro una cartella (con __MACOSX) o il .necro3d dentro uno zip si importa lo stesso', async () => {
+  const { packBackup, unpackBackup, bytesToDataUrl } = await import('../src/app/backup.ts');
+  const { unzipSync, zipSync, strToU8 } = await import('fflate');
+  const jpeg = bytesToDataUrl(new Uint8Array([0xff, 0xd8, 0xff, 0xe0, 1, 2, 3, 0xff, 0xd9]), 'image/jpeg');
+  const state = createNewGame(NOW, 9);
+  state.graves[0].photoId = 'mp_1';
+  const zip = packBackup(state, [{ id: 'ph_1', createdAt: '2026-10-01T10:00:00Z', dataUrl: jpeg }], [{ id: 'mp_1', dataUrl: jpeg }]);
+  // zip della cartella estratta, come lo rifà il Finder: tutto sotto una cartella, più i file di servizio
+  const inFolder = {};
+  for (const [name, bytes] of Object.entries(unzipSync(zip))) {
+    inFolder[`necrothing-2026-10-26/${name}`] = bytes;
+    inFolder[`__MACOSX/necrothing-2026-10-26/._${name.split('/').pop()}`] = strToU8('junk');
+  }
+  const a = unpackBackup(zipSync(inFolder));
+  assert.deepEqual(a.state, JSON.parse(JSON.stringify(state)));
+  assert.equal(a.photos.length, 1, 'le foto si trovano accanto a save.json');
+  assert.deepEqual(a.memorials, [{ id: 'mp_1', dataUrl: jpeg }]);
+  // il file .necro3d compresso di nuovo
+  const b = unpackBackup(zipSync({ 'necrothing-2026-10-26.necro3d': zip }));
+  assert.deepEqual(b.state, a.state);
+  assert.ok(b.exportedAt, 'data di esportazione letta');
+  // uno zip qualsiasi resta non riconosciuto
+  assert.throws(() => unpackBackup(zipSync({ 'foto.jpg': strToU8('x') })), /non riconosciuto/);
+});
+
 test('cimitero pieno per le misure: tante tombe, tutte le presenze, niente sovrapposizioni, sempre uguale', async () => {
   const { fullCemetery } = await import('../src/game/fullCemetery.ts');
   const s = fullCemetery(4242, NOW);

@@ -2,7 +2,7 @@
 // Inventario, dettaglio, profilo/achievement, impostazioni, foto e galleria.
 
 import { terrainSection } from './expansion.ts';
-import { exportBackup, gallery, importBackup, type PhotoRecord } from '../app/persistence.ts';
+import { applyBackup, exportBackup, gallery, readBackup, type PhotoRecord, type ReadBackup } from '../app/persistence.ts';
 import { BUSINESS, DECAY, EARLY_ACCESS, EXPANSION, RANKS, RELEASE_LOCKS } from '../game/balance.ts';
 import { CATALOG, CATALOG_LIST, CATEGORY_ORDER, isSeasonallyAvailable, PLACEABLE_CATEGORY_LABELS, repairCost, seasonLabel, type PlaceableCategory, type PlaceableDef } from '../game/catalog.ts';
 import {
@@ -14,7 +14,7 @@ import * as R from '../game/rules.ts';
 import { createNewGame, type FpsSetting, type SaveData, type ThemeSetting, type TimeOverride } from '../game/state.ts';
 import { computePrestige, detectDistricts, DISTRICT_LABELS, expansionStatus } from '../game/world.ts';
 import { newId } from '../game/rng.ts';
-import { $, closeDrawer, confirmDialog, fmtDate, h, type Modal, openDrawer, openModal, setDrawerBody, setDrawerExtra, setDrawerFooter, setDrawerHero, toast, wispPill } from './dom.ts';
+import { $, closeDrawer, confirmDialog, fmtDate, h, type Modal, openDrawer, openModal, progressDialog, setDrawerBody, setDrawerExtra, setDrawerFooter, setDrawerHero, toast, wispPill } from './dom.ts';
 import { shopHeader } from './shopHeader.ts';
 import { houseBoughtView, houseShopDetail, houseShopGrid } from './house.ts';
 import { graveThumb, placeableThumb } from './thumbs.ts';
@@ -688,6 +688,64 @@ function achievementsTab(s: SaveData, got: Set<string>): HTMLElement {
 /** La scheda aperta nelle Impostazioni. */
 let settingsTab: 'game' | 'graphics' | 'save' | 'info' = 'game';
 
+// ── Backup: a ogni passo una finestra dice cosa sta succedendo e com'è andata ──
+
+/** Lascia disegnare la finestra prima del lavoro pesante (lo ZIP blocca la pagina finché non ha finito). */
+const nextPaint = () => new Promise<void>((r) => requestAnimationFrame(() => setTimeout(r, 0)));
+const errorText = (err: unknown) => (err instanceof Error && err.message) || t('settings.backup.error');
+/** Peso del file, es. «28 kB» o «2,3 MB». */
+function fileSize(bytes: number): string {
+  const mb = bytes >= 1e6;
+  return new Intl.NumberFormat(currentLang(), { style: 'unit', unit: mb ? 'megabyte' : 'kilobyte', maximumFractionDigits: mb ? 1 : 0 }).format(Math.max(1, bytes / (mb ? 1e6 : 1e3))).replace(' ', '\u00a0'); // numero e unità sulla stessa riga
+}
+
+/** Esporta: prepara il file (stato e foto), lo scarica e dice nome, peso e dove trovarlo. */
+async function exportSave(ui: UI) {
+  const p = progressDialog(t('settings.backup.exporting'), t('settings.backup.exportingText'));
+  await nextPaint();
+  try {
+    const blob = await exportBackup(ui.game.state);
+    const file = `necrothing-${new Date().toISOString().slice(0, 10)}.necro3d`;
+    const a = h('a', { href: URL.createObjectURL(blob), download: file });
+    a.click();
+    setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+    await p.done(t('settings.backup.exported'), t('settings.backup.exportedText', { file, size: fileSize(blob.size) }), true);
+  } catch (err) {
+    await p.done(t('settings.backup.exportFailed'), errorText(err), false);
+  }
+}
+
+/** Importa: legge e controlla il file, chiede conferma (la partita attuale viene sostituita), poi carica. */
+async function importSave(ui: UI, f: File) {
+  const p = progressDialog(t('settings.backup.reading'), t('settings.backup.readingText', { file: f.name }));
+  await nextPaint();
+  let read: ReadBackup;
+  try {
+    read = readBackup(await f.arrayBuffer());
+  } catch (err) {
+    await p.done(t('settings.backup.importFailed'), `${errorText(err)} ${t('settings.backup.importHint')}`, false);
+    return;
+  }
+  p.close();
+  const name = read.state.player.name;
+  const at = read.content.exportedAt;
+  if (!await confirmDialog({
+    title: t('settings.backup.confirm.title'),
+    message: at ? t('settings.backup.confirm.textDate', { name, date: fmtDate(at) }) : t('settings.backup.confirm.text', { name }),
+    ok: t('settings.backup.confirm.ok'), danger: true,
+  })) return;
+  const q = progressDialog(t('settings.backup.importing'), t('settings.backup.importingText'));
+  await nextPaint();
+  try {
+    ui.game.replaceState(await applyBackup(read));
+  } catch (err) {
+    await q.done(t('settings.backup.importFailed'), errorText(err), false);
+    return;
+  }
+  closeDrawer(true);
+  await q.done(t('settings.backup.restored'), t('settings.backup.restoredText', { name }), true);
+}
+
 export function openSettings(ui: UI) {
   const game = ui.game;
   const s = game.state.settings;
@@ -712,10 +770,10 @@ export function openSettings(ui: UI) {
   const fileInput = h('input', {
     type: 'file', style: 'display:none',
     onchange: async (e: Event) => {
-      const f = (e.target as HTMLInputElement).files?.[0];
-      if (!f) return;
-      try { game.replaceState(await importBackup(await f.arrayBuffer())); toast(t('settings.backup.restored')); closeDrawer(); } catch (err) { toast(err instanceof Error ? err.message : t('settings.backup.importFailed')); }
-      (e.target as HTMLInputElement).value = ''; // lo stesso file si può riscegliere
+      const input = e.target as HTMLInputElement;
+      const f = input.files?.[0];
+      input.value = ''; // lo stesso file si può riscegliere
+      if (f) await importSave(ui, f);
     },
   });
   const sections: Record<typeof settingsTab, Array<HTMLElement | null>> = {
@@ -745,28 +803,31 @@ export function openSettings(ui: UI) {
     ],
     save: [
       h('div', { class: 'section-title' }, t('settings.section.backup')),
-      h('div', { class: 'row' },
-        h('button', { class: 'big-btn ghost', onclick: async () => {
-          const blob = await exportBackup(game.state);
-          const a = h('a', { href: URL.createObjectURL(blob), download: `necrothing-${new Date().toISOString().slice(0, 10)}.necro3d` });
-          a.click();
-          setTimeout(() => URL.revokeObjectURL(a.href), 2000);
-        } }, t('settings.backup.export')),
-        h('button', { class: 'big-btn ghost', onclick: () => fileInput.click() }, t('settings.backup.import'))),
+      h('p', { class: 'muted' }, t('settings.backup.hint')),
       fileInput,
       h('div', { class: 'section-title' }, t('settings.newGame')),
+      h('p', { class: 'muted' }, t('settings.newGame.hint')),
+    ],
+    info: [
+      h('p', { class: 'muted' }, t('settings.info')),
+      h('p', { class: 'muted', 'data-build': 'true' }, buildLabel()),
+    ],
+  };
+  // i pulsanti di ogni scheda stanno in fondo al pannello, come negli altri; le schede di sole regolazioni non ne hanno
+  const footers: Record<typeof settingsTab, HTMLElement | null> = {
+    game: null,
+    graphics: null,
+    save: h('div', { style: 'display:grid;gap:6px' },
+      h('div', { class: 'row' },
+        h('button', { class: 'big-btn ghost', onclick: () => exportSave(ui) }, t('settings.backup.export')),
+        h('button', { class: 'big-btn ghost', onclick: () => fileInput.click() }, t('settings.backup.import'))),
       h('button', { class: 'big-btn ghost', style: 'color:var(--danger)', onclick: async () => {
         if (!await confirmDialog({ title: t('settings.newGame'), message: t('settings.newGame.confirm'), ok: t('settings.newGame.ok'), danger: true })) return;
         game.replaceState(createNewGame(new Date()));
         closeDrawer();
         toast(t('settings.newGame.done'));
-      } }, t('settings.newGame')),
-    ],
-    info: [
-      h('p', { class: 'muted' }, t('settings.info')),
-      h('p', { class: 'muted', 'data-build': 'true' }, buildLabel()),
-      h('a', { class: 'big-btn ghost', href: './gallery.html', style: 'display:grid;place-items:center;text-decoration:none' }, t('settings.assetGallery')),
-    ],
+      } }, t('settings.newGame'))),
+    info: h('a', { class: 'big-btn ghost', href: './gallery.html', style: 'display:grid;place-items:center;text-decoration:none' }, t('settings.assetGallery')),
   };
   const TABS: Array<[typeof settingsTab, string, string]> = [['game', 'shovel', t('settings.tab.game')], ['graphics', 'lightOn', t('settings.tab.graphics')], ['save', 'book', t('settings.tab.save')], ['info', 'search', t('settings.tab.info')]];
   // tutte le sezioni restano nel pannello (i controlli tengono il loro stato), si mostra solo quella scelta
@@ -775,9 +836,10 @@ export function openSettings(ui: UI) {
     settingsTab = id;
     for (const b of Array.from(tabBar.children)) b.classList.toggle('active', b === e.currentTarget);
     for (const [k, el] of Object.entries(panes)) el.hidden = k !== id;
+    setDrawerFooter(footers[id]);
   } }, icon(ic, 20), label)));
   const body = h('div', { 'data-settings': 'true' }, tabBar, ...Object.values(panes));
-  openDrawer(t('settings.title'), body, { full: true });
+  openDrawer(t('settings.title'), body, { full: true, footer: footers[settingsTab] ?? undefined });
 }
 
 /** "Versione abc1234 · 13/10/2026, 14:40": per controllare che il sito pubblicato sia aggiornato. */

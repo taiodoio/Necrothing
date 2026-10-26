@@ -3,7 +3,7 @@
 // Export/import in un file .necro3d (ZIP: vedi backup.ts).
 
 import { normalizeSave, type SaveData } from '../game/state.ts';
-import { packBackup, unpackBackup, type MemorialPhoto, type PhotoRecord } from './backup.ts';
+import { packBackup, unpackBackup, type BackupContent, type MemorialPhoto, type PhotoRecord } from './backup.ts';
 import { t } from '../i18n/index.ts';
 
 export type { MemorialPhoto, PhotoRecord };
@@ -127,11 +127,19 @@ export async function exportBackup(state: SaveData): Promise<Blob> {
   return new Blob([packBackup(state, photos, graves) as BlobPart], { type: 'application/zip' });
 }
 
-/** Importa un backup (ZIP nuovo o JSON vecchio): sostituisce stato e foto. */
-export async function importBackup(data: ArrayBuffer): Promise<SaveData> {
+/** Un backup letto e controllato, non ancora applicato (si chiede prima conferma). */
+export interface ReadBackup { state: SaveData; content: BackupContent }
+
+/** Legge un backup (ZIP nuovo, anche ricompresso, o JSON vecchio) senza toccare la partita. */
+export function readBackup(data: ArrayBuffer): ReadBackup {
   const content = unpackBackup(new Uint8Array(data));
   const state = normalizeSave(content.state);
   if (!state) throw new Error(t('backup.corrupt'));
+  return { state, content };
+}
+
+/** Sostituisce stato e foto con quelli del backup letto. */
+export async function applyBackup({ state, content }: ReadBackup): Promise<SaveData> {
   await gallery.clear().catch(() => undefined);
   for (const p of content.photos) await gallery.add(p);
   await memorials.clear().catch(() => undefined);

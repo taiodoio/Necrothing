@@ -168,6 +168,8 @@ export default {
   'dialog.ok': 'Conferma',
   // breve: pulsante
   'dialog.cancel': 'Annulla',
+  // breve: pulsante che chiude un avviso (es. «Backup esportato»)
+  'dialog.gotIt': 'Ok',
   // breve: pulsante; anche per i lettori di schermo sulla X
   'dialog.close': 'Chiudi',
 

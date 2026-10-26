@@ -312,7 +312,7 @@
 @keyframes modalIn { from { opacity: 0; scale: 0.94; } }
 .ui-next .drawer-foot { border-radius: 0; padding-bottom: 14px; }
 /* i grandi un po' più bassi dello schermo, al centro: restano finestre, non pagine */
-.ui-next .drawer:is(.with-hero, .full) { top: 50%; bottom: auto; height: min(84%, 720px, calc(100% - 28px - var(--safe-t) - var(--safe-b))); max-height: none; translate: 0 -50%; border-radius: var(--r); }
+.ui-next .drawer:is(.with-hero, .full) { top: 50%; bottom: auto; height: min(84%, 720px, calc(100% - 28px - var(--safe-t) - var(--safe-b))); max-height: none; border-radius: var(--r); }
 .ui-next .drawer.with-hero .drawer-hero { height: 168px; }
 .ui-next .drawer.with-hero .drawer-head { height: 168px; padding-top: 12px; }
 .ui-next .drawer.with-hero #drawer-close { top: 12px; }

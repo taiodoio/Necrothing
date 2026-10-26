@@ -803,23 +803,31 @@ export function openSettings(ui: UI) {
     ],
     save: [
       h('div', { class: 'section-title' }, t('settings.section.backup')),
+      h('p', { class: 'muted' }, t('settings.backup.hint')),
+      fileInput,
+      h('div', { class: 'section-title' }, t('settings.newGame')),
+      h('p', { class: 'muted' }, t('settings.newGame.hint')),
+    ],
+    info: [
+      h('p', { class: 'muted' }, t('settings.info')),
+      h('p', { class: 'muted', 'data-build': 'true' }, buildLabel()),
+    ],
+  };
+  // i pulsanti di ogni scheda stanno in fondo al pannello, come negli altri; le schede di sole regolazioni non ne hanno
+  const footers: Record<typeof settingsTab, HTMLElement | null> = {
+    game: null,
+    graphics: null,
+    save: h('div', { style: 'display:grid;gap:6px' },
       h('div', { class: 'row' },
         h('button', { class: 'big-btn ghost', onclick: () => exportSave(ui) }, t('settings.backup.export')),
         h('button', { class: 'big-btn ghost', onclick: () => fileInput.click() }, t('settings.backup.import'))),
-      fileInput,
-      h('div', { class: 'section-title' }, t('settings.newGame')),
       h('button', { class: 'big-btn ghost', style: 'color:var(--danger)', onclick: async () => {
         if (!await confirmDialog({ title: t('settings.newGame'), message: t('settings.newGame.confirm'), ok: t('settings.newGame.ok'), danger: true })) return;
         game.replaceState(createNewGame(new Date()));
         closeDrawer();
         toast(t('settings.newGame.done'));
-      } }, t('settings.newGame')),
-    ],
-    info: [
-      h('p', { class: 'muted' }, t('settings.info')),
-      h('p', { class: 'muted', 'data-build': 'true' }, buildLabel()),
-      h('a', { class: 'big-btn ghost', href: './gallery.html', style: 'display:grid;place-items:center;text-decoration:none' }, t('settings.assetGallery')),
-    ],
+      } }, t('settings.newGame'))),
+    info: h('a', { class: 'big-btn ghost', href: './gallery.html', style: 'display:grid;place-items:center;text-decoration:none' }, t('settings.assetGallery')),
   };
   const TABS: Array<[typeof settingsTab, string, string]> = [['game', 'shovel', t('settings.tab.game')], ['graphics', 'lightOn', t('settings.tab.graphics')], ['save', 'book', t('settings.tab.save')], ['info', 'search', t('settings.tab.info')]];
   // tutte le sezioni restano nel pannello (i controlli tengono il loro stato), si mostra solo quella scelta
@@ -828,9 +836,10 @@ export function openSettings(ui: UI) {
     settingsTab = id;
     for (const b of Array.from(tabBar.children)) b.classList.toggle('active', b === e.currentTarget);
     for (const [k, el] of Object.entries(panes)) el.hidden = k !== id;
+    setDrawerFooter(footers[id]);
   } }, icon(ic, 20), label)));
   const body = h('div', { 'data-settings': 'true' }, tabBar, ...Object.values(panes));
-  openDrawer(t('settings.title'), body, { full: true });
+  openDrawer(t('settings.title'), body, { full: true, footer: footers[settingsTab] ?? undefined });
 }
 
 /** "Versione abc1234 · 13/10/2026, 14:40": per controllare che il sito pubblicato sia aggiornato. */

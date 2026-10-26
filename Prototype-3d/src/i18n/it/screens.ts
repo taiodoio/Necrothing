@@ -346,6 +346,8 @@ export default {
   'settings.reminders.app': 'Un avviso il giorno di ogni anniversario (si festeggia solo aprendo il gioco quel giorno) e la sera prima che una tomba trascurata si rompa.',
   'settings.reminders.browser': 'Nel browser niente notifiche: nell’app arriva un avviso il giorno di ogni anniversario e la sera prima che una tomba trascurata si rompa. Il cimitero si aggiorna comunque quando lo riapri.',
   'settings.section.backup': 'Backup',
+  // spiega a cosa serve il backup, sopra i pulsanti Esporta e Importa
+  'settings.backup.hint': 'Esporta salva il cimitero, il Custode e le foto in un file .necro3d; Importa lo ricarica, anche su un altro dispositivo o dopo aver cancellato i dati del browser.',
   // breve: pulsante
   'settings.backup.export': 'Esporta',
   // breve: pulsante
@@ -389,6 +391,8 @@ export default {
   'settings.assetGallery': 'Galleria asset',
   // breve: pulsante, e titolo della conferma
   'settings.newGame': 'Nuova partita',
+  // spiega cosa fa «Nuova partita», sopra il pulsante
+  'settings.newGame.hint': 'Ricomincia da un cimitero nuovo. La partita attuale si perde: se vuoi tenerla, esportala prima.',
   'settings.newGame.confirm': 'Ricominciare da capo? Il cimitero attuale andrà perso.',
   // breve: pulsante della conferma
   'settings.newGame.ok': 'Ricomincia',

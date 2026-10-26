@@ -13,7 +13,7 @@ import * as R from '../game/rules.ts';
 import type { BurialDraft } from '../game/rules.ts';
 import { DAY_PHASE_LABELS } from '../game/time.ts';
 import { currentLang, t } from '../i18n/index.ts';
-import { $, applyPageTexts, closeDrawer, drawerOpen, h, joinDot, toast } from './dom.ts';
+import { $, applyPageTexts, closeDrawer, drawerOpen, h, joinDot } from './dom.ts';
 import { hydrateIcons, icon, iconUrl, installFrames } from './icons.ts';
 import { uiNext, uiPlay, uiPreview } from '../app/uiNext.ts';
 import { openDeceased } from './deceased.ts';
@@ -196,7 +196,8 @@ export class UI {
       case 'edit':
         if (g.editMode) { g.setEditMode(false); break; }
         if (!g.state.settings.editIntroSeen) S.openEditIntro(this);
-        else { g.setEditMode(true); toast(t('hud.edit.toast')); }
+        // il banner di Modifica dice già cosa fare: niente toast
+        else g.setEditMode(true);
         break;
       case 'inventory': S.openInventory(this); break;
       case 'shop': g.centerOnShop(); break;

@@ -81,8 +81,6 @@ export default {
   'hud.staff.take': 'Impugna il bastone mistico',
   // banner di Modifica, interfaccia nuova (breve: deve stare intero sul telefono)
   'hud.edit.banner': 'Tocca un elemento e trascinalo',
-  // notifica entrando in Modifica
-  'hud.edit.toast': 'Modifica: tocca un elemento e trascinalo.',
 
   // ── Barra di posizionamento ──
   // tracciando sentieri e recinti, prima di cominciare

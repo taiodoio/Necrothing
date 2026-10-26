@@ -1,11 +1,12 @@
-// Scheda del defunto (in prova): la stessa per la tomba nel cimitero, il
-// ricordo sull'albero e la riga del Registro, con gli stessi dati, la pillola
-// di dove riposa sotto il nome e la cronologia con le icone; cambiano solo le
-// azioni. Nel giorno dell'anniversario la testata è decorata.
-// Per ora non è collegata al gioco: serve per le anteprime.
+// Scheda del defunto: la stessa per la tomba nel cimitero, il ricordo
+// sull'albero e la riga del Registro, con gli stessi dati, la pillola di dove
+// riposa sotto il nome e la cronologia con le icone; cambiano solo le azioni.
+// Per tutto il giorno dell'anniversario la tomba ha la corona di fiori al
+// posto della foto.
 
 import { CATEGORY_LABELS, deathCauseLabel, GRAVE_STATE_LABELS, GRAVE_TYPE_LABELS, graveVisualState } from '../game/graves.ts';
 import * as R from '../game/rules.ts';
+import { anniversaryYears } from '../game/simulation.ts';
 import type { Grave, MemoryType } from '../game/state.ts';
 import { t } from '../i18n/index.ts';
 import { memorials } from '../app/persistence.ts';
@@ -23,8 +24,6 @@ export type DeceasedFrom = 'map' | 'tree' | 'registry' | 'note';
 
 export interface DeceasedOpts {
   from?: DeceasedFrom;
-  /** Oggi è il suo anniversario (anni dalla morte): la testata decorata, per tutto il giorno. */
-  anniversary?: { years: number };
   /** Torna all'elenco da cui si è aperta (Registro), invece di chiudere. */
   back?: () => void;
 }
@@ -102,8 +101,9 @@ export function openDeceased(ui: UI, id: string, opts: DeceasedOpts = {}) {
     ];
   }
 
-  const anniv = opts.anniversary && !kept
-    ? annivHero({ grave: g, years: opts.anniversary.years, medal, where, photo: g.photoId ? memorials.get(g.photoId).then((m) => m?.dataUrl ?? null).catch(() => null) : Promise.resolve(null) })
+  const years = kept ? 0 : anniversaryYears(g.deathDate, game.now());
+  const anniv = years
+    ? annivHero({ grave: g, years, medal, where, photo: g.photoId ? memorials.get(g.photoId).then((m) => m?.dataUrl ?? null).catch(() => null) : Promise.resolve(null) })
     : null;
   // il nome c'è già sotto l'immagine: niente titolo in testa
   openDrawer('', h('div', { class: 'deceased' },

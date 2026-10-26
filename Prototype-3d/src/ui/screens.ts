@@ -28,6 +28,7 @@ const CAT_ICON: Record<PlaceableCategory | 'all', string> = { all: 'bag', light:
 const tabIcon = (c: PlaceableCategory | 'all') => (uiPlay() ? icon(CAT_ICON[c], 20) : null);
 import type { UI } from './UI.ts';
 import { openCustomize } from './customize.ts';
+import { openDeceased } from './deceased.ts';
 import { BurialPhoto, loadImage, openPostcard, photoStep, portrait } from './memorial.ts';
 import type { PostcardData } from './postcard.ts';
 import { memorials } from '../app/persistence.ts';
@@ -435,6 +436,8 @@ export function openDetail(ui: UI, id: string) {
   const s = game.state;
   const style = s.settings.style;
   const g = s.graves.find((x) => x.id === id);
+  // interfaccia nuova: la scheda del defunto (la stessa del ricordo e del Registro)
+  if (g && uiNext()) { openDeceased(ui, id, { from: 'map' }); return; }
   if (g) {
     const vs = graveVisualState(g);
     const mem = s.memories.filter((m) => m.graveId === id).slice(-8).reverse();

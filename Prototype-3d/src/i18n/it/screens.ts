@@ -435,7 +435,7 @@ export default {
   // sulla cartolina, sotto «Riposa a Necrothing»
   'postcard.tagline': 'il cimitero degli oggetti',
   // testo che accompagna la cartolina condivisa
-  // ── Scheda del defunto (in prova: tomba, ricordo, Registro) ──
+  // ── Scheda del defunto (tomba, ricordo, Registro) ──
   // pillola sotto il nome: dove riposa
   'deceased.where.grave': 'Riposa nel cimitero',
   'deceased.where.legacy': 'Lascito del vecchio custode',
@@ -461,7 +461,7 @@ export default {
   'deceased.goGrave': 'Vai alla tomba',
   // breve: pulsante
   'deceased.goTree': 'Vai all’albero',
-  // ── Anniversario della morte (in prova): testata decorata e notifica ──
+  // ── Anniversario della morte: corona nella scheda e notifica ──
   // sul nastro della corona: «3° anniversario»
   'anniv.ordinal': '{n}° anniversario',
   'anniv.ago#one': 'Oggi, un anno fa',

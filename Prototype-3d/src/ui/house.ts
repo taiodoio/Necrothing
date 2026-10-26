@@ -3,7 +3,7 @@
 // «Casa» della Bottega, dove tetti e aggiunte si comprano salendo di rango.
 
 import { RANKS } from '../game/balance.ts';
-import { CATEGORY_LABELS, deathCauseLabel, GRAVE_TYPE_LABELS, graveVisualState } from '../game/graves.ts';
+import { CATEGORY_LABELS, graveVisualState } from '../game/graves.ts';
 import { HOUSE_PARTS, HOUSE_ROOFS, houseItem, houseRoof, houseShown, houseVariant, type HousePart, type HouseRoof } from '../game/house.ts';
 import { rankForXp } from '../game/progression.ts';
 import * as R from '../game/rules.ts';
@@ -15,10 +15,9 @@ import { LOWPOLY_MATERIALS } from '../render/modelCache.ts';
 import { currentLang, t } from '../i18n/index.ts';
 import { closeDrawer, confirmDialog, fmtDate, h, openDrawer, setDrawerBody, setDrawerHero, toast, wispPill } from './dom.ts';
 import { icon } from './icons.ts';
-import { memorials } from '../app/persistence.ts';
-import { portrait } from './memorial.ts';
 import { houseHeader } from './houseHeader.ts';
 import { registryHeader } from './registryHeader.ts';
+import { openDeceased } from './deceased.ts';
 import { needChip, needRows, type UnlockNeed } from './screens.ts';
 import { graveThumb, modelThumb, placeableThumb } from './thumbs.ts';
 import type { UI } from './UI.ts';
@@ -89,35 +88,11 @@ export function openRegistry(ui: UI, filter: RegFilter = 'all', settled = false)
 }
 
 /**
- * La scheda di una sepoltura aperta dal registro: si legge e basta. L'unica
- * azione è andarci (le cure si fanno sul posto, camminando per il cimitero);
- * chiudendo si torna all'elenco.
+ * La scheda di una sepoltura aperta dal registro: la scheda del defunto,
+ * con «Vai alla tomba» (o all'albero); chiudendo si torna all'elenco.
  */
 function openRegistryEntry(ui: UI, id: string, filter: RegFilter) {
-  const game = ui.game;
-  const s = game.state;
-  const kept = R.entrustedById(s, id);
-  const g = kept?.grave ?? s.graves.find((x) => x.id === id);
-  if (!g) return;
-  const stone = kept ? fruitImg() : graveThumb(g.graveType, s.settings.style, graveVisualState(g), g.seed % 4);
-  const head = h('img', { src: stone, alt: '' }) as HTMLElement;
-  // la foto dell'oggetto, se c'è, come nella scheda della tomba
-  if (g.photoId) void memorials.get(g.photoId).then((m) => { if (m && head.isConnected) head.replaceWith(portrait(m.dataUrl, stone)); }).catch(() => undefined);
-  // il nome c'è già sotto l'immagine: niente titolo in testa
-  openDrawer('', h('div', {},
-    h('div', { class: 'hero' }, head, h('h3', {}, g.name),
-      g.epitaph ? h('div', { class: 'epitaph' }, t('house.ui.registry.epitaph', { text: g.epitaph })) : null),
-    h('dl', { class: 'kv' },
-      h('dt', {}, t('house.ui.registry.category')), h('dd', {}, CATEGORY_LABELS[g.category]),
-      h('dt', {}, t('house.ui.registry.lived')), h('dd', {}, `${fmtDate(g.birthDate)} → ${fmtDate(g.deathDate)}`),
-      h('dt', {}, t('house.ui.registry.cause')), h('dd', {}, deathCauseLabel(g.deathCause, g.deathCauseText)),
-      h('dt', {}, t('house.ui.registry.buried')), h('dd', {}, g.legacy ? t('house.ui.registry.legacy') : fmtDate(g.createdAt)),
-      h('dt', {}, t('house.ui.registry.rests')), h('dd', {}, kept ? t('house.ui.registry.restTree', { date: fmtDate(kept.entrustedAt) }) : t('house.ui.registry.restGrave', { type: GRAVE_TYPE_LABELS[g.graveType] }))),
-  ), {
-    // la X (e il tocco fuori) riportano all'elenco, col filtro di prima
-    beforeClose: () => { openRegistry(ui, filter, true); return false; },
-    footer: h('button', { class: 'big-btn', onclick: () => { closeDrawer(true); game.locate(id); } }, icon('pin', 22), kept ? t('house.ui.registry.goTree') : t('house.ui.registry.goGrave')),
-  });
+  openDeceased(ui, id, { from: 'registry', back: () => openRegistry(ui, filter, true) });
 }
 
 // ── Personalizza la casa ──────────────────────────────────────────────

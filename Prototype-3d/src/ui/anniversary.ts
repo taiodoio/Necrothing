@@ -1,6 +1,6 @@
 // Il giorno dell'anniversario della morte: la scheda della tomba ha la
 // corona di fiori col nastro al posto della foto (per tutto il giorno) e
-// arriva una notifica col lumino e «Vedi la tomba».
+// arriva una notifica con la corona e «Vedi la tomba».
 
 import type { Grave } from '../game/state.ts';
 import { createRng } from '../game/rng.ts';
@@ -112,6 +112,6 @@ export function annivHero(a: AnnivInput): HTMLElement {
 
 /** La notifica del giorno dell'anniversario, con «Vedi la tomba». */
 export function annivNote(name: string, years: number, see: () => void) {
-  npcNote({ kind: 'custode', name: t('anniv.note.name'), say: t('anniv.note.say'), text: t('anniv.note.text', { n: years, name }), img: lpIconPng('lumino'), icon: true,
+  npcNote({ kind: 'custode', name: t('anniv.note.name'), say: t('anniv.note.say'), text: t('anniv.note.text', { n: years, name }), img: lpIconPng('wreath'), icon: true,
     action: { label: t('note.seeGrave'), run: see } });
 }

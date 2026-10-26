@@ -31,7 +31,7 @@ export interface DeceasedOpts {
 
 /** Un'icona per ogni voce della cronologia. */
 const LOG_ICONS: Record<MemoryType, string> = {
-  burial: 'coffin', flower: 'flower', cleaned: 'broom', repaired: 'hammer', anniversary: 'lumino',
+  burial: 'coffin', flower: 'flower', cleaned: 'broom', repaired: 'hammer', anniversary: 'wreath',
   ghost: 'ghost', blessing: 'bell', zombie: 'skull', entrusted: 'tree',
 };
 

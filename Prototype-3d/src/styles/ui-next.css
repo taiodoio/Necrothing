@@ -312,7 +312,8 @@
   border-radius: var(--r); overflow: hidden; box-shadow: 0 20px 50px rgba(0, 0, 0, 0.55), inset 0 1px 0 var(--line); animation: modalIn 0.24s cubic-bezier(0.2, 1.25, 0.4, 1) both; }
 @keyframes modalIn { from { opacity: 0; scale: 0.94; } }
 .ui-next .drawer-foot { border-radius: 0; padding-bottom: 14px; }
-.ui-next .drawer:is(.with-hero, .full) { top: calc(14px + var(--safe-t)); bottom: calc(14px + var(--safe-b)); max-height: none; translate: none; border-radius: var(--r); }
+/* i grandi un po' più bassi dello schermo, al centro: restano finestre, non pagine */
+.ui-next .drawer:is(.with-hero, .full) { top: 50%; bottom: auto; height: min(84%, 720px, calc(100% - 28px - var(--safe-t) - var(--safe-b))); max-height: none; translate: 0 -50%; border-radius: var(--r); }
 .ui-next .drawer.with-hero .drawer-hero { height: 168px; }
 .ui-next .drawer.with-hero .drawer-head { height: 168px; padding-top: 12px; }
 .ui-next .drawer.with-hero #drawer-close { top: 12px; }
@@ -320,6 +321,5 @@
 .ui-next .scrim { background: rgba(8, 6, 10, 0.55); }
 @media (min-width: 760px) {
   .ui-next .drawer { left: 50%; right: auto; width: 560px; translate: -50% -50%; }
-  .ui-next .drawer:is(.with-hero, .full) { translate: -50% 0; }
 }
 @media (prefers-reduced-motion: reduce) { .ui-next .drawer { animation: none; } }

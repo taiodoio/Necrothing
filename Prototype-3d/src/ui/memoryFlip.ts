@@ -9,7 +9,7 @@ import { t } from '../i18n/index.ts';
 import { $, fmtDate, h } from './dom.ts';
 import { deceasedParts } from './deceased.ts';
 import { icon } from './icons.ts';
-import { confirmExhume } from './screens.ts';
+import { confirmExhume, moreActions } from './screens.ts';
 import type { UI } from './UI.ts';
 
 /** Il cartellino girato adesso (uno alla volta). */
@@ -49,11 +49,12 @@ export function flipMemoryTag(ui: UI, id: string, from: HTMLElement, fruit: stri
         g.epitaph ? h('i', { class: 'mtf-epitaph' }, t('detail.epitaph.quoted', { text: g.epitaph })) : null,
         parts.where),
       parts.facts, parts.timeline),
+    // come nelle altre schede: «Altro» (con Libera ricordo) sopra, l'azione principale sotto
     h('div', { class: 'mtf-actions' },
-      h('button', { class: 'mtf-btn', onclick: () => void parts.postcard() }, icon('postcard', 18), t('detail.grave.postcard')),
-      h('button', { class: 'mtf-btn danger', onclick: () => { done(true); confirmExhume(ui, id, g.name, 'memory'); } }, icon('shovel', 18), t('tree.memory.free'))));
+      moreActions([{ icon: 'shovel', label: t('tree.memory.free'), danger: true, run: () => { done(true); confirmExhume(ui, id, g.name, 'memory'); } }]),
+      h('button', { class: 'mtf-btn', onclick: () => void parts.postcard() }, icon('postcard', 20), t('detail.grave.postcard'))));
   const inner = h('div', { class: 'mtf-inner' }, front, back);
-  const card = h('div', { class: 'mtf-card' }, h('span', { class: 'mtf-string' }), inner);
+  const card = h('div', { class: 'mtf-card' }, inner);
   const layer = h('div', { class: 'mtf-layer drawer-overlay', onclick: (ev: Event) => { if (ev.target === layer) done(); } }, card);
   drawer.append(layer);
 

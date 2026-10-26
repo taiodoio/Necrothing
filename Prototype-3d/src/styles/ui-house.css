@@ -69,8 +69,6 @@
   background: rgba(10, 7, 12, 0); transition: background 0.35s ease; }
 .ui-next .mtf-layer.on { background: rgba(10, 7, 12, 0.66); }
 .ui-next .mtf-card { position: relative; width: min(100%, 330px); height: min(100%, 540px); transform-origin: 50% 50%; will-change: transform; }
-.ui-next .mtf-string { position: absolute; left: 50%; bottom: 100%; width: 1.5px; height: 60px; translate: -50% 14px; background: #cbb48a; opacity: 0; transition: opacity 0.3s; }
-.ui-next .mtf-layer.on .mtf-string { opacity: 1; }
 .ui-next .mtf-inner { position: absolute; inset: 0; transform-style: preserve-3d; transition: transform 0.52s cubic-bezier(0.35, 1.25, 0.45, 1); }
 .ui-next .mtf-inner.flipped { transform: rotateY(180deg); }
 .ui-next .mtf-face { position: absolute; inset: 0; backface-visibility: hidden; -webkit-backface-visibility: hidden; border-radius: 8px 8px 22px 22px;
@@ -94,9 +92,10 @@
 .ui-next .mtf-back .section-title { color: #6e4b20; font-size: 20px; }
 .ui-next .mtf-back .dc-log li { border-bottom: 1px dashed rgba(58, 42, 34, 0.25); color: #3a2a22; font-size: 13px; padding: 5px 0; }
 .ui-next .mtf-back .dc-log time, .ui-next .mtf-back .dc-more { color: #7a6656; }
-.ui-next .mtf-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 10px; }
-.ui-next .mtf-btn { display: inline-flex; align-items: center; justify-content: center; gap: 6px; height: 44px; padding: 0 8px; border: 0; border-radius: 12px; font: 800 13px/1.1 var(--pixel, sans-serif); color: #f6eddb; background: #4a3426; box-shadow: 0 2px 0 #24170f; }
-.ui-next .mtf-btn.danger { color: #9c3a2c; background: rgba(156, 58, 44, 0.1); box-shadow: inset 0 0 0 1.5px rgba(156, 58, 44, 0.45); }
+.ui-next .mtf-actions { display: grid; gap: 8px; margin-top: 10px; }
+.ui-next .mtf-btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; width: 100%; height: 48px; padding: 0 12px; border: 0; border-radius: 12px; font: 800 15px/1.1 var(--pixel, sans-serif); color: #f6eddb; background: #4a3426; box-shadow: 0 2px 0 #24170f; }
+.ui-next .mtf-back .more-toggle { min-height: 46px; color: #3a2a22; background: rgba(58, 42, 34, 0.1); box-shadow: inset 0 0 0 1.5px rgba(58, 42, 34, 0.18); }
+.ui-next .mtf-back .more-scrim { position: absolute; inset: -400px; border-radius: 0; }
 @media (prefers-reduced-motion: reduce) { .ui-next .mtf-inner, .ui-next .mtf-card { transition: none !important; } }
 
 /* ── Scheda del defunto (tomba, ricordo, Registro) ─────────────────── */

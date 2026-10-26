@@ -435,6 +435,41 @@ export default {
   // sulla cartolina, sotto «Riposa a Necrothing»
   'postcard.tagline': 'il cimitero degli oggetti',
   // testo che accompagna la cartolina condivisa
+  // ── Scheda unica del defunto (in prova: tomba, ricordo, Registro) ──
+  // in testa, quando la si apre dal suo fantasma
+  'deceased.ghost.grave': 'Il fantasma di {name} ti ha salutato',
+  'deceased.ghost.graveText': 'Si è affacciato dalla sua tomba ed è svanito nella nebbia.',
+  'deceased.ghost.memory': 'Il fantasma di {name} è tornato a trovarti',
+  'deceased.ghost.memoryText': 'È sceso dall’Albero dei ricordi per un saluto.',
+  // in testa, il giorno dell'anniversario della morte
+  'deceased.anniv.title': 'Oggi è il suo anniversario',
+  'deceased.anniv.text#one': 'Un anno fa {name} ci lasciava. Portagli dei fiori.',
+  'deceased.anniv.text#other': '{n} anni fa {name} ci lasciava. Portagli dei fiori.',
+  // pillola sotto il nome: dove riposa
+  'deceased.where.grave': 'Riposa nel cimitero',
+  'deceased.where.legacy': 'Lascito del vecchio custode',
+  'deceased.where.tree': 'Sull’albero dei ricordi dal {date}',
+  'deceased.category': 'Categoria',
+  'deceased.lived': 'Vissuto',
+  // senza data di nascita
+  'deceased.died': 'Morto il {date}',
+  'deceased.cause': 'Causa',
+  'deceased.buried': 'Sepolto',
+  'deceased.buriedLegacy': 'Prima del tuo arrivo',
+  'deceased.stone': 'Lapide',
+  'deceased.stoneGone': '{type} (fino al {date})',
+  'deceased.state': 'Stato',
+  'deceased.ghosts': 'Apparizioni',
+  'deceased.ghostsSeen#one': 'Il suo fantasma è passato una volta',
+  'deceased.ghostsSeen#other': 'Il suo fantasma è passato {n} volte',
+  'deceased.ghostsNone': 'Il suo fantasma non si è ancora visto',
+  'deceased.log': 'Cronologia',
+  'deceased.logMore#one': 'e un ricordo più vecchio',
+  'deceased.logMore#other': 'e altri {n} ricordi più vecchi',
+  // breve: pulsante
+  'deceased.goGrave': 'Vai alla tomba',
+  // breve: pulsante
+  'deceased.goTree': 'Vai all’albero',
   'postcard.shareText': 'In memoria di {name}. Sepolto a Necrothing, il cimitero degli oggetti.',
   'postcard.shareTitle': 'In memoria di {name}',
   // nome del file se il nome dell'oggetto non ha lettere utili (minuscolo, senza spazi)

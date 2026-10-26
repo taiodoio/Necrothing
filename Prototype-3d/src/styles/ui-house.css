@@ -64,6 +64,30 @@
 .ui-next .mt-tag small { display: block; margin-top: 3px; color: #7a6656; font-size: 11.5px; font-weight: 700; }
 .ui-next .mt-seen { display: inline-flex; align-items: center; gap: 2px; margin-top: 5px; color: #8a5a18; font-size: 11px; font-weight: 800; }
 
+/* ── Scheda unica del defunto (in prova) ─────────────────────────── */
+.ui-next .deceased .hero { gap: 6px; }
+.ui-next .dc-where { display: inline-flex; align-items: center; gap: 5px; padding: 3px 11px 3px 7px; border-radius: 999px; background: var(--track); font-size: 12.5px; font-weight: 800; color: var(--paper); }
+.ui-next .dc-where.tree { background: color-mix(in srgb, #f0b45a 22%, var(--track)); color: #ffd98a; }
+.ui-next .dc-where.legacy { color: var(--muted); }
+.ui-next .dc-banner { display: grid; grid-template-columns: 58px 1fr; gap: 12px; align-items: center; margin: 0 0 14px; padding: 10px 14px 12px 10px; border-radius: var(--r);
+  background: color-mix(in srgb, var(--spectral) 14%, var(--panel-2)); box-shadow: inset 0 0 0 1.5px color-mix(in srgb, var(--spectral) 45%, transparent), 0 0 18px color-mix(in srgb, var(--spectral) 18%, transparent); }
+.ui-next .dc-banner img { width: 58px; height: 64px; object-fit: contain; object-position: bottom; }
+.ui-next .dc-banner b { display: block; font: 700 19px/1.1 var(--gothic); color: var(--spectral); }
+.ui-next .dc-banner p { margin: 3px 0 5px; font-size: 13.5px; line-height: 1.35; }
+.ui-next .dc-banner.anniv { background: color-mix(in srgb, #f0b45a 14%, var(--panel-2)); box-shadow: inset 0 0 0 1.5px color-mix(in srgb, #f0b45a 50%, transparent), 0 0 18px rgba(240, 180, 90, 0.15); }
+.ui-next .dc-banner.anniv b { color: #ffd98a; }
+.ui-next .dc-banner-ico { display: grid; place-items: center; width: 58px; height: 58px; }
+.ui-next .dc-gains { display: flex; flex-wrap: wrap; gap: 6px; }
+.ui-next .dc-gains > span { display: inline-flex; align-items: center; gap: 3px; padding: 1px 8px 1px 5px; border-radius: 999px; background: var(--track); font-size: 12px; font-weight: 800; color: var(--spectral); }
+.ui-next .dc-gains > span:only-child, .ui-next .dc-gains > span + span { padding-left: 8px; }
+.ui-next .dc-gains > span + span { color: var(--gold-bright); }
+.ui-next .kv dd.warn { color: var(--danger); }
+.ui-next .dc-log { list-style: none; margin: 4px 0 0; padding: 0; display: grid; }
+.ui-next .dc-log li { display: grid; grid-template-columns: 26px 1fr auto; gap: 8px; align-items: center; padding: 7px 0; border-bottom: 1px solid var(--line); font-size: 14px; }
+.ui-next .dc-log li:last-child { border-bottom: 0; }
+.ui-next .dc-log time { color: var(--muted); font-size: 12.5px; }
+.ui-next .dc-more { margin: 4px 0 0; font-size: 12.5px; }
+
 /* ── Vantaggi della casa ──────────────────────────────────────────── */
 .ui-next .perks { display: grid; gap: 6px; margin: 10px 0 4px; padding: 10px 12px; border-radius: var(--r-s); background: var(--input); }
 .ui-next .perks ul { margin: 0; padding-left: 18px; display: grid; gap: 4px; font-size: 13px; line-height: 1.35; }

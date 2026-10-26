@@ -22,7 +22,8 @@ import type { UI } from './UI.ts';
 
 const asModel = (m: LPModel, height: number) => ({ geometries: m.geometries, lights: m.lights, height, mats: LOWPOLY_MATERIALS, dedicated: true });
 const treeImg = (n: number) => modelThumb(`albero-ricordi:${Math.min(30, n)}`, asModel(memoryTreeLP(n, 2), 4), [5, 5]);
-const fruitImg = () => modelThumb('frutto-ricordo', asModel(memoryFruitLP(), 1), [1, 1]);
+/** Il frutto acceso (miniatura), lo stesso dei cartellini. */
+export const fruitImg = () => modelThumb('frutto-ricordo', asModel(memoryFruitLP(), 1), [1, 1]);
 
 /** Conferma prima del rito: cosa succede, e che non si torna indietro. */
 export function openEntrust(ui: UI, graveId: string) {

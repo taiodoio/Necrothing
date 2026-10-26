@@ -43,11 +43,22 @@ export function pathStone(v: PVis): LPModel {
   return lp.build();
 }
 
+/**
+ * Sentiero in terra battuta: il terreno sotto è più chiaro e caldo del prato
+ * (vedi terrain.ts); qui zolle scure sul bordo, sassolini e qualche ciuffo
+ * d'erba che sconfina.
+ */
 export function pathDirt(v: PVis): LPModel {
   const lp = new LP(`lp:pathdirt:${v.seed}:${v.dirty}`);
   const r = lp.rng;
-  lp.push([0, -0.03, 0], r.range(0, 6.28), -Math.PI / 2).extrude(irregularShape(r, 0.5, 8, 0.95), 0.045, LPC.soil, { vary: 0.08, ao: 0, curve: 1 }).pop();
-  pebbles(lp, -0.4, -0.4, 0.4, 0.4, 4);
+  // la terra battuta è il colore del terreno (continuo tra le caselle): qui solo zolle, sassi ed erba
+  // zolle più scure sul bordo
+  for (let i = 0; i < 6; i++) {
+    const a = (i / 6) * Math.PI * 2 + r.range(-0.4, 0.4), d = r.range(0.32, 0.46);
+    lp.blob(Math.cos(a) * d, 0.02, Math.sin(a) * d, r.range(0.04, 0.07), r.range(0.015, 0.025), r.range(0.035, 0.06), '#55402d', { vary: 0.1, ao: 0 });
+  }
+  pebbles(lp, -0.38, -0.38, 0.38, 0.38, 6);
+  for (let i = 0; i < 2; i++) { const a = r.range(0, Math.PI * 2); grassTuft(lp, Math.cos(a) * 0.44, Math.sin(a) * 0.44, 0.55, GRASS, 4); }
   if (v.dirty) weeds(lp, r.range(-0.3, 0.3), r.range(-0.3, 0.3), 0.7);
   return lp.build();
 }

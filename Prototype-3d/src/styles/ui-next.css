@@ -302,3 +302,24 @@
 /* Inventario: «Vendi» con il guadagno sotto, in piccolo, con l'icona */
 .ui-next .sell-btn { display: grid; justify-items: center; align-content: center; gap: 0; line-height: 1.1; }
 .ui-next .sell-btn .sell-gain { display: inline-flex; align-items: center; gap: 2px; font-size: 12px; font-weight: 800; color: var(--spectral); }
+
+/* ── Pannelli come finestre (modali) sopra la scena ───────────────────
+   Al centro, staccati dai bordi, con tutti gli angoli arrotondati; quelli
+   con la testata animata (Bottega, Registro, Albero, Casa) e gli elenchi
+   lunghi (.full) alti quasi tutto lo schermo, gli altri quanto il contenuto. */
+.ui-next .drawer { left: calc(12px + var(--safe-l)); right: calc(12px + var(--safe-r)); top: 50%; bottom: auto; width: auto; height: auto;
+  max-height: calc(100% - 28px - var(--safe-t) - var(--safe-b)); translate: 0 -50%; transform: none; padding: 0;
+  border-radius: var(--r); overflow: hidden; box-shadow: 0 20px 50px rgba(0, 0, 0, 0.55), inset 0 1px 0 var(--line); animation: modalIn 0.24s cubic-bezier(0.2, 1.25, 0.4, 1) both; }
+@keyframes modalIn { from { opacity: 0; scale: 0.94; } }
+.ui-next .drawer-foot { border-radius: 0; padding-bottom: 14px; }
+.ui-next .drawer:is(.with-hero, .full) { top: calc(14px + var(--safe-t)); bottom: calc(14px + var(--safe-b)); max-height: none; translate: none; border-radius: var(--r); }
+.ui-next .drawer.with-hero .drawer-hero { height: 168px; }
+.ui-next .drawer.with-hero .drawer-head { height: 168px; padding-top: 12px; }
+.ui-next .drawer.with-hero #drawer-close { top: 12px; }
+.ui-next .drawer:is(.with-hero, .full) .drawer-body { flex: 1; }
+.ui-next .scrim { background: rgba(8, 6, 10, 0.55); }
+@media (min-width: 760px) {
+  .ui-next .drawer { left: 50%; right: auto; width: 560px; translate: -50% -50%; }
+  .ui-next .drawer:is(.with-hero, .full) { translate: -50% 0; }
+}
+@media (prefers-reduced-motion: reduce) { .ui-next .drawer { animation: none; } }

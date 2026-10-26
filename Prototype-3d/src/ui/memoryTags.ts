@@ -98,9 +98,9 @@ function branch(r: Rng, fromLeft: boolean, reach: number): Branch {
   return { y, half, el };
 }
 
-function tag(e: EntrustedMemory, r: Rng, knotY: number, fruit: string, open: (id: string) => void) {
+function tag(e: EntrustedMemory, r: Rng, knotY: number, fruit: string, open: (id: string, el: HTMLElement) => void) {
   const len = Math.round(r.range(14, 34)), tilt = r.range(-3, 3), wide = Math.round(r.range(86, 96));
-  return h('button', { class: 'mt-tag', style: `--len:${len}px;--tilt:${tilt.toFixed(1)}deg;width:${wide}%;margin-top:${(knotY + len).toFixed(0)}px`, onclick: () => open(e.grave.id) },
+  return h('button', { class: 'mt-tag', 'data-id': e.grave.id, style: `--len:${len}px;--tilt:${tilt.toFixed(1)}deg;width:${wide}%;margin-top:${(knotY + len).toFixed(0)}px`, onclick: (ev: Event) => open(e.grave.id, ev.currentTarget as HTMLElement) },
     h('img', { src: fruit, alt: '' }),
     h('b', {}, e.grave.name),
     h('small', {}, t('tree.list.tag', { category: CATEGORY_LABELS[e.grave.category], date: fmtDate(e.entrustedAt) })),
@@ -108,7 +108,7 @@ function tag(e: EntrustedMemory, r: Rng, knotY: number, fruit: string, open: (id
 }
 
 /** I ricordi (dal più recente) appesi ai rami, due per ramo. */
-export function memoryTags(list: EntrustedMemory[], fruit: string, open: (id: string) => void): HTMLElement {
+export function memoryTags(list: EntrustedMemory[], fruit: string, open: (id: string, el: HTMLElement) => void): HTMLElement {
   const rows: HTMLElement[] = [];
   for (let i = 0; i * 2 < list.length; i++) {
     const pair = list.slice(i * 2, i * 2 + 2);

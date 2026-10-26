@@ -241,5 +241,6 @@ export function openCustomize(ui: UI) {
     footer: h('div', { class: 'row look-foot' }, reset, saveBtn),
     beforeClose: () => !dirty() || confirmDialog({ title: t('look.ui.unsaved.title'), message: t('look.ui.unsaved.text'), ok: t('dialog.close'), cancel: t('look.ui.unsaved.stay'), danger: true }),
     onClose: () => preview.dispose(),
+    full: true,
   });
 }

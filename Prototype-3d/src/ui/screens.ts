@@ -155,7 +155,7 @@ export function openBurial(ui: UI, initial?: R.BurialDraft, startStep = 0) {
         h('button', { class: 'big-btn', disabled: !stepValid(), onclick: async () => { d.photoId = await photo.store(); closeDrawer(); game.startGravePlacement(d); } }, t('burial.choosePlace'))));
     }
   };
-  openDrawer(t('burial.title'), h('div'));
+  openDrawer(t('burial.title'), h('div'), { full: true });
   render();
 }
 
@@ -413,7 +413,7 @@ export function openInventory(ui: UI, cat: PlaceableCategory | 'all' = 'all') {
           : h('button', { class: 'big-btn', onclick: () => { closeDrawer(); game.startItemPlacement(d.id); } }, t('inventory.place'))),
     ));
   };
-  openDrawer(t('inventory.title'), h('div'));
+  openDrawer(t('inventory.title'), h('div'), { full: true });
   render();
 }
 
@@ -574,7 +574,7 @@ export function openPlayer(ui: UI) {
         h('div', { class: 'ico' }, icon(done ? (ACH_ICONS[a.id] ?? 'trophy') : 'lock', 30)),
         h('div', {}, h('b', {}, a.name), h('p', {}, t('player.achievement.line', { description: a.description, tier: tiers[tier] })), !done && prog > 0 ? h('div', { class: 'bar' }, h('i', { style: `width:${Math.round(prog * 100)}%` })) : null));
     })),
-  ));
+  ), { full: true });
 }
 
 // ── Impostazioni ───────────────────────────────────────────────────────
@@ -656,7 +656,7 @@ export function openSettings(ui: UI) {
         toast(t('settings.newGame.done'));
       } }, t('settings.newGame'))),
   );
-  openDrawer(t('settings.title'), body);
+  openDrawer(t('settings.title'), body, { full: true });
 }
 
 /** "Versione abc1234 · 13/10/2026, 14:40": per controllare che il sito pubblicato sia aggiornato. */
@@ -766,7 +766,7 @@ export async function openGallery(ui: UI) {
       h('button', { class: 'big-btn ghost', style: 'color:var(--danger)', onclick: async () => { await gallery.remove(p.id); photos.splice(photos.indexOf(p), 1); render(); } }, t('gallery.delete')),
       h('button', { class: 'big-btn', onclick: () => sharePhoto(p.dataUrl) }, t('gallery.share'))));
   };
-  openDrawer(t('gallery.title'), h('div'));
+  openDrawer(t('gallery.title'), h('div'), { full: true });
   render();
   void ui;
 }

@@ -80,10 +80,18 @@ let onCloseCb: (() => void) | null = null;
 /** Se presente e restituisce (o promette) false, la chiusura (X, sfondo, Esc) viene annullata. */
 let beforeCloseCb: (() => boolean | Promise<boolean>) | null = null;
 
-/** Apre il drawer; con `title` vuoto la testata resta solo la X (quando il nome è già nel contenuto). */
-export function openDrawer(title: string, body: Node, opts: { footer?: Node; onClose?: () => void; beforeClose?: () => boolean | Promise<boolean> } = {}) {
+/**
+ * Apre il pannello (nell'interfaccia nuova una finestra sopra la scena); con
+ * `title` vuoto la testata resta solo la X (quando il nome è già nel
+ * contenuto). `full`: elenchi e schermate lunghe, alti quasi tutto lo
+ * schermo (con la testata animata lo sono sempre); gli altri si adattano al
+ * contenuto, al centro.
+ */
+export function openDrawer(title: string, body: Node, opts: { footer?: Node; onClose?: () => void; beforeClose?: () => boolean | Promise<boolean>; full?: boolean } = {}) {
   const drawer = $('#drawer');
   dropHero();
+  dropOverlays();
+  drawer.classList.toggle('full', !!opts.full);
   $('#drawer-title').textContent = title;
   drawer.classList.toggle('no-title', !title);
   $('#drawer-extra').replaceChildren();
@@ -123,6 +131,11 @@ export function setDrawerHero(el: HTMLElement) {
   drawer.classList.add('with-hero');
 }
 
+/** Via quello che un pannello ha aperto sopra di sé (il cartellino girato dell'albero). */
+function dropOverlays() {
+  for (const el of $('#drawer').querySelectorAll(':scope > .drawer-overlay')) el.remove();
+}
+
 function dropHero() {
   const drawer = $('#drawer');
   drawer.querySelector(':scope > .drawer-hero')?.remove(); // uscendo dal documento la testata si ferma da sola
@@ -147,6 +160,7 @@ export function closeDrawer(force = false) {
   }
   beforeCloseCb = null;
   dropHero();
+  dropOverlays();
   $('#drawer').hidden = true;
   $('#scrim').hidden = true;
   document.body.classList.remove('drawer-open');

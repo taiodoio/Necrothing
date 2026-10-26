@@ -34,22 +34,19 @@ const LOG_ICONS: Record<MemoryType, string> = {
   ghost: 'ghost', blessing: 'bell', zombie: 'skull', entrusted: 'tree',
 };
 
-export function openDeceased(ui: UI, id: string, opts: DeceasedOpts = {}) {
-  const game = ui.game;
-  const s = game.state;
+/**
+ * I pezzi comuni della scheda: la pillola di dove riposa, i dati, la
+ * cronologia e la cartolina (li usa anche il retro del cartellino dell'albero).
+ */
+export function deceasedParts(ui: UI, id: string) {
+  const s = ui.game.state;
   const kept = R.entrustedById(s, id);
   const g: Grave | undefined = kept?.grave ?? s.graves.find((x) => x.id === id);
-  if (!g) return;
-  const from = opts.from ?? (kept ? 'tree' : 'map');
+  if (!g) return null;
   const vs = kept ? null : graveVisualState(g);
   const log = s.memories.filter((m) => m.graveId === id).reverse();
   const ghosts = kept ? kept.ghostVisits : log.filter((m) => m.type === 'ghost').length;
-
-  // la foto, se c'è, al posto della lapide (o del frutto), che resta in piccolo
-  const medal = kept ? fruitImg() : graveThumb(g.graveType, s.settings.style, vs!, g.seed % 4);
-  const head = h('img', { src: medal, alt: '' }) as HTMLElement;
-  let photoUrl: string | null = null;
-  if (g.photoId) void memorials.get(g.photoId).then((m) => { if (m && head.isConnected) { photoUrl = m.dataUrl; head.replaceWith(portrait(m.dataUrl, medal)); } }).catch(() => undefined);
+  const photo = g.photoId ? memorials.get(g.photoId).then((m) => m?.dataUrl ?? null).catch(() => null) : Promise.resolve(null);
 
   // dove riposa, in una pillola sotto il nome
   const where = kept
@@ -75,9 +72,25 @@ export function openDeceased(ui: UI, id: string, opts: DeceasedOpts = {}) {
       h('span', {}, kept && m.type === 'ghost' && m.at >= kept.entrustedAt ? t('tree.memory.ghostNear') : MEMORY_LABELS[m.type]),
       h('time', {}, fmtDate(m.at))))),
     log.length > shown.length ? h('p', { class: 'muted dc-more' }, t('deceased.logMore', { n: log.length - shown.length })) : null) : null;
+  const postcard = async () => openPostcard(await postcardData(g, await photo, ui, g.seed % 4, kept ? fruitImg() : undefined));
+  return { g, kept, vs, where, facts, timeline, photo, postcard };
+}
+
+export function openDeceased(ui: UI, id: string, opts: DeceasedOpts = {}) {
+  const game = ui.game;
+  const s = game.state;
+  const parts = deceasedParts(ui, id);
+  if (!parts) return;
+  const { g, kept, vs, where, facts, timeline } = parts;
+  const from = opts.from ?? (kept ? 'tree' : 'map');
+
+  // la foto, se c'è, al posto della lapide (o del frutto), che resta in piccolo
+  const medal = kept ? fruitImg() : graveThumb(g.graveType, s.settings.style, vs!, g.seed % 4);
+  const head = h('img', { src: medal, alt: '' }) as HTMLElement;
+  void parts.photo.then((url) => { if (url && head.isConnected) head.replaceWith(portrait(url, medal)); });
 
   // azioni: nel cimitero quella che serve adesso; da lontano (Registro) «Vai alla tomba»
-  const postcard = { icon: 'postcard', label: t('detail.grave.postcard'), run: async () => openPostcard(await postcardData(g, photoUrl, ui, g.seed % 4, kept ? fruitImg() : undefined)) };
+  const postcard = { icon: 'postcard', label: t('detail.grave.postcard'), run: () => void parts.postcard() };
   let main: HTMLElement;
   let more: Parameters<typeof moreActions>[0];
   if (kept) {
@@ -103,7 +116,7 @@ export function openDeceased(ui: UI, id: string, opts: DeceasedOpts = {}) {
 
   const years = kept ? 0 : anniversaryYears(g.deathDate, game.now());
   const anniv = years
-    ? annivHero({ grave: g, years, medal, where, photo: g.photoId ? memorials.get(g.photoId).then((m) => m?.dataUrl ?? null).catch(() => null) : Promise.resolve(null) })
+    ? annivHero({ grave: g, years, medal, where, photo: parts.photo })
     : null;
   // il nome c'è già sotto l'immagine: niente titolo in testa
   openDrawer('', h('div', { class: 'deceased' },

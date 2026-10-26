@@ -200,6 +200,52 @@ export function confirmDialog(opts: { title: string; message: string; ok?: strin
   });
 }
 
+// ── Avanzamento ───────────────────────────────────────────────────────
+
+export interface Progress {
+  /** Dice com'è andata (titolo, testo, esito) e aspetta «Ok». */
+  done: (title: string, message: string, ok: boolean) => Promise<void>;
+  /** Chiude senza dire nulla (es. si passa a una conferma). */
+  close: () => void;
+}
+
+/**
+ * Finestra per le operazioni che durano (backup): finché lavora mostra una
+ * rotella e cosa sta facendo, e non si chiude; poi dice se è andata bene o
+ * cosa non va, e si chiude con «Ok».
+ */
+export function progressDialog(title: string, message: string): Progress {
+  dialogOpen++;
+  let open = true;
+  let onKey: ((e: KeyboardEvent) => void) | null = null;
+  const close = () => {
+    if (!open) return;
+    open = false;
+    dialogOpen--;
+    if (onKey) document.removeEventListener('keydown', onKey, true);
+    scrim.remove();
+  };
+  const box = h('div', { class: 'dialog progress-dialog', role: 'alertdialog', 'aria-modal': 'true', 'aria-busy': 'true', 'aria-live': 'polite', onclick: (e: Event) => e.stopPropagation() },
+    h('h3', {}, title),
+    h('div', { class: 'progress-row' }, h('span', { class: 'busy-spin', 'aria-hidden': 'true' }), h('p', {}, message)));
+  const scrim = h('div', { class: 'dialog-scrim' }, box);
+  ($('#drawer').parentElement ?? document.body).append(scrim);
+  const done = (doneTitle: string, doneMessage: string, ok: boolean) => new Promise<void>((resolve) => {
+    if (!open) { resolve(); return; }
+    const finish = () => { close(); resolve(); };
+    onKey = (e: KeyboardEvent) => { if (e.key === 'Escape' || e.key === 'Enter') { e.stopPropagation(); e.preventDefault(); finish(); } };
+    document.addEventListener('keydown', onKey, true);
+    scrim.onclick = finish;
+    box.setAttribute('aria-busy', 'false');
+    box.classList.toggle('failed', !ok);
+    box.replaceChildren(
+      h('h3', {}, ok ? icon('check', 26) : null, doneTitle),
+      h('p', {}, doneMessage),
+      h('button', { class: 'big-btn', onclick: finish }, t('dialog.gotIt')));
+  });
+  return { done, close };
+}
+
 // ── Modale ────────────────────────────────────────────────────────────
 
 export interface Modal {

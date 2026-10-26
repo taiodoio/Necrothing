@@ -15,7 +15,7 @@ export interface PhotoRecord { id: string; createdAt: string; dataUrl: string }
 /** Foto dell'oggetto sepolto (la tomba la indica con `photoId`). */
 export interface MemorialPhoto { id: string; dataUrl: string }
 
-export interface BackupContent { state: unknown; photos: PhotoRecord[]; memorials: MemorialPhoto[] }
+export interface BackupContent { state: unknown; photos: PhotoRecord[]; memorials: MemorialPhoto[]; exportedAt?: string }
 
 const EXT: Record<string, string> = { 'image/jpeg': 'jpg', 'image/png': 'png', 'image/webp': 'webp' };
 const MIME: Record<string, string> = { jpg: 'image/jpeg', png: 'image/png', webp: 'image/webp' };
@@ -56,8 +56,10 @@ export function packBackup(state: unknown, photos: PhotoRecord[], memorials: Mem
 }
 
 const isZip = (b: Uint8Array) => b.length > 3 && b[0] === 0x50 && b[1] === 0x4b && b[2] === 0x03 && b[3] === 0x04;
+/** I file di servizio che macOS aggiunge comprimendo una cartella (__MACOSX/, ._nome). */
+const isJunk = (name: string) => name.startsWith('__MACOSX/') || /(^|\/)\._/.test(name);
 
-export function unpackBackup(bytes: Uint8Array): BackupContent {
+export function unpackBackup(bytes: Uint8Array, depth = 0): BackupContent {
   if (!isZip(bytes)) {
     // vecchio formato: tutto in un JSON, foto in base64
     let parsed: { format?: string; state?: unknown; photos?: PhotoRecord[] } | null = null;
@@ -66,18 +68,31 @@ export function unpackBackup(bytes: Uint8Array): BackupContent {
     return { state: parsed.state, photos: parsed.photos ?? [], memorials: [] };
   }
   let files: Record<string, Uint8Array>;
-  try { files = unzipSync(bytes); } catch { throw new Error(t('backup.corrupt')); }
-  const raw = files['save.json'];
-  if (!raw) throw new Error(t('backup.unknownFile'));
-  const index = JSON.parse(strFromU8(raw)) as { format?: string; state?: unknown; photos?: Array<{ id: string; createdAt: string; file: string }>; memorials?: Array<{ id: string; file: string }> };
-  if (index.format !== BACKUP_FORMAT) throw new Error(t('backup.unknownFile'));
+  try { files = unzipSync(bytes, { filter: (f) => !isJunk(f.name) }); } catch { throw new Error(t('backup.corrupt')); }
+  // save.json in cima, oppure dentro la cartella con cui è stato ricompresso il backup:
+  // le immagini si cercano accanto a lui
+  const index = Object.keys(files).filter((n) => n === 'save.json' || n.endsWith('/save.json')).sort((a, b) => a.length - b.length)[0];
+  if (!index) {
+    // il backup intero dentro uno zip (es. il file .necro3d compresso di nuovo): si apre quello
+    if (depth === 0) {
+      for (const [name, b] of Object.entries(files)) {
+        if (name.endsWith('/') || !b.length) continue;
+        try { return unpackBackup(b, depth + 1); } catch { /* non era lui: si prova il prossimo */ }
+      }
+    }
+    throw new Error(t('backup.unknownFile'));
+  }
+  const dir = index.slice(0, -'save.json'.length);
+  let parsed: { format?: string; exportedAt?: string; state?: unknown; photos?: Array<{ id: string; createdAt: string; file: string }>; memorials?: Array<{ id: string; file: string }> };
+  try { parsed = JSON.parse(strFromU8(files[index])); } catch { throw new Error(t('backup.corrupt')); }
+  if (parsed.format !== BACKUP_FORMAT) throw new Error(t('backup.unknownFile'));
   const image = (file: string) => {
-    const b = files[file];
+    const b = files[dir + file];
     return b ? bytesToDataUrl(b, MIME[file.split('.').pop() ?? ''] ?? 'application/octet-stream') : null;
   };
   const photos: PhotoRecord[] = [];
-  for (const p of index.photos ?? []) { const dataUrl = image(p.file); if (dataUrl) photos.push({ id: p.id, createdAt: p.createdAt, dataUrl }); }
+  for (const p of parsed.photos ?? []) { const dataUrl = image(p.file); if (dataUrl) photos.push({ id: p.id, createdAt: p.createdAt, dataUrl }); }
   const memorials: MemorialPhoto[] = [];
-  for (const m of index.memorials ?? []) { const dataUrl = image(m.file); if (dataUrl) memorials.push({ id: m.id, dataUrl }); }
-  return { state: index.state, photos, memorials };
+  for (const m of parsed.memorials ?? []) { const dataUrl = image(m.file); if (dataUrl) memorials.push({ id: m.id, dataUrl }); }
+  return { state: parsed.state, photos, memorials, exportedAt: parsed.exportedAt };
 }

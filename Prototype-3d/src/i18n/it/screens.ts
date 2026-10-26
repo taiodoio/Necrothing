@@ -350,10 +350,40 @@ export default {
   'settings.backup.export': 'Esporta',
   // breve: pulsante
   'settings.backup.import': 'Importa',
-  // notifica
-  'settings.backup.restored': 'Backup ripristinato.',
-  // notifica
-  'settings.backup.importFailed': 'Import fallito.',
+  // titolo della finestra mentre si prepara il file
+  'settings.backup.exporting': 'Preparo il backup…',
+  'settings.backup.exportingText': 'Raccolgo il cimitero e le foto in un unico file.',
+  // titolo: il file è pronto
+  'settings.backup.exported': 'Backup esportato',
+  // {file} è il nome del file, {size} il peso (es. «28 kB»)
+  'settings.backup.exportedText': 'Ho salvato {file} ({size}) nei download del browser. Conservalo: serve per riprendere la partita su un altro dispositivo.',
+  // titolo
+  'settings.backup.exportFailed': 'Esportazione non riuscita',
+  // titolo della finestra mentre si legge il file scelto
+  'settings.backup.reading': 'Leggo il backup…',
+  // {file} è il nome del file scelto
+  'settings.backup.readingText': 'Controllo {file}.',
+  // titolo della conferma prima di sostituire la partita
+  'settings.backup.confirm.title': 'Caricare questo backup?',
+  // {name} è il nome del Custode nel backup, {date} il giorno dell'esportazione
+  'settings.backup.confirm.textDate': 'È il cimitero di {name}, esportato il {date}. La partita attuale verrà sostituita: se ti serve, esportala prima.',
+  // {name} è il nome del Custode nel backup (backup vecchi, senza data)
+  'settings.backup.confirm.text': 'È il cimitero di {name}. La partita attuale verrà sostituita: se ti serve, esportala prima.',
+  // breve: pulsante
+  'settings.backup.confirm.ok': 'Carica',
+  // titolo della finestra mentre si carica
+  'settings.backup.importing': 'Carico il backup…',
+  'settings.backup.importingText': 'Ripristino il cimitero e le foto.',
+  // titolo: caricamento riuscito
+  'settings.backup.restored': 'Backup caricato',
+  // {name} è il nome del Custode
+  'settings.backup.restoredText': 'Bentornato, {name}: il tuo cimitero è com’era al momento del backup.',
+  // titolo: il file non si è potuto caricare
+  'settings.backup.importFailed': 'Il backup non si carica',
+  // segue il motivo dell'errore
+  'settings.backup.importHint': 'Scegli il file .necro3d esportato da Necrothing (va bene anche dentro uno zip).',
+  // quando l'errore non ha un messaggio
+  'settings.backup.error': 'Si è verificato un errore.',
   'settings.info': 'Necrothing 3D · prototipo procedurale (Three.js). Tutti i modelli sono generati dal codice. Scorciatoie: WASD muovi · E interagisci · C vista · V stile.',
   // breve: pulsante (pagina di prova con tutti i modelli)
   'settings.assetGallery': 'Galleria asset',

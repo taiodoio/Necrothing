@@ -37,7 +37,7 @@ function houseNeeds(s: SaveData, it: HouseRoof | HousePart): UnlockNeed[] {
   const rank = rankForXp(s.player.xp);
   if (it.minRank > rank.level) {
     const need = RANKS.find((r) => r.level === it.minRank)!;
-    out.push({ icon: 'lock', short: t('house.ui.need.rankShort', { rank: it.minRank }), long: t('house.ui.need.rank', { rank: it.minRank, name: need.name, now: rank.level, xp: (need.minXp - s.player.xp).toLocaleString(currentLang()) }), progress: [s.player.xp, need.minXp] });
+    out.push({ icon: 'rank', short: t('house.ui.need.rankShort', { rank: it.minRank }), long: t('house.ui.need.rank', { rank: it.minRank, name: need.name, now: rank.level, xp: (need.minXp - s.player.xp).toLocaleString(currentLang()) }), progress: [s.player.xp, need.minXp] });
   }
   if (s.player.wisps < it.cost) out.push({ icon: 'wisp', short: t('house.ui.need.wispsShort', { n: it.cost - s.player.wisps }), long: t('house.ui.need.wisps', { cost: it.cost, n: it.cost - s.player.wisps }), progress: [s.player.wisps, it.cost] });
   return out;

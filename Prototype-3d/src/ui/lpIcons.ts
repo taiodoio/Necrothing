@@ -95,6 +95,12 @@ const halfSun = (t: Tones, cy = 14): Poly[] => [
   ...Array.from({ length: 5 }, (_, i) => -Math.PI + 0.32 + (i * (Math.PI - 0.64)) / 4).flatMap((a) => bar(12 + Math.cos(a) * 7.4, cy + Math.sin(a) * 7.4, 12 + Math.cos(a) * 9.8, cy + Math.sin(a) * 9.8, 1.9, t)),
   ...fan([...arc(12, cy, 5.8, Math.PI, Math.PI * 2, 8)], t, [11, cy - 2.5]),
 ];
+/** Stella a cinque punte. */
+const star5 = (cx: number, cy: number, r: number, t: Tones): Poly[] => fan(Array.from({ length: 10 }, (_, i) => { const a = -Math.PI / 2 + (i * Math.PI) / 5, rr = i % 2 ? r * 0.45 : r; return [cx + Math.cos(a) * rr, cy + Math.sin(a) * rr] as V; }), t, [cx - r * 0.15, cy - r * 0.2]);
+/** Scintilla a quattro punte. */
+const spark = (cx: number, cy: number, r: number, t: Tones): Poly[] => fan([[cx, cy - r], [cx + r * 0.26, cy - r * 0.26], [cx + r, cy], [cx + r * 0.26, cy + r * 0.26], [cx, cy + r], [cx - r * 0.26, cy + r * 0.26], [cx - r, cy], [cx - r * 0.26, cy - r * 0.26]], t, [cx - r * 0.2, cy - r * 0.2]);
+/** Lapide col cappello tondo (x0..x1, dalla cima y0 alla base y1). */
+const stone = (x0: number, y0: number, x1: number, y1: number, t: Tones): Poly[] => { const r = (x1 - x0) / 2, cx = x0 + r; return fan([[x0, y1], [x0, y0 + r], ...arc(cx, y0 + r, r, Math.PI, Math.PI * 2, 6), [x1, y1]], t, [cx - r * 0.3, y0 + r]); };
 const sunset = (t: Tones): Poly[] => [...halfSun(t), ...bar(3, 15.4, 21, 15.4, 2.2, T.iron), ...bar(6, 19, 18, 19, 2, T.iron)];
 const cloud = (dy = 0): Poly[] => [...disc(8, 11 + dy, 4, T.cloud), ...disc(13, 8.6 + dy, 5, T.cloud), ...disc(17, 11.4 + dy, 3.6, T.cloud), ...rrect(4.4, 10.6 + dy, 20.4, 15.2 + dy, 2.2, T.cloud, [10, 11 + dy])];
 
@@ -202,6 +208,24 @@ const ICONS: Record<string, () => Poly[]> = {
     ...fan([[12, 17], [9.4, 23], [7.6, 21.2], [10.4, 16.6]], T.crimson), ...fan([[12, 17], [14.6, 23], [16.4, 21.2], [13.6, 16.6]], T.crimson), ...disc(12, 17.4, 2, T.crimson, 8)],
   // localizza: la puntina sulla mappa
   pin: () => [...fan([[12, 22], [6, 13.4], [5.2, 9], [7.2, 4.6], [12, 2.4], [16.8, 4.6], [18.8, 9], [18, 13.4]], T.red, [9.5, 6.5]), ...disc(12, 9.2, 3, T.paper, 10)],
+  // ── dati del Custode e della mappa (le stesse icone ovunque se ne parli) ──
+  // rango: medaglia d'oro con la stella, appesa al nastro
+  rank: () => [...fan([[6.4, 1.6], [10.8, 1.6], [12.6, 9.4], [9.4, 10.6]], T.crimson, [9, 5]), ...fan([[13.2, 1.6], [17.6, 1.6], [14.6, 10.6], [11.4, 9.4]], T.red, [15, 5]),
+    ...disc(12, 15, 7, T.gold, 14), ...ring(12, 15, 5.4, 7, [T.gold[1], T.gold[2], T.gold[2]], 14), ...star5(12, 15.2, 4, T.moon)],
+  // punti Necro (esperienza): la scintilla grande e una piccola
+  xp: () => [...spark(10.4, 13, 9, T.gold), ...spark(18.6, 5.4, 3.6, T.spectral)],
+  // prestigio: la corona con le gemme
+  prestige: () => [...fan([[3, 7.4], [7.6, 12], [12, 4.2], [16.4, 12], [21, 7.4], [19, 18.4], [5, 18.4]], T.gold, [10, 11]), ...rrect(4.6, 17.6, 19.4, 21, 1, T.gold, [10, 18]),
+    ...disc(3, 7, 1.6, T.gold, 6), ...disc(12, 3.6, 1.7, T.gold, 6), ...disc(21, 7, 1.6, T.gold, 6), ...disc(12, 14.2, 1.9, T.crimson, 6), ...disc(7.6, 15.4, 1.3, T.spectral, 6), ...disc(16.4, 15.4, 1.3, T.spectral, 6)],
+  // distretto: tre lapidi vicine
+  district: () => [...stone(2.4, 8.6, 9.4, 20.6, T.stone), ...stone(14.6, 8.6, 21.6, 20.6, T.stone), ...stone(7.6, 4, 16.4, 21.4, T.stone), ...bar(10.4, 11.4, 13.6, 11.4, 1, T.iron), ...bar(10.4, 14, 13.6, 14, 1, T.iron),
+    ...bar(1.6, 21.6, 22.4, 21.6, 1.6, T.leaf)],
+  // il cimitero (stato della mappa): cancello a due pilastri con l'arco di ferro
+  gate: () => [...line(arc(12, 11, 6.6, Math.PI, Math.PI * 2, 8), 1.6, T.iron), ...[7.6, 10.6, 13.4, 16.4].flatMap((x) => bar(x, x < 9 || x > 15 ? 11.6 : 6, x, 20.4, 1.2, T.iron)), ...bar(6, 14.6, 18, 14.6, 1.2, T.iron),
+    ...rrect(1.6, 6.4, 6, 21.6, 0.6, T.stone, [3, 9]), ...rrect(18, 6.4, 22.4, 21.6, 0.6, T.stone, [19, 9]), ...fan([[1, 6.6], [3.8, 3.2], [6.6, 6.6]], T.stone), ...fan([[17.4, 6.6], [20.2, 3.2], [23, 6.6]], T.stone)],
+  // mausoleo: timpano, tre colonne, gradino
+  mausoleum: () => [...fan([[2.4, 9], [12, 2.6], [21.6, 9]], T.stone, [10, 6]), ...rrect(3.4, 8.6, 20.6, 10.6, 0.4, T.stone, [8, 9]), ...[6.2, 12, 17.8].flatMap((x) => rrect(x - 1.5, 10.6, x + 1.5, 18.6, 0.4, T.stone, [x - 0.6, 12])),
+    ...rrect(9.8, 12.4, 14.2, 18.6, 0.4, T.ink, [11, 14]), ...rrect(2, 18.4, 22, 21.4, 0.6, T.stone, [8, 19])],
   angled: () => [...P([[12, 3], [20.4, 7.6], [12, 12.2], [3.6, 7.6]], T.stone[0]), ...P([[3.6, 7.6], [12, 12.2], [12, 21.4], [3.6, 16.8]], T.stone[1]), ...P([[12, 12.2], [20.4, 7.6], [20.4, 16.8], [12, 21.4]], T.stone[2])],
 };
 
@@ -234,6 +258,24 @@ function sky(phase: SkyPhase, w: SkyWeather): Poly[] {
 for (const ph of ['dawn', 'day', 'dusk', 'night'] as const) for (const w of ['clear', 'fog', 'rain', 'storm'] as const) ICONS[`sky-${ph}-${w}`] = () => sky(ph, w);
 
 const polysOf = (name: string): Poly[] => (ICONS[name] ?? ICONS.wisp)();
+
+export type BadgeTier = 'gold' | 'silver' | 'bronze';
+const TIER: Record<BadgeTier | 'locked', Tones> = {
+  gold: T.gold, silver: ['#f4f6fa', '#c3cad6', '#8a93a4'], bronze: ['#f2c49c', '#c88a54', '#8c5a32'], locked: ['#8f8a99', '#6c6777', '#4c4856'],
+};
+function badgePolys(name: string, tier: BadgeTier | 'locked'): Poly[] {
+  const t = TIER[tier], ribbon: Tones = tier === 'locked' ? ['#7a7484', '#5e5968', '#46424f'] : T.crimson;
+  return [
+    ...fan([[7.4, 15], [10.6, 16.6], [8.6, 23.4], [7.2, 21.4], [5, 22.6]], ribbon, [8, 18]), ...fan([[16.6, 15], [13.4, 16.6], [15.4, 23.4], [16.8, 21.4], [19, 22.6]], ribbon, [16, 18]),
+    ...fan(ngon(12, 10.6, 9.8, 16), t, [10.6, 9]), ...fan(ngon(12, 10.6, 7.6, 16), ['#4a4258', '#3a3446', '#2c2735'], [12, 10.6]),
+    ...tf(polysOf(name), 0.56, 12 - 12 * 0.56, 10.6 - 12 * 0.56),
+  ];
+}
+/** Il medaglione di un traguardo (data-URI SVG): «locked» lo fa grigio. */
+export function lpBadgeUrl(name: string, tier: BadgeTier | 'locked'): string {
+  const body = badgePolys(name, tier).map((p) => `<polygon points="${p.pts.map(([x, y]) => `${fmt(x)},${fmt(y)}`).join(' ')}" fill="${p.fill}" stroke="${p.fill}" stroke-width="0.25" stroke-linejoin="round"/>`).join('');
+  return `data:image/svg+xml,${encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">${body}</svg>`)}`;
+}
 export const hasLpIcon = (name: string) => name in ICONS;
 
 const fmt = (n: number) => Math.round(n * 100) / 100;

@@ -124,6 +124,21 @@ export function custodePortrait(look: CustodeLook, popOut = false): string {
   return url;
 }
 
+/** Il Custode intero (in piedi, girato di tre quarti) per la sua pagina; si ridisegna solo se l'aspetto cambia. */
+let figure: { key: string; url: string } | null = null;
+export function custodeFigure(look: CustodeLook): string {
+  const key = JSON.stringify(look);
+  if (figure?.key === key) return figure.url;
+  let url = '';
+  try {
+    if (!renderer) setup();
+    renderer!.setSize(SIZE * 2, SIZE * 2, false);
+    url = render(look, { bare: false, parts: ['head', 'body', 'armL', 'armR', 'legL', 'legR'], yaw: 0.42, pitch: 0.1, zoom: 0.98 });
+  } catch { url = ''; } finally { renderer?.setSize(SIZE, SIZE, false); }
+  figure = { key, url };
+  return url;
+}
+
 /** Miniatura di una scelta (subito se già pronta, altrimenti appena disegnata). */
 export function lookThumb(kind: ThumbKind, value: string): Promise<string> {
   const key = `${kind}:${value}`;

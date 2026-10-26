@@ -493,7 +493,35 @@ export function openDetail(ui: UI, id: string) {
       h('button', { class: 'big-btn', onclick: () => { game.act((st) => R.setText(st, id, input.value)); } }, t('detail.sign.save')));
   }
   // il nome c'è già sotto l'immagine: niente titolo in testa
-  openDrawer('', body);
+  openDrawer('', body, { footer: itemFooter(ui, id) ?? undefined });
+}
+
+/**
+ * In fondo alla scheda di un oggetto l'azione che serve adesso (ripara,
+ * pulisci, accendi, entra in bottega…), come nel menù sulla mappa; le altre
+ * in «Altro», sopra. Niente, se l'oggetto non ha azioni.
+ */
+function itemFooter(ui: UI, id: string): HTMLElement | null {
+  const game = ui.game;
+  const { actions, pet } = ui.placeableActions(id);
+  type Act = { icon: string; label: string; run: () => void };
+  const own: Array<Act & { rank: number }> = actions.filter((a) => a.act !== 'detail').map((a) => ({
+    icon: a.icon,
+    label: a.act === 'repair' ? t('detail.grave.repair', { price: a.cost ?? 0 }) : a.label,
+    run: () => { closeDrawer(true); game.performEntityAction(id, a.act); },
+    // prima ciò che va sistemato, poi la funzione dell'oggetto, poi la luce
+    rank: a.act === 'repair' ? 0 : a.act === 'clean' ? 1 : a.cls === 'primary' ? 2 : 3,
+  }));
+  const pets: Array<Act & { rank: number }> = pet.filter((a) => !a.disabled).map((a) => ({
+    icon: a.icon, label: a.label, rank: a.cls === 'primary' ? 4 : 5,
+    run: () => { closeDrawer(true); game.select(null); a.run(); },
+  }));
+  const all = [...own, ...pets].sort((a, b) => a.rank - b.rank);
+  if (!all.length) return null;
+  const [main, ...rest] = all;
+  return h('div', { style: 'display:grid;gap:6px' },
+    rest.length ? moreActions(rest) : null,
+    h('button', { class: 'big-btn', onclick: main.run }, icon(main.icon, 22), main.label));
 }
 
 /** Conferma della riesumazione (o del «Libera ricordo»), poi arriva il becchino con la carriola. */

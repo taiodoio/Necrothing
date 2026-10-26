@@ -84,7 +84,7 @@ export default {
 
   // ── Barra di posizionamento ──
   // tracciando sentieri e recinti, prima di cominciare
-  'hud.trace.hint': 'Trascina il dito sul terreno per tracciare; alza il dito e riparti per fare un angolo. Due dita spostano la vista.',
+  'hud.trace.hint': 'Trascina il dito sul terreno per tracciare: quando giri, il tracciato piega da solo. Due dita spostano la vista.',
   // tracciando: pezzi pronti da posare
   'hud.trace.ok': '{n} da posare',
   // tracciando: pezzi che non si hanno

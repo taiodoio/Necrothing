@@ -4,6 +4,7 @@
 
 import * as THREE from 'three';
 import { BAT, BUSINESS, FOREST_MARGIN, PET_GIFT, GRAVE_FOOTPRINT, KEEPER_LAMP, LIVE_TICK_MS, SOUL_BELL, STAFF, ZOMBIE_MUD } from '../game/balance.ts';
+import { moveTraceDraw, startTraceDraw, traceDrawCells, type TraceDraw } from '../game/trace.ts';
 import { CATALOG, CATALOG_LIST, EDIT_ONLY, rotatedFootprint, TRACEABLE } from '../game/catalog.ts';
 import { applyTheme, uiNext, uiPreview } from './uiNext.ts';
 import { watchLifecycle } from './platform.ts';
@@ -58,7 +59,7 @@ export interface Placement {
   rot: number;
   valid: boolean;
   /** Strumento a traccia (interfaccia nuova): i tratti già tirati e quello sotto il dito. */
-  trace?: { segs: R.TraceCell[][]; live: R.TraceCell[] | null };
+  trace?: { segs: R.TraceCell[][]; live: R.TraceCell[] | null; draw?: TraceDraw | null };
 }
 
 
@@ -698,14 +699,6 @@ export class Game {
       const k = `${c.x},${c.y}`;
       return !seen.has(k) && !!seen.add(k);
     });
-  }
-
-  /** Tratto dritto da a verso b, sull'asse dove il dito si è mosso di più. */
-  private traceLine(a: { x: number; y: number }, b: { x: number; y: number }): R.TraceCell[] {
-    const dx = b.x - a.x, dy = b.y - a.y;
-    const alongX = Math.abs(dx) >= Math.abs(dy);
-    const n = alongX ? Math.abs(dx) : Math.abs(dy);
-    return Array.from({ length: n + 1 }, (_, i) => ({ x: a.x + (alongX ? Math.sign(dx) * i : 0), y: a.y + (alongX ? 0 : Math.sign(dy) * i), rot: alongX ? 0 : 1 }));
   }
 
   /** Per la barra in basso: quanti se ne posano, quanti mancano, quanti cadono su spazi occupati. */
@@ -1376,7 +1369,8 @@ export class Game {
       // un dito traccia (due dita spostano la vista): il tratto parte dalla casella toccata (toccando
       // la fine del tratto prima l'angolo è in comune, toccando quella accanto si parte da lì)
       const t = this.placement.trace;
-      t.live = this.traceLine(g.cell, g.cell);
+      t.draw = startTraceDraw(g.cell);
+      t.live = traceDrawCells(t.draw);
       this.refreshPlacement();
       return true;
     }
@@ -1401,10 +1395,12 @@ export class Game {
 
   private onDragMove(x: number, y: number, dx: number, dy: number, owned: boolean) {
     const t = this.placement?.trace;
-    if (owned && t?.live) {
+    if (owned && t?.live && t.draw) {
       const g = this.groundCell(x, y);
       if (!g) return;
-      t.live = this.traceLine(t.live[0], g.cell);
+      // il tratto segue il dito e piega da solo quando il dito gira
+      moveTraceDraw(t.draw, { x: g.p.x + HALF, y: g.p.z + HALF });
+      t.live = traceDrawCells(t.draw);
       this.refreshPlacement();
       return;
     }
@@ -1432,6 +1428,7 @@ export class Game {
       // alzando il dito il tratto resta (un tratto di una cella sola è il dito che si posa per il pizzico)
       if (tr.live.length > 1) tr.segs.push(tr.live);
       tr.live = null;
+      tr.draw = null;
       this.refreshPlacement();
       return;
     }

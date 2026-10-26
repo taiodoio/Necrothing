@@ -9,6 +9,7 @@ import { areaForLevel, buildOccupancy, canPlaceAt, computePrestige, detectDistri
 import { CATALOG_LIST, rotatedFootprint } from '../src/game/catalog.ts';
 import { evaluateAchievements, rankForXp } from '../src/game/progression.ts';
 import { shortWisps } from '../src/ui/numbers.ts';
+import { moveTraceDraw, startTraceDraw, traceDrawCells } from '../src/game/trace.ts';
 import { DECAY, EXPANSION, RELEASE_LOCKS, WISPS, XP } from '../src/game/balance.ts';
 
 const NOW = new Date('2026-10-09T12:00:00Z');
@@ -1069,4 +1070,32 @@ test('cosa occupa le caselle: nomi di tombe e oggetti, senza doppioni', () => {
   const names = R.blockersAt(s, [{ x: g.x, y: g.y, fp: [1, 1] }, { x: g.x, y: g.y, fp: [2, 2] }]);
   assert.deepEqual(names, [g.name]);
   assert.deepEqual(R.blockersAt(s, [{ x: 0, y: 0, fp: [1, 1] }]), []);
+});
+
+test('tracciato: segue il dito e piega da solo quando il dito gira', () => {
+  const key = (cells) => cells.map((c) => `${c.x},${c.y}`).join(' ');
+  // dritto verso destra, poi giù: un angolo solo, con la casella d'angolo una volta
+  let d = startTraceDraw({ x: 10, y: 10 });
+  for (const x of [11.5, 12.5, 13.5]) moveTraceDraw(d, { x, y: 10.5 });
+  for (const y of [11.5, 12.5]) moveTraceDraw(d, { x: 13.5, y });
+  assert.equal(key(traceDrawCells(d)), '10,10 11,10 12,10 13,10 13,11 13,12');
+  // il dito che trema di poco non fa scalini
+  d = startTraceDraw({ x: 10, y: 10 });
+  for (const [x, y] of [[11.5, 10.9], [12.5, 11.2], [13.5, 10.6]]) moveTraceDraw(d, { x, y });
+  assert.equal(key(traceDrawCells(d)), '10,10 11,10 12,10 13,10');
+  // in diagonale: una scaletta di tratti che si toccano
+  d = startTraceDraw({ x: 10, y: 10 });
+  for (let k = 1; k <= 6; k++) moveTraceDraw(d, { x: 10.5 + k * 0.5, y: 10.5 + k * 0.5 });
+  const stair = traceDrawCells(d);
+  for (let i = 1; i < stair.length; i++) assert.equal(Math.abs(stair[i].x - stair[i - 1].x) + Math.abs(stair[i].y - stair[i - 1].y), 1);
+  assert.deepEqual([stair.at(-1).x, stair.at(-1).y], [13, 13]);
+  // tornando indietro sul primo tratto l'angolo si disfa
+  d = startTraceDraw({ x: 10, y: 10 });
+  for (const x of [11.5, 12.5, 13.5]) moveTraceDraw(d, { x, y: 10.5 });
+  moveTraceDraw(d, { x: 13.5, y: 12.5 });
+  moveTraceDraw(d, { x: 13.5, y: 10.5 });
+  moveTraceDraw(d, { x: 12.5, y: 10.5 });
+  assert.equal(key(traceDrawCells(d)), '10,10 11,10 12,10');
+  // ogni casella una volta sola, con il verso del suo tratto
+  assert.ok(traceDrawCells(d).every((c) => c.rot === 0));
 });

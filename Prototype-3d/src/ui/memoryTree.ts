@@ -12,7 +12,7 @@ import type { LPModel } from '../render/lowpoly/kit.ts';
 import { t } from '../i18n/index.ts';
 import { closeDrawer, fmtDate, h, joinDot, openDrawer, setDrawerHero } from './dom.ts';
 import { memoryTags } from './memoryTags.ts';
-import { openDeceased } from './deceased.ts';
+import { closeFlippedTag, flipMemoryTag } from './memoryFlip.ts';
 import { uiNext } from '../app/uiNext.ts';
 import { treeHeader } from './treeHeader.ts';
 import { icon } from './icons.ts';
@@ -55,14 +55,26 @@ export function openEntrust(ui: UI, graveId: string) {
  * Toccando l'albero: in testata l'albero di notte (animato), sotto i ricordi
  * affidati, ognuno col suo cartellino appeso a un ramo.
  */
-export function openMemoryTree(ui: UI) {
+export function openMemoryTree(ui: UI, focusId?: string) {
   const s = ui.game.state;
   const list = [...s.entrusted].reverse();
+  const fruit = fruitImg();
+  // interfaccia nuova: il cartellino toccato si gira e mostra la sua storia
+  const open = (id: string, el: HTMLElement) => (uiNext() ? flipMemoryTag(ui, id, el, fruit) : openMemory(ui, id, undefined, true));
   openDrawer(t('tree.title'), h('div', {},
     h('p', { class: 'muted mt-intro' }, list.length ? t('tree.list.count', { n: list.length }) : t('tree.list.none')),
-    list.length ? memoryTags(list, fruitImg(), (id) => openMemory(ui, id, undefined, true)) : h('p', { class: 'muted' }, t('tree.list.hint')),
-  ));
+    list.length ? memoryTags(list, fruit, open) : h('p', { class: 'muted' }, t('tree.list.hint')),
+  ), { beforeClose: () => !closeFlippedTag() });
   setDrawerHero(treeHeader(s.entrusted.length).el);
+  // aperto dal suo fantasma: si scorre fino al suo cartellino e lo si gira
+  if (focusId) {
+    window.setTimeout(() => {
+      const el = document.querySelector<HTMLElement>(`#drawer .mt-tag[data-id="${CSS.escape(focusId)}"]`);
+      if (!el) return;
+      el.scrollIntoView({ block: 'center' });
+      window.setTimeout(() => { if (el.isConnected) flipMemoryTag(ui, focusId, el, fruit); }, 260);
+    }, 320);
+  }
 }
 
 /**
@@ -71,7 +83,8 @@ export function openMemoryTree(ui: UI) {
  */
 export function openMemory(ui: UI, id: string, visit?: R.ActionResult, fromList = false) {
   // interfaccia nuova: la scheda del defunto (la stessa della tomba e del Registro)
-  if (uiNext()) { openDeceased(ui, id, { from: fromList ? 'tree' : 'note' }); return; }
+  // interfaccia nuova: si apre l'albero e si gira il suo cartellino
+  if (uiNext()) { openMemoryTree(ui, id); return; }
   const game = ui.game;
   const s = game.state;
   const e: EntrustedMemory | undefined = R.entrustedById(s, id);

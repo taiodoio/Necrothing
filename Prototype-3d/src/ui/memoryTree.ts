@@ -12,6 +12,8 @@ import type { LPModel } from '../render/lowpoly/kit.ts';
 import { t } from '../i18n/index.ts';
 import { closeDrawer, fmtDate, h, joinDot, openDrawer, setDrawerHero } from './dom.ts';
 import { memoryTags } from './memoryTags.ts';
+import { openDeceased } from './deceased.ts';
+import { uiNext } from '../app/uiNext.ts';
 import { treeHeader } from './treeHeader.ts';
 import { icon } from './icons.ts';
 import { memorials } from '../app/persistence.ts';
@@ -22,7 +24,8 @@ import type { UI } from './UI.ts';
 
 const asModel = (m: LPModel, height: number) => ({ geometries: m.geometries, lights: m.lights, height, mats: LOWPOLY_MATERIALS, dedicated: true });
 const treeImg = (n: number) => modelThumb(`albero-ricordi:${Math.min(30, n)}`, asModel(memoryTreeLP(n, 2), 4), [5, 5]);
-const fruitImg = () => modelThumb('frutto-ricordo', asModel(memoryFruitLP(), 1), [1, 1]);
+/** Il frutto acceso (miniatura), lo stesso dei cartellini. */
+export const fruitImg = () => modelThumb('frutto-ricordo', asModel(memoryFruitLP(), 1), [1, 1]);
 
 /** Conferma prima del rito: cosa succede, e che non si torna indietro. */
 export function openEntrust(ui: UI, graveId: string) {
@@ -67,6 +70,8 @@ export function openMemoryTree(ui: UI) {
  * in cima c'è la visita). «Indietro» torna alla lista; aperta dalla lista, anche la X.
  */
 export function openMemory(ui: UI, id: string, visit?: R.ActionResult, fromList = false) {
+  // interfaccia nuova: la scheda del defunto (la stessa della tomba e del Registro)
+  if (uiNext()) { openDeceased(ui, id, { from: fromList ? 'tree' : 'note' }); return; }
   const game = ui.game;
   const s = game.state;
   const e: EntrustedMemory | undefined = R.entrustedById(s, id);

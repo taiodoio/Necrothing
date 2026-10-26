@@ -64,6 +64,44 @@
 .ui-next .mt-tag small { display: block; margin-top: 3px; color: #7a6656; font-size: 11.5px; font-weight: 700; }
 .ui-next .mt-seen { display: inline-flex; align-items: center; gap: 2px; margin-top: 5px; color: #8a5a18; font-size: 11px; font-weight: 800; }
 
+/* ── Scheda del defunto (tomba, ricordo, Registro) ─────────────────── */
+.ui-next .deceased .hero { gap: 6px; }
+.ui-next .dc-where { display: inline-flex; align-items: center; gap: 5px; padding: 3px 11px 3px 7px; border-radius: 999px; background: var(--track); font-size: 12.5px; font-weight: 800; color: var(--paper); }
+.ui-next .dc-where.tree { background: color-mix(in srgb, #f0b45a 22%, var(--track)); color: #ffd98a; }
+.ui-next .dc-where.legacy { color: var(--muted); }
+.ui-next .kv dd.warn { color: var(--danger); }
+.ui-next .dc-log { list-style: none; margin: 4px 0 0; padding: 0; display: grid; }
+.ui-next .dc-log li { display: grid; grid-template-columns: 26px 1fr auto; gap: 8px; align-items: center; padding: 7px 0; border-bottom: 1px solid var(--line); font-size: 14px; }
+.ui-next .dc-log li:last-child { border-bottom: 0; }
+.ui-next .dc-log time { color: var(--muted); font-size: 12.5px; }
+.ui-next .dc-more { margin: 4px 0 0; font-size: 12.5px; }
+
+/* ── Anniversario: la corona di fiori al posto della foto ──────────── */
+.ui-next .an { display: grid; justify-items: center; gap: 6px; text-align: center; margin-bottom: 4px; }
+.ui-next .an h3 { margin: 0; font-size: 32px; line-height: 1; color: var(--gold-bright); }
+.ui-next .an-ago { font: 700 17px/1.1 var(--gothic); color: #ffd98a; letter-spacing: 0.02em; }
+.ui-next .an-stage { position: relative; width: 100%; display: grid; justify-items: center; overflow: hidden; padding: 4px 0 10px; }
+.ui-next .an-petal { position: absolute; top: -14px; width: 9px; height: 6px; border-radius: 60% 40% 60% 40%; background: var(--c); opacity: 0; pointer-events: none;
+  animation: anFall var(--t) linear var(--d) infinite; }
+@keyframes anFall { 0% { opacity: 0; transform: translate(0, 0) rotate(0); } 8% { opacity: 0.9; } 50% { transform: translate(var(--x), 160px) rotate(260deg); } 92% { opacity: 0.8; } 100% { opacity: 0; transform: translate(0, 330px) rotate(520deg); } }
+.ui-next .an-lumino { position: relative; display: inline-grid; }
+.ui-next .an-lumino::after { content: ''; position: absolute; left: 50%; top: 2%; width: 70%; aspect-ratio: 1; translate: -50% -30%; border-radius: 50%; pointer-events: none;
+  background: radial-gradient(circle, rgba(255, 196, 96, 0.75), rgba(255, 150, 60, 0) 70%); animation: anFlicker 1.6s ease-in-out infinite alternate; }
+@keyframes anFlicker { 0% { opacity: 0.65; transform: scale(0.92); } 35% { opacity: 1; } 60% { opacity: 0.75; transform: scale(1.06); } 100% { opacity: 0.95; transform: scale(0.98); } }
+@media (prefers-reduced-motion: reduce) { .ui-next .an-petal { display: none; } .ui-next .an-lumino::after { animation: none; } }
+.ui-next .an-round { width: 100%; height: 100%; border-radius: 50%; overflow: hidden; background: var(--thumb); box-shadow: 0 0 0 3px #c99340, 0 0 0 6px rgba(255, 233, 184, 0.35), 0 8px 18px rgba(0, 0, 0, 0.45); }
+.ui-next .an-round img { width: 100%; height: 100%; object-fit: contain; }
+.ui-next .an-round img.is-photo { object-fit: cover; }
+/* la notifica con la corona (anniversario): più grande, esce un po' dal bordo in alto come i ritratti dei personaggi */
+.ui-next .npc-note.icon img { left: -3px; bottom: auto; top: -14px; width: 62px; }
+.ui-next .an-wreath .an-stage { background: radial-gradient(closest-side, rgba(240, 180, 90, 0.28), rgba(240, 180, 90, 0) 100%); }
+.ui-next .an-wreath-box { position: relative; width: min(78vw, 300px); aspect-ratio: 1; }
+.ui-next .an-wreath-box .an-round { position: absolute; inset: 22%; width: auto; height: auto; }
+.ui-next .an-wreath-svg { position: absolute; inset: 0; width: 100%; height: 100%; filter: drop-shadow(0 4px 4px rgba(0, 0, 0, 0.4)); }
+.ui-next .an-ribbon-text { font: 700 19px var(--gothic); fill: #ffe9b8; letter-spacing: 0.02em; }
+.ui-next .an-side { position: absolute; bottom: 14px; }
+.ui-next .an-side.l { left: 4%; } .ui-next .an-side.r { right: 4%; }
+
 /* ── Vantaggi della casa ──────────────────────────────────────────── */
 .ui-next .perks { display: grid; gap: 6px; margin: 10px 0 4px; padding: 10px 12px; border-radius: var(--r-s); background: var(--input); }
 .ui-next .perks ul { margin: 0; padding-left: 18px; display: grid; gap: 4px; font-size: 13px; line-height: 1.35; }

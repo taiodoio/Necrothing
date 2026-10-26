@@ -221,22 +221,6 @@ export default {
   'house.ui.registry.locate.cancel': 'Resta qui',
   'house.ui.registry.empty.tree': 'All’albero non hai ancora affidato nessuno.',
   'house.ui.registry.empty.all': 'Il libro è ancora bianco: la prima sepoltura la scriverai tu.',
-  // scheda di una sepoltura: etichette a sinistra
-  'house.ui.registry.category': 'Categoria',
-  'house.ui.registry.lived': 'Vissuto',
-  'house.ui.registry.cause': 'Causa',
-  'house.ui.registry.buried': 'Sepolto',
-  'house.ui.registry.rests': 'Riposa',
-  // l'epitaffio tra virgolette
-  'house.ui.registry.epitaph': '“{text}”',
-  // le tombe che c'erano già all'inizio del gioco
-  'house.ui.registry.legacy': 'Lascito del vecchio custode',
-  'house.ui.registry.restTree': 'Nell’Albero dei ricordi, dal {date}',
-  // {type} è il tipo di lapide
-  'house.ui.registry.restGrave': '{type}, nel cimitero',
-  // breve: pulsante
-  'house.ui.registry.goTree': 'Vai all’albero',
-  'house.ui.registry.goGrave': 'Vai alla tomba',
 
   // ── Casa del Custode ──
   'house.ui.title': 'Casa del Custode',

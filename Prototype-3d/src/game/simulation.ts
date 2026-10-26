@@ -23,6 +23,8 @@ export interface CatchUpReport {
   placeablesDirty: number;
   placeablesBroken: number;
   anniversaries: string[];
+  /** Le tombe di quegli anniversari (per la notifica con «Vedi la tomba»). */
+  anniversaryIds: string[];
   /** Anniversari caduti mentre il gioco era chiuso (restano nei ricordi, senza premio). */
   missedAnniversaries: string[];
   blessing: string | null;
@@ -55,6 +57,16 @@ export function anniversariesBetween(deathDate: string, from: Date, to: Date): D
     if (day >= fromDay && day <= toDay) out.push(d);
   }
   return out;
+}
+
+/** Se oggi è l'anniversario della morte, quanti anni sono passati (0 se non lo è). */
+export function anniversaryYears(deathDate: string | null, now: Date): number {
+  if (!deathDate) return 0;
+  const death = new Date(deathDate);
+  if (Number.isNaN(death.getTime()) || now.getFullYear() <= death.getFullYear()) return 0;
+  const d = new Date(now.getFullYear(), death.getMonth(), death.getDate(), 12);
+  if (d.getMonth() !== death.getMonth()) d.setDate(0); // 29 febbraio → 28
+  return isoDate(d) === isoDate(now) ? now.getFullYear() - death.getFullYear() : 0;
 }
 
 /** Cella libera casuale nel recinto per un fuoco fatuo. */
@@ -110,7 +122,7 @@ export function runCatchUp(s: SaveData, now: Date): CatchUpReport {
   const onset = () => new Date(last.getTime() + rng.next() * Math.max(0, now.getTime() - last.getTime())).toISOString();
   const r: CatchUpReport = {
     elapsedDays, newDirty: 0, newBroken: 0, witheredFlowers: 0, placeablesDirty: 0,
-    placeablesBroken: 0, anniversaries: [], missedAnniversaries: [], blessing: null, wispsAdded: 0, weatherChanged: false, xpGained: 0,
+    placeablesBroken: 0, anniversaries: [], anniversaryIds: [], missedAnniversaries: [], blessing: null, wispsAdded: 0, weatherChanged: false, xpGained: 0,
   };
 
   // casa del Custode: l'arnia fa durare i fiori, il giardinetto rallenta le erbacce
@@ -126,6 +138,7 @@ export function runCatchUp(s: SaveData, now: Date): CatchUpReport {
       addMemory(s, g.id, 'anniversary', at);
       if (isoDate(at) === isoDate(now)) {
         r.anniversaries.push(g.name);
+        r.anniversaryIds.push(g.id);
         s.player.xp += XP.anniversary;
         s.player.wisps += WISPS.anniversary;
         r.xpGained += XP.anniversary;

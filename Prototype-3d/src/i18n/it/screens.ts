@@ -435,6 +435,43 @@ export default {
   // sulla cartolina, sotto «Riposa a Necrothing»
   'postcard.tagline': 'il cimitero degli oggetti',
   // testo che accompagna la cartolina condivisa
+  // ── Scheda del defunto (tomba, ricordo, Registro) ──
+  // pillola sotto il nome: dove riposa
+  'deceased.where.grave': 'Riposa nel cimitero',
+  'deceased.where.legacy': 'Lascito del vecchio custode',
+  'deceased.where.tree': 'Sull’albero dei ricordi dal {date}',
+  'deceased.category': 'Categoria',
+  'deceased.lived': 'Vissuto',
+  // senza data di nascita
+  'deceased.died': 'Morto il {date}',
+  'deceased.cause': 'Causa',
+  'deceased.buried': 'Sepolto',
+  'deceased.buriedLegacy': 'Prima del tuo arrivo',
+  'deceased.stone': 'Lapide',
+  'deceased.stoneGone': '{type} (fino al {date})',
+  'deceased.state': 'Stato',
+  'deceased.ghosts': 'Apparizioni',
+  'deceased.ghostsSeen#one': 'Il suo fantasma è passato una volta',
+  'deceased.ghostsSeen#other': 'Il suo fantasma è passato {n} volte',
+  'deceased.ghostsNone': 'Il suo fantasma non si è ancora visto',
+  'deceased.log': 'Cronologia',
+  'deceased.logMore#one': 'e un ricordo più vecchio',
+  'deceased.logMore#other': 'e altri {n} ricordi più vecchi',
+  // breve: pulsante
+  'deceased.goGrave': 'Vai alla tomba',
+  // breve: pulsante
+  'deceased.goTree': 'Vai all’albero',
+  // ── Anniversario della morte: corona nella scheda e notifica ──
+  // sul nastro della corona: «3° anniversario»
+  'anniv.ordinal': '{n}° anniversario',
+  'anniv.ago#one': 'Oggi, un anno fa',
+  'anniv.ago#other': 'Oggi, {n} anni fa',
+  // notifica: chi parla (al posto del nome del personaggio)
+  'anniv.note.name': 'Anniversario',
+  // notifica: la frase in grande
+  'anniv.note.say': 'In memoria',
+  'anniv.note.text#one': 'Un anno fa ci lasciava {name}.',
+  'anniv.note.text#other': '{n} anni fa ci lasciava {name}.',
   'postcard.shareText': 'In memoria di {name}. Sepolto a Necrothing, il cimitero degli oggetti.',
   'postcard.shareTitle': 'In memoria di {name}',
   // nome del file se il nome dell'oggetto non ha lettere utili (minuscolo, senza spazi)

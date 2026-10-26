@@ -978,7 +978,7 @@ test('tempo a gioco chiuso: i rientri frequenti non azzerano le ore accumulate',
 });
 
 test('anniversari: quello di oggi premia, quelli persi restano nei ricordi', async () => {
-  const { anniversariesBetween } = await import('../src/game/simulation.ts');
+  const { anniversariesBetween, anniversaryYears } = await import('../src/game/simulation.ts');
   const s = createNewGame(NOW, 13);
   const at = spot(s);
   // morto il 5 ottobre 2024: l'anniversario 2026 cade mentre il gioco è chiuso (dal 1° al 9 ottobre)
@@ -995,13 +995,21 @@ test('anniversari: quello di oggi premia, quelli persi restano nei ricordi', asy
   // il giorno giusto premia
   const s2 = createNewGame(NOW, 14);
   const at2 = spot(s2);
-  R.bury(s2, draft({ name: 'Walkman', deathDate: '2020-10-09' }), at2.x, at2.y, NOW);
+  const { grave: walkman } = R.bury(s2, draft({ name: 'Walkman', deathDate: '2020-10-09' }), at2.x, at2.y, NOW);
   s2.world.lastSimulationAt = new Date('2026-10-08T20:00:00Z').toISOString();
   const xp2 = s2.player.xp;
-  assert.ok(runCatchUp(s2, NOW).anniversaries.includes('Walkman'));
+  const r2 = runCatchUp(s2, NOW);
+  assert.ok(r2.anniversaries.includes('Walkman'));
+  assert.ok(r2.anniversaryIds.includes(walkman.id), 'la tomba, per la notifica');
   assert.ok(s2.player.xp > xp2);
   // il 29 febbraio negli anni non bisestili cade il 28
   assert.equal(anniversariesBetween('2024-02-29', new Date('2027-02-01T12:00:00'), new Date('2027-03-10T12:00:00'))[0].getDate(), 28);
+  // per tutto il giorno dell'anniversario si sa da quanti anni (la corona nella scheda)
+  assert.equal(anniversaryYears('2020-10-09', new Date('2026-10-09T08:00:00')), 6);
+  assert.equal(anniversaryYears('2020-10-09', new Date('2026-10-09T23:30:00')), 6);
+  assert.equal(anniversaryYears('2020-10-09', new Date('2026-10-10T08:00:00')), 0);
+  assert.equal(anniversaryYears('2026-10-09', new Date('2026-10-09T08:00:00')), 0, 'non il giorno stesso della morte');
+  assert.equal(anniversaryYears('2024-02-29', new Date('2027-02-28T12:00:00')), 3);
 });
 
 test('promemoria: anniversari futuri e tombe che stanno per rompersi, uno al giorno per tipo', async () => {

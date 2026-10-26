@@ -75,6 +75,8 @@ export default {
   'game.rite.busy': 'Aspetta che finisca il rito in corso.',
   // breve: pulsante nella notifica del fantasma di un ricordo
   'game.memory.see': 'Vedi il ricordo',
+  // pulsante nelle notifiche (fantasma con nome, anniversario): porta alla scheda della tomba
+  'note.seeGrave': 'Vedi la tomba',
 
   // ── Animali di casa (menù) ──
   // breve: voce del menù dell’animale

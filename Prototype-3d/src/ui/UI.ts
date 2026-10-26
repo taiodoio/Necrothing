@@ -16,6 +16,7 @@ import { currentLang, t } from '../i18n/index.ts';
 import { $, applyPageTexts, closeDrawer, drawerOpen, h, joinDot, toast } from './dom.ts';
 import { hydrateIcons, icon, iconUrl, installFrames } from './icons.ts';
 import { uiNext, uiPlay, uiPreview } from '../app/uiNext.ts';
+import { openDeceased } from './deceased.ts';
 import { custodePortrait } from './lookThumbs.ts';
 import { shortWisps } from './numbers.ts';
 import * as S from './screens.ts';
@@ -209,6 +210,8 @@ export class UI {
   openRegistry() { H.openRegistry(this); }
   openHouse() { H.openHouse(this); }
   openDetail(id: string) { S.openDetail(this, id); }
+  /** La scheda della tomba aperta da una notifica (fantasma con nome, anniversario). */
+  openGrave(id: string) { if (uiNext()) openDeceased(this, id, { from: 'note' }); else S.openDetail(this, id); }
   openEntrust(graveId: string) { T.openEntrust(this, graveId); }
   openMemoryTree() { T.openMemoryTree(this); }
   openMemory(id: string, visit?: R.ActionResult) { T.openMemory(this, id, visit); }

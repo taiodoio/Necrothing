@@ -11,7 +11,7 @@ import { askReminderPermission, clearReminders, remindersAvailable, syncReminder
 import type { GraveVisualState } from '../game/graves.ts';
 import { graveVisualState } from '../game/graves.ts';
 import * as R from '../game/rules.ts';
-import { catchUpMessage, liveTick, runCatchUp } from '../game/simulation.ts';
+import { anniversaryYears, catchUpMessage, liveTick, runCatchUp, type CatchUpReport } from '../game/simulation.ts';
 import { createNewGame, type FpsSetting, type ThemeSetting, type Quality, type QualitySetting, type SaveData, type TimeOverride } from '../game/state.ts';
 import { dayPhaseForHour, type DayPhase } from '../game/time.ts';
 import type { CustodeLook } from '../game/look.ts';
@@ -24,6 +24,7 @@ import { placeableKey, placeableModel, placeableSeed, seedCount, type PVis } fro
 import { UI } from '../ui/UI.ts';
 import { confirmDialog, drawerOpen, floater, toast } from '../ui/dom.ts';
 import { npcNote, type NpcNote } from '../ui/npcNote.ts';
+import { annivNote } from '../ui/anniversary.ts';
 import { npcPortrait } from '../ui/npcPortraits.ts';
 import { ROAMER_LABELS } from '../game/spawn.ts';
 import type { CharacterKind } from '../view/characters.ts';
@@ -176,7 +177,7 @@ export class Game {
     canvas.addEventListener('webglcontextrestored', () => { this.world.setStyle(this.state.settings.style, this.state, true); this.actors.setStyle(this.state.settings.style); });
     this.resize();
     saveNow(this.state);
-    const msg = catchUpMessage(report);
+    const msg = catchUpMessage(this.announceAnniversaries(report, 1200));
     if (msg) setTimeout(() => toast(msg), 900);
     this.ui.refreshHud();
     this.ui.maybeTutorial();
@@ -416,7 +417,7 @@ export class Game {
     this.markActive();
     const report = runCatchUp(this.state, this.now());
     this.afterChange();
-    const msg = catchUpMessage(report);
+    const msg = catchUpMessage(this.announceAnniversaries(report, 400));
     if (msg) toast(msg);
     this.renderer.setAnimationLoop(this.loop);
   };
@@ -981,6 +982,24 @@ export class Game {
     ];
   }
 
+  /**
+   * Gli anniversari di oggi (interfaccia nuova): una notifica per tomba, con la
+   * corona e «Vedi la tomba», dopo `delay` ms. Torna il resoconto senza quegli
+   * anniversari, perché il messaggio del ritorno non li ripeta.
+   */
+  private announceAnniversaries(report: CatchUpReport, delay: number): CatchUpReport {
+    if (!uiNext() || !report.anniversaryIds.length) return report;
+    const now = this.now();
+    setTimeout(() => {
+      for (const id of report.anniversaryIds) {
+        const g = this.state.graves.find((x) => x.id === id);
+        const years = g ? anniversaryYears(g.deathDate, now) : 0;
+        if (g && years) annivNote(g.name, years, () => this.ui.openGrave(id));
+      }
+    }, delay);
+    return { ...report, anniversaries: [], anniversaryIds: [] };
+  }
+
   /** Un personaggio parla: notifica col ritratto (interfaccia nuova) o toast. */
   private say(n: NpcNote) {
     if (uiNext()) npcNote(n); else toast(n.text);
@@ -1123,11 +1142,14 @@ export class Game {
     this.actors.cheer(0.9);
     let visit: R.ActionResult | null = null;
     this.act((s, n) => (visit = R.interactRoamer(s, r.kind, n, { rare: r.rare, graveId: r.graveId, memoryId: r.memoryId, x: cell.x, y: cell.y })), at, true);
-    // la notifica col ritratto; il fantasma di un ricordo dell'albero ha in più «Vedi il ricordo»
+    // la notifica col ritratto; il fantasma di un ricordo dell'albero ha in più «Vedi il ricordo»,
+    // quello con nome di una tua sepoltura «Vedi la tomba» (il fantasma qualunque niente)
     const met = visit as R.ActionResult | null;
     const memoryId = r.memoryId;
+    const graveId = r.kind === 'ghost' && r.rare && r.graveId && this.state.graves.some((g) => g.id === r.graveId) ? r.graveId : null;
     if (met) this.say({ kind: r.kind === 'ghost' && r.rare ? 'ghostRare' : r.kind, name: ROAMER_LABELS[r.kind], text: met.message, wisps: met.wisps, xp: met.xp,
-      action: memoryId ? { label: t('game.memory.see'), run: () => this.ui.openMemory(memoryId) } : undefined });
+      action: memoryId ? { label: t('game.memory.see'), run: () => this.ui.openMemory(memoryId) }
+        : graveId ? { label: t('note.seeGrave'), run: () => this.ui.openGrave(graveId) } : undefined });
     this.effects.puff(r.pos, r.kind === 'ghost' ? '#cfeee6' : r.kind === 'zombie' ? '#9bd34a' : '#e8dfcc');
     this.actors.removeRoamer(id);
     // interfaccia di prima: si apre subito la scheda del ricordo, con la visita in testa

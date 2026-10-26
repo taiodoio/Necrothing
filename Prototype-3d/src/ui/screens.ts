@@ -598,9 +598,14 @@ export function openPlayer(ui: UI) {
 const statRow = (ic: string, label: string, value: string, extra?: HTMLElement | null, long = false) =>
   h('div', { class: `pl-stat${long ? ' long' : ''}` }, icon(ic, 26), h('div', { class: 'pl-stat-text' }, h('span', {}, label), h('b', {}, value), extra ?? null));
 
+/** Un dato in breve, in una riga di quattro: icona, valore grande e, sotto, cosa è; il titolo lo dice per intero. */
+const statChip = (ic: string, value: string, label: string, title: string, extra?: HTMLElement | null) =>
+  h('div', { class: 'pl-chip', title, 'aria-label': title }, icon(ic, 30), h('b', {}, value), h('small', {}, label), extra ?? null);
+
 /**
  * Il Custode: il nome (la matita accanto al campo apre la tastiera e diventa
- * una spunta che conferma e la chiude), «Modifica aspetto», i dati; sotto, il cimitero.
+ * una spunta che conferma e la chiude), «Modifica aspetto», i dati in quattro
+ * tasselli; sotto, il cimitero. Tutto sta in uno schermo, senza scorrere.
  */
 function keeperTab(ui: UI, openLook: () => void): HTMLElement {
   const game = ui.game;
@@ -642,15 +647,16 @@ function keeperTab(ui: UI, openLook: () => void): HTMLElement {
     ? t('player.fence.unlocked', { label: exp.label, size: exp.size, max: EXPANSION[exp.unlocked].size })
     : exp.next ? t('player.fence.next', { label: exp.label, size: exp.size, prestige: exp.next.minPrestige, n: exp.toNext })
       : t('player.fence.value', { label: exp.label, size: exp.size });
+  const xp = next ? `${p.xp.toLocaleString(lang)} / ${next.minXp.toLocaleString(lang)}` : p.xp.toLocaleString(lang);
   return h('div', {},
     h('div', { class: 'pl-name-row' }, name, pen),
     h('button', { class: 'big-btn pl-look', onclick: openLook }, icon('shirt', 22), t('player.customize')),
-    h('div', { class: 'pl-stats' },
-      statRow('rank', t('player.rank'), t('player.rank.value', { level: rank.level, name: rank.name })),
-      statRow('xp', t('player.xp'), next ? `${p.xp.toLocaleString(lang)} / ${next.minXp.toLocaleString(lang)}` : p.xp.toLocaleString(lang),
+    h('div', { class: 'pl-chips' },
+      statChip('rank', String(rank.level), rank.name, `${t('player.rank')}: ${t('player.rank.value', { level: rank.level, name: rank.name })}`),
+      statChip('xp', p.xp.toLocaleString(lang), t('player.xp'), `${t('player.xp')}: ${xp}`,
         h('div', { class: 'xp-bar pl-bar' }, h('i', { style: `width:${Math.round(rankProgress(p.xp) * 100)}%` }))),
-      statRow('wisp', t('player.wisps'), p.wisps.toLocaleString(lang)),
-      statRow('prestige', t('player.prestige'), String(computePrestige(s)))),
+      statChip('wisp', p.wisps.toLocaleString(lang), t('player.wisps'), `${t('player.wisps')}: ${p.wisps.toLocaleString(lang)}`),
+      statChip('prestige', String(computePrestige(s)), t('player.prestige'), `${t('player.prestige')}: ${computePrestige(s)}`)),
     h('div', { class: 'section-title' }, t('player.section.cemetery')),
     h('div', { class: 'pl-stats' },
       statRow('fence', t('player.fence'), fence, null, true),

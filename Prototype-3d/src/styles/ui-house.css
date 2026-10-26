@@ -95,7 +95,8 @@
 .ui-next .mtf-actions { display: grid; gap: 8px; margin-top: 10px; }
 .ui-next .mtf-btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; width: 100%; height: 48px; padding: 0 12px; border: 0; border-radius: 12px; font: 800 15px/1.1 var(--pixel, sans-serif); color: #f6eddb; background: #4a3426; box-shadow: 0 2px 0 #24170f; }
 .ui-next .mtf-back .more-toggle { min-height: 46px; color: #3a2a22; background: rgba(58, 42, 34, 0.1); box-shadow: inset 0 0 0 1.5px rgba(58, 42, 34, 0.18); }
-.ui-next .mtf-back .more-scrim { position: absolute; inset: -400px; border-radius: 0; }
+/* il retro è ruotato, quindi fa da contenitore per i figli «fixed»: il velo del menù copre esattamente il cartellino */
+.ui-next .mtf-back .more-scrim { position: fixed; inset: 0; border-radius: 8px 8px 22px 22px; }
 @media (prefers-reduced-motion: reduce) { .ui-next .mtf-inner, .ui-next .mtf-card { transition: none !important; } }
 
 /* ── Scheda del defunto (tomba, ricordo, Registro) ─────────────────── */

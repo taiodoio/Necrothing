@@ -1028,6 +1028,8 @@ export class Actors {
 
   /** Ogni cella raggiunta da uno zombie (la vista decide se sporca una tomba lì accanto). */
   zombieStep: ((r: Roamer, cell: Cell) => void) | null = null;
+  /** Il Custode ha coccolato l'animale o ci ha giocato (l'osso riportato): id della casetta. */
+  petPlayed: ((placeId: string) => void) | null = null;
 
   /** Notte: il vampiro esce dalla cripta, i fantasmi vanno a ballare nel gazebo. */
   private night = false;
@@ -1393,6 +1395,7 @@ export class Actors {
         this.bone.carrier = null;
         this.bone.obj.visible = false;
         this.happy(pet, 1.8);
+        this.petPlayed?.(pet.placeId);
         return;
       }
       case 'happy':
@@ -1490,6 +1493,7 @@ export class Actors {
       this.work(1.3);
       this.happy(p, 1.9);
       done?.();
+      this.petPlayed?.(p.placeId);
     };
     if (Math.hypot(a.x - p.pos.x, a.z - p.pos.z) < 1.3 || !this.walkTo(worldToCell(spot), pet)) pet();
   }

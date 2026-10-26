@@ -405,7 +405,9 @@ export function openInventory(ui: UI, cat: PlaceableCategory | 'all' = 'all') {
     setDrawerFooter(h('div', { style: 'display:grid;gap:8px' },
       h('div', { class: 'row' }, h('b', {}, d.label), h('span', { class: 'muted', style: 'text-align:right' }, t('inventory.owned', { n: s.inventory[d.id] ?? 0 }))),
       h('div', { class: 'row' },
-        h('button', { class: 'big-btn ghost', onclick: () => { game.act((st) => R.sell(st, d.id, 1)); game.refreshBike(); if (!(s.inventory[d.id] ?? 0)) selected = null; render(); } }, t('inventory.sell', { n: R.sellPrice(d.id) })),
+        h('button', { class: 'big-btn ghost sell-btn', onclick: () => { game.act((st) => R.sell(st, d.id, 1)); game.refreshBike(); if (!(s.inventory[d.id] ?? 0)) selected = null; render(); } },
+          // «Vendi» e, sotto in piccolo, quanto si guadagna con l'icona
+          ...(uiNext() ? [h('span', {}, t('inventory.sellLabel')), h('small', { class: 'sell-gain' }, t('inventory.sellGain', { n: R.sellPrice(d.id) }), icon('wisp', 13))] : [t('inventory.sell', { n: R.sellPrice(d.id) })])),
         d.category === 'extra'
           ? h('button', { class: 'big-btn', onclick: () => { closeDrawer(); game.useExtra(d.id); } }, game.extraLabel(d.id))
           : h('button', { class: 'big-btn', onclick: () => { closeDrawer(); game.startItemPlacement(d.id); } }, t('inventory.place'))),

@@ -3,7 +3,7 @@
 // espansione/achievement → salvataggio → sincronizzazione della vista.
 
 import * as THREE from 'three';
-import { BAT, BUSINESS, FOREST_MARGIN, GRAVE_FOOTPRINT, KEEPER_LAMP, LIVE_TICK_MS, SOUL_BELL, STAFF, ZOMBIE_MUD } from '../game/balance.ts';
+import { BAT, BUSINESS, FOREST_MARGIN, PET_GIFT, GRAVE_FOOTPRINT, KEEPER_LAMP, LIVE_TICK_MS, SOUL_BELL, STAFF, ZOMBIE_MUD } from '../game/balance.ts';
 import { CATALOG, CATALOG_LIST, EDIT_ONLY, rotatedFootprint, TRACEABLE } from '../game/catalog.ts';
 import { applyTheme, uiNext, uiPreview } from './uiNext.ts';
 import { watchLifecycle } from './platform.ts';
@@ -147,6 +147,7 @@ export class Game {
     this.actors.setNight(this.isNight());
     this.actors.syncPresences(this.state, now);
     this.actors.zombieStep = (r, cell) => this.zombieStep(r, cell);
+    this.actors.petPlayed = (id) => this.petJoy(id);
     this.actors.setStaff(this.staffOn);
     this.actors.setPace(R.keeperPace(this.state));
     this.rig.setMode(this.state.settings.camera);
@@ -712,7 +713,9 @@ export class Game {
     if (!p?.trace) return null;
     const status = R.traceStatus(this.state, p.type!, this.traceCells());
     const count = (k: R.TraceStatus) => status.filter((x) => x === k).length;
-    return { have: R.ownedCount(this.state, p.type!), ok: count('ok'), busy: count('busy'), short: count('short'), segs: p.trace.segs.length };
+    const cells = this.traceCells();
+    const blockers = R.blockersAt(this.state, cells.filter((_, i) => status[i] === 'busy').map((c) => ({ x: c.x, y: c.y, fp: rotatedFootprint(p.type!, c.rot) })));
+    return { have: R.ownedCount(this.state, p.type!), ok: count('ok'), busy: count('busy'), short: count('short'), segs: p.trace.segs.length, blockers };
   }
 
   undoTrace() {
@@ -761,6 +764,13 @@ export class Game {
       this.world.showGhost(`${style}|${placeableKey(v)}`, () => getModel(placeableKey(v), style, () => placeableModel(v), 0), fp, p.x, p.y, p.rot, p.valid);
     }
     this.ui.refreshPlacementBar();
+  }
+
+  /** Cosa occupa il punto dove si sta posando (vuoto se è libero o se è fuori dal recinto). */
+  placementBlockers(): string[] {
+    const p = this.placement;
+    if (!p || p.trace || p.valid) return [];
+    return R.blockersAt(this.state, [{ x: p.x, y: p.y, fp: this.placementFp() }]);
   }
 
   rotatePlacement() {
@@ -1010,6 +1020,25 @@ export class Game {
     this.say({ kind: 'custode', name: this.state.player.name, say, text, wisps: r?.wisps && r.wisps > 0 ? r.wisps : undefined, xp: r?.xp || undefined, img: npcPortrait('custode', this.state.player.look) || undefined });
   }
 
+  /** Coccole e giochi per animale: quanti ne mancano al prossimo regalo (a caso, vedi PET_GIFT). */
+  private petMood = new Map<string, number>();
+
+  /** L'animale è contento: ogni tanto, a caso, porta da 1 a 5 fuochi fatui (con la sua notifica). */
+  private petJoy(id: string) {
+    const roll = (a: number, b: number) => a + Math.floor(Math.random() * (b - a + 1));
+    const left = (this.petMood.get(id) ?? roll(...PET_GIFT.every)) - 1;
+    if (left > 0) { this.petMood.set(id, left); return; }
+    this.petMood.set(id, roll(...PET_GIFT.every));
+    const pet = this.actors.petAt(id);
+    if (!pet) return;
+    const n = roll(...PET_GIFT.wisps);
+    const at = this.actors.petTop(id) ?? undefined;
+    let gift: R.ActionResult | null = null;
+    if (!this.act((s) => (gift = R.petGift(s, n)), at, true) || !gift) return;
+    const species = pet.kind.replace(/^pet/, '').toLowerCase();
+    this.say({ kind: pet.kind, name: pet.label, text: t(`pet.${species}.gift`, { n }), wisps: n });
+  }
+
   /** Dopo un comando l'animale ricorda cosa fa (salvato nella sua casetta). */
   private petCommand(id: string, message: string) {
     const pet = this.actors.petAt(id);
@@ -1238,7 +1267,8 @@ export class Game {
     this.actors.spawnVisitor(kind, door, door.clone(), stops, (id) => {
       const c = this.entityCells(id);
       const top = c ? cellCenter(c.x, c.y, c.fp).setY(1.4) : undefined;
-      if (kind === 'gravedigger') { this.act((s, n) => { const r = R.gravediggerClean(s, id, n); if (r.xp) cleaned++; return r; }, top); }
+      // la pulizia di ogni tomba la dicono il «+N» sul posto e, alla fine, la notifica del becchino
+      if (kind === 'gravedigger') { this.act((s, n) => { const r = R.gravediggerClean(s, id, n); if (r.xp) cleaned++; return r; }, top, true); }
       else {
         let first: R.ActionResult | null = null;
         this.act((s, n) => (first = R.priestBless(s, id, n, !blessed)), top, true);

@@ -623,7 +623,44 @@ export function keeperHouseLP(v: PVis): LPModel {
   if (v.lit) lp.light(0.55, 0.75, z + front + 0.25, LPC.window, 0.75, 4.5, 0.1, 0.8);
   if (v.lit && parts.has('lantern')) lp.light(-0.85, 0.85, z + front + 0.25, LPC.lantern, 0.6, 3.5, 0.2, 0.6);
   grassTuft(lp, -1.8, -1.75, 1.1); grassTuft(lp, 1.85, -1.8, 1); grassTuft(lp, 1.8, 1.85, 1.1);
+  yardScatter(lp, parts);
   return lp.build();
+}
+
+/**
+ * Le zone del cortile che le aggiunte occupano (rettangoli x0, z0, x1, z1
+ * nell'ingombro 4×4): lì non spuntano erba e sassolini.
+ */
+const PART_ZONES: Record<string, Array<[number, number, number, number]>> = {
+  pumpkins: [[-1.35, -0.25, -0.75, 0.4], [-0.1, -0.25, 0.3, 0.15]],
+  toolbench: [[1.05, -0.8, 2, -0.1]],
+  picket: [[-2, 1.75, 2, 2], [-2, -0.2, -1.75, 2], [1.75, -0.2, 2, 2]],
+  garden: [[-1.7, 0.3, -0.8, 1.2], [-1.75, 1.3, -0.95, 1.8], [-0.65, -0.1, 0.25, 1.95]],
+  beehive: [[1.4, -0.1, 1.95, 0.45]],
+  fruit: [[-2, -0.5, -1.2, 0.4], [1.25, -1.9, 2, -1]],
+  veggie: [[0.3, 0.3, 1.9, 1.6]],
+};
+
+/**
+ * Il cortile non è un prato liscio: ciuffi d'erba, sassolini e qualche fiore
+ * come nel prato attorno, tranne sul vialetto della porta e dove ci sono le
+ * aggiunte (compaiono e spariscono con loro).
+ */
+function yardScatter(lp: LP, parts: Set<string>) {
+  const r = lp.rng;
+  const zones = [[-0.75, -0.25, 0.3, 1.95] as [number, number, number, number], ...[...parts].flatMap((p) => PART_ZONES[p] ?? [])];
+  const free = (x: number, zz: number) => !zones.some(([x0, z0, x1, z1]) => x >= x0 && x <= x1 && zz >= z0 && zz <= z1);
+  for (let i = 0; i < 46; i++) {
+    // davanti nel cortile, e ai lati della casetta
+    const front = i < 34;
+    const x = front ? r.range(-1.85, 1.85) : (r.chance(0.5) ? -1 : 1) * r.range(1.3, 1.85);
+    const zz = front ? r.range(-0.1, 1.85) : r.range(-1.8, -0.3);
+    if (!free(x, zz)) continue;
+    const roll = r.next();
+    if (roll < 0.58) grassTuft(lp, x, zz, r.range(0.75, 1.15));
+    else if (roll < 0.82) for (let k = 0; k < 3; k++) lp.push([x + r.range(-0.08, 0.08), 0, zz + r.range(-0.08, 0.08)], r.range(0, 3)).blob(0, 0.012, 0, r.range(0.025, 0.045), r.range(0.015, 0.025), r.range(0.02, 0.04), r.pick([LPC.stone, LPC.stoneLight, '#8f8a80']), { vary: 0.1, ao: 0 }).pop();
+    else flower(lp, x, zz, r.pick(LPC.flowers), r.range(0.1, 0.16));
+  }
 }
 
 /** Alberello da frutto storto, carico di frutti. */

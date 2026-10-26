@@ -6,7 +6,7 @@
 
 import type { CharacterKind } from '../view/characters.ts';
 import { hasT, t, tList } from '../i18n/index.ts';
-import { $, h } from './dom.ts';
+import { $, dropToasts, h, setNoteCheck } from './dom.ts';
 import { icon } from './icons.ts';
 import { npcPortrait } from './npcPortraits.ts';
 
@@ -39,11 +39,15 @@ const ACTION_MS = 8000;
 /** Una notifica resta in vista almeno così prima che la successiva la sostituisca. */
 const MIN_MS = 1000;
 
-let current: { el: HTMLElement; at: number; timer: number } | null = null;
+let current: { el: HTMLElement; at: number; timer: number; text: string } | null = null;
 let waiting = 0;
 const queue: NpcNote[] = [];
 
+// i toast con lo stesso testo di una notifica (in vista o in coda) non compaiono
+setNoteCheck((m) => queue.some((n) => n.text === m) || current?.text === m);
+
 export function npcNote(n: NpcNote) {
+  dropToasts(n.text);
   queue.push(n);
   if (queue.length > 3) queue.shift(); // una raffica (la campana delle anime): solo le ultime
   pump();
@@ -88,7 +92,7 @@ function show(n: NpcNote) {
   // i toast scendono sotto la notifica, quanto è alta (con la frase su due righe o il pulsante è più alta)
   $('#game').style.setProperty('--note-h', `${el.offsetHeight}px`);
   $('#game').classList.add('has-note');
-  current = { el, at: performance.now(), timer: window.setTimeout(() => dismiss(), ms) };
+  current = { el, at: performance.now(), timer: window.setTimeout(() => dismiss(), ms), text: n.text };
 }
 
 /**

@@ -1053,3 +1053,20 @@ test('saldo nell’HUD: intero fino a 99.999, poi abbreviato', () => {
   assert.equal(shortWisps(1_000_560), '1 mln');
   assert.equal(shortWisps(1_250_000), '1,2 mln');
 });
+
+test('animale contento: il regalo aggiunge i fuochi fatui (almeno uno)', () => {
+  const s = createNewGame(NOW, 21);
+  const w = s.player.wisps;
+  const r = R.petGift(s, 3);
+  assert.equal(r.wisps, 3);
+  assert.equal(s.player.wisps, w + 3);
+  assert.equal(R.petGift(s, 0).wisps, 1);
+});
+
+test('cosa occupa le caselle: nomi di tombe e oggetti, senza doppioni', () => {
+  const s = createNewGame(NOW, 22);
+  const g = s.graves[0];
+  const names = R.blockersAt(s, [{ x: g.x, y: g.y, fp: [1, 1] }, { x: g.x, y: g.y, fp: [2, 2] }]);
+  assert.deepEqual(names, [g.name]);
+  assert.deepEqual(R.blockersAt(s, [{ x: 0, y: 0, fp: [1, 1] }]), []);
+});

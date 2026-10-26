@@ -235,3 +235,9 @@ export const EXPANSION = [
 ] as const;
 
 export const DISTRICT = { minGraves: 4, adjacency: 3 } as const;
+
+/**
+ * Regalo dell'animale domestico: ogni tanto (dopo un numero a caso di coccole
+ * o di giochi con l'osso, tra `every`) porta da 1 a 5 fuochi fatui.
+ */
+export const PET_GIFT = { every: [3, 6] as const, wisps: [1, 5] as const };

@@ -372,7 +372,7 @@ export class UI {
       const def = CATALOG[p.type!];
       const hint = !tr.segs && !tr.ok && !tr.busy
         ? t('hud.trace.hint')
-        : joinDot([t('hud.trace.ok', { n: tr.ok }), tr.short ? t('hud.trace.short', { n: tr.short }) : '', tr.busy ? t('hud.trace.busy', { n: tr.busy }) : '']);
+        : joinDot([t('hud.trace.ok', { n: tr.ok }), tr.short ? t('hud.trace.short', { n: tr.short }) : '', tr.busy ? (tr.blockers.length ? t('hud.trace.busyBy', { n: tr.busy, what: tr.blockers.slice(0, 3).join(', ') }) : t('hud.trace.busy', { n: tr.busy })) : '']);
       const bar = h('div', { class: 'tutorial trace-bar' },
         h('b', {}, icon(def.rotatable ? 'fence' : 'edit', 18), def.label, h('span', { class: 'trace-count' }, `${tr.ok}/${tr.have}`)),
         h('span', { class: tr.short ? 'muted warn' : 'muted' }, hint),
@@ -389,9 +389,10 @@ export class UI {
     }
     const label = p.kind === 'grave' ? t('hud.place.graveTitle', { name: p.draft!.name }) : CATALOG[p.type!].label;
     const rot = p.kind === 'item' && CATALOG[p.type!].rotatable;
+    const blockers = this.game.placementBlockers();
     const bar = h('div', { class: 'tutorial' },
       h('b', {}, icon(p.kind === 'grave' ? 'bury' : 'target', 18), label),
-      h('span', { class: 'muted' }, p.valid ? t('hud.place.hint') : t('hud.place.busy')),
+      h('span', { class: 'muted' }, p.valid ? t('hud.place.hint') : blockers.length ? t('hud.place.busyBy', { what: blockers.slice(0, 3).join(', ') }) : t('hud.place.busy')),
       h('div', { class: 'row' },
         h('button', { class: 'pill', onclick: () => this.game.cancelPlacement() }, t('dialog.cancel')),
         rot ? h('button', { class: 'pill', onclick: () => this.game.rotatePlacement() }, icon('variant', 16), t('hud.place.rotate')) : null,

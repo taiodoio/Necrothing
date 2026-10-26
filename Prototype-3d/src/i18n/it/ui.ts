@@ -93,6 +93,8 @@ export default {
   'hud.trace.short': 'ne mancano {n}',
   // tracciando: pezzi su caselle già occupate
   'hud.trace.busy': '{n} su spazi occupati',
+  // {what}: cosa c'è (es. «Fango, Lanterna»)
+  'hud.trace.busyBy': '{n} su spazi occupati ({what})',
   // breve: pulsante; {cost} è il prezzo in fuochi fatui (segue l'icona)
   'hud.trace.buyShort': 'Compra i {n} mancanti · {cost}',
   // breve: pulsante
@@ -109,6 +111,8 @@ export default {
   'hud.place.graveTitle': 'Dove riposerà {name}?',
   'hud.place.hint': 'Tocca il terreno o trascina per spostare, poi conferma.',
   'hud.place.busy': 'Spazio occupato: scegli un punto libero.',
+  // {what}: cosa c'è (es. «Fango»)
+  'hud.place.busyBy': 'Qui c’è già: {what}. Scegli un punto libero.',
 
   // ── Primo avvio ──
   'hud.tutorial.title': 'Benvenuto, Custode.',

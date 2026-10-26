@@ -240,7 +240,19 @@ export function openCustomize(ui: UI) {
   openDrawer(t('look.ui.title'), body, {
     footer: h('div', { class: 'row look-foot' }, reset, saveBtn),
     beforeClose: () => !dirty() || confirmDialog({ title: t('look.ui.unsaved.title'), message: t('look.ui.unsaved.text'), ok: t('dialog.close'), cancel: t('look.ui.unsaved.stay'), danger: true }),
-    onClose: () => preview.dispose(),
+    onClose: () => { scroller?.removeEventListener('scroll', onScroll); preview.dispose(); },
     full: true,
   });
+  // scorrendo le opzioni il Custode si rimpicciolisce (−30%) e lascia spazio alla lista; in cima torna grande.
+  // Soglie diverse per entrare e uscire: il palco che si accorcia non deve rimandare indietro lo scorrimento.
+  const stage = body.firstElementChild as HTMLElement;
+  const scroller = body.parentElement;
+  const onScroll = () => {
+    if (!scroller) return;
+    if (!stage.isConnected) { scroller.removeEventListener('scroll', onScroll); return; }
+    const y = scroller.scrollTop;
+    if (y > 96 && scroller.scrollHeight - scroller.clientHeight > 180) stage.classList.add('compact');
+    else if (y < 8) stage.classList.remove('compact');
+  };
+  scroller?.addEventListener('scroll', onScroll, { passive: true });
 }

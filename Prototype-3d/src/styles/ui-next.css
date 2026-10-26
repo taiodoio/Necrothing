@@ -182,7 +182,7 @@
 .ui-next .hero .epitaph { color: var(--paper); }
 .ui-next .photo-rect i { border-color: var(--primary); }
 .ui-next .floater { text-shadow: 0 1px 3px rgba(0, 0, 0, 0.7) !important; }
-.ui-next .look-stage { background: var(--panel); border-bottom: 1px solid var(--line); box-shadow: none; }
+.ui-next .look-stage { top: -12px; margin: -12px -12px 8px; background: var(--panel); border-bottom: 1px solid var(--line); box-shadow: none; } /* attaccato al bordo: sopra il Custode non passa niente */
 .ui-next .look-tile { border: 0; border-radius: var(--r-s); background: var(--panel-2); }
 .ui-next .look-tile.active { background: var(--panel-2); color: var(--gold-bright); box-shadow: 0 0 0 2.5px var(--primary); }
 .ui-next .look-thumb { border-radius: 10px; background: var(--thumb); overflow: hidden; }

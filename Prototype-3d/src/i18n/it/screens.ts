@@ -270,6 +270,8 @@ export default {
   'player.tab.achievements': 'Traguardi',
   // per i lettori di schermo: la matita accanto al nome
   'player.editName': 'Cambia nome',
+  // per i lettori di schermo: la spunta che conferma il nome e chiude la tastiera
+  'player.saveName': 'Conferma nome',
   // sezione sotto i dati: lo stato del cimitero (recinto e distretti)
   'player.section.cemetery': 'Il tuo cimitero',
   // nome del giocatore se il campo resta vuoto

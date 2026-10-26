@@ -161,6 +161,8 @@ const tmp = new THREE.Color();
 const LP = {
   grassA: C('#354839'), grassB: C('#3f5536'), moss: C('#61745a'), dry: C('#8d805c'), soil: C('#534238'),
   soilDark: C('#3f3129'), wildA: C('#2f3b2c'), wildB: C('#3c3d2b'), leaf: C('#6a4a2c'), mud: C('#3a2f27'), stone: C('#4a4a49'),
+  // terra battuta dei sentieri: più chiara e calda del prato, si legge anche di notte
+  trail: C('#86643f'), trailDark: C('#6c4f33'),
 };
 
 /** Colore di un "pixel" di terreno (px,py in coordinate pixel, ppc = pixel per cella). */
@@ -213,7 +215,7 @@ function lowpolyCellColor(input: GroundInput, cx: number, cy: number, out: THREE
   const patch = lowNoise(cx, cy, input.seed + 21, 6);
   switch (g) {
     case 'path': out.copy(LP.soil).lerp(LP.soilDark, 0.35 + n1 * 0.3); break;
-    case 'dirt': out.copy(LP.soil).lerp(LP.soilDark, n1 * 0.6); break;
+    case 'dirt': out.copy(LP.trail).lerp(LP.trailDark, n1 * 0.7); break;
     case 'mud': out.copy(LP.mud); break;
     case 'plot': out.copy(LP.soil); break;
     case 'fence': out.copy(LP.grassA).lerp(LP.soilDark, 0.35); break;

@@ -183,6 +183,10 @@ export default {
   'inventory.sell#other': 'Vendi · +{n} fuochi fatui',
   // breve: pulsante
   'inventory.place': 'Inserisci',
+  // breve: pulsante (sotto, in piccolo, il guadagno: inventory.sellGain)
+  'inventory.sellLabel': 'Vendi',
+  // sotto «Vendi», accanto all'icona del fuoco fatuo
+  'inventory.sellGain': '+{n}',
 
   // ── Scheda della tomba ──
   // ricordi nella cronologia della tomba

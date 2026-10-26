@@ -624,12 +624,23 @@ export function hillockLP(v: PVis): LPModel {
 }
 
 export function mudLP(v: PVis): LPModel {
+  // fango ben visibile anche di notte: bordo chiaro di terra smossa, centro bagnato
+  // più scuro, una pozza che riflette, zolle in rilievo sul bordo e impronte
   const lp = new LP(`lp:mud:${v.seed}`);
   const r = lp.rng;
-  lp.push([0, 0.004, 0], r.range(0, 6), -Math.PI / 2).plate(irregularShape(r, 0.45, 9), 0.01, '#2c2119', { ao: 0 }).pop();
-  lp.push([0.08, 0.016, -0.05], r.range(0, 6), -Math.PI / 2).plate(irregularShape(r, 0.22, 7), 0.008, '#3b4648', { bucket: 'water', ao: 0 }).pop();
-  pebbles(lp, -0.4, -0.4, 0.4, 0.4, 3);
-  for (let i = 0; i < 3; i++) lp.push([r.range(-0.3, 0.3), 0.018, r.range(-0.3, 0.3)], r.range(0, 3), -Math.PI / 2).plate(irregularShape(r, 0.035, 5, 0.6), 0.005, '#1c1612', { ao: 0 }).pop();
+  lp.push([0, 0.004, 0], r.range(0, 6), -Math.PI / 2).plate(irregularShape(r, 0.49, 10), 0.012, '#7a5b3e', { ao: 0 }).pop();
+  lp.push([0, 0.014, 0], r.range(0, 6), -Math.PI / 2).plate(irregularShape(r, 0.38, 9), 0.01, '#4e3826', { ao: 0 }).pop();
+  lp.push([r.range(-0.08, 0.08), 0.026, r.range(-0.08, 0.08)], r.range(0, 6), -Math.PI / 2).plate(irregularShape(r, 0.2, 8), 0.006, '#6f8790', { bucket: 'water', ao: 0 }).pop();
+  // zolle sul bordo
+  for (let i = 0; i < 7; i++) {
+    const a = (i / 7) * Math.PI * 2 + r.range(-0.3, 0.3), d = r.range(0.36, 0.44);
+    lp.blob(Math.cos(a) * d, 0.02, Math.sin(a) * d, r.range(0.05, 0.08), r.range(0.025, 0.04), r.range(0.04, 0.07), '#8a6a48', { vary: 0.12 });
+  }
+  // due impronte di stivale nel fango
+  for (const [x, z, a] of [[-0.18, 0.12, 0.4], [0.02, -0.16, 0.5]] as const) {
+    lp.push([x, 0.027, z], a, -Math.PI / 2).plate(irregularShape(r, 0.055, 6, 0.55), 0.004, '#2e2118', { ao: 0 }).pop();
+  }
+  pebbles(lp, -0.42, -0.42, 0.42, 0.42, 3);
   return lp.build();
 }
 

@@ -265,6 +265,9 @@ export default {
   'pet.dog.home': 'Il cane va a cuccia.',
   'pet.dog.wake': 'Il cane esce a fare un giro.',
   'pet.dog.free': 'Il cane va a zonzo per il cimitero.',
+  // l'animale contento porta qualche fuoco fatuo (notifica)
+  'pet.dog.gift#one': 'Il cane è super felice! Ti porta un fuoco fatuo.',
+  'pet.dog.gift#other': 'Il cane è super felice! Ti porta {n} fuochi fatui.',
   // breve: nome dell’animale
   'pet.cat.label': 'Gatto',
   'pet.cat.broken': 'La casetta è rotta: riparala e il gatto tornerà fuori.',
@@ -272,6 +275,8 @@ export default {
   'pet.cat.home': 'Il gatto va a cuccia.',
   'pet.cat.wake': 'Il gatto esce a fare un giro.',
   'pet.cat.free': 'Il gatto va a zonzo per il cimitero.',
+  'pet.cat.gift#one': 'Il gatto fa le fusa, contento: ti porta un fuoco fatuo.',
+  'pet.cat.gift#other': 'Il gatto fa le fusa, contento: ti porta {n} fuochi fatui.',
   // breve: nome dell’animale
   'pet.rabbit.label': 'Coniglio',
   'pet.rabbit.broken': 'La casetta è rotta: riparala e il coniglio tornerà fuori.',
@@ -279,6 +284,8 @@ export default {
   'pet.rabbit.home': 'Il coniglio va a cuccia.',
   'pet.rabbit.wake': 'Il coniglio esce a fare un giro.',
   'pet.rabbit.free': 'Il coniglio va a zonzo per il cimitero.',
+  'pet.rabbit.gift#one': 'Il coniglio è al settimo cielo! Ti porta un fuoco fatuo.',
+  'pet.rabbit.gift#other': 'Il coniglio è al settimo cielo! Ti porta {n} fuochi fatui.',
   // breve: nome dell’animale
   'pet.duck.label': 'Papera',
   'pet.duck.broken': 'La casetta è rotta: riparala e la papera tornerà fuori.',
@@ -286,6 +293,8 @@ export default {
   'pet.duck.home': 'La papera va a cuccia.',
   'pet.duck.wake': 'La papera esce a fare un giro.',
   'pet.duck.free': 'La papera va a zonzo per il cimitero.',
+  'pet.duck.gift#one': 'La papera è felicissima! Ti porta un fuoco fatuo.',
+  'pet.duck.gift#other': 'La papera è felicissima! Ti porta {n} fuochi fatui.',
   // breve: nome dell’animale
   'pet.crow.label': 'Corvo',
   'pet.crow.broken': 'La casetta è rotta: riparala e il corvo tornerà fuori.',
@@ -293,4 +302,6 @@ export default {
   'pet.crow.home': 'Il corvo va a cuccia.',
   'pet.crow.wake': 'Il corvo esce a fare un giro.',
   'pet.crow.free': 'Il corvo va a zonzo per il cimitero.',
+  'pet.crow.gift#one': 'Il corvo è tutto contento! Ti porta un fuoco fatuo luccicante.',
+  'pet.crow.gift#other': 'Il corvo è tutto contento! Ti porta {n} fuochi fatui luccicanti.',
 } satisfies Record<string, string>;

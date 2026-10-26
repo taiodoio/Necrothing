@@ -475,6 +475,24 @@ export function traceStatus(s: SaveData, type: string, cells: TraceCell[]): Trac
   });
 }
 
+/**
+ * Cosa occupa le caselle (nomi delle tombe e degli oggetti, senza doppioni):
+ * per dire perché non si può posare lì (il fango, per esempio, si vede poco).
+ */
+export function blockersAt(s: SaveData, cells: Array<{ x: number; y: number; fp: [number, number] }>): string[] {
+  const occ = buildOccupancy(s);
+  const ids = new Set<string>();
+  for (const c of cells) for (const k of cellsOf(c.x, c.y, c.fp)) { const id = occ.owner.get(k); if (id) ids.add(id); }
+  const names = new Set<string>();
+  for (const id of ids) {
+    const g = s.graves.find((x) => x.id === id);
+    const p = g ? null : s.placeables.find((x) => x.id === id);
+    const name = g ? g.name : p ? placeableDef(p.type).label : null;
+    if (name) names.add(name);
+  }
+  return [...names];
+}
+
 /** Posa tutte le celle buone del tracciato prendendole dall'inventario. */
 export function placeTrace(s: SaveData, type: string, cells: TraceCell[], now: Date): ActionResult & { placed: number } {
   const status = traceStatus(s, type, cells);
@@ -675,6 +693,13 @@ export function interactRoamer(
       return ok(near.length ? t('rules.gravedigger.cleaned', { n: near.length }) : t('rules.gravedigger.idle'), xp, w);
     }
   }
+}
+
+/** L'animale, felice per le coccole o per il gioco, porta qualche fuoco fatuo. */
+export function petGift(s: SaveData, wisps: number): ActionResult {
+  const n = Math.max(1, Math.round(wisps));
+  reward(s, 0, n);
+  return ok('', 0, n);
 }
 
 export function recordPhoto(s: SaveData, now: Date): ActionResult {

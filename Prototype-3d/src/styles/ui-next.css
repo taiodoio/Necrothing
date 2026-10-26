@@ -298,3 +298,7 @@
 @keyframes npcIn { from { transform: translateY(-18px); opacity: 0; } }
 @keyframes npcOut { to { transform: translateY(-10px); opacity: 0; } }
 @keyframes npcWob { 0%, 100% { transform: translateY(0) rotate(0); } 30% { transform: translateY(-2px) rotate(-6deg); } 60% { transform: translateY(1px) rotate(4deg); } }
+
+/* Inventario: «Vendi» con il guadagno sotto, in piccolo, con l'icona */
+.ui-next .sell-btn { display: grid; justify-items: center; align-content: center; gap: 0; line-height: 1.1; }
+.ui-next .sell-btn .sell-gain { display: inline-flex; align-items: center; gap: 2px; font-size: 12px; font-weight: 800; color: var(--spectral); }

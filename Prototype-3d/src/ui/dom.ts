@@ -50,11 +50,22 @@ export function applyPageTexts() {
 
 export function toast(message: string, kind: '' | 'ach' = '') {
   if (!message) return;
+  // se lo dice già una notifica dei personaggi (in vista o in coda), il toast non serve
+  if (saidInNote(message)) return;
   const box = $('#toasts');
   const el = h('div', { class: `toast ${kind}` }, kind === 'ach' ? icon('trophy', 18) : null, message);
   box.append(el);
   while (box.children.length > 3) box.firstElementChild?.remove();
   setTimeout(() => el.remove(), 3900);
+}
+
+/** Una notifica dei personaggi dice già `message` (vedi npcNote). */
+let saidInNote: (message: string) => boolean = () => false;
+export function setNoteCheck(fn: (message: string) => boolean) { saidInNote = fn; }
+
+/** Via i toast che ripetono `message` (la notifica che arriva lo dice già). */
+export function dropToasts(message: string) {
+  for (const el of document.querySelectorAll('#toasts .toast')) if (el.textContent === message) el.remove();
 }
 
 export function floater(x: number, y: number, text: string, kind: 'wisp' | 'xp') {

@@ -364,6 +364,7 @@ button.slot:active, .icon-btn:active, .ctx-actions button:active, .big-btn:activ
 .look-preview { display: block; height: min(220px, 25vh); width: auto; aspect-ratio: 240 / 270; background: transparent; cursor: grab; touch-action: pan-y; } /* trascinabile in orizzontale, lo scorrimento verticale resta alla pagina */
 .look-preview:active { cursor: grabbing; }
 .look-stage .look-preview { transition: height 0.2s ease; }
+#drawer-body:has(> .look) { overflow-anchor: none; } /* il palco che si accorcia non sposta lo scorrimento */
 .look-stage.compact .look-preview { height: calc(min(220px, 25vh) * 0.7); }
 .look-tabs { justify-self: stretch; justify-content: center; padding: 2px 10px 8px; }
 .look-sub { margin-top: 6px; }

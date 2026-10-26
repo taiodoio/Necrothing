@@ -188,6 +188,22 @@ const ICONS: Record<string, () => Poly[]> = {
     ...fan([[5, 10], [12, 9.4], [19, 10], [18.4, 11.6], [5.6, 11.6]], T.ghost, [9, 10]),
     ...fan([[6.8, 11], [9.2, 11], [8, 15.4]], T.ghost, [7.6, 12]), ...fan([[14.8, 11], [17.2, 11], [16, 15.4]], T.ghost, [15.6, 12]),
     ...fan([[16, 15.8], [16.7, 17.2], [16, 18.2], [15.3, 17.2]], T.crimson, [15.8, 16.6])],
+  // anniversario (tre proposte): il lumino rosso col coperchio d'ottone e la croce in rilievo
+  lumino: () => [...rrect(7.4, 19.8, 16.6, 22.2, 0.6, T.gold, [10, 20.5]), ...fan([[7, 9.8], [17, 9.8], [16.2, 20.4], [7.8, 20.4]], T.crimson, [10, 12]),
+    ...bar(12, 12.4, 12, 18, 1.2, T.gold), ...bar(10, 14.2, 14, 14.2, 1.2, T.gold), ...rrect(6.2, 8, 17.8, 10.8, 1, T.gold, [10, 8.6]),
+    ...fan([[12, 0.8], [14.4, 4.4], [13.8, 6.8], [12, 7.6], [10.2, 6.8], [9.6, 4.4]], T.flame, [11.4, 4.5])],
+  // la corona di foglie con tre fiori e il nastro
+  wreath: () => [
+    ...Array.from({ length: 13 }, (_, i) => -Math.PI / 2 + (i / 13) * Math.PI * 2 + 0.24).flatMap((a) => {
+      const x = 12 + Math.cos(a) * 7.2, y = 10.4 + Math.sin(a) * 7.2, lx = Math.cos(a + Math.PI / 2) * 2.7, ly = Math.sin(a + Math.PI / 2) * 2.7;
+      return fan([[x - lx, y - ly], [x - ly * 0.45, y + lx * 0.45], [x + lx, y + ly], [x + ly * 0.45, y - lx * 0.45]], T.leaf, [x, y]);
+    }),
+    ...[-2.4, -0.75, Math.PI].flatMap((a) => [...disc(12 + Math.cos(a) * 7.2, 10.4 + Math.sin(a) * 7.2, 2.4, T.pink, 8), ...disc(12 + Math.cos(a) * 7.2, 10.4 + Math.sin(a) * 7.2, 0.9, T.gold, 6)]),
+    ...fan([[12, 17], [9.4, 23], [7.6, 21.2], [10.4, 16.6]], T.crimson), ...fan([[12, 17], [14.6, 23], [16.4, 21.2], [13.6, 16.6]], T.crimson), ...disc(12, 17.4, 2, T.crimson, 8)],
+  // il calendarietto col lumino acceso
+  annivCal: () => [...rrect(3.4, 4.6, 20.6, 21, 1.8, T.paper, [9, 9]), ...rrect(3.4, 4.6, 20.6, 9.2, 1.6, T.hat, [9, 5.5]), ...bar(8, 2.6, 8, 6.4, 1.6, T.iron), ...bar(16, 2.6, 16, 6.4, 1.6, T.iron),
+    ...fan([[9.2, 13.8], [14.8, 13.8], [14.2, 19.4], [9.8, 19.4]], T.crimson, [11, 15]), ...rrect(8.8, 12.6, 15.2, 14.2, 0.5, T.gold, [11, 13]),
+    ...fan([[12, 9.4], [13.3, 11.2], [12, 12.4], [10.7, 11.2]], T.flame)],
   // localizza: la puntina sulla mappa
   pin: () => [...fan([[12, 22], [6, 13.4], [5.2, 9], [7.2, 4.6], [12, 2.4], [16.8, 4.6], [18.8, 9], [18, 13.4]], T.red, [9.5, 6.5]), ...disc(12, 9.2, 3, T.paper, 10)],
   angled: () => [...P([[12, 3], [20.4, 7.6], [12, 12.2], [3.6, 7.6]], T.stone[0]), ...P([[3.6, 7.6], [12, 12.2], [12, 21.4], [3.6, 16.8]], T.stone[1]), ...P([[12, 12.2], [20.4, 7.6], [20.4, 16.8], [12, 21.4]], T.stone[2])],
@@ -254,4 +270,14 @@ export function drawLpIcon(g: CanvasRenderingContext2D, name: string, x: number,
     g.stroke();
   }
   g.restore();
+}
+
+/** L'icona come immagine PNG (per le notifiche, dove serve un'immagine vera), con un po' di margine. */
+export function lpIconPng(name: string, size = 112): string {
+  const c = document.createElement('canvas');
+  c.width = c.height = size;
+  const g = c.getContext('2d');
+  if (!g) return '';
+  drawLpIcon(g, name, size * 0.06, size * 0.06, size * 0.88);
+  return c.toDataURL('image/png');
 }

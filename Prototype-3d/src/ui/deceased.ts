@@ -1,6 +1,7 @@
-// Scheda unica del defunto (in prova): la stessa per la tomba nel cimitero,
-// il ricordo sull'albero e la riga del Registro. Cambiano solo le azioni e,
-// in testa, il motivo per cui la si apre: il suo fantasma, l'anniversario.
+// Scheda del defunto (in prova): la stessa per la tomba nel cimitero, il
+// ricordo sull'albero e la riga del Registro, con gli stessi dati, la pillola
+// di dove riposa sotto il nome e la cronologia con le icone; cambiano solo le
+// azioni. Nel giorno dell'anniversario la testata è decorata.
 // Per ora non è collegata al gioco: serve per le anteprime.
 
 import { CATEGORY_LABELS, deathCauseLabel, GRAVE_STATE_LABELS, GRAVE_TYPE_LABELS, graveVisualState } from '../game/graves.ts';
@@ -8,11 +9,11 @@ import * as R from '../game/rules.ts';
 import type { Grave, MemoryType } from '../game/state.ts';
 import { t } from '../i18n/index.ts';
 import { memorials } from '../app/persistence.ts';
-import { closeDrawer, fmtDate, h, openDrawer } from './dom.ts';
+import { closeDrawer, fmtDate, h, openDrawer, setDrawerHero } from './dom.ts';
 import { icon } from './icons.ts';
 import { openPostcard, portrait } from './memorial.ts';
 import { fruitImg, openMemoryTree } from './memoryTree.ts';
-import { npcPortrait } from './npcPortraits.ts';
+import { annivHero, type AnnivStyle } from './anniversary.ts';
 import { confirmExhume, MEMORY_LABELS, moreActions, postcardData } from './screens.ts';
 import { graveThumb } from './thumbs.ts';
 import type { UI } from './UI.ts';
@@ -22,23 +23,19 @@ export type DeceasedFrom = 'map' | 'tree' | 'registry' | 'note';
 
 export interface DeceasedOpts {
   from?: DeceasedFrom;
-  /** Il suo fantasma è appena passato (con quanto ha lasciato). */
-  ghost?: { wisps: number; xp: number };
-  /** Oggi è il suo anniversario (anni dalla morte, quanto ha dato). */
-  anniversary?: { years: number; wisps: number; xp: number };
+  /** Oggi è il suo anniversario (anni dalla morte): la testata decorata, per tutto il giorno. */
+  anniversary?: { years: number };
+  /** Proposte di testata per l'anniversario (solo per le anteprime). */
+  annivStyle?: AnnivStyle;
   /** Torna all'elenco da cui si è aperta (Registro), invece di chiudere. */
   back?: () => void;
 }
 
 /** Un'icona per ogni voce della cronologia. */
 const LOG_ICONS: Record<MemoryType, string> = {
-  burial: 'coffin', flower: 'flower', cleaned: 'broom', repaired: 'hammer', anniversary: 'calendar',
+  burial: 'coffin', flower: 'flower', cleaned: 'broom', repaired: 'hammer', anniversary: 'lumino',
   ghost: 'ghost', blessing: 'bell', zombie: 'skull', entrusted: 'tree',
 };
-
-const gains = (wisps: number, xp: number) => h('span', { class: 'dc-gains' },
-  wisps ? h('span', {}, icon('wisp', 13), t('tree.memory.visitWisps', { n: wisps })) : null,
-  xp ? h('span', {}, t('tree.memory.visitXp', { n: xp })) : null);
 
 export function openDeceased(ui: UI, id: string, opts: DeceasedOpts = {}) {
   const game = ui.game;
@@ -56,19 +53,6 @@ export function openDeceased(ui: UI, id: string, opts: DeceasedOpts = {}) {
   const head = h('img', { src: medal, alt: '' }) as HTMLElement;
   let photoUrl: string | null = null;
   if (g.photoId) void memorials.get(g.photoId).then((m) => { if (m && head.isConnected) { photoUrl = m.dataUrl; head.replaceWith(portrait(m.dataUrl, medal)); } }).catch(() => undefined);
-
-  // perché la scheda si apre: il suo fantasma, l'anniversario
-  const banner = opts.ghost
-    ? h('div', { class: 'dc-banner ghost' },
-      h('img', { src: npcPortrait(kept ? 'ghost' : 'ghostRare') || '', alt: '' }),
-      h('div', {}, h('b', {}, t(kept ? 'deceased.ghost.memory' : 'deceased.ghost.grave', { name: g.name })),
-        h('p', {}, t(kept ? 'deceased.ghost.memoryText' : 'deceased.ghost.graveText')), gains(opts.ghost.wisps, opts.ghost.xp)))
-    : opts.anniversary
-      ? h('div', { class: 'dc-banner anniv' },
-        h('span', { class: 'dc-banner-ico' }, icon('calendar', 40)),
-        h('div', {}, h('b', {}, t('deceased.anniv.title')),
-          h('p', {}, t('deceased.anniv.text', { n: opts.anniversary.years, name: g.name })), gains(opts.anniversary.wisps, opts.anniversary.xp)))
-      : null;
 
   // dove riposa, in una pillola sotto il nome
   const where = kept
@@ -120,9 +104,12 @@ export function openDeceased(ui: UI, id: string, opts: DeceasedOpts = {}) {
     ];
   }
 
-  openDrawer(kept ? t('tree.memory.title') : t('detail.grave.title'), h('div', { class: 'deceased' },
-    banner,
-    h('div', { class: 'hero' }, head, h('h3', {}, g.name), where,
+  const anniv = opts.anniversary && !kept
+    ? annivHero(opts.annivStyle ?? 'wreath', { grave: g, years: opts.anniversary.years, medal, where, photo: g.photoId ? memorials.get(g.photoId).then((m) => m?.dataUrl ?? null).catch(() => null) : Promise.resolve(null) })
+    : null;
+  // il nome c'è già sotto l'immagine: niente titolo in testa
+  openDrawer('', h('div', { class: 'deceased' },
+    anniv ? anniv.body : h('div', { class: 'hero' }, head, h('h3', {}, g.name), where,
       g.epitaph ? h('div', { class: 'epitaph' }, t('detail.epitaph.quoted', { text: g.epitaph })) : null),
     facts,
     timeline,
@@ -130,4 +117,5 @@ export function openDeceased(ui: UI, id: string, opts: DeceasedOpts = {}) {
     beforeClose: opts.back ? () => { opts.back!(); return false; } : from === 'tree' ? () => { openMemoryTree(ui); return false; } : undefined,
     footer: h('div', { style: 'display:grid;gap:6px' }, moreActions(more), main),
   });
+  if (anniv?.hero) setDrawerHero(anniv.hero);
 }

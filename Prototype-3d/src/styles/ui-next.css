@@ -78,7 +78,7 @@
 .ui-next :is(button.slot, .icon-btn, .ctx-actions button, .big-btn, .pill, .card, .chip, .tab, .fab):active { transform: translateY(1px); }
 
 /* titoli */
-.ui-next :is(.chip-body strong, .ctx-title, .drawer-head h2, .hero h3, .dialog h3, .section-title, .tutorial b, .filter-switch b) {
+.ui-next :is(.chip-body strong, .ctx-title, .drawer-head h2, .hero h3, .an h3, .dialog h3, .section-title, .tutorial b, .filter-switch b) {
   font-family: var(--gothic); font-weight: 700; color: var(--gold-bright); letter-spacing: 0;
 }
 

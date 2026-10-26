@@ -21,6 +21,8 @@ export interface NpcNote {
   say?: string;
   /** Il ritratto, se non quello del modello (il Custode col suo aspetto). */
   img?: string;
+  /** `img` è un'icona (anniversario): centrata, invece che appoggiata in basso. */
+  icon?: boolean;
   /** Un pulsante (es. «Vedi il ricordo»): la notifica resta un po' di più. */
   action?: { label: string; run: () => void };
 }
@@ -75,7 +77,7 @@ function show(n: NpcNote) {
   const img = url ? h('img', { alt: '' }) as HTMLImageElement : null;
   if (img) void restingOnFloor(url).then((u) => { img.src = u; });
   const ms = n.action ? ACTION_MS : SHOW_MS;
-  const el = h('div', { class: `npc-note${n.action ? ' with-action' : ''}`, role: 'status' },
+  const el = h('div', { class: `npc-note${n.action ? ' with-action' : ''}${n.icon ? ' icon' : ''}`, role: 'status' },
     img,
     // il guadagno accanto al nome: la frase resta su una riga quando può
     h('div', { class: 'npc-note-head' }, say, h('small', {}, n.name), n.wisps ? gain(n.wisps, false) : null, n.xp ? gain(n.xp, true) : null),

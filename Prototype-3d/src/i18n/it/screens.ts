@@ -435,16 +435,7 @@ export default {
   // sulla cartolina, sotto «Riposa a Necrothing»
   'postcard.tagline': 'il cimitero degli oggetti',
   // testo che accompagna la cartolina condivisa
-  // ── Scheda unica del defunto (in prova: tomba, ricordo, Registro) ──
-  // in testa, quando la si apre dal suo fantasma
-  'deceased.ghost.grave': 'Il fantasma di {name} ti ha salutato',
-  'deceased.ghost.graveText': 'Si è affacciato dalla sua tomba ed è svanito nella nebbia.',
-  'deceased.ghost.memory': 'Il fantasma di {name} è tornato a trovarti',
-  'deceased.ghost.memoryText': 'È sceso dall’Albero dei ricordi per un saluto.',
-  // in testa, il giorno dell'anniversario della morte
-  'deceased.anniv.title': 'Oggi è il suo anniversario',
-  'deceased.anniv.text#one': 'Un anno fa {name} ci lasciava. Portagli dei fiori.',
-  'deceased.anniv.text#other': '{n} anni fa {name} ci lasciava. Portagli dei fiori.',
+  // ── Scheda del defunto (in prova: tomba, ricordo, Registro) ──
   // pillola sotto il nome: dove riposa
   'deceased.where.grave': 'Riposa nel cimitero',
   'deceased.where.legacy': 'Lascito del vecchio custode',
@@ -470,6 +461,19 @@ export default {
   'deceased.goGrave': 'Vai alla tomba',
   // breve: pulsante
   'deceased.goTree': 'Vai all’albero',
+  // ── Anniversario della morte (in prova): testata decorata e notifica ──
+  // sul nastro, sulla targa: «3° anniversario»
+  'anniv.ordinal': '{n}° anniversario',
+  'anniv.ago#one': 'Oggi, un anno fa',
+  'anniv.ago#other': 'Oggi, {n} anni fa',
+  // sulla lapide, senza data di nascita
+  'anniv.died': '† {year}',
+  // notifica: chi parla (al posto del nome del personaggio)
+  'anniv.note.name': 'Anniversario',
+  // notifica: la frase in grande
+  'anniv.note.say': 'In memoria',
+  'anniv.note.text#one': 'Un anno fa ci lasciava {name}.',
+  'anniv.note.text#other': '{n} anni fa ci lasciava {name}.',
   'postcard.shareText': 'In memoria di {name}. Sepolto a Necrothing, il cimitero degli oggetti.',
   'postcard.shareTitle': 'In memoria di {name}',
   // nome del file se il nome dell'oggetto non ha lettere utili (minuscolo, senza spazi)

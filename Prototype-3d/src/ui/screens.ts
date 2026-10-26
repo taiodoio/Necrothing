@@ -20,7 +20,6 @@ import { houseBoughtView, houseShopDetail, houseShopGrid } from './house.ts';
 import { graveThumb, placeableThumb } from './thumbs.ts';
 import { ACH_COUNT, ACH_ICONS, icon } from './icons.ts';
 import { lpBadgeUrl } from './lpIcons.ts';
-import { custodeFigure } from './lookThumbs.ts';
 import { uiNext, uiPlay, uiPreview } from '../app/uiNext.ts';
 import { remindersAvailable } from '../app/reminders.ts';
 import { currentLang, LANGS, setLang, t, tList } from '../i18n/index.ts';
@@ -29,7 +28,7 @@ import { currentLang, LANGS, setLang, t, tList } from '../i18n/index.ts';
 const CAT_ICON: Record<PlaceableCategory | 'all', string> = { all: 'bag', light: 'lightOn', decoration: 'flower', structure: 'fence', ambient: 'tree', npc: 'ghost', extra: 'bike' };
 const tabIcon = (c: PlaceableCategory | 'all') => (uiPlay() ? icon(CAT_ICON[c], 20) : null);
 import type { UI } from './UI.ts';
-import { openCustomize } from './customize.ts';
+import { CustodePreview, openCustomize } from './customize.ts';
 import { openDeceased } from './deceased.ts';
 import { BurialPhoto, loadImage, openPostcard, photoStep, portrait } from './memorial.ts';
 import type { PostcardData } from './postcard.ts';
@@ -576,20 +575,33 @@ export function openPlayer(ui: UI) {
   const s = ui.game.state;
   const got = new Set(s.achievements.map((a) => a.id));
   const body = h('div', { class: 'player-page' });
+  // il Custode che gira in cima (come nella personalizzazione): una scena sola, chiusa cambiando scheda o pannello
+  let preview: CustodePreview | null = null;
+  const drop = () => { preview?.dispose(); preview = null; };
   const tab = (id: typeof playerTab, ic: string, label: string, n?: string) =>
     h('button', { class: `tab ${playerTab === id ? 'active' : ''}`, onclick: () => { playerTab = id; render(); } }, icon(ic, 20), label, n ? h('span', { class: 'tab-n' }, n) : null);
-  const render = () => body.replaceChildren(
-    h('div', { class: 'tabs' }, tab('keeper', 'keeper', t('player.tab.keeper')), tab('achievements', 'trophy', t('player.tab.achievements'), `${got.size}/${ACHIEVEMENTS.length}`)),
-    playerTab === 'keeper' ? keeperTab(ui) : achievementsTab(s, got));
+  const render = () => {
+    drop();
+    const tabs = h('div', { class: 'tabs' }, tab('keeper', 'keeper', t('player.tab.keeper')), tab('achievements', 'trophy', t('player.tab.achievements'), `${got.size}/${ACHIEVEMENTS.length}`));
+    if (playerTab === 'keeper') {
+      preview = new CustodePreview(s.player.look);
+      body.replaceChildren(tabs, h('div', { class: 'look-stage pl-stage' }, preview.canvas), keeperTab(ui));
+      // «Modifica aspetto» è l'azione principale della scheda
+      setDrawerFooter(h('button', { class: 'big-btn', onclick: () => { drop(); openCustomize(ui); } }, icon('shirt', 22), t('player.customize')));
+    } else {
+      body.replaceChildren(tabs, achievementsTab(s, got));
+      setDrawerFooter(null);
+    }
+  };
+  openDrawer(t('player.title'), body, { full: true, onClose: drop });
   render();
-  openDrawer(t('player.title'), body, { full: true });
 }
 
-/** Una riga di dati: l'icona dell'elemento (la stessa in tutto il gioco), l'etichetta piccola e il valore. */
-const statRow = (ic: string, label: string, value: string, extra?: HTMLElement | null) =>
-  h('div', { class: 'pl-stat' }, icon(ic, 26), h('div', {}, h('small', {}, label), h('b', {}, value), extra ?? null));
+/** Una riga di dati: l'icona dell'elemento (la stessa in tutto il gioco), l'etichetta e il valore; sotto, se serve, una barra. */
+const statRow = (ic: string, label: string, value: string, extra?: HTMLElement | null, long = false) =>
+  h('div', { class: `pl-stat${long ? ' long' : ''}` }, icon(ic, 26), h('div', { class: 'pl-stat-text' }, h('span', {}, label), h('b', {}, value), extra ?? null));
 
-/** Il Custode: la figura a sinistra; a destra il nome (la matita apre la tastiera), i dati e «Modifica aspetto». Sotto, lo stato del cimitero. */
+/** Il Custode: il nome (la matita accanto al campo apre la tastiera), poi i dati; sotto, il cimitero. */
 function keeperTab(ui: UI): HTMLElement {
   const game = ui.game;
   const s = game.state;
@@ -598,34 +610,29 @@ function keeperTab(ui: UI): HTMLElement {
   const next = nextRank(p.xp);
   const exp = expansionStatus(s);
   const districts = detectDistricts(s.graves);
+  const lang = currentLang();
   const name = h('input', {
     class: 'pl-name', value: p.name, maxLength: 24, 'aria-label': t('player.name'), enterkeyhint: 'done',
     onchange: (e: Event) => { const el = e.target as HTMLInputElement; p.name = el.value.trim() || t('player.defaultName'); el.value = p.name; game.afterChange(); },
     onkeydown: (e: KeyboardEvent) => { if (e.key === 'Enter') (e.target as HTMLInputElement).blur(); },
   }) as HTMLInputElement;
-  const pen = h('button', { class: 'pl-pen', 'aria-label': t('player.editName'), onclick: () => { name.focus(); name.setSelectionRange(name.value.length, name.value.length); } }, icon('edit', 20));
-  const fig = custodeFigure(p.look);
+  const pen = h('button', { class: 'icon-btn pl-pen', 'aria-label': t('player.editName'), onclick: () => { name.focus(); name.setSelectionRange(name.value.length, name.value.length); } }, icon('edit', 22));
   const fence = exp.unlocked > exp.level
     ? t('player.fence.unlocked', { label: exp.label, size: exp.size, max: EXPANSION[exp.unlocked].size })
     : exp.next ? t('player.fence.next', { label: exp.label, size: exp.size, prestige: exp.next.minPrestige, n: exp.toNext })
       : t('player.fence.value', { label: exp.label, size: exp.size });
   return h('div', {},
-    h('div', { class: 'pl-top' },
-      h('div', { class: 'pl-figure' }, fig ? h('img', { src: fig, alt: '' }) : icon('keeper', 72)),
-      h('div', { class: 'pl-side' },
-        h('div', { class: 'pl-name-field' }, name, pen),
-        statRow('rank', t('player.rank'), t('player.rank.value', { level: rank.level, name: rank.name })),
-        statRow('xp', t('player.xp'), next ? `${p.xp.toLocaleString(currentLang())} / ${next.minXp.toLocaleString(currentLang())}` : p.xp.toLocaleString(currentLang()),
-          h('div', { class: 'xp-bar pl-bar' }, h('i', { style: `width:${Math.round(rankProgress(p.xp) * 100)}%` }))),
-        statRow('wisp', t('player.wisps'), p.wisps.toLocaleString(currentLang())),
-        statRow('prestige', t('player.prestige'), String(computePrestige(s))),
-        h('button', { class: 'big-btn ghost pl-look', onclick: () => openCustomize(ui) }, icon('shirt', 20), t('player.customize')))),
+    h('div', { class: 'pl-name-row' }, name, pen),
+    h('div', { class: 'pl-stats' },
+      statRow('rank', t('player.rank'), t('player.rank.value', { level: rank.level, name: rank.name })),
+      statRow('xp', t('player.xp'), next ? `${p.xp.toLocaleString(lang)} / ${next.minXp.toLocaleString(lang)}` : p.xp.toLocaleString(lang),
+        h('div', { class: 'xp-bar pl-bar' }, h('i', { style: `width:${Math.round(rankProgress(p.xp) * 100)}%` }))),
+      statRow('wisp', t('player.wisps'), p.wisps.toLocaleString(lang)),
+      statRow('prestige', t('player.prestige'), String(computePrestige(s)))),
     h('div', { class: 'section-title' }, t('player.section.cemetery')),
-    h('div', { class: 'pl-map' },
-      h('div', { class: 'pl-map-ico' }, icon('gate', 64)),
-      h('div', { class: 'pl-map-rows' },
-        statRow('fence', t('player.fence'), fence),
-        statRow('district', t('player.districts'), districts.length ? districts.map((d) => DISTRICT_LABELS[d.theme]).join(', ') : t('player.districts.none')))));
+    h('div', { class: 'pl-stats' },
+      statRow('fence', t('player.fence'), fence, null, true),
+      statRow('district', t('player.districts'), districts.length ? districts.map((d) => DISTRICT_LABELS[d.theme]).join(', ') : t('player.districts.none'), null, true)));
 }
 
 /** I traguardi: in testa quanti se ne hanno, poi una carta per ciascuno col suo medaglione (prima quelli ottenuti). */

@@ -57,8 +57,8 @@ function previewGround(): CachedModel {
   return groundModel;
 }
 
-/** Piccola scena separata con il Custode che ruota lentamente. */
-class CustodePreview {
+/** Piccola scena separata con il Custode che ruota lentamente (anche in cima alla pagina del Custode). */
+export class CustodePreview {
   readonly canvas = h('canvas', { class: 'look-preview', width: 240, height: 270 }) as HTMLCanvasElement;
   private readonly renderer: THREE.WebGLRenderer;
   private readonly scene = new THREE.Scene();

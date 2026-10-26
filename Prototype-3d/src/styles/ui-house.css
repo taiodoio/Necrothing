@@ -150,25 +150,21 @@
 .ui-next .bat-btn .bat-left { position: absolute; right: -6px; bottom: -6px; min-width: 22px; height: 20px; padding: 0 5px; border-radius: 10px;
   display: grid; place-items: center; background: #a86ad0; color: #fff; font: 800 11px/1 var(--sans, sans-serif); font-style: normal; }
 
-/* ── Pagina del Custode: figura a sinistra, nome e dati a destra, stato del cimitero sotto ── */
-.ui-next .player-page .tabs { margin-bottom: 4px; }
-.ui-next .pl-top { display: grid; grid-template-columns: minmax(104px, 38%) minmax(0, 1fr); gap: 12px; align-items: start; margin: 4px 0 14px; }
-.ui-next .pl-figure { position: relative; display: grid; place-items: end center; aspect-ratio: 3 / 4; border-radius: var(--r); overflow: hidden;
-  background: radial-gradient(90% 70% at 50% 82%, color-mix(in srgb, var(--primary) 22%, transparent), transparent 70%), var(--thumb); }
-.ui-next .pl-figure img { width: 112%; max-width: none; margin-bottom: -4%; }
-.ui-next .pl-side { display: grid; gap: 9px; min-width: 0; }
-.ui-next .pl-name-field { display: flex; align-items: center; gap: 6px; padding: 2px 4px 2px 12px; border-radius: 12px; background: var(--input); }
-.ui-next .pl-name { flex: 1; min-width: 0; width: 100%; height: 40px; padding: 0; border: 0; background: none; color: var(--gold-bright); font: 700 20px/1 var(--gothic); outline: none; box-shadow: none; }
-.ui-next .pl-pen { flex: none; width: 36px; height: 36px; display: grid; place-items: center; border: 0; border-radius: 10px; background: var(--panel-2); }
-.ui-next .pl-stat { display: grid; grid-template-columns: 26px 1fr; gap: 8px; align-items: center; min-width: 0; }
-.ui-next .pl-stat small { display: block; color: var(--muted); font-size: 12px; font-weight: 700; line-height: 1.1; }
-.ui-next .pl-stat b { display: block; color: var(--paper); font-size: 15px; font-weight: 800; line-height: 1.2; overflow-wrap: anywhere; }
-.ui-next .pl-bar { display: block; height: 6px; margin-top: 4px; }
-.ui-next .pl-look { min-height: 44px; margin-top: 2px; }
-.ui-next .pl-map { display: grid; grid-template-columns: 72px 1fr; gap: 12px; align-items: center; padding: 12px; border-radius: var(--r); background: var(--panel-2); }
-.ui-next .pl-map-ico { display: grid; place-items: center; width: 72px; height: 72px; border-radius: 16px; background: var(--thumb); }
-.ui-next .pl-map-rows { display: grid; gap: 10px; min-width: 0; }
-.ui-next .pl-map .pl-stat b { font-size: 13.5px; font-weight: 700; }
+/* ── Pagina del Custode: il Custode che gira in cima, il nome, i dati a tutta larghezza, il cimitero sotto ── */
+.ui-next .player-page .tabs { margin-bottom: 0; }
+.ui-next .pl-stage { position: relative; top: 0; margin: 0 -10px 12px; border-radius: 0; }
+.ui-next .pl-name-row { display: grid; grid-template-columns: 1fr auto; gap: 8px; align-items: center; margin-bottom: 12px; }
+.ui-next .pl-name { width: 100%; min-width: 0; height: 48px; padding: 0 14px; border: 0; border-radius: 12px; background: var(--input); color: var(--gold-bright); font: 700 22px/1 var(--gothic); outline: none; }
+.ui-next .pl-pen { width: 48px; height: 48px; }
+.ui-next .pl-stats { display: grid; gap: 2px; border-radius: var(--r); background: var(--panel-2); padding: 4px 14px; margin-bottom: 12px; }
+.ui-next .pl-stat { display: grid; grid-template-columns: 28px 1fr; gap: 12px; align-items: center; padding: 10px 0; }
+.ui-next .pl-stat + .pl-stat { border-top: 1px solid var(--line); }
+.ui-next .pl-stat-text { display: grid; grid-template-columns: auto 1fr; gap: 2px 12px; align-items: baseline; min-width: 0; }
+.ui-next .pl-stat-text span { color: var(--muted); font-size: 14px; font-weight: 700; }
+.ui-next .pl-stat-text b { color: var(--paper); font-size: 15px; font-weight: 800; text-align: right; overflow-wrap: anywhere; }
+.ui-next .pl-stat.long .pl-stat-text { grid-template-columns: 1fr; }
+.ui-next .pl-stat.long .pl-stat-text b { text-align: left; font-weight: 700; line-height: 1.3; }
+.ui-next .pl-stat-text .pl-bar { grid-column: 1 / -1; display: block; height: 6px; margin-top: 6px; }
 
 /* schede che dividono lo spazio in parti uguali (Impostazioni) */
 .ui-next .tabs.even { display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; overflow: visible; }

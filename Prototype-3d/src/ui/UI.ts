@@ -386,6 +386,8 @@ export class UI {
   refreshPlacementBar() {
     const p = this.game.placement;
     this.refreshEditBanner();
+    // mentre si sceglie il posto spariscono il menù e i pulsanti della mappa: la barra scende in fondo, al loro posto
+    $('#game').classList.toggle('tools-off', !!p);
     if (!p) { this.placementBar?.remove(); this.placementBar = null; $('#bubble').classList.remove('hidden'); return; }
     this.closeContext();
     $('#bubble').classList.add('hidden');

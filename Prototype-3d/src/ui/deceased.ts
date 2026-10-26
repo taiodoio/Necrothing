@@ -72,7 +72,7 @@ export function deceasedParts(ui: UI, id: string) {
       h('span', {}, kept && m.type === 'ghost' && m.at >= kept.entrustedAt ? t('tree.memory.ghostNear') : MEMORY_LABELS[m.type]),
       h('time', {}, fmtDate(m.at))))),
     log.length > shown.length ? h('p', { class: 'muted dc-more' }, t('deceased.logMore', { n: log.length - shown.length })) : null) : null;
-  const postcard = async () => openPostcard(await postcardData(g, await photo, ui, g.seed % 4, kept ? fruitImg() : undefined));
+  const postcard = () => void openPostcard(photo.then((ph) => postcardData(g, ph, ui, g.seed % 4, kept ? fruitImg() : undefined)));
   return { g, kept, vs, where, facts, timeline, photo, postcard };
 }
 

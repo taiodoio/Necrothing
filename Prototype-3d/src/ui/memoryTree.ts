@@ -113,9 +113,9 @@ export function openMemory(ui: UI, id: string, visit?: R.ActionResult, fromList 
   ), {
     footer: h('div', { style: 'display:grid;gap:6px' },
       moreActions([
-        { icon: 'postcard', label: t('detail.grave.postcard'), run: async () => {
-          const photo = g.photoId ? (await memorials.get(g.photoId).catch(() => null))?.dataUrl ?? null : null;
-          openPostcard(await postcardData(g, photo, ui, g.seed % 4, fruitImg()));
+        { icon: 'postcard', label: t('detail.grave.postcard'), run: () => {
+          const photo = g.photoId ? memorials.get(g.photoId).then((m) => m?.dataUrl ?? null, () => null) : Promise.resolve(null);
+          void openPostcard(photo.then((ph) => postcardData(g, ph, ui, g.seed % 4, fruitImg())));
         } },
         { icon: 'shovel', label: t('tree.memory.free'), danger: true, run: () => confirmExhume(ui, id, g.name, 'memory') },
       ]),

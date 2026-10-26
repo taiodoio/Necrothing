@@ -152,7 +152,7 @@ export function openBurial(ui: UI, initial?: R.BurialDraft, startStep = 0) {
     } else {
       // nel riepilogo la cartolina si può già mandare, prima di scegliere il posto
       setDrawerFooter(h('div', { style: 'display:grid;gap:6px' },
-        h('div', { class: 'row' }, back, h('button', { class: 'big-btn ghost', onclick: async () => openPostcard(await postcardData({ ...d, graveType: d.graveType! }, photo.url(), ui)) }, t('burial.postcard'))),
+        h('div', { class: 'row' }, back, h('button', { class: 'big-btn ghost', onclick: () => void openPostcard(postcardData({ ...d, graveType: d.graveType! }, photo.url(), ui)) }, t('burial.postcard'))),
         h('button', { class: 'big-btn', disabled: !stepValid(), onclick: async () => { d.photoId = await photo.store(); closeDrawer(); game.startGravePlacement(d); } }, t('burial.choosePlace'))));
     }
   };
@@ -469,7 +469,7 @@ export function openDetail(ui: UI, id: string) {
     ), { footer: h('div', { style: 'display:grid;gap:6px' },
       // le altre azioni (cartolina, albero, riesuma) in «Altro», secondario, sopra l'azione che serve adesso
       moreActions([
-        { icon: 'postcard', label: t('detail.grave.postcard'), run: async () => openPostcard(await postcardData(g, photoUrl, ui, g.seed % 4)) },
+        { icon: 'postcard', label: t('detail.grave.postcard'), run: () => void openPostcard(postcardData(g, photoUrl, ui, g.seed % 4)) },
         R.memoryTree(s) ? { icon: 'tree', label: t('detail.grave.entrust'), run: () => ui.openEntrust(id) } : null,
         { icon: 'shovel', label: t('detail.exhume'), danger: true, run: () => confirmExhume(ui, id, g.name, 'grave') },
       ]),
@@ -866,6 +866,7 @@ function photoOverlay(ui: UI) {
   apply();
   layer.hidden = false;
   $('#bubble').classList.add('hidden');
+  $('#game').classList.add('tools-off'); // niente pulsanti della mappa sotto la barra dello scatto
   let mode: string | null = null;
   let last = { x: 0, y: 0 };
   const down = (e: PointerEvent) => {
@@ -895,6 +896,7 @@ function photoOverlay(ui: UI) {
   const close = () => {
     layer.hidden = true;
     $('#bubble').classList.remove('hidden');
+    $('#game').classList.remove('tools-off');
     layer.removeEventListener('pointerdown', down);
     layer.removeEventListener('pointermove', move);
     layer.removeEventListener('pointerup', up);

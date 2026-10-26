@@ -345,6 +345,10 @@ button.slot:active, .icon-btn:active, .ctx-actions button:active, .big-btn:activ
 .tutorial { position: absolute; z-index: 7; left: 50%; transform: translateX(-50%); bottom: calc(96px + var(--safe-b)); width: min(92vw, 420px); padding: 4px 8px 8px; font-size: 14.5px; line-height: 1.4; display: grid; gap: 8px; }
 .welcome-scrim { position: absolute; inset: 0; z-index: 10; background: rgba(8, 10, 14, 0.55); }
 .tutorial.welcome { z-index: 11; }
+/* scegliendo il posto (o inquadrando una foto) il menù e i pulsanti della mappa spariscono:
+   la barra sta in fondo, alla loro altezza */
+.tools-off .map-tools { display: none; }
+.tools-off .tutorial:not(.welcome) { bottom: calc(14px + var(--safe-b)); }
 .tutorial b { display: flex; align-items: center; gap: 6px; color: var(--gold-bright); font: 400 26px/1 var(--gothic); text-shadow: 0 2px 0 #000; }
 
 @media (max-width: 380px) {

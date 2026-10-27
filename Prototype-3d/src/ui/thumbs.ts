@@ -37,22 +37,22 @@ sun.position.set(-4, 8, 6);
 scene.add(sun);
 
 /** Il renderer delle miniature; se il suo contesto è andato perso se ne fa uno nuovo. */
-function setup(fresh = false) {
-  if (!fresh && alive(renderer)) return renderer;
+function setup(fresh = false, size = SIZE) {
+  if (!fresh && alive(renderer)) { renderer.setSize(size, size, false); return renderer; }
   renderer?.dispose();
   renderer = null;
   const canvas = document.createElement('canvas');
   renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true, preserveDrawingBuffer: true });
-  renderer.setSize(SIZE, SIZE, false);
+  renderer.setSize(size, size, false);
   renderer.setPixelRatio(1);
   renderer.outputColorSpace = THREE.SRGBColorSpace;
   return renderer;
 }
 
-function snapshot(key: string, group: THREE.Group, fp: [number, number]): string {
+function snapshot(key: string, group: THREE.Group, fp: [number, number], px = SIZE): string {
   const hit = cache.get(key);
   if (hit) return hit;
-  let r = setup();
+  let r = setup(false, px);
   scene.add(group);
   const box = new THREE.Box3().setFromObject(group);
   const size = box.getSize(new THREE.Vector3());
@@ -64,7 +64,7 @@ function snapshot(key: string, group: THREE.Group, fp: [number, number]): string
   camera.lookAt(center);
   r.render(scene, camera);
   // vuota (contesto perso): si riprova con un renderer nuovo, e se resta vuota non si tiene
-  if (!drewSomething(r)) { r = setup(true); r.render(scene, camera); }
+  if (!drewSomething(r)) { r = setup(true, px); r.render(scene, camera); }
   const ok = drewSomething(r);
   const url = r.domElement.toDataURL('image/png');
   scene.remove(group);
@@ -85,10 +85,15 @@ export function placeableThumb(type: string, style: ArtStyle, variant = 0): stri
   const key = `${style}|${placeableKey(v)}`;
   if (cache.has(key)) return cache.get(key)!;
   const g = instantiate(getModel(placeableKey(v), style, () => placeableModel(v), 1));
-  if (PRESENCE_TYPES.has(type)) addCast(g, type, style);
-  // la testa dello spaventapasseri è una parte animata: in miniatura c'è lo stesso
-  if (type === 'scarecrow' && style === 'lowpoly') { const anim = createAnimated(v); if (anim) { anim.update(30); g.add(anim.root); } }
+  addPresences(g, v, style);
   return snapshot(key, g, CATALOG[type].footprint);
+}
+
+/** Chi abita l'oggetto, fermo nella sua posa (anche nelle anteprime già pronte, render/bake). */
+export function addPresences(g: THREE.Object3D, v: PVis, style: ArtStyle) {
+  if (PRESENCE_TYPES.has(v.type)) addCast(g, v.type, style);
+  // la testa dello spaventapasseri è una parte animata: in miniatura c'è lo stesso
+  if (v.type === 'scarecrow' && style === 'lowpoly') { const anim = createAnimated(v); if (anim) { anim.update(30); g.add(anim.root); } }
 }
 
 /**
@@ -96,7 +101,7 @@ export function placeableThumb(type: string, style: ArtStyle, variant = 0): stri
  * strega, scheletri, fantasmi, gatti, la statua), fermo nella sua posa.
  * Si ritraggono come di notte, quando ci sono tutti (vampiro, gazebo).
  */
-function addCast(g: THREE.Group, type: string, style: ArtStyle) {
+function addCast(g: THREE.Object3D, type: string, style: ArtStyle) {
   const { cast, props } = presenceLayout({ type, broken: false }, { night: true, tier: 'high' });
   for (const c of cast) {
     if (c.hidden) continue;
@@ -118,9 +123,10 @@ function addCast(g: THREE.Group, type: string, style: ArtStyle) {
   }
 }
 
-export function graveThumb(type: GraveType, style: ArtStyle, state: GraveVisualState = 'clean', seed = 0): string {
-  const key = `${style}|g:${type}:${state}:${seed}`;
+/** Miniatura di una lapide; `size` più grande per le schede dove si vede in grande (es. 480). */
+export function graveThumb(type: GraveType, style: ArtStyle, state: GraveVisualState = 'clean', seed = 0, size = SIZE): string {
+  const key = `${style}|g:${type}:${state}:${seed}${size === SIZE ? '' : `@${size}`}`;
   if (cache.has(key)) return cache.get(key)!;
   const g = instantiate(getModel(`g:${type}:${state}:${seed}`, style, () => graveModel(type, state, seed), seed));
-  return snapshot(key, g, GRAVE_FOOTPRINT);
+  return snapshot(key, g, GRAVE_FOOTPRINT, size);
 }

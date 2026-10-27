@@ -87,6 +87,12 @@ export interface Roamer extends Walker {
   /** Zombie: ha già sporcato una tomba (al massimo una), e le tombe su cui ha già tentato la sorte. */
   muddied?: boolean;
   tried?: Set<string>;
+  /**
+   * Zombie: va prima verso ciò che l'ha chiamato (tomba aperta, bar, orto) e
+   * solo lì comincia a vagare (la sua vita si conta da quando arriva). Senza,
+   * nato sul bordo, vagando a caso restava sempre lungo il recinto.
+   */
+  seek?: { stop: VisitStop; planned: boolean; budget: number };
 }
 
 /** Una tappa del giro: una tomba o un oggetto (cella e ingombro). */
@@ -814,7 +820,7 @@ export class Actors {
 
   // ── Presenze erranti ─────────────────────────────────────────────────
 
-  spawnRoamer(req: SpawnRequest, near?: THREE.Vector3): Roamer {
+  spawnRoamer(req: SpawnRequest, near?: THREE.Vector3, seek?: VisitStop): Roamer {
     const id = `r${++roamerSeq}`;
     const a = this.area;
     let start: THREE.Vector3;
@@ -841,6 +847,8 @@ export class Actors {
       pause: 0, hitbox, dying: 0, perched: false,
     };
     if (req.kind === 'crow') { r.pos.y = 3; r.path = []; }
+    // al massimo un minuto e mezzo di strada: se non arriva, vaga dov'è
+    if (seek) r.seek = { stop: seek, planned: false, budget: 90 };
     this.roamers.set(id, r);
     return r;
   }
@@ -863,6 +871,31 @@ export class Actors {
     return p ? p.slice(1).map((c) => cellCenter(c.x, c.y, [1, 1])) : null;
   }
 
+  /** Percorso fino a una cella libera accanto a una tappa (meglio davanti), la più vicina; null se non ci si arriva. */
+  private approachPath(from: THREE.Vector3, s: VisitStop): THREE.Vector3[] | null {
+    const at = worldToCell(from);
+    const ring: Cell[] = [];
+    for (let i = -1; i <= s.fp[0]; i++) { ring.push({ x: s.x + i, y: s.y + s.fp[1] }); ring.push({ x: s.x + i, y: s.y - 1 }); }
+    for (let j = 0; j < s.fp[1]; j++) { ring.push({ x: s.x - 1, y: s.y + j }); ring.push({ x: s.x + s.fp[0], y: s.y + j }); }
+    const near = ring.filter((c) => this.walkable(c.x, c.y)).sort((a, b) => Math.hypot(a.x - at.x, a.y - at.y) - Math.hypot(b.x - at.x, b.y - at.y) + (a.y === s.y + s.fp[1] ? -1 : 0) - (b.y === s.y + s.fp[1] ? -1 : 0));
+    for (const c of near.slice(0, 4)) { const path = this.visitPath(from, c); if (path) { path.push(cellCenter(c.x, c.y, [1, 1])); return path; } }
+    return null;
+  }
+
+  /** Lo zombie va verso ciò che l'ha chiamato; arrivato (o se non ci arriva) comincia a vagare lì. */
+  private stepSeek(r: Roamer, sk: NonNullable<Roamer['seek']>, dt: number) {
+    if (!sk.planned) {
+      sk.planned = true;
+      const path = this.approachPath(r.pos, sk.stop);
+      if (!path) { r.seek = undefined; return; }
+      r.path = path;
+    }
+    sk.budget -= dt;
+    if (sk.budget > 0 && this.followPath(r, dt)) { r.pose = 'walk'; return; }
+    r.seek = undefined;
+    r.path = [];
+  }
+
   private stepVisit(r: Roamer, v: Visit, dt: number) {
     if (v.stage === 'go') {
       if (!v.planned) {
@@ -873,14 +906,7 @@ export class Actors {
           r.path = [...(p ?? []), v.exit.clone()];
           return;
         }
-        // una cella libera accanto alla tappa (meglio davanti), la più vicina
-        const from = worldToCell(r.pos);
-        const ring: Cell[] = [];
-        for (let i = -1; i <= s.fp[0]; i++) { ring.push({ x: s.x + i, y: s.y + s.fp[1] }); ring.push({ x: s.x + i, y: s.y - 1 }); }
-        for (let j = 0; j < s.fp[1]; j++) { ring.push({ x: s.x - 1, y: s.y + j }); ring.push({ x: s.x + s.fp[0], y: s.y + j }); }
-        const near = ring.filter((c) => this.walkable(c.x, c.y)).sort((a, b) => Math.hypot(a.x - from.x, a.y - from.y) - Math.hypot(b.x - from.x, b.y - from.y) + (a.y === s.y + s.fp[1] ? -1 : 0) - (b.y === s.y + s.fp[1] ? -1 : 0));
-        let path: THREE.Vector3[] | null = null;
-        for (const c of near.slice(0, 4)) { path = this.visitPath(r.pos, c); if (path) { path.push(cellCenter(c.x, c.y, [1, 1])); break; } }
+        const path = this.approachPath(r.pos, s);
         if (!path) { v.i++; return; } // irraggiungibile: passa alla prossima
         r.path = path;
         v.planned = true;
@@ -916,6 +942,7 @@ export class Actors {
   }
 
   private stepRoamer(r: Roamer, dt: number, t: number, graves: THREE.Vector3[]) {
+    if (r.seek && r.dying <= 0) { this.stepSeek(r, r.seek, dt); return; }
     r.age += dt;
     if (r.dying > 0) {
       r.dying -= dt;

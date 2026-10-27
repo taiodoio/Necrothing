@@ -5,7 +5,7 @@
 import * as THREE from 'three';
 import { BAT, BUSINESS, FOREST_MARGIN, PET_GIFT, GRAVE_FOOTPRINT, KEEPER_LAMP, LIVE_TICK_MS, SOUL_BELL, STAFF, ZOMBIE_MUD } from '../game/balance.ts';
 import { moveTraceDraw, startTraceDraw, traceDrawCells, type TraceDraw } from '../game/trace.ts';
-import { CATALOG, CATALOG_LIST, EDIT_ONLY, rotatedFootprint, TRACEABLE } from '../game/catalog.ts';
+import { CATALOG, CATALOG_LIST, EDIT_ONLY, rotatedFootprint, TRACEABLE, ZOMBIE_ATTRACTORS } from '../game/catalog.ts';
 import { applyTheme, uiNext, uiPreview } from './uiNext.ts';
 import { watchLifecycle } from './platform.ts';
 import { askReminderPermission, clearReminders, remindersAvailable, syncReminders } from './reminders.ts';
@@ -338,7 +338,7 @@ export class Game {
       if (s.memoryId) { this.spawnMemoryGhost(s.memoryId); continue; }
       if (s.kind === 'priest' || s.kind === 'gravedigger') { this.spawnVisitor(s.kind); continue; }
       const g = s.graveId ? this.state.graves.find((x) => x.id === s.graveId) : undefined;
-      this.actors.spawnRoamer(s, g ? cellCenter(g.x, g.y + 2, [2, 1]) : undefined);
+      this.actors.spawnRoamer(s, g ? cellCenter(g.x, g.y + 2, [2, 1]) : undefined, s.kind === 'zombie' ? this.zombieGoal() : undefined);
     }
     if (res.wisp) { this.world.sync(this.state); scheduleSave(this.state); }
   }
@@ -1905,7 +1905,14 @@ export class Game {
   /** Solo sviluppo/test: forza la comparsa di una presenza. */
   debugSpawn(kind: Parameters<Actors['spawnRoamer']>[0]['kind'], rare = false) {
     const g = this.state.graves[0];
-    this.actors.spawnRoamer({ kind, rare, graveId: g?.id }, g && kind === 'ghost' ? cellCenter(g.x, g.y + 2, [2, 1]) : undefined);
+    this.actors.spawnRoamer({ kind, rare, graveId: g?.id }, g && kind === 'ghost' ? cellCenter(g.x, g.y + 2, [2, 1]) : undefined, kind === 'zombie' ? this.zombieGoal() : undefined);
+  }
+
+  /** Dove va uno zombie appena entrato: una delle cose che lo chiamano (tomba o bara aperta, bar, orto), a caso. */
+  private zombieGoal(): VisitStop | undefined {
+    const calls = this.state.placeables.filter((p) => !p.broken && (ZOMBIE_ATTRACTORS.has(p.type) || p.type === 'zombie_bar' || p.type === 'brain_farm'));
+    const p = calls[Math.floor(Math.random() * calls.length)];
+    return p ? { id: p.id, x: p.x, y: p.y, fp: rotatedFootprint(p.type, p.rot) } : undefined;
   }
 
   dispose() {

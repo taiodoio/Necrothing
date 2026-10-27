@@ -142,6 +142,12 @@ export default {
   'shop.detail.meta.uniqueOwned': '{category} · pezzo unico · ne hai {owned}',
   'shop.detail.meta.maxOwned': '{category} · ne puoi comprare {max} · ne hai {owned}',
   'shop.detail.unique': 'Pezzo unico',
+  // sulla pergamena dell'acquisto: quanti se ne possono comprare
+  'shop.detail.available': 'Acquistabili',
+  // valore accanto a «Acquistabili»
+  'shop.detail.availableValue': 'fino a {max}',
+  // sulla pergamena dell'acquisto: quanti ne hai già
+  'shop.detail.owned': 'Già tuoi',
   'shop.detail.max': 'Max {max}',
   // {season} è il periodo in cui si compra
   'shop.detail.seasonal': 'Stagionale: si compra solo {season}, poi resta tuo per sempre.',
@@ -470,6 +476,12 @@ export default {
   'postcard.share': 'Condividi',
   // notifica (dove non si può condividere, la cartolina si scarica)
   'postcard.saved': 'Cartolina salvata.',
+  // titolo della finestra mentre si disegna la cartolina
+  'postcard.preparing': 'Preparo la cartolina…',
+  'postcard.preparingText': 'Metto insieme la foto, la lapide e le parole.',
+  // titolo: la cartolina non si è potuta disegnare
+  'postcard.failed': 'La cartolina non si crea',
+  'postcard.failedText': 'Qualcosa è andato storto mentre la disegnavo. Riprova; se non va, chiudi e riapri il gioco.',
   // sulla cartolina, sopra il nome
   'postcard.inMemoryOf': 'In memoria di',
   // sulla cartolina: causa e categoria

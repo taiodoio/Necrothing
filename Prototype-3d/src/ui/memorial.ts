@@ -5,8 +5,9 @@
 
 import { memorials } from '../app/persistence.ts';
 import { newId } from '../game/rng.ts';
-import { h, openModal, toast } from './dom.ts';
+import { h, openModal, progressDialog, toast } from './dom.ts';
 import { icon } from './icons.ts';
+import { uiPlay } from '../app/uiNext.ts';
 import { t } from '../i18n/index.ts';
 import { applyPhotoFilter, PHOTO_FILTER_LABELS, squareCrop, type PhotoFilter } from './photoFilters.ts';
 import { drawPostcard, sharePostcard, type PostcardData } from './postcard.ts';
@@ -30,7 +31,12 @@ export class BurialPhoto {
   url(f: PhotoFilter = this.filter): string | null {
     if (!this.base) return null;
     let u = this.cache.get(f);
-    if (!u) { u = applyPhotoFilter(this.base, f, 11).toDataURL('image/jpeg', 0.85); this.cache.set(f, u); }
+    if (!u) {
+      const c = applyPhotoFilter(this.base, f, 11);
+      u = c.toDataURL('image/jpeg', 0.85);
+      c.width = c.height = 0; // sul telefono la memoria per le tele è poca: questa non serve più
+      this.cache.set(f, u);
+    }
     return u;
   }
 
@@ -78,7 +84,8 @@ export function photoStep(photo: BurialPhoto, rerender: () => void): HTMLElement
     input.click();
   };
   const box = h('div', { class: 'photo-pick' },
-    h('p', { class: 'muted', style: 'margin:0' }, photo.has ? t('memorial.hint.swipe') : t('memorial.hint.optional')));
+    // senza foto il «Salta» del piede dice già che è facoltativa
+    photo.has || !uiPlay() ? h('p', { class: 'muted', style: 'margin:0' }, photo.has ? t('memorial.hint.swipe') : t('memorial.hint.optional')) : null);
   const frame = portrait(photo.url(), null);
   box.append(frame);
   if (photo.has) {
@@ -104,18 +111,32 @@ export function photoStep(photo: BurialPhoto, rerender: () => void): HTMLElement
 }
 
 /**
- * La cartolina in un modale sopra al resto (sfondo scuro, X in alto a sinistra
+ * La cartolina in un modale sopra al resto (sfondo scuro, X in alto a destra
  * come gli altri modali; il drawer sotto resta com'è): l'immagine e «Condividi»
- * (dove non si può condividere, si scarica).
+ * (dove non si può condividere, si scarica). Mentre la si disegna una finestra
+ * lo dice; se non si riesce (es. sul telefono manca memoria) lo dice invece di
+ * non fare nulla. `data` può essere ancora in preparazione (foto e lapide da caricare).
  */
-export async function openPostcard(data: PostcardData) {
-  const card = await drawPostcard(data);
+export async function openPostcard(data: PostcardData | Promise<PostcardData>) {
+  const p = progressDialog(t('postcard.preparing'), t('postcard.preparingText'));
+  let d: PostcardData, blob: Blob;
+  try {
+    d = await data;
+    const card = await drawPostcard(d);
+    blob = await new Promise<Blob>((res, rej) => card.toBlob((b) => (b ? res(b) : rej(new Error(t('postcard.failedText')))), 'image/png'));
+    card.width = card.height = 0; // la tela non serve più: sul telefono la sua memoria va liberata subito
+  } catch {
+    await p.done(t('postcard.failed'), t('postcard.failedText'), false);
+    return;
+  }
+  p.close();
+  const url = URL.createObjectURL(blob);
   const share = async () => {
-    const r = await sharePostcard(card, data.name);
+    const r = await sharePostcard(blob, d.name);
     if (r === 'downloaded') toast(t('postcard.saved'));
   };
   openModal(h('div', { class: 'postcard-dialog' },
     h('h3', { class: 'modal-title' }, t('postcard.dialog.title')),
-    h('img', { class: 'postcard-view', src: card.toDataURL('image/png'), alt: t('postcard.dialog.alt', { name: data.name }) }),
-    h('button', { class: 'big-btn', onclick: share }, icon('postcard', 22), t('postcard.share'))), { label: t('postcard.dialog.title') });
+    h('img', { class: 'postcard-view', src: url, alt: t('postcard.dialog.alt', { name: d.name }) }),
+    h('button', { class: 'big-btn', onclick: share }, icon('postcard', 22), t('postcard.share'))), { label: t('postcard.dialog.title'), onClose: () => URL.revokeObjectURL(url) });
 }

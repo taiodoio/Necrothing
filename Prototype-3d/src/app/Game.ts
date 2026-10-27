@@ -652,13 +652,14 @@ export class Game {
 
   // ── Posizionamento (sepoltura & inventario) ──────────────────────────
 
-  private viewCenterCell() {
-    return worldToCell(this.rig.target);
+  /** Da dove parte la scelta del posto: accanto al Custode (lo si vede sempre, a differenza del centro della vista). */
+  private placementOriginCell() {
+    return worldToCell(this.actors.avatar.pos);
   }
 
   startGravePlacement(draft: R.BurialDraft) {
     const occ = buildOccupancy(this.state);
-    const c = this.viewCenterCell();
+    const c = this.placementOriginCell();
     const spot = nearestFreeSpot(c.x, c.y, GRAVE_FOOTPRINT, occ, areaForLevel(this.state.world.expansionLevel));
     if (!spot) { toast(t('game.noSpace.grave')); return; }
     this.select(null);
@@ -673,7 +674,7 @@ export class Game {
     if (uiNext() && TRACEABLE.has(type)) { this.startTrace(type); return; }
     const fp = rotatedFootprint(type, 0);
     const occ = buildOccupancy(this.state);
-    const c = this.viewCenterCell();
+    const c = this.placementOriginCell();
     const spot = nearestFreeSpot(c.x, c.y, fp, occ, areaForLevel(this.state.world.expansionLevel));
     if (!spot) { toast(t('game.noSpace.item')); return; }
     this.select(null);
@@ -684,10 +685,11 @@ export class Game {
   }
 
   private startTrace(type: string) {
-    const c = this.viewCenterCell();
+    const c = this.placementOriginCell();
     this.select(null);
     this.placement = { kind: 'item', type, x: c.x, y: c.y, rot: 0, valid: false, trace: { segs: [], live: null } };
     this.rig.follow = null;
+    this.rig.jumpTo(cellCenter(c.x, c.y, [1, 1])); // si traccia partendo da dove sta il Custode
     this.refreshPlacement();
   }
 

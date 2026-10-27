@@ -15,10 +15,11 @@ import { LOWPOLY_MATERIALS } from '../render/modelCache.ts';
 import { currentLang, t } from '../i18n/index.ts';
 import { closeDrawer, confirmDialog, fmtDate, h, openDrawer, setDrawerBody, setDrawerHero, toast, wispPill } from './dom.ts';
 import { icon } from './icons.ts';
+import { uiPlay } from '../app/uiNext.ts';
 import { houseHeader } from './houseHeader.ts';
 import { registryHeader } from './registryHeader.ts';
 import { openDeceased } from './deceased.ts';
-import { needChip, needRows, type UnlockNeed } from './screens.ts';
+import { needChip, needRows, tabGlyph, type UnlockNeed } from './screens.ts';
 import { graveThumb, modelThumb, placeableThumb } from './thumbs.ts';
 import type { UI } from './UI.ts';
 
@@ -68,10 +69,11 @@ export function openRegistry(ui: UI, filter: RegFilter = 'all', settled = false)
     ].filter((r) => filter === 'all' || (filter === 'tree') === r.tree)
       .sort((a, b) => b.at.localeCompare(a.at));
     const count = (f: RegFilter) => f === 'all' ? s.graves.length + s.entrusted.length : f === 'tree' ? s.entrusted.length : s.graves.length;
+    const REG_MONO: Record<RegFilter, string> = { all: 'book', graves: 'tomb', tree: 'tree' };
     const tabs = h('div', { class: 'tabs' }, ...([['all', t('house.ui.registry.tab.all')], ['graves', t('house.ui.registry.tab.graves')], ['tree', t('house.ui.registry.tab.tree')]] as const).map(([f, label]) =>
-      h('button', { class: `tab ${f === filter ? 'active' : ''}`, onclick: () => { filter = f; render(); } }, label, h('small', { class: 'tab-n' }, String(count(f))))));
+      h('button', { class: `tab ${f === filter ? 'active' : ''}`, onclick: () => { filter = f; render(); } }, tabGlyph(REG_MONO[f]), label, h('small', { class: 'tab-n' }, String(count(f))))));
     setDrawerBody(h('div', { class: 'registry' },
-      h('p', { class: 'muted' }, t('house.ui.registry.intro')),
+      uiPlay() ? null : h('p', { class: 'muted' }, t('house.ui.registry.intro')),
       tabs,
       rows.length ? h('div', { class: 'reg-list' }, ...rows.map((r) => h('div', { class: 'reg-row' },
         h('button', { class: 'reg-open', onclick: () => openRegistryEntry(ui, r.id, filter) },
@@ -120,7 +122,7 @@ export function openHouse(ui: UI) {
         h('b', {}, it.label),
         h('span', { class: 'price owned' }, active ? t('house.ui.card.shown') : t('house.ui.card.hidden')));
     setDrawerBody(h('div', {},
-      h('p', { class: 'muted', style: 'margin:0 0 10px' }, t('house.ui.hint')),
+      uiPlay() ? null : h('p', { class: 'muted', style: 'margin:0 0 10px' }, t('house.ui.hint')),
       perksBox(s),
       roofs.length > 1 ? h('div', {}, h('div', { class: 'section-title' }, t('house.ui.roof')),
         h('div', { class: 'grid' }, ...roofs.map((r) => card(r, s.house.roof === r.id, () => {

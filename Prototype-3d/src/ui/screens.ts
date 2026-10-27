@@ -11,7 +11,7 @@ import {
 } from '../game/graves.ts';
 import { ACHIEVEMENTS, achievementProgress, nextRank, rankForXp, rankProgress } from '../game/progression.ts';
 import * as R from '../game/rules.ts';
-import { createNewGame, type FpsSetting, type SaveData, type ThemeSetting, type TimeOverride } from '../game/state.ts';
+import { createNewGame, type ArtStyle, type FpsSetting, type SaveData, type ThemeSetting, type TimeOverride } from '../game/state.ts';
 import { computePrestige, detectDistricts, DISTRICT_LABELS, expansionStatus } from '../game/world.ts';
 import { newId } from '../game/rng.ts';
 import { $, closeDrawer, confirmDialog, fmtDate, h, type Modal, openDrawer, openModal, progressDialog, setDrawerBody, setDrawerExtra, setDrawerFooter, setDrawerHero, toast, wispPill } from './dom.ts';
@@ -20,13 +20,29 @@ import { houseBoughtView, houseShopDetail, houseShopGrid } from './house.ts';
 import { graveThumb, placeableThumb } from './thumbs.ts';
 import { ACH_COUNT, ACH_ICONS, icon } from './icons.ts';
 import { lpBadgeUrl } from './lpIcons.ts';
+import { monoIcon } from './monoIcons.ts';
+import { factLabel, parchment } from './parchment.ts';
 import { uiNext, uiPlay, uiPreview } from '../app/uiNext.ts';
 import { remindersAvailable } from '../app/reminders.ts';
 import { currentLang, LANGS, setLang, t, tList } from '../i18n/index.ts';
 
-/** Interfaccia «viva»: un'icona per ogni scheda delle categorie. */
-const CAT_ICON: Record<PlaceableCategory | 'all', string> = { all: 'bag', light: 'lightOn', decoration: 'flower', structure: 'fence', ambient: 'tree', npc: 'ghost', extra: 'bike' };
-const tabIcon = (c: PlaceableCategory | 'all') => (uiPlay() ? icon(CAT_ICON[c], 20) : null);
+/**
+ * Immagine di un oggetto. Nell'interfaccia «viva» (stile low-poly) è
+ * l'anteprima illuminata già pronta in PNG (public/previews, vedi
+ * scripts/bake-previews.mjs): di notte, su una zolla d'erba, con le sue luci;
+ * altrimenti la miniatura disegnata al momento.
+ */
+function itemImg(type: string, style: ArtStyle, cls: 'lit' | 'lit-hero', variant = 0): HTMLElement {
+  return uiPlay() && style === 'lowpoly'
+    ? h('img', { class: cls, src: `previews/${type}.png`, alt: '' })
+    : h('img', { src: placeableThumb(type, style, variant), alt: '' });
+}
+
+/** Interfaccia «viva»: un'icona monocromatica per ogni scheda delle categorie. */
+const CAT_ICON: Record<PlaceableCategory | 'all', string> = { all: 'all', light: 'light', decoration: 'flower', structure: 'fence', ambient: 'tree', npc: 'ghost', extra: 'star' };
+/** L'icona di una scheda (solo nell'interfaccia «viva»). */
+export const tabGlyph = (name: string) => (uiPlay() ? monoIcon(name, 19) : null);
+const tabIcon = (c: PlaceableCategory | 'all') => tabGlyph(CAT_ICON[c]);
 import type { UI } from './UI.ts';
 import { CustodePreview, openCustomize } from './customize.ts';
 import { openDeceased } from './deceased.ts';
@@ -111,7 +127,7 @@ export function openBurial(ui: UI, initial?: R.BurialDraft, startStep = 0) {
         h('div', { class: 'chips' }, ...EPITAPHS.map((ep) => h('button', { class: 'chip', onclick: () => { d.epitaph = ep; render(); } }, ep))),
       );
     } else if (step === 4) {
-      body.append(h('p', { class: 'muted' }, t('burial.graveType.intro')),
+      body.append(uiPlay() ? '' : h('p', { class: 'muted' }, t('burial.graveType.intro')), // il lucchetto col rango lo dice già
         h('div', { class: 'grid' }, ...GRAVE_TYPES.map((gt) => {
           const locked = GRAVE_TYPE_MIN_RANK[gt] > level;
           return h('button', {
@@ -152,7 +168,7 @@ export function openBurial(ui: UI, initial?: R.BurialDraft, startStep = 0) {
     } else {
       // nel riepilogo la cartolina si può già mandare, prima di scegliere il posto
       setDrawerFooter(h('div', { style: 'display:grid;gap:6px' },
-        h('div', { class: 'row' }, back, h('button', { class: 'big-btn ghost', onclick: async () => openPostcard(await postcardData({ ...d, graveType: d.graveType! }, photo.url(), ui)) }, t('burial.postcard'))),
+        h('div', { class: 'row' }, back, h('button', { class: 'big-btn ghost', onclick: () => void openPostcard(postcardData({ ...d, graveType: d.graveType! }, photo.url(), ui)) }, t('burial.postcard'))),
         h('button', { class: 'big-btn', disabled: !stepValid(), onclick: async () => { d.photoId = await photo.store(); closeDrawer(); game.startGravePlacement(d); } }, t('burial.choosePlace'))));
     }
   };
@@ -261,11 +277,11 @@ export function openShop(ui: UI, cat: PlaceableCategory | 'house' = 'light', sel
   const drawShop = () => {
     const tabs = h('div', { class: 'tabs' }, ...CATEGORY_ORDER.map((c) => h('button', { class: `tab ${c === cat ? 'active' : ''}`, onclick: () => { cat = c; selected = null; render(); } }, tabIcon(c), PLACEABLE_CATEGORY_LABELS[c])),
       // tetti e aggiunte della Casa del Custode
-      uiPreview() ? h('button', { class: `tab ${cat === 'house' ? 'active' : ''}`, onclick: () => { cat = 'house'; selected = null; render(); } }, uiPlay() ? icon('house', 20) : null, t('shop.tab.house')) : null);
+      uiPreview() ? h('button', { class: `tab ${cat === 'house' ? 'active' : ''}`, onclick: () => { cat = 'house'; selected = null; render(); } }, tabGlyph('home'), t('shop.tab.house')) : null);
     if (next) setDrawerExtra(wispPill(s.player.wisps));
     const pick = (id: string) => { selected = id; qty = 1; render(); };
     if (cat === 'house') {
-      setDrawerBody(h('div', {}, h('p', { class: 'muted' }, next ? t('shop.house.intro') : t('shop.house.introWisps', { n: s.player.wisps, amount: s.player.wisps.toLocaleString(currentLang()) })), tabs,
+      setDrawerBody(h('div', {}, uiPlay() ? null : h('p', { class: 'muted' }, next ? t('shop.house.intro') : t('shop.house.introWisps', { n: s.player.wisps, amount: s.player.wisps.toLocaleString(currentLang()) })), tabs,
         houseShopGrid(s, selected, pick)));
     } else {
       const items = CATALOG_LIST.filter((d) => d.category === cat && !d.permanent);
@@ -279,7 +295,7 @@ export function openShop(ui: UI, cat: PlaceableCategory | 'house' = 'light', sel
             class: `card ${selected === d.id ? 'selected' : ''} ${locked ? 'locked' : ''} ${av === 'funds' ? 'dim' : ''} ${owned ? 'owned' : ''}`,
             onclick: () => pick(d.id),
           },
-          h('span', { class: 'thumb' }, h('img', { src: placeableThumb(d.id, s.settings.style), alt: '' }),
+          h('span', { class: 'thumb' }, itemImg(d.id, s.settings.style, 'lit'),
             locked ? h('span', { class: 'lock-over' }, icon('lock', 30)) : null,
             owned ? h('span', { class: 'owned-tick' }, icon('check', 15)) : null),
           h('b', {}, d.label),
@@ -301,7 +317,8 @@ export function openShop(ui: UI, cat: PlaceableCategory | 'house' = 'light', sel
         (s.inventory[d.id] ?? 0) > 0 ? h('span', { class: 'badge' }, String(s.inventory[d.id])) : null);
       }));
       const wisps = { n: s.player.wisps, amount: s.player.wisps.toLocaleString(currentLang()) };
-      setDrawerBody(h('div', {}, h('p', { class: 'muted' }, uiPreview()
+      // interfaccia «viva»: niente spiegazione, i lucchetti e le pastiglie sotto le carte dicono già tutto
+      setDrawerBody(h('div', {}, uiPlay() ? null : h('p', { class: 'muted' }, uiPreview()
         ? (next ? t('shop.intro.preview') : t('shop.intro.previewWisps', wisps))
         : t('shop.intro.classic', wisps)), tabs, grid));
     }
@@ -325,10 +342,15 @@ export function openShop(ui: UI, cat: PlaceableCategory | 'house' = 'light', sel
     return h('div', { class: next ? 'shop-detail' : '', style: next ? '' : 'display:grid;gap:8px' },
       next ? wispPill(s.player.wisps) : null,
       next
-        ? h('div', { class: 'shop-detail-top' }, h('img', { src: placeableThumb(d.id, s.settings.style), alt: '' }),
-          h('h3', {}, d.label), h('p', { class: 'muted' }, metaLine(d)))
+        ? h('div', { class: 'shop-detail-top' }, itemImg(d.id, s.settings.style, 'lit-hero'),
+          h('h3', {}, d.label), uiPlay() ? null : h('p', { class: 'muted' }, metaLine(d)))
         : h('div', { class: 'row' }, h('b', {}, d.label), h('span', { class: 'muted', style: 'text-align:right' }, d.unique ? t('shop.detail.unique') : t('shop.detail.max', { max: R.maxBuyable(s, d.id) }))),
-      h('p', { class: 'muted', style: 'margin:0' }, d.description),
+      // interfaccia «viva»: descrizione e dati su pergamena, con le icone
+      uiPlay() ? parchment('dc-facts', h('p', { class: 'p-desc' }, d.description), h('dl', { class: 'kv' },
+        h('dt', {}, ...factLabel('category', t('detail.item.category'))), h('dd', {}, PLACEABLE_CATEGORY_LABELS[d.category]),
+        h('dt', {}, ...factLabel('available', t('shop.detail.available'))), h('dd', {}, d.unique ? t('shop.detail.unique') : t('shop.detail.availableValue', { max: R.maxBuyable(s, d.id) })),
+        (s.inventory[d.id] ?? 0) > 0 ? h('dt', {}, ...factLabel('owned', t('shop.detail.owned'))) : null, (s.inventory[d.id] ?? 0) > 0 ? h('dd', {}, String(s.inventory[d.id])) : null))
+        : h('p', { class: 'muted', style: 'margin:0' }, d.description),
       uiPreview() ? needRows(av === 'owned' ? [] : unlockNeeds(s, d, now)) : null,
       !uiPreview() && av === 'graves' ? h('div', { class: 'xp-bar', style: 'height:6px' }, h('i', { style: `width:${Math.round((R.graveTotal(s) / d.minGraves!) * 100)}%` })) : null,
       !uiPreview() && av === 'feat' ? h('div', { class: 'xp-bar', style: 'height:6px' }, h('i', { style: `width:${Math.round((R.featProgress(s, d.feat!)[0] / d.feat!.goal) * 100)}%` })) : null,
@@ -358,7 +380,7 @@ export function openShop(ui: UI, cat: PlaceableCategory | 'house' = 'light', sel
           if (next) {
             drawShop();
             show(h('div', { class: 'shop-detail' }, wispPill(s.player.wisps),
-              h('div', { class: 'shop-detail-top' }, h('img', { src: placeableThumb(d.id, s.settings.style), alt: '' }), h('h3', {}, d.label), h('p', { class: 'muted' }, text)),
+              h('div', { class: 'shop-detail-top' }, itemImg(d.id, s.settings.style, 'lit-hero'), h('h3', {}, d.label), h('p', { class: 'muted' }, text)),
               h('div', { class: 'row' }, h('button', { class: 'big-btn ghost', onclick: close }, t('shop.bought.continue')), go)));
             return;
           }
@@ -395,7 +417,7 @@ export function openInventory(ui: UI, cat: PlaceableCategory | 'all' = 'all') {
       const owned = s.inventory[d.id] ?? 0;
       const placed = s.placeables.filter((p) => p.type === d.id).length;
       return h('button', { class: `card ${owned === 0 ? 'dim' : ''} ${selected === d.id ? 'selected' : ''}`, onclick: () => { if (owned) { selected = d.id; render(); } else toast(t('inventory.allPlaced', { item: d.label })); } },
-        h('img', { src: placeableThumb(d.id, s.settings.style), alt: '' }),
+        itemImg(d.id, s.settings.style, 'lit'),
         h('b', {}, d.label),
         h('small', {}, placed ? t('inventory.placed', { n: placed }) : t('inventory.stored')),
         owned ? h('span', { class: 'badge' }, String(owned)) : null);
@@ -469,7 +491,7 @@ export function openDetail(ui: UI, id: string) {
     ), { footer: h('div', { style: 'display:grid;gap:6px' },
       // le altre azioni (cartolina, albero, riesuma) in «Altro», secondario, sopra l'azione che serve adesso
       moreActions([
-        { icon: 'postcard', label: t('detail.grave.postcard'), run: async () => openPostcard(await postcardData(g, photoUrl, ui, g.seed % 4)) },
+        { icon: 'postcard', label: t('detail.grave.postcard'), run: () => void openPostcard(postcardData(g, photoUrl, ui, g.seed % 4)) },
         R.memoryTree(s) ? { icon: 'tree', label: t('detail.grave.entrust'), run: () => ui.openEntrust(id) } : null,
         { icon: 'shovel', label: t('detail.exhume'), danger: true, run: () => confirmExhume(ui, id, g.name, 'grave') },
       ]),
@@ -479,15 +501,20 @@ export function openDetail(ui: UI, id: string) {
   const p = s.placeables.find((x) => x.id === id);
   if (!p) return;
   const d = CATALOG[p.type];
-  const body = h('div', {},
-    h('div', { class: 'hero' }, h('img', { src: placeableThumb(p.type, style, p.variant), alt: '' }), h('h3', {}, d.label), h('p', { class: 'muted' }, d.description)),
-    h('dl', { class: 'kv' },
-      h('dt', {}, t('detail.item.category')), h('dd', {}, PLACEABLE_CATEGORY_LABELS[d.category]),
-      d.decays ? h('dt', {}, t('detail.item.condition')) : null, d.decays ? h('dd', {}, p.broken ? t('detail.item.broken', { n: R.placeableRepairPrice(s, p.type) }) : p.dirty ? t('detail.item.dirty') : t('detail.item.ok')) : null,
-      d.light ? h('dt', {}, t('detail.item.light')) : null, d.light ? h('dd', {}, p.broken ? t('detail.item.lightBroken') : p.lit ? t('detail.item.lightOn') : t('detail.item.lightOff')) : null,
-      BUSINESS[p.type] ? h('dt', {}, t('detail.item.business')) : null, BUSINESS[p.type] ? h('dd', {}, businessLine(s, p.id, p.type, game.now())) : null,
-    ),
+  const facts = h('dl', { class: 'kv' },
+    h('dt', {}, ...factLabel('category', t('detail.item.category'))), h('dd', {}, PLACEABLE_CATEGORY_LABELS[d.category]),
+    d.decays ? h('dt', {}, ...factLabel('condition', t('detail.item.condition'))) : null, d.decays ? h('dd', { class: p.broken ? 'warn' : '' }, p.broken ? t('detail.item.broken', { n: R.placeableRepairPrice(s, p.type) }) : p.dirty ? t('detail.item.dirty') : t('detail.item.ok')) : null,
+    d.light ? h('dt', {}, ...factLabel('light', t('detail.item.light'))) : null, d.light ? h('dd', {}, p.broken ? t('detail.item.lightBroken') : p.lit ? t('detail.item.lightOn') : t('detail.item.lightOff')) : null,
+    BUSINESS[p.type] ? h('dt', {}, ...factLabel('business', t('detail.item.business'))) : null, BUSINESS[p.type] ? h('dd', {}, businessLine(s, p.id, p.type, game.now())) : null,
   );
+  // interfaccia «viva»: l'anteprima illuminata senza riquadro, descrizione e dati su pergamena
+  const body = uiPlay()
+    ? h('div', { class: 'item-detail' },
+      h('div', { class: 'hero' }, itemImg(p.type, style, 'lit-hero', p.variant), h('h3', {}, d.label)),
+      parchment('dc-facts', h('p', { class: 'p-desc' }, d.description), facts))
+    : h('div', {},
+      h('div', { class: 'hero' }, h('img', { src: placeableThumb(p.type, style, p.variant), alt: '' }), h('h3', {}, d.label), h('p', { class: 'muted' }, d.description)),
+      facts);
   if (d.editableText) {
     const input = h('input', { value: p.text ?? '', maxLength: 60, placeholder: t('detail.sign.placeholder') });
     body.append(h('div', { class: 'field' }, h('label', {}, t('detail.sign.label')), input),
@@ -579,7 +606,7 @@ export function openPlayer(ui: UI) {
   let preview: CustodePreview | null = null;
   const drop = () => { preview?.dispose(); preview = null; };
   const tab = (id: typeof playerTab, ic: string, label: string, n?: string) =>
-    h('button', { class: `tab ${playerTab === id ? 'active' : ''}`, onclick: () => { playerTab = id; render(); } }, icon(ic, 20), label, n ? h('span', { class: 'tab-n' }, n) : null);
+    h('button', { class: `tab ${playerTab === id ? 'active' : ''}`, onclick: () => { playerTab = id; render(); } }, uiPlay() ? tabGlyph(ic === 'keeper' ? 'keeper' : 'trophy') : icon(ic, 20), label, n ? h('span', { class: 'tab-n' }, n) : null);
   const render = () => {
     drop();
     const tabs = h('div', { class: 'tabs' }, tab('keeper', 'keeper', t('player.tab.keeper')), tab('achievements', 'trophy', t('player.tab.achievements'), `${got.size}/${ACHIEVEMENTS.length}`));
@@ -829,6 +856,7 @@ export function openSettings(ui: UI) {
       } }, t('settings.newGame'))),
     info: h('a', { class: 'big-btn ghost', href: './gallery.html', style: 'display:grid;place-items:center;text-decoration:none' }, t('settings.assetGallery')),
   };
+  const SETTINGS_MONO: Record<typeof settingsTab, string> = { game: 'shovel', graphics: 'sparkle', save: 'save', info: 'info' };
   const TABS: Array<[typeof settingsTab, string, string]> = [['game', 'shovel', t('settings.tab.game')], ['graphics', 'lightOn', t('settings.tab.graphics')], ['save', 'book', t('settings.tab.save')], ['info', 'search', t('settings.tab.info')]];
   // tutte le sezioni restano nel pannello (i controlli tengono il loro stato), si mostra solo quella scelta
   const panes = Object.fromEntries(TABS.map(([id]) => [id, h('div', { class: 'settings-pane', hidden: id !== settingsTab }, ...sections[id])])) as unknown as Record<typeof settingsTab, HTMLElement>;
@@ -837,7 +865,7 @@ export function openSettings(ui: UI) {
     for (const b of Array.from(tabBar.children)) b.classList.toggle('active', b === e.currentTarget);
     for (const [k, el] of Object.entries(panes)) el.hidden = k !== id;
     setDrawerFooter(footers[id]);
-  } }, icon(ic, 20), label)));
+  } }, uiPlay() ? tabGlyph(SETTINGS_MONO[id]) : icon(ic, 20), label)));
   const body = h('div', { 'data-settings': 'true' }, tabBar, ...Object.values(panes));
   openDrawer(t('settings.title'), body, { full: true, footer: footers[settingsTab] ?? undefined });
 }
@@ -852,6 +880,8 @@ function buildLabel(): string {
 // ── Foto & galleria ────────────────────────────────────────────────────
 
 export function startPhoto(ui: UI) {
+  // interfaccia «viva»: subito l'inquadratura, che ha già il suo suggerimento («Sposta gli angoli»)
+  if (uiPlay()) { photoOverlay(ui); return; }
   openDrawer(t('photo.title'), h('div', {},
     h('p', { class: 'muted' }, t('photo.intro'))),
   { footer: h('button', { class: 'big-btn', onclick: () => { closeDrawer(); photoOverlay(ui); } }, t('photo.start')) });
@@ -866,6 +896,7 @@ function photoOverlay(ui: UI) {
   apply();
   layer.hidden = false;
   $('#bubble').classList.add('hidden');
+  $('#game').classList.add('tools-off'); // niente pulsanti della mappa sotto la barra dello scatto
   let mode: string | null = null;
   let last = { x: 0, y: 0 };
   const down = (e: PointerEvent) => {
@@ -895,6 +926,7 @@ function photoOverlay(ui: UI) {
   const close = () => {
     layer.hidden = true;
     $('#bubble').classList.remove('hidden');
+    $('#game').classList.remove('tools-off');
     layer.removeEventListener('pointerdown', down);
     layer.removeEventListener('pointermove', move);
     layer.removeEventListener('pointerup', up);

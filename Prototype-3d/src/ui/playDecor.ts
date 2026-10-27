@@ -3,6 +3,7 @@
 // come variabili (--deco-*, --pattern-*), così gli stili restano tutti in ui-play.css.
 
 import { lpIconUrl } from './lpIcons.ts';
+import { installNatureDecor } from './natureDecor.ts';
 
 /**
  * Tessera del pattern: zucca, foglia, teschio, bara, pipistrello e qualche
@@ -33,4 +34,5 @@ export function installPlayDecor() {
   // un marrone scuro molto trasparente: sullo sfondo chiaro e su quello scuro resta «tono su tono»
   st.setProperty('--pattern-light', patternTile('rgba(92, 63, 34, 0.11)'));
   st.setProperty('--pattern-dark', patternTile('rgba(14, 8, 4, 0.32)'));
+  installNatureDecor();
 }

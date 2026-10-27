@@ -17,7 +17,13 @@ import { fruitImg, openMemoryTree } from './memoryTree.ts';
 import { annivHero } from './anniversary.ts';
 import { confirmExhume, MEMORY_LABELS, moreActions, postcardData } from './screens.ts';
 import { graveThumb } from './thumbs.ts';
+import { factLabel, parchment } from './parchment.ts';
+import { lpIconPng } from './lpIcons.ts';
+import { uiPlay } from '../app/uiNext.ts';
 import type { UI } from './UI.ts';
+
+/** Lucciole attorno all'immagine: posizione (% in orizzontale, px in verticale) e grandezza. */
+const FIREFLIES: Array<[number, number, number]> = [[18, 160, 1], [28, 50, 2], [64, 80, 0], [80, 150, 1], [42, 28, 2], [74, 40, 0], [12, 106, 1]];
 
 /** Da dove si arriva: decide il pulsante principale e cosa fa la X. */
 export type DeceasedFrom = 'map' | 'tree' | 'registry' | 'note';
@@ -56,14 +62,14 @@ export function deceasedParts(ui: UI, id: string) {
       : h('span', { class: 'dc-where' }, icon('bury', 16), t('deceased.where.grave'));
 
   const facts = h('dl', { class: 'kv' },
-    h('dt', {}, t('deceased.category')), h('dd', {}, CATEGORY_LABELS[g.category]),
-    h('dt', {}, t('deceased.lived')), h('dd', {}, g.birthDate ? `${fmtDate(g.birthDate)} → ${fmtDate(g.deathDate)}` : t('deceased.died', { date: fmtDate(g.deathDate) })),
-    h('dt', {}, t('deceased.cause')), h('dd', {}, deathCauseLabel(g.deathCause, g.deathCauseText)),
-    h('dt', {}, t('deceased.buried')), h('dd', {}, g.legacy ? t('deceased.buriedLegacy') : fmtDate(g.createdAt)),
-    h('dt', {}, t('deceased.stone')), h('dd', {}, kept ? t('deceased.stoneGone', { type: GRAVE_TYPE_LABELS[g.graveType], date: fmtDate(kept.entrustedAt) }) : GRAVE_TYPE_LABELS[g.graveType]),
-    vs ? h('dt', {}, t('deceased.state')) : null,
+    h('dt', {}, ...factLabel('category', t('deceased.category'))), h('dd', {}, CATEGORY_LABELS[g.category]),
+    h('dt', {}, ...factLabel('lived', t('deceased.lived'))), h('dd', {}, g.birthDate ? `${fmtDate(g.birthDate)} → ${fmtDate(g.deathDate)}` : t('deceased.died', { date: fmtDate(g.deathDate) })),
+    h('dt', {}, ...factLabel('cause', t('deceased.cause'))), h('dd', {}, deathCauseLabel(g.deathCause, g.deathCauseText)),
+    h('dt', {}, ...factLabel('buried', t('deceased.buried'))), h('dd', {}, g.legacy ? t('deceased.buriedLegacy') : fmtDate(g.createdAt)),
+    h('dt', {}, ...factLabel('stone', t('deceased.stone'))), h('dd', {}, kept ? t('deceased.stoneGone', { type: GRAVE_TYPE_LABELS[g.graveType], date: fmtDate(kept.entrustedAt) }) : GRAVE_TYPE_LABELS[g.graveType]),
+    vs ? h('dt', {}, ...factLabel('state', t('deceased.state'))) : null,
     vs ? h('dd', { class: g.broken ? 'warn' : '' }, g.broken ? t('detail.grave.stateBroken', { state: GRAVE_STATE_LABELS[vs], n: R.graveRepairPrice(s) }) : GRAVE_STATE_LABELS[vs]) : null,
-    h('dt', {}, t('deceased.ghosts')), h('dd', {}, ghosts ? t('deceased.ghostsSeen', { n: ghosts }) : t('deceased.ghostsNone')));
+    h('dt', {}, ...factLabel('ghosts', t('deceased.ghosts'))), h('dd', {}, ghosts ? t('deceased.ghostsSeen', { n: ghosts }) : t('deceased.ghostsNone')));
 
   const shown = log.slice(0, 8);
   const timeline = shown.length ? h('div', {},
@@ -86,8 +92,15 @@ export function openDeceased(ui: UI, id: string, opts: DeceasedOpts = {}) {
 
   // la foto, se c'è, al posto della lapide (o del frutto), che resta in piccolo
   const medal = kept ? fruitImg() : graveThumb(g.graveType, s.settings.style, vs!, g.seed % 4);
-  const head = h('img', { src: medal, alt: '' }) as HTMLElement;
-  void parts.photo.then((url) => { if (url && head.isConnected) head.replaceWith(portrait(url, medal)); });
+  const play = uiPlay();
+  const head = h('img', { class: play ? 'dc-stone' : '', src: medal, alt: '' }) as HTMLElement;
+  // interfaccia «viva»: la foto è una stampa appoggiata, con una candela accesa nell'angolo e un ciuffo di foglie
+  void parts.photo.then((url) => {
+    if (!url || !head.isConnected) return;
+    const pic = portrait(url, play ? lpIconPng('lumino', 128) : medal);
+    if (play) { pic.classList.add('print'); pic.append(h('span', { class: 'dc-fern', 'aria-hidden': 'true' })); }
+    head.replaceWith(pic);
+  });
 
   // azioni: nel cimitero quella che serve adesso; da lontano (Registro) «Vai alla tomba»
   const postcard = { icon: 'postcard', label: t('detail.grave.postcard'), run: () => void parts.postcard() };
@@ -119,13 +132,25 @@ export function openDeceased(ui: UI, id: string, opts: DeceasedOpts = {}) {
     ? annivHero({ grave: g, years, medal, where, photo: parts.photo })
     : null;
   // il nome c'è già sotto l'immagine: niente titolo in testa
-  openDrawer('', h('div', { class: 'deceased' },
-    anniv ?? h('div', { class: 'hero' }, head, h('h3', {}, g.name), where,
+  // interfaccia «viva»: alone caldo e lucciole attorno all'immagine, i dati su pergamena, la terra in fondo
+  const glow = play ? [h('span', { class: 'dc-glow', 'aria-hidden': 'true' }), ...FIREFLIES.map(([x, y, k]) => h('i', { class: `dc-fly f${k}`, style: `left:${x}%;top:${y}px`, 'aria-hidden': 'true' }))] : [];
+  const body = h('div', { class: 'deceased' },
+    anniv ?? h('div', { class: 'hero' }, ...glow, head, h('h3', {}, g.name), where,
       g.epitaph ? h('div', { class: 'epitaph' }, t('detail.epitaph.quoted', { text: g.epitaph })) : null),
-    facts,
+    play ? parchment('dc-facts', facts) : facts,
+    play && timeline ? h('div', { class: 'dc-divider', 'aria-hidden': 'true' }, icon('pumpkin', 24)) : null,
     timeline,
-  ), {
+    play ? h('div', { class: 'dc-earth', style: 'background-image:url(deco/ground.png)', 'aria-hidden': 'true' }) : null, // i18n-ok: stile
+  );
+  openDrawer('', body, {
     beforeClose: opts.back ? () => { opts.back!(); return false; } : from === 'tree' ? () => { openMemoryTree(ui); return false; } : undefined,
     footer: h('div', { style: 'display:grid;gap:6px' }, moreActions(more), main),
   });
+  // i pulsanti stanno sopra il fondo del contenuto: la terra finisce sotto di loro
+  if (play) {
+    const foot = document.getElementById('drawer-foot')!;
+    const fit = () => { if (body.isConnected) body.style.setProperty('--foot-h', `${foot.offsetHeight}px`); };
+    new ResizeObserver(fit).observe(foot);
+    fit();
+  }
 }

@@ -7,6 +7,7 @@ import { memorials } from '../app/persistence.ts';
 import { newId } from '../game/rng.ts';
 import { h, openModal, progressDialog, toast } from './dom.ts';
 import { icon } from './icons.ts';
+import { uiPlay } from '../app/uiNext.ts';
 import { t } from '../i18n/index.ts';
 import { applyPhotoFilter, PHOTO_FILTER_LABELS, squareCrop, type PhotoFilter } from './photoFilters.ts';
 import { drawPostcard, sharePostcard, type PostcardData } from './postcard.ts';
@@ -83,7 +84,8 @@ export function photoStep(photo: BurialPhoto, rerender: () => void): HTMLElement
     input.click();
   };
   const box = h('div', { class: 'photo-pick' },
-    h('p', { class: 'muted', style: 'margin:0' }, photo.has ? t('memorial.hint.swipe') : t('memorial.hint.optional')));
+    // senza foto il «Salta» del piede dice già che è facoltativa
+    photo.has || !uiPlay() ? h('p', { class: 'muted', style: 'margin:0' }, photo.has ? t('memorial.hint.swipe') : t('memorial.hint.optional')) : null);
   const frame = portrait(photo.url(), null);
   box.append(frame);
   if (photo.has) {

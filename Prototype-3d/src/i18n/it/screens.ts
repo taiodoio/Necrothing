@@ -142,6 +142,12 @@ export default {
   'shop.detail.meta.uniqueOwned': '{category} · pezzo unico · ne hai {owned}',
   'shop.detail.meta.maxOwned': '{category} · ne puoi comprare {max} · ne hai {owned}',
   'shop.detail.unique': 'Pezzo unico',
+  // sulla pergamena dell'acquisto: quanti se ne possono comprare
+  'shop.detail.available': 'Acquistabili',
+  // valore accanto a «Acquistabili»
+  'shop.detail.availableValue': 'fino a {max}',
+  // sulla pergamena dell'acquisto: quanti ne hai già
+  'shop.detail.owned': 'Già tuoi',
   'shop.detail.max': 'Max {max}',
   // {season} è il periodo in cui si compra
   'shop.detail.seasonal': 'Stagionale: si compra solo {season}, poi resta tuo per sempre.',

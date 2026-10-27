@@ -13,7 +13,7 @@ import { t } from '../i18n/index.ts';
 import { closeDrawer, fmtDate, h, joinDot, openDrawer, setDrawerHero } from './dom.ts';
 import { memoryTags } from './memoryTags.ts';
 import { closeFlippedTag, flipMemoryTag } from './memoryFlip.ts';
-import { uiNext } from '../app/uiNext.ts';
+import { uiNext, uiPlay } from '../app/uiNext.ts';
 import { treeHeader } from './treeHeader.ts';
 import { icon } from './icons.ts';
 import { memorials } from '../app/persistence.ts';
@@ -62,7 +62,8 @@ export function openMemoryTree(ui: UI, focusId?: string) {
   // interfaccia nuova: il cartellino toccato si gira e mostra la sua storia
   const open = (id: string, el: HTMLElement) => (uiNext() ? flipMemoryTag(ui, id, el, fruit) : openMemory(ui, id, undefined, true));
   openDrawer(t('tree.title'), h('div', {},
-    h('p', { class: 'muted mt-intro' }, list.length ? t('tree.list.count', { n: list.length }) : t('tree.list.none')),
+    // con i cartellini appesi il conteggio non serve: resta solo il «nessun ricordo» dell'albero vuoto
+    list.length && uiPlay() ? null : h('p', { class: 'muted mt-intro' }, list.length ? t('tree.list.count', { n: list.length }) : t('tree.list.none')),
     list.length ? memoryTags(list, fruit, open) : h('p', { class: 'muted' }, t('tree.list.hint')),
   ), { beforeClose: () => !closeFlippedTag() });
   setDrawerHero(treeHeader(s.entrusted.length).el);

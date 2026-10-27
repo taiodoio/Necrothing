@@ -129,6 +129,19 @@ export function setDrawerHero(el: HTMLElement) {
   const drawer = $('#drawer');
   drawer.prepend(el);
   drawer.classList.add('with-hero');
+  $('#drawer-body').addEventListener('scroll', heroOnScroll, { passive: true });
+}
+
+/**
+ * Scorrendo il contenuto la testata si riduce a una fascia (più scura, con
+ * titolo, saldo e X) e lascia spazio alla lista; in cima torna grande. Soglie
+ * diverse per entrare e uscire: la testata che si accorcia non rimbalza.
+ */
+function heroOnScroll(e: Event) {
+  const y = (e.currentTarget as HTMLElement).scrollTop;
+  const drawer = $('#drawer');
+  if (y > 24) drawer.classList.add('hero-small');
+  else if (y < 2) drawer.classList.remove('hero-small');
 }
 
 /** Via quello che un pannello ha aperto sopra di sé (il cartellino girato dell'albero). */
@@ -139,7 +152,8 @@ function dropOverlays() {
 function dropHero() {
   const drawer = $('#drawer');
   drawer.querySelector(':scope > .drawer-hero')?.remove(); // uscendo dal documento la testata si ferma da sola
-  drawer.classList.remove('with-hero');
+  drawer.classList.remove('with-hero', 'hero-small');
+  $('#drawer-body').removeEventListener('scroll', heroOnScroll);
 }
 
 export function setDrawerBody(node: Node) {

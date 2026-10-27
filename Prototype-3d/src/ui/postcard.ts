@@ -57,7 +57,7 @@ const rrect = (g: CanvasRenderingContext2D, x: number, y: number, w: number, h: 
  * bruciacchiato e un angolo consumato (la stessa delle prove d'interfaccia).
  * Si disegna a metà misura e si ingrandisce: grana e bordi restano morbidi.
  */
-function parchmentSvg(W: number, H: number, seed = 3): string {
+export function parchmentSvg(W: number, H: number, seed = 3): string {
   const shape = `M6 8 L${W - 22} 5 L${W - 6} 16 L${W - 5} ${H - 9} L${W * 0.55} ${H - 4} L12 ${H - 6} L5 ${H * 0.6} Z`;
   return `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}">
   <defs>

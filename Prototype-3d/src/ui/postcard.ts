@@ -6,7 +6,7 @@
 
 import { t } from '../i18n/index.ts';
 import { drawLpIcon } from './lpIcons.ts';
-import { patternTileUrl } from './playDecor.ts';
+import { patternTileCanvas } from './playDecor.ts';
 
 export interface PostcardData {
   name: string;
@@ -79,7 +79,52 @@ export function parchmentSvg(W: number, H: number, seed = 3): string {
   </g>
 </svg>`; // i18n-ok: disegno
 }
-const loadSvg = (url: string) => new Promise<HTMLImageElement | null>((res) => { const im = new Image(); im.onload = () => res(im); im.onerror = () => res(null); im.src = url; });
+
+/**
+ * La pergamena della cartolina disegnata direttamente sulla tela (come
+ * parchmentSvg, ma senza filtri SVG): bordo strappato, carta calda con
+ * macchie e grana, bordi bruciati, l'angolo piegato, l'ombra sotto.
+ */
+function drawParchment(g: CanvasRenderingContext2D, x: number, y: number, W: number, H: number, seed: number) {
+  let s = seed * 7919;
+  const rnd = () => ((s = (s * 9301 + 49297) % 233280) / 233280);
+  // il contorno: i lati spezzati in tratti corti, ognuno spostato un poco
+  const corners: Array<[number, number]> = [[12, 16], [W - 44, 10], [W - 12, 32], [W - 10, H - 18], [W * 0.55, H - 8], [24, H - 12], [10, H * 0.6]];
+  const pts: Array<[number, number]> = [];
+  corners.forEach(([ax, ay], i) => {
+    const [bx, by] = corners[(i + 1) % corners.length];
+    const len = Math.hypot(bx - ax, by - ay), n = Math.max(2, Math.ceil(len / 14));
+    const nx = -(by - ay) / len, ny = (bx - ax) / len;
+    for (let k = 0; k < n; k++) { const f = k / n, j = (rnd() - 0.5) * 5; pts.push([x + ax + (bx - ax) * f + nx * j, y + ay + (by - ay) * f + ny * j]); }
+  });
+  const path = () => { g.beginPath(); pts.forEach(([px, py], i) => (i ? g.lineTo(px, py) : g.moveTo(px, py))); g.closePath(); };
+  const paper = g.createLinearGradient(x, y, x + W, y + H);
+  paper.addColorStop(0, '#f3e6c8'); paper.addColorStop(0.55, '#ead8b0'); paper.addColorStop(1, '#dcc391');
+  g.save(); g.shadowColor = 'rgba(8, 5, 14, 0.55)'; g.shadowBlur = 24; g.shadowOffsetY = 10;
+  path(); g.fillStyle = paper; g.fill();
+  g.restore();
+  g.save(); path(); g.clip();
+  // macchie larghe e tenui
+  for (let i = 0; i < 7; i++) {
+    const cx = x + rnd() * W, cy = y + rnd() * H, r = 50 + rnd() * 110;
+    const m = g.createRadialGradient(cx, cy, 0, cx, cy, r);
+    m.addColorStop(0, `rgba(150, 104, 44, ${0.06 + rnd() * 0.08})`); m.addColorStop(1, 'rgba(150, 104, 44, 0)');
+    g.fillStyle = m; g.fillRect(cx - r, cy - r, r * 2, r * 2);
+  }
+  // la grana della carta
+  for (let i = 0, n = Math.round((W * H) / 80); i < n; i++) {
+    g.fillStyle = `rgba(92, 64, 34, ${(rnd() * 0.16).toFixed(3)})`;
+    g.fillRect(x + rnd() * W, y + rnd() * H, 1.4 + rnd() * 1.4, 1.4 + rnd() * 1.4);
+  }
+  // i bordi bruciati: una linea larga e sfumata lungo il contorno, tagliata dentro la carta
+  g.shadowColor = 'rgba(120, 72, 26, 0.85)'; g.shadowBlur = 16;
+  g.lineWidth = 9; g.strokeStyle = 'rgba(156, 108, 52, 0.6)';
+  path(); g.stroke();
+  g.restore();
+  // l'angolo piegato in alto a destra
+  g.beginPath(); g.moveTo(x + W - 44, y + 10); g.lineTo(x + W - 12, y + 32); g.lineTo(x + W - 36, y + 34); g.closePath();
+  g.fillStyle = 'rgba(201, 171, 118, 0.95)'; g.fill();
+}
 
 /**
  * Cartolina nello stile del gioco: il foglio viola scuro col motivo tono su
@@ -103,11 +148,11 @@ export async function drawPostcard(d: PostcardData): Promise<HTMLCanvasElement> 
   glow.addColorStop(0, 'rgba(255, 226, 168, 0.12)'); glow.addColorStop(1, 'rgba(0, 0, 0, 0)');
   g.fillStyle = glow; g.fillRect(0, 0, W, H);
   // il motivo tono su tono dei pannelli, più grande (la cartolina è larga quasi tre telefoni)
-  const tile = await loadSvg(patternTileUrl('rgba(14, 8, 4, 0.34)'));
-  if (tile) {
-    const pat = g.createPattern(tile, 'repeat');
-    if (pat) { pat.setTransform(new DOMMatrix().scale(1.7)); g.fillStyle = pat; g.fillRect(0, 0, W, H); }
-  }
+  // (tutto disegnato sulla tela, senza immagini SVG: su iPhone Safari a volte poi non la esporta)
+  const tile = patternTileCanvas('rgba(14, 8, 4, 0.34)', 1.7);
+  const pat = g.createPattern(tile, 'repeat');
+  if (pat) { g.fillStyle = pat; g.fillRect(0, 0, W, H); }
+  tile.width = tile.height = 0;
   // il riquadro: pannello arrotondato col filo d'oro
   const M = 40, R = 56;
   g.save(); g.shadowColor = 'rgba(8, 5, 14, 0.55)'; g.shadowBlur = 40; g.shadowOffsetY = 12;
@@ -161,14 +206,9 @@ export async function drawPostcard(d: PostcardData): Promise<HTMLCanvasElement> 
   const by = H - 108, rule = by - 84;
   const PW = 780, PH = 70 + 50 + (epitaph.length ? 58 + 44 * (epitaph.length - 1) : 0) + 44;
   const py = Math.max(badgeBottom + 24, (badgeBottom + rule - 30) / 2 - PH / 2);
-  const paper = await loadSvg(`data:image/svg+xml;charset=utf-8,${encodeURIComponent(parchmentSvg(PW / 2, PH / 2, 3))}`);
   g.save();
   g.translate(W / 2, py + PH / 2); g.rotate(-0.012);
-  if (paper) {
-    g.save(); g.shadowColor = 'rgba(8, 5, 14, 0.55)'; g.shadowBlur = 24; g.shadowOffsetY = 10;
-    g.drawImage(paper, -PW / 2, -PH / 2, PW, PH);
-    g.restore();
-  } else { rrect(g, -PW / 2, -PH / 2, PW, PH, 12); g.fillStyle = '#ead8b0'; g.fill(); }
+  drawParchment(g, -PW / 2, -PH / 2, PW, PH, 3);
   let y = -PH / 2 + 70;
   g.fillStyle = '#3b2814'; g.font = `800 42px ${SANS}`;
   fit(g, d.dates, (p) => `800 ${p}px ${SANS}`, 42, PW - 100, 28);

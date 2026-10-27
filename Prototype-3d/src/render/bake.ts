@@ -166,6 +166,11 @@ export function renderItemPreview(type: string, S = 320): string {
   return renderPreview(getModel(placeableKey(v), 'lowpoly', () => placeableModel(v), 1), type, S, (o) => addPresences(o, v, 'lowpoly'));
 }
 
+/** Anteprima di una lapide (pulita), per la scelta nella sepoltura. */
+export function renderGravePreview(type: GraveType, S = 320): string {
+  return renderPreview(getModel(`g:${type}:clean:0`, 'lowpoly', () => graveModel(type, 'clean', 0), 0), `grave:${type}`, S);
+}
+
 /** Anteprima di un tetto (la casa con quel tetto) o di un'aggiunta della Casa del Custode. */
 export function renderHousePreview(id: string, S = 320): string {
   if (houseRoof(id)) return renderItemPreviewVariant('keeper_house', houseVariant({ owned: [id], roof: id, hidden: [] }), S);

@@ -87,6 +87,7 @@ export function photoStep(photo: BurialPhoto, rerender: () => void): HTMLElement
     // senza foto il «Salta» del piede dice già che è facoltativa
     photo.has || !uiPlay() ? h('p', { class: 'muted', style: 'margin:0' }, photo.has ? t('memorial.hint.swipe') : t('memorial.hint.optional')) : null);
   const frame = portrait(photo.url(), null);
+  if (uiPlay() && photo.has) frame.classList.add('print'); // interfaccia «viva»: una stampa appoggiata, come nella scheda del defunto
   box.append(frame);
   if (photo.has) {
     const i = FILTERS.indexOf(photo.filter);
@@ -125,7 +126,8 @@ export async function openPostcard(data: PostcardData | Promise<PostcardData>) {
     const card = await drawPostcard(d);
     blob = await new Promise<Blob>((res, rej) => card.toBlob((b) => (b ? res(b) : rej(new Error(t('postcard.failedText')))), 'image/png'));
     card.width = card.height = 0; // la tela non serve più: sul telefono la sua memoria va liberata subito
-  } catch {
+  } catch (e) {
+    console.error(e); // il messaggio resta generico: il motivo vero si vede nella console
     await p.done(t('postcard.failed'), t('postcard.failedText'), false);
     return;
   }

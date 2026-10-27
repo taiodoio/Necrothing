@@ -57,7 +57,7 @@ test('sepoltura: XP, fuochi, occupazione e limite astratto giornaliero', () => {
 
 test('fiori solo su tomba pulita; pulizia e riparazione', () => {
   const s = createNewGame(NOW, 2);
-  const legacy = s.graves[0]; // sporca
+  const legacy = s.graves.find((g) => g.id === 'story-gym'); // sporca (la prima che il tutorial fa pulire)
   assert.throws(() => R.bringFlowers(s, legacy.id, NOW), /sporca/);
   R.cleanGrave(s, legacy.id, NOW);
   const r = R.bringFlowers(s, legacy.id, NOW);
@@ -145,7 +145,7 @@ test('modifica: piazza, ruota, sposta, riponi; la bottega non si elimina', () =>
 test('becchino: pulisce gratis le tombe vicine', () => {
   const s = createNewGame(NOW, 7);
   const dirty = s.graves.filter((g) => g.dirty);
-  const r = R.interactRoamer(s, 'gravedigger', NOW, { x: 21, y: 23 });
+  const r = R.interactRoamer(s, 'gravedigger', NOW, { x: 25, y: 23 });
   assert.ok(r.xp > 0);
   assert.ok(dirty.some((g) => !g.dirty));
 });

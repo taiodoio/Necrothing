@@ -1,0 +1,108 @@
+/* Primo ingresso (ui/onboarding.ts): pergamena, nome, introduzione, tutorial, giro
+   dell'interfaccia. Pannelli, decori, pulsanti e caratteri sono quelli del gioco
+   (.dialog.modal, .big-btn, gotico dorato); niente sfocature sopra la scena. */
+
+.ob-layer {
+  position: fixed; inset: 0; z-index: 30; display: grid; place-items: center; align-content: center; gap: 14px;
+  padding: calc(16px + var(--safe-t)) 16px calc(16px + var(--safe-b));
+  background: radial-gradient(120% 80% at 50% 40%, rgba(14, 10, 20, 0.74), rgba(6, 4, 10, 0.9)); /* i18n-ok: stile */
+  font-family: "Nunito", system-ui, sans-serif; color: var(--paper, #f3ecdf);
+  animation: obFade 0.35s ease-out both;
+}
+@keyframes obFade { from { opacity: 0; } }
+.ob-layer .row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; width: 100%; }
+
+/* ── La pergamena ─────────────────────────────────────────────────── */
+.ob-letter-layer { grid-template-rows: auto 1fr auto; align-content: stretch; }
+.ob-skip {
+  justify-self: end; min-height: 40px; padding: 8px 16px; border: 0; border-radius: 99px; cursor: pointer;
+  background: rgba(20, 15, 24, 0.86); color: #efe3d0; font: 800 14px "Nunito", sans-serif; box-shadow: inset 0 0 0 1.5px rgba(255, 226, 168, 0.25);
+}
+.ob-scroll { position: relative; width: min(94vw, 540px); display: grid; justify-items: center; align-self: center; cursor: default; }
+.ob-roll {
+  position: relative; z-index: 2; width: 100%; height: 26px; border-radius: 13px;
+  background: linear-gradient(180deg, #a46c3a 0%, #7a4a22 45%, #4f2e14 100%);
+  box-shadow: 0 6px 12px rgba(0, 0, 0, 0.5), inset 0 2px 0 rgba(255, 220, 170, 0.35);
+}
+.ob-roll::before, .ob-roll::after {
+  content: ''; position: absolute; top: -4px; width: 22px; height: 34px; border-radius: 9px;
+  background: linear-gradient(180deg, #ffe2a8, #c99340 60%, #8a5c22); box-shadow: 0 3px 6px rgba(0, 0, 0, 0.45);
+}
+.ob-roll::before { left: -8px; }
+.ob-roll::after { right: -8px; }
+.ui-next .parch.ob-paper {
+  width: calc(100% - 26px); margin: -6px 0; padding: 26px 24px 22px;
+  height: min(640px, calc(100dvh - 230px - var(--safe-t) - var(--safe-b))); overflow-y: auto; overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch; filter: none; box-shadow: 0 14px 28px rgba(0, 0, 0, 0.55);
+}
+.ob-letter { max-width: 34em; margin: 0 auto; color: #3a2a22; font-size: 16.5px; line-height: 1.55; }
+.ob-letter h2 { margin: 0 0 14px; font: 700 30px/1.05 var(--gothic); color: #5a3418; text-align: center; }
+.ob-letter p { margin: 0 0 12px; }
+.ob-letter .ob-closing { margin-top: 18px; font-weight: 800; text-align: center; }
+.ob-letter .ob-sign { margin-bottom: 18px; font-style: italic; text-align: center; color: #5e4630; }
+.ob-continue { width: min(94vw, 420px); }
+/* si srotola: la carta (già della sua misura) si scopre dall'alto, il rullo di sotto scende */
+.ob-scroll.unroll:not(.open) .ob-paper { animation: obUnroll 1.8s cubic-bezier(0.45, 0.1, 0.25, 1) both; }
+.ob-scroll.unroll:not(.open) .ob-roll.bottom { animation: obRoll 1.8s cubic-bezier(0.45, 0.1, 0.25, 1) both; }
+@keyframes obUnroll { from { clip-path: inset(0 0 100% 0); } to { clip-path: inset(0 0 0 0); } }
+@keyframes obRoll { from { transform: translateY(calc(-1 * var(--ob-h, 400px))); } to { transform: none; } }
+
+/* ── Schede (nome, introduzione, giro) ────────────────────────────── */
+.ui-next .dialog.modal.ob-card { width: min(92vw, 400px); padding: 20px 18px 16px; gap: 12px; text-align: center; justify-items: center; overflow: visible; }
+.ob-card p { margin: 0; font-size: 16px; line-height: 1.45; }
+.ob-portrait { width: 96px; height: 96px; margin-top: -64px; border-radius: 50%; object-fit: cover; background: #2c2836;
+  box-shadow: 0 0 0 4px #c99340, 0 10px 20px rgba(0, 0, 0, 0.55); }
+.ob-say { font: 700 27px/1.05 var(--gothic); color: var(--gold-bright); }
+.ob-card h3 { margin: 0; font: 700 28px/1.05 var(--gothic); color: var(--gold-bright); }
+.ob-field { display: grid; gap: 6px; width: 100%; text-align: left; font-weight: 800; font-size: 13px; color: var(--muted); }
+.ob-input { width: 100%; min-height: 50px; padding: 12px 14px; border: 0; border-radius: var(--r-s); outline: none;
+  background: var(--input); box-shadow: inset 0 0 0 1.5px var(--edge); color: var(--paper); font: 700 18px "Nunito", sans-serif; }
+.ob-input:focus { box-shadow: inset 0 0 0 2px var(--primary); }
+.ob-input::placeholder { color: var(--muted); opacity: 0.8; }
+.dialog p.ob-error { min-height: 1.3em; color: var(--danger); font-weight: 800; font-size: 14px; }
+.dialog p.ob-error:empty { min-height: 0; }
+.dialog p.ob-hint { font-size: 13.5px; color: var(--muted); }
+.ob-icon { width: 96px; height: 96px; filter: drop-shadow(0 8px 14px rgba(0, 0, 0, 0.5)); }
+.ob-dots { display: flex; gap: 6px; justify-content: center; }
+.ob-dots i { width: 8px; height: 8px; border-radius: 50%; background: var(--edge); }
+.ob-dots i.on { width: 22px; border-radius: 4px; background: var(--primary); }
+
+/* ── Il tutorial ──────────────────────────────────────────────────── */
+.ob-coach {
+  position: fixed; z-index: 12; left: 50%; top: calc(var(--hud-top, 64px) + 22px + var(--safe-t)); transform: translateX(-50%);
+  width: min(calc(100vw - 24px), 460px); display: grid; grid-template-columns: 48px minmax(0, 1fr); gap: 12px; align-items: center;
+  padding: 12px 14px; border-radius: 18px; background: var(--panel, #f4ede0);
+  box-shadow: var(--shadow), 0 0 0 2px var(--primary); color: var(--paper);
+  font-family: "Nunito", system-ui, sans-serif; animation: obCoach 0.35s ease-out both;
+}
+@keyframes obCoach { from { opacity: 0; transform: translate(-50%, -8px); } }
+body.drawer-open .ob-coach, body.ob-open .ob-coach { display: none; }
+/* sotto il consiglio scendono i messaggi e le note delle presenze (niente si copre) */
+.ui-next .has-coach :is(.toasts, .npc-note) { top: calc(var(--hud-top) + 22px + var(--coach-h, 96px) + 10px + var(--safe-t)); }
+.ui-next .has-coach.has-note .toasts { top: calc(var(--hud-top) + 22px + var(--coach-h, 96px) + var(--note-h, 64px) + 20px + var(--safe-t)); }
+.ob-coach-face { width: 48px; height: 48px; border-radius: 50%; object-fit: cover; background: #2c2836; box-shadow: 0 0 0 2.5px #c99340; }
+.ob-coach-body p { margin: 0; font-size: 15px; font-weight: 700; line-height: 1.35; }
+.ob-coach-foot { display: flex; justify-content: space-between; align-items: center; margin-top: 6px; }
+.ob-progress { font-size: 12px; font-weight: 800; color: var(--muted); }
+.ob-link { border: 0; padding: 6px 0 6px 10px; background: none; color: var(--gold-bright); font: 800 13px "Nunito", sans-serif; cursor: pointer; text-decoration: underline; text-underline-offset: 3px; }
+/* il segno sulla scena: un anello che pulsa e una freccia che salta (segue la camera) */
+.ob-marker { position: fixed; z-index: 6; left: 0; top: 0; width: 0; height: 0; pointer-events: none; visibility: hidden; }
+.ob-marker::before { content: ''; position: absolute; left: -26px; top: -26px; width: 52px; height: 52px; border-radius: 50%;
+  border: 3px solid #ffe2a8; box-shadow: 0 0 14px rgba(255, 210, 120, 0.8); animation: obPulse 1.4s ease-out infinite; }
+.ob-marker::after { content: ''; position: absolute; left: -9px; top: -64px; width: 0; height: 0; border-left: 9px solid transparent; border-right: 9px solid transparent;
+  border-top: 14px solid #ffe2a8; filter: drop-shadow(0 2px 3px rgba(0, 0, 0, 0.6)); animation: obBounce 1s ease-in-out infinite alternate; }
+@keyframes obPulse { from { transform: scale(0.7); opacity: 1; } to { transform: scale(1.35); opacity: 0; } }
+@keyframes obBounce { to { transform: translateY(8px); } }
+.ob-glow { animation: obGlow 1.3s ease-in-out infinite; }
+@keyframes obGlow { 50% { box-shadow: 0 0 0 6px rgba(255, 226, 168, 0.55), 0 0 22px rgba(255, 200, 100, 0.8); } }
+
+/* ── Il giro dell'interfaccia ─────────────────────────────────────── */
+.ob-tour-layer { background: none; place-items: start center; align-content: start; }
+.ob-spot { position: fixed; z-index: 0; border-radius: 18px; pointer-events: none; transition: left 0.3s ease, top 0.3s ease, width 0.3s ease, height 0.3s ease;
+  box-shadow: 0 0 0 9999px rgba(6, 4, 10, 0.72), inset 0 0 0 2.5px #ffe2a8, 0 0 24px rgba(255, 210, 120, 0.6); }
+.ui-next .dialog.modal.ob-tour-card { position: fixed; left: 50%; transform: translateX(-50%); top: 40%; z-index: 1; }
+
+@media (prefers-reduced-motion: reduce) {
+  .ob-layer, .ob-coach, .ob-scroll .ob-paper, .ob-scroll .ob-roll, .ob-marker::before, .ob-marker::after, .ob-glow { animation: none !important; }
+  .ob-spot { transition: none; }
+}

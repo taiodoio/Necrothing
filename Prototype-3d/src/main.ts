@@ -13,10 +13,12 @@ import './styles/main.css';
 import './styles/ui-next.css';
 import './styles/ui-play.css';
 import './styles/ui-house.css';
+import './styles/ui-onboarding.css';
 import { setUiNext, setUiPlay, setUiPreview } from './app/uiNext.ts';
 import { bootScreen, nextPaint, runSliced } from './app/boot.ts';
 import { loadSave, takeRecoveredNotice } from './app/persistence.ts';
 import { toast } from './ui/dom.ts';
+import { warmAllPreviews } from './ui/screens.ts';
 import { modelJobs } from './view/WorldView.ts';
 import { warmHeroes } from './ui/heroWarm.ts';
 import { restoreThumbs, warmThumbs } from './ui/thumbWarm.ts';
@@ -60,12 +62,18 @@ void (async () => {
     await nextPaint();
     game.start();
     await nextPaint();
-    await boot.finish();
-    // il salvataggio non si leggeva: una copia è rimasta da parte (persistence.ts), lo si dice
-    if (takeRecoveredNotice()) toast(t('save.recovered'));
-    // nei momenti liberi: le testate animate (albero, casa) e le miniature che mancano
+    // nei momenti liberi (anche mentre si legge la pergamena e si sceglie il nome): le testate
+    // animate (albero, casa), le miniature che mancano, le anteprime della Bottega
     warmHeroes(game.state);
     warmThumbs(game.state);
+    // primo ingresso (o partita nuova): il pulsante sulla schermata iniziale, poi la pergamena;
+    // altrimenti la schermata sfuma e si gioca (o si riprende il percorso da dove era rimasto)
+    const first = game.state.onboarding.stage === 'welcome';
+    await boot.finish(first ? { cta: t('onboarding.enter') } : undefined);
+    if (first || game.state.onboarding.stage !== 'done') setTimeout(warmAllPreviews, 300);
+    game.ui.onboarding.resume();
+    // il salvataggio non si leggeva: una copia è rimasta da parte (persistence.ts), lo si dice
+    if (takeRecoveredNotice()) toast(t('save.recovered'));
   } catch (error) {
     console.error('Impossibile inizializzare la scena 3D:', error);
     document.getElementById('boot')?.remove();

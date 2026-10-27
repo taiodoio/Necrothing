@@ -21,6 +21,7 @@ import { factLabel, parchment } from './parchment.ts';
 import { groundUrl } from './previews.ts';
 import { lpIconPng } from './lpIcons.ts';
 import { uiPlay } from '../app/uiNext.ts';
+import { signalOnboarding } from './onboarding.ts';
 import type { UI } from './UI.ts';
 
 /** Lucciole attorno all'immagine: posizione (% in orizzontale, px in verticale) e grandezza. */
@@ -87,6 +88,7 @@ export function deceasedParts(ui: UI, id: string) {
 }
 
 export function openDeceased(ui: UI, id: string, opts: DeceasedOpts = {}) {
+  signalOnboarding('graveOpened');
   const game = ui.game;
   const s = game.state;
   const parts = deceasedParts(ui, id);

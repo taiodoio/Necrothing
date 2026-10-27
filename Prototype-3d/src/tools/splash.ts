@@ -144,7 +144,7 @@ export async function stage(game: Game) {
   if (!document.getElementById('splash-css')) {
     const css = document.createElement('style');
     css.id = 'splash-css';
-    css.textContent = '#game > :not(canvas), .welcome-scrim, .tutorial { display: none !important; }'; // i18n-ok
+    css.textContent = '#game > :not(canvas), .welcome-scrim, .tutorial, .ob-layer, .ob-coach, .ob-marker { display: none !important; }'; // i18n-ok
     document.head.append(css);
   }
   const g = gate;

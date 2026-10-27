@@ -112,12 +112,6 @@ export default {
   // {what}: cosa c'è (es. «Fango»)
   'hud.place.busyBy': 'Qui c’è già: {what}. Scegli un punto libero.',
 
-  // ── Primo avvio ──
-  'hud.tutorial.title': 'Benvenuto, Custode.',
-  'hud.tutorial.shop': 'Questa è la Bottega: qui compri lampioni, statue, presenze e tutto ciò che serve al cimitero, pagando in fuochi fatui. Toccala per entrare; in Modifica puoi spostarla dove vuoi.',
-  'hud.tutorial.graves': 'Il vecchio custode ha lasciato tre tombe trascurate: puliscile e porta loro dei fiori. Tocca il terreno per camminare.',
-  // breve: pulsante
-  'hud.tutorial.ok': 'Ho capito',
 
   // ── Menù contestuale (sopra l'oggetto toccato) ──
   // breve: pulsante (nell'interfaccia nuova è solo un'icona, il testo va ai lettori di schermo)
@@ -413,4 +407,64 @@ export default {
   'area.banner.edit': 'Modifica',
   'area.banner.show': 'Mostra',
   'area.banner.save': 'Salva',
+
+  // ── Primo ingresso (ui/onboarding.ts): tono del Custode, leggero; termini neutri (niente «benvenuto/a») ──
+  // pulsante principale della schermata iniziale, solo al primo ingresso
+  'onboarding.enter': 'Entra in Necrothing',
+  // breve: salta la fase in corso (pergamena, nome, introduzione, giro)
+  'onboarding.skip': 'Salta',
+  // breve: chiude la pergamena e va avanti
+  'onboarding.continue': 'Continua',
+  // titolo della pergamena di benvenuto (forma neutra)
+  'onboarding.letter.title': 'Ti diamo il benvenuto a Necrothing',
+  // la lettera, un paragrafo per voce separata da |
+  'onboarding.letter.body': 'Ciao,|Nella vita ci sono cose che ci accompagnano per un po’. Oggetti che ci stanno a cuore, amicizie che sembravano durare per sempre, sogni che abbiamo inseguito e momenti che vorremmo non finissero mai.|Ma non tutto è destinato a rimanere.|A volte le cose si rompono, le strade si dividono e i nostri piani non vanno come speravamo.|E va bene così.|Perché anche ciò che finisce, o non è andato come volevamo, può aver lasciato qualcosa di prezioso dentro di noi.|Necrothing nasce per dare un piccolo posto speciale a tutto questo.|Qui puoi custodire i tuoi ricordi, prendertene cura e, quando vorrai, guardarli con occhi diversi.|Non devi dimenticare, trovare per forza un lato positivo o trasformare ogni errore in una lezione. A volte basta riconoscere che qualcosa ha fatto parte della nostra storia.|Non c’è fretta, non c’è nulla da dimostrare. Questo piccolo cimitero crescerà insieme a te, un ricordo alla volta.|Perché non tutto ciò che finisce perde il suo valore. E non tutto ciò che sembra un fallimento deve rimanere tale.',
+  // chiusura della lettera (forma neutra, uguale al titolo)
+  'onboarding.letter.closing': 'Ti diamo il benvenuto a Necrothing.',
+  // firma della lettera, in corsivo
+  'onboarding.letter.sign': 'Un piccolo posto per ciò che è stato, e per tutto quello che ancora potrà essere.',
+  // per i lettori di schermo: tocca per vedere subito tutta la pergamena
+  'onboarding.letter.aria': 'Lettera di benvenuto: tocca per srotolarla subito',
+  // il Custode accoglie e chiede il nome (fumetto e testo)
+  'onboarding.name.say': 'Eccoti, finalmente.',
+  'onboarding.name.text': 'Questo cimitero aspettava qualcuno che se ne prendesse cura. Come ti chiami?',
+  'onboarding.name.label': 'Il tuo nome',
+  'onboarding.name.hint': 'Potrai cambiarlo quando vuoi dal profilo.',
+  // pulsante: conferma il nome scritto
+  'onboarding.name.ok': 'Questo è il mio nome',
+  'onboarding.name.error.empty': 'Scrivi almeno una lettera.',
+  // {n}: caratteri massimi
+  'onboarding.name.error.long': 'Al massimo {n} caratteri.',
+  'onboarding.name.error.chars': 'Usa lettere, numeri, spazi, apostrofi e trattini.',
+  // introduzione: quattro schede brevi con la voce del Custode; {name}: il nome appena scelto
+  'onboarding.intro.1.title': 'Piacere, {name}.',
+  'onboarding.intro.1.text': 'Le fiammelle azzurre sono fuochi fatui: raccoglile passeggiando. In Bottega diventano lanterne, statue e tutto ciò che ti piace.',
+  'onboarding.intro.2.title': 'Un po’ di cura',
+  'onboarding.intro.2.text': 'Le tombe chiedono attenzione: togli le erbacce, porta fiori freschi, ripara quelle rovinate. Non c’è fretta: ti aspettano.',
+  'onboarding.intro.3.title': 'Chi passa di qui',
+  'onboarding.intro.3.text': 'Fantasmi, gatti, corvi, il becchino, il prete e qualche zombie. Toccali: hanno sempre qualcosa da lasciarti.',
+  'onboarding.intro.4.title': 'I tuoi ricordi',
+  'onboarding.intro.4.text': 'Ogni cosa che finisce può avere qui il suo posto: seppelliscila, scrivile un epitaffio, e sistema il cimitero come vuoi tu.',
+  // breve: pulsanti delle schede
+  'onboarding.next': 'Avanti',
+  'onboarding.start': 'Iniziamo',
+  // tutorial con azioni vere: un consiglio alla volta; {n} e {total}: il passo
+  'onboarding.tutorial.progress': '{n} di {total}',
+  'onboarding.tutorial.skip': 'Salta il tutorial',
+  'onboarding.tutorial.wisp': 'Vedi quella fiammella azzurra? È un fuoco fatuo: toccala e vai a raccoglierla.',
+  'onboarding.tutorial.visit': 'Ogni tomba ha una storia. Tocca una tomba e apri la sua scheda.',
+  'onboarding.tutorial.light': 'Le lanterne si accendono e si spengono: tocca la lanterna e prova.',
+  'onboarding.tutorial.clean': '«Da lunedì vado in palestra» è piena di erbacce: toccala e puliscila.',
+  'onboarding.tutorial.bury': 'Quando qualcosa finisce, qui puoi dargli un posto. Tocca Seppellisci per vedere come si fa.',
+  // giro dell'interfaccia: quattro tappe
+  'onboarding.tour.profile.title': 'Il tuo profilo',
+  'onboarding.tour.profile.text': 'Qui vedi il rango e i fuochi fatui. Toccalo per le statistiche, i traguardi e per cambiare aspetto al Custode.',
+  'onboarding.tour.bury.title': 'Seppellisci',
+  'onboarding.tour.bury.text': 'Per dare un posto a ciò che è finito: nome, foto, epitaffio e la lapide che preferisci.',
+  'onboarding.tour.shop.title': 'La Bottega',
+  'onboarding.tour.shop.text': 'Toccala per comprare luci, decorazioni e presenze con i fuochi fatui. Quello che compri va nell’Inventario.',
+  'onboarding.tour.menu.title': 'Il menu',
+  'onboarding.tour.menu.text': 'Tutto il resto è qui: Seppellisci, Modifica per spostare e sistemare, Inventario, Bottega, Foto, Galleria e Impostazioni, dove puoi rivedere questa introduzione.',
+  // breve: ultimo pulsante del giro
+  'onboarding.tour.end': 'Inizia a giocare',
 } satisfies Record<string, string>;

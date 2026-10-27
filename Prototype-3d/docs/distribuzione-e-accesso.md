@@ -52,7 +52,7 @@ L'ordine dei controlli è sempre lo stesso: prima l'accesso commerciale, poi lo 
 
 I valori stanno in `DEMO_LIMITS` (`src/config/distribution.ts`) e valgono solo con accesso Demo in `store-release` (o in `development` con la Demo simulata). Mai nella beta.
 
-- **Tombe narrative.** Le 10 tombe del vecchio custode della partita nuova sono escluse dal limite. La roadmap ne indicava 3; per ora restano 10, come deciso.
+- **Tombe narrative.** Le 10 tombe del vecchio custode della partita nuova sono escluse dal limite. La roadmap ne indicava 3; per ora restano 10, come deciso. Tre di queste sono le tombe dell'introduzione (`docs/primo-ingresso.md`).
 - **Tombe personali.** Al massimo **5**, cioè le tombe del giocatore nel cimitero (`personalGraves`). Non contano i ricordi affidati all'albero, che è Full.
 - **Catalogo limitato.** Si compra solo quello classificato `demo` (vedi sotto).
 - **Progressi.** XP, rango e fuochi fatui restano e non si azzerano passando alla Full.
@@ -99,7 +99,7 @@ I test controllano che ogni oggetto abbia una sola classe e che le eccezioni sia
 | `xmas_tree` (Albero di Natale, rango 1, solo dicembre) | demo | Stagionale per mese, non per finestra di date: non era tra i 6. Da confermare. |
 | Teste speciali (zucca, teschio, zombie) e altre scelte d'aspetto | demo | Oggi tutte libere. Solo il cappello da strega è Full (viene con l'Angolo della strega). |
 | Ampliamento del recinto (`expansion`) | demo | Si sblocca col prestigio. Per la Demo manca una decisione (fermarlo a un livello?). |
-| Tombe del vecchio custode con lapidi Full (angelo, obelisco, memoriale, monumento) | — | Contenuto narrativo: restano come sono. |
+| Tombe del vecchio custode con lapidi Full (angelo, obelisco, memoriale, monumento) | — | Nelle partite nuove ora hanno lapidi della Demo. Nei salvataggi esistenti restano come sono. |
 
 ### Funzionalità
 
@@ -282,16 +282,17 @@ Generato dal codice il 27/10/2026.
 
 **Schema.** `SaveData` (`src/game/state.ts`) sta in localStorage (`necrothing3d.save.v1`); le foto stanno in IndexedDB.
 
-**Versione 3.** `SAVE_VERSION = 3`, con `MIGRATIONS` numerate e applicate in ordine solo oltre la versione salvata:
+**Versione 4.** `SAVE_VERSION = 4`, con `MIGRATIONS` numerate e applicate in ordine solo oltre la versione salvata:
 - v2: mappa 64×64 (spostamento di 8 celle);
-- v3: il registro `meta` delle distribuzioni.
+- v3: il registro `meta` delle distribuzioni;
+- v4: lo stato del primo ingresso (`onboarding`). I salvataggi esistenti lo hanno già finito (`docs/primo-ingresso.md`).
 
 Le altre correzioni (tipi rinominati, rimborsi, valori mancanti) restano riparazioni ripetibili, valide per salvataggi di qualsiasi età.
 
 **Mai distruttive.** XP, fuochi fatui, inventario, tombe, ricordi, posizioni, Casa, aspetto e preferenze passano intatti. I test lo verificano su due salvataggi campione (`tests/fixtures/save-v1.json`, `save-v2.json`) creati col codice di prima.
 
 **Copie di sicurezza** accanto al salvataggio, che il gioco non cancella mai:
-- `….pre-v3`: com'era prima della migrazione;
+- `….pre-vN`: com'era prima della migrazione alla versione N;
 - `….newer`: una partita di una versione più nuova del gioco (per esempio dopo il ritorno a una build TestFlight precedente). Si apre senza abbassarne la versione e senza perdere campi sconosciuti;
 - `….unreadable`: un salvataggio che non si legge. Prima veniva sovrascritto subito da una partita nuova; ora viene tenuto da parte e il giocatore viene avvisato.
 

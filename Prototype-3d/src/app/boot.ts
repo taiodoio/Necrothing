@@ -12,8 +12,12 @@ export interface BootScreen {
   stage(key: string, to: number): void;
   /** Avanzamento dentro la fase (0…1 dell'intera barra). */
   progress(p: number): void;
-  /** Barra piena, frase di saluto, poi la schermata sfuma. */
-  finish(): Promise<void>;
+  /**
+   * Barra piena, frase di saluto, poi la schermata sfuma. Con `cta` (solo al
+   * primo ingresso) al posto della barra compare il pulsante, e la schermata
+   * sfuma quando lo si tocca.
+   */
+  finish(opts?: { cta?: string }): Promise<void>;
   /** Il sottotitolo tradotto sulla targa, quando il suo carattere è pronto. */
   showTagline(): void;
 }
@@ -47,11 +51,21 @@ export function bootScreen(): BootScreen {
     },
     stage: (key, to) => { if (line) line.textContent = t(key); set(to); },
     progress: set,
-    finish: async () => {
+    finish: async (opts = {}) => {
       if (!el) return;
       if (line) line.textContent = t('boot.step.ready');
       set(1);
       await sleep(450);
+      if (opts.cta) {
+        // primo ingresso: il pulsante al posto della barra, sopra un'ombra che lo rende leggibile
+        const btn = document.createElement('button');
+        btn.className = 'boot-cta';
+        btn.textContent = opts.cta;
+        el.classList.add('with-cta');
+        el.querySelector('.boot-load')?.replaceChildren(btn);
+        btn.focus({ preventScroll: true });
+        await new Promise<void>((resolve) => btn.addEventListener('click', () => resolve(), { once: true }));
+      }
       el.classList.add('done');
       await sleep(600);
       el.remove();

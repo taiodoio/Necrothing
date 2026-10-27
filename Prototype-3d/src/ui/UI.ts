@@ -14,6 +14,7 @@ import type { BurialDraft } from '../game/rules.ts';
 import { DAY_PHASE_LABELS } from '../game/time.ts';
 import { currentLang, t } from '../i18n/index.ts';
 import { $, applyPageTexts, closeDrawer, drawerOpen, h, joinDot } from './dom.ts';
+import { Onboarding } from './onboarding.ts';
 import { hydrateIcons, icon, iconUrl, installFrames } from './icons.ts';
 import { uiNext, uiPlay, uiPreview } from '../app/uiNext.ts';
 import { openDeceased } from './deceased.ts';
@@ -36,10 +37,12 @@ export class UI {
   /** Menù ancorato a un personaggio (animale, Custode) invece che a un oggetto. */
   private ctxAnchor: (() => THREE.Vector3 | null) | null = null;
   private placementBar: HTMLElement | null = null;
-  private tutorial: HTMLElement | null = null;
+  /** Il primo ingresso: pergamena, nome, introduzione, tutorial, giro dell'interfaccia (ui/onboarding.ts). */
+  readonly onboarding: Onboarding;
 
   constructor(game: Game) {
     this.game = game;
+    this.onboarding = new Onboarding(this);
     applyPageTexts();
     installFrames();
     if (uiNext()) {
@@ -357,10 +360,11 @@ export class UI {
     $('#ctx-title').replaceChildren(document.createTextNode(title), h('small', {}, sub));
     $('#ctx-actions').replaceChildren(...actions.map((a) => icons
       // solo l'icona (il nome resta per i lettori di schermo); il costo in un angolino
-      ? h('button', { class: a.cls ?? '', 'aria-label': a.cost ? t('ctx.costAria', { label: a.label, cost: a.cost }) : a.label, title: a.label, onclick: () => this.game.performEntityAction(sel.id, a.act) },
+      ? h('button', { class: a.cls ?? '', 'data-ctx': a.act, 'aria-label': a.cost ? t('ctx.costAria', { label: a.label, cost: a.cost }) : a.label, title: a.label, onclick: () => this.game.performEntityAction(sel.id, a.act) },
         icon(a.icon, 28), a.cost ? h('em', {}, String(a.cost)) : null)
       : h('button', {
         class: a.cls ?? '',
+        'data-ctx': a.act,
         onclick: () => this.game.performEntityAction(sel.id, a.act),
       }, icon(a.icon, 20), a.label, a.cost ? h('em', {}, ` −${a.cost}`, icon('wisp', 12)) : null)), ...petActions.filter((a) => !icons || !a.disabled).map((a) => this.runButton(a)));
     $('#ctx').hidden = false;
@@ -428,29 +432,9 @@ export class UI {
     this.placementBar = bar;
   }
 
-  // ── Tutorial ─────────────────────────────────────────────────────────
-
-  maybeTutorial() {
-    const s = this.game.state.settings;
-    if (s.shopTutorialDone) return;
-    setTimeout(() => {
-      this.game.centerOnShop();
-      this.game.select(null);
-      // il benvenuto è un modale: sopra tutto (anche menù e pulsanti), col fondo scurito
-      const scrim = h('div', { class: 'welcome-scrim' });
-      const card = h('div', { class: 'tutorial welcome', role: 'dialog', 'aria-modal': 'true' },
-        h('b', {}, t('hud.tutorial.title')),
-        h('span', {}, t('hud.tutorial.shop')),
-        h('span', { class: 'muted' }, t('hud.tutorial.graves')),
-        h('button', { class: 'big-btn', onclick: () => { s.shopTutorialDone = true; scrim.remove(); card.remove(); this.tutorial = null; this.game.recenter(); this.game.afterChange(); } }, t('hud.tutorial.ok')),
-      );
-      this.tutorial = card;
-      $('#game').append(scrim, card);
-    }, 1200);
-  }
-
   /** Chiamato ogni frame: riposiziona il menù contestuale. */
   frame() {
     if ((this.ctxId || this.ctxAnchor) && !$('#ctx').hidden) this.positionContext();
+    this.onboarding.frame();
   }
 }

@@ -23,13 +23,14 @@ import { setVoxelResolution, voxelResolution, voxelsPerWorldUnit } from '../rend
 import { graveModel } from '../render/models/graves.ts';
 import { placeableKey, placeableModel, placeableSeed, seedCount, type PVis } from '../render/models/registry.ts';
 import { UI } from '../ui/UI.ts';
-import { confirmDialog, drawerOpen, floater, toast } from '../ui/dom.ts';
+import { confirmDialog, drawerOpen, floater, toast, uiBlocking } from '../ui/dom.ts';
 import { npcNote, type NpcNote } from '../ui/npcNote.ts';
 import { annivNote } from '../ui/anniversary.ts';
 import { npcPortrait } from '../ui/npcPortraits.ts';
 import { ROAMER_LABELS } from '../game/spawn.ts';
 import type { CharacterKind } from '../view/characters.ts';
 import { PetGifts } from '../game/petGifts.ts';
+import { signalOnboarding } from '../ui/onboarding.ts';
 import { Actors, graveSpots, type PetMode, type VisitStop } from '../view/Actors.ts';
 import { Atmosphere } from '../view/Atmosphere.ts';
 import { CameraRig } from '../view/CameraRig.ts';
@@ -183,7 +184,6 @@ export class Game {
     const msg = catchUpMessage(this.announceAnniversaries(report, 1200));
     if (msg) setTimeout(() => toast(msg), 900);
     this.ui.refreshHud();
-    this.ui.maybeTutorial();
     // un'area sbloccata mentre il gioco era chiuso: lo si dice appena aperto
     setTimeout(() => this.offerExpansion(), 2500);
     if (opts.prewarm !== false) setTimeout(() => this.prewarmModels(), 4000);
@@ -259,7 +259,7 @@ export class Game {
     // visibile ma senza focus: quasi fermo (vale anche nella pagina di misura)
     if (this.unfocused) return Math.min(this.frameCap, UNFOCUSED_FPS);
     if (!this.idleSaver) return this.frameCap;
-    if (drawerOpen()) return Math.min(this.frameCap, MENU_FPS);
+    if (drawerOpen() || uiBlocking()) return Math.min(this.frameCap, MENU_FPS);
     const still = now - this.lastActiveAt > IDLE_MS && !this.actors.avatarMoving && !this.placement && !this.drag;
     return still ? Math.min(this.frameCap, IDLE_FPS) : this.frameCap;
   }
@@ -308,7 +308,7 @@ export class Game {
     if (this.hudTimer <= 0) { this.hudTimer = 1; this.ui.refreshClock(); this.refreshBusinesses(); }
 
     // sotto un pannello si disegna un fotogramma e poi più nulla (la pagina di misura disegna sempre)
-    const menu = drawerOpen() && this.idleSaver;
+    const menu = (drawerOpen() || uiBlocking()) && this.idleSaver;
     if (!menu || !this.drawnUnderMenu) {
       if (!this.renderer.shadowMap.autoUpdate) this.refreshStaticShadows();
       this.world.updateDecorLod(this.rig.camera);
@@ -496,7 +496,7 @@ export class Game {
   private offerExpansion() {
     const w = this.state.world;
     if (w.unlockedLevel <= w.notifiedLevel || !this.ui) return;
-    if (!this.state.settings.shopTutorialDone || drawerOpen() || this.placement || this.shrink || this.actors.funeralActive) return;
+    if (this.state.onboarding.stage !== 'done' || drawerOpen() || uiBlocking() || this.placement || this.shrink || this.actors.funeralActive) return;
     w.notifiedLevel = w.unlockedLevel;
     scheduleSave(this.state);
     if (w.expansionLevel < w.unlockedLevel) this.ui.openExpansionOffer(w.unlockedLevel);
@@ -576,7 +576,7 @@ export class Game {
       if (Math.hypot(p.x - a.x, p.z - a.z) < reach) {
         const id = w.id;
         if (reach > 0.65) this.effects.puff(p.clone().setY(0.8), '#8ff0dc');
-        this.act((s) => R.collectWisp(s, id), p.clone().setY(1), true); // basta il «+1» che vola
+        if (this.act((s) => R.collectWisp(s, id), p.clone().setY(1), true)) signalOnboarding('wispCollected'); // basta il «+1» che vola
         this.ui.bumpWisps();
         return;
       }
@@ -628,10 +628,10 @@ export class Game {
     const instant: EntityAction[] = ['detail', 'shop', 'rotate', 'store', 'confirm', 'move', 'entrust', 'memories', 'registry', 'house', 'collect'];
     const run = () => {
       switch (action) {
-        case 'clean': this.actors.work(); this.act((s, n) => (grave ? R.cleanGrave(s, id, n) : R.cleanPlaceable(s, id, n)), center, 'rewarded'); break;
+        case 'clean': this.actors.work(); if (this.act((s, n) => (grave ? R.cleanGrave(s, id, n) : R.cleanPlaceable(s, id, n)), center, 'rewarded') && grave) signalOnboarding('graveCleaned'); break;
         case 'repair': this.actors.work(1.6); this.act((s, n) => (grave ? R.repairGrave(s, id, n) : R.repairPlaceable(s, id, n)), center, 'rewarded'); break;
         case 'flowers': this.actors.work(0.8); this.act((s, n) => R.bringFlowers(s, id, n), center, 'rewarded'); break;
-        case 'light': this.act((s) => R.toggleLight(s, id), center); break;
+        case 'light': if (this.act((s) => R.toggleLight(s, id), center)) signalOnboarding('lightToggled'); break;
         case 'rotate': this.act((s) => R.rotateEntity(s, id)); break;
         case 'store': this.act((s) => R.storePlaceable(s, id)); this.select(null); break;
         case 'confirm': this.select(null); toast(t('game.place.confirmed')); break;
@@ -1831,6 +1831,12 @@ export class Game {
     if (!c) return;
     this.rig.follow = null;
     this.rig.jumpTo(cellCenter(c.x, c.y, c.fp));
+  }
+
+  /** La camera su un punto della scena (il tutorial: un fuoco fatuo). */
+  focusPoint(at: THREE.Vector3) {
+    this.rig.follow = null;
+    this.rig.jumpTo(at);
   }
 
   /** Cattura un rettangolo (px CSS) della scena in bianco e nero. */

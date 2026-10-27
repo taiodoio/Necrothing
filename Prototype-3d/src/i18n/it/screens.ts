@@ -416,6 +416,10 @@ export default {
   'settings.newGame.done': 'Un nuovo cimitero ti aspetta.',
   // versione del gioco in fondo alle impostazioni
   'settings.build.dev': 'Versione di sviluppo',
+  // Impostazioni: rivedere il primo ingresso (pergamena, nome, introduzione, tutorial, giro) senza toccare la partita
+  'settings.section.onboarding': 'Introduzione',
+  'settings.onboarding.replay': 'Rivedi l’introduzione',
+  'settings.onboarding.hint': 'La pergamena, il tutorial e il giro dell’interfaccia. La partita non cambia.',
   // {commit} è il codice della versione, {when} data e ora già formattate
   'settings.build.version': 'Versione {commit} · {when}',
   // tecnico, sotto la versione: il profilo di distribuzione (beta-full, development…)

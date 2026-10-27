@@ -177,6 +177,11 @@ export function drawerOpen(): boolean {
   return !$('#drawer').hidden;
 }
 
+/** Qualcosa copre tutta la scena (la pergamena, il nome, il giro dell'interfaccia): la scena si ferma come sotto un pannello. */
+let blocking = false;
+export function setUiBlocking(on: boolean) { blocking = on; document.body.classList.toggle('ob-open', on); }
+export const uiBlocking = () => blocking;
+
 /** Chiude il drawer; `force` salta la conferma (es. dopo aver salvato). */
 export function closeDrawer(force = false) {
   if ($('#drawer').hidden || (!force && dialogOpen)) return;

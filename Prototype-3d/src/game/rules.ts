@@ -201,10 +201,10 @@ export function bury(s: SaveData, d: BurialDraft, x: number, y: number, now: Dat
   };
   s.graves.push(grave);
   memory(s, grave.id, 'burial', now);
-  const xp = d.category === 'abstract' ? XP.burialAbstract : XP.burialPhysical;
+  const { xp, wisps } = burialReward(grave);
   if (d.category === 'abstract') s.player.lastAbstractBurialDate = isoDate(now);
-  reward(s, xp, WISPS.burial);
-  return { grave, result: ok(t('rules.bury.done', { name: grave.name }), xp, WISPS.burial) };
+  reward(s, xp, wisps);
+  return { grave, result: ok(t('rules.bury.done', { name: grave.name }), xp, wisps) };
 }
 
 // ── Cura delle tombe ────────────────────────────────────────────────────
@@ -255,13 +255,33 @@ export function repairGrave(s: SaveData, graveId: string, now: Date): ActionResu
   return ok(t('rules.repair.graveDone'), XP.repaired, -cost);
 }
 
-/** Riesuma una tomba: sparisce col suo registro e il terreno torna libero. */
-export function exhumeGrave(s: SaveData, graveId: string): ActionResult {
+/** La ricompensa della sepoltura di una tomba (quella che si restituisce riesumandola subito). */
+export const burialReward = (g: Pick<Grave, 'category'>) => ({ xp: g.category === 'abstract' ? XP.burialAbstract : XP.burialPhysical, wisps: WISPS.burial });
+
+/**
+ * Riesumarla adesso ne annulla la ricompensa? Sì entro poche ore dalla
+ * sepoltura (ECONOMY.exhumeRefundHours): seppellire e riesumare a ripetizione
+ * non deve far salire di rango. Dopo, riesumare è gratis.
+ */
+export function exhumeRevokes(g: Pick<Grave, 'createdAt' | 'legacy'>, now: Date): boolean {
+  return !g.legacy && now.getTime() - new Date(g.createdAt).getTime() < ECONOMY.exhumeRefundHours * 3_600_000;
+}
+
+/** Riesuma una tomba: sparisce col suo registro e il terreno torna libero (appena fatta, toglie la sua ricompensa). */
+export function exhumeGrave(s: SaveData, graveId: string, now = new Date()): ActionResult {
   const g = graveById(s, graveId);
   s.graves = s.graves.filter((x) => x.id !== graveId);
   s.memories = s.memories.filter((m) => m.graveId !== graveId);
   s.player.counters.exhumed++;
-  return ok(t('rules.exhume.done', { name: g.name }));
+  if (!exhumeRevokes(g, now)) return ok(t('rules.exhume.done', { name: g.name }));
+  // la sepoltura non c'è stata: via XP e fuochi fatui che aveva dato (mai sotto zero), e non conta per gli sblocchi
+  const r = burialReward(g);
+  const xp = Math.min(r.xp, s.player.xp), wisps = Math.min(r.wisps, s.player.wisps);
+  s.player.xp -= xp;
+  s.player.wisps -= wisps;
+  s.player.counters.wispsEarned = Math.max(0, s.player.counters.wispsEarned - r.wisps); // anche per il traguardo del bastone
+  s.player.counters.exhumed--;
+  return ok(t('rules.exhume.doneRevoked', { name: g.name, xp, wisps }), -xp, -wisps);
 }
 
 /** Riesuma un ricordo affidato all'Albero dei ricordi: lascia l'albero e il registro. */
@@ -330,9 +350,9 @@ export function entrustGrave(s: SaveData, graveId: string, now: Date): ActionRes
   s.graves = s.graves.filter((x) => x.id !== graveId);
   s.entrusted.push({ grave: { ...g }, entrustedAt: now.toISOString(), ghostVisits: 0 });
   memory(s, graveId, 'entrusted', now);
-  const xp = g.category === 'abstract' ? XP.burialAbstract : XP.burialPhysical;
-  reward(s, xp, WISPS.burial);
-  return ok(t('rules.entrust.done', { name: g.name }), xp, WISPS.burial);
+  // un rito, non una nuova sepoltura: la ricompensa piena c'è già stata
+  reward(s, XP.entrust, 0);
+  return ok(t('rules.entrust.done', { name: g.name }), XP.entrust, 0);
 }
 
 export function entrustedById(s: SaveData, id: string) {

@@ -3,7 +3,7 @@
 
 import { terrainSection } from './expansion.ts';
 import { applyBackup, exportBackup, gallery, readBackup, type PhotoRecord, type ReadBackup } from '../app/persistence.ts';
-import { BUSINESS, DECAY, EXPANSION, RANKS } from '../game/balance.ts';
+import { BUSINESS, DECAY, ECONOMY, EXPANSION, RANKS } from '../game/balance.ts';
 import { CATALOG, CATALOG_LIST, CATEGORY_ORDER, PLACEABLE_CATEGORY_LABELS, repairCost, seasonLabel, type PlaceableCategory, type PlaceableDef } from '../game/catalog.ts';
 import {
   CATEGORIES, CATEGORY_LABELS, CUSTOM_CAUSE_MAX, DEATH_CAUSE_LABELS, deathCauseLabel, DEATH_CAUSES, GRAVE_STATE_LABELS,
@@ -602,9 +602,12 @@ function itemFooter(ui: UI, id: string): HTMLElement | null {
 /** Conferma della riesumazione (o del «Libera ricordo»), poi arriva il becchino con la carriola. */
 export async function confirmExhume(ui: UI, id: string, name: string, kind: 'grave' | 'memory') {
   const grave = kind === 'grave';
+  // sepolta da poco: riesumandola si perde la ricompensa della sepoltura (lo si dice prima)
+  const g = grave ? ui.game.state.graves.find((x) => x.id === id) : undefined;
+  const revokes = !!g && R.exhumeRevokes(g, ui.game.now());
   const ok = await confirmDialog({
     title: t(grave ? 'exhume.confirm.title' : 'exhume.free.title', { name }),
-    message: t(grave ? 'exhume.confirm.grave' : 'exhume.confirm.memory'),
+    message: grave ? `${t('exhume.confirm.grave')}${revokes ? ` ${t('exhume.confirm.revokes', { xp: R.burialReward(g!).xp, wisps: R.burialReward(g!).wisps, h: ECONOMY.exhumeRefundHours })}` : ''}` : t('exhume.confirm.memory'),
     ok: t(grave ? 'exhume.confirm.ok' : 'exhume.free.ok'), danger: true,
   });
   if (!ok) return;

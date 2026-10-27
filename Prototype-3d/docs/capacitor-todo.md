@@ -12,7 +12,7 @@ verificare) quando si crea il progetto Capacitor.
   - **Visibile senza focus:** 5 FPS.
   - I plugin nativi si leggono da `window.Capacitor` solo dentro l'app.
 - **Promemoria** (`src/game/reminders.ts`, `src/app/reminders.ts`):
-  - **Quando partono:** il giorno di ogni anniversario alle 10 e la sera prima che una tomba trascurata si rompa, alle 18.
+  - **Quando partono:** il giorno di ogni anniversario alle 10; una volta sola, alle 18, il giorno in cui più della metà delle tombe sarà sporca o rotta (`REMINDERS.neglectShare`).
   - **Limiti:** uno al giorno per tipo, al più 48 in attesa (iOS ne tiene 64).
   - **Permesso:** il gioco lo chiede dopo la prima sepoltura, con un suo dialogo; interruttore «Promemoria» in Impostazioni.
   - **Nel browser:** non partono; il bench mostra quelli che pianificherebbe.

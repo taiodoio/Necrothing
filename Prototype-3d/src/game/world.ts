@@ -1,7 +1,7 @@
 // Geometria logica del mondo: area recintata (espansione), occupazione delle
 // celle, piazzabilità e camminabilità. Nessuna dipendenza da three/DOM.
 
-import { EXPANSION, GRAVE_FOOTPRINT, MAP_SIZE, MAUSOLEUM_PRESTIGE, DISTRICT } from './balance.ts';
+import { ECONOMY, EXPANSION, GRAVE_FOOTPRINT, MAP_SIZE, MAUSOLEUM_PRESTIGE, DISTRICT } from './balance.ts';
 import { CATALOG, rotatedFootprint } from './catalog.ts';
 import type { Grave, Placed, SaveData } from './state.ts';
 import { t } from '../i18n/index.ts';
@@ -161,7 +161,8 @@ export function detectDistricts(graves: Grave[]): District[] {
 
 export function computePrestige(state: Pick<SaveData, 'graves' | 'placeables'>): number {
   const graves = state.graves;
-  const decorative = state.placeables.filter((p) => !['path_stone', 'path_dirt', 'shop'].includes(p.type));
+  // gli oggetti da pochi fuochi fatui (erba, fango, sentieri) non contano: il recinto non si allarga spargendo erba
+  const decorative = state.placeables.filter((p) => p.type !== 'shop' && (CATALOG[p.type]?.cost ?? 0) >= ECONOMY.prestigeMinCost);
   const flowerScore = graves.filter((g) => g.hasFlowers).length * 2;
   const cleanScore = graves.filter((g) => !g.weeds && !g.dirty && !g.broken).length;
   const variety = new Set(graves.map((g) => g.category)).size * 3;

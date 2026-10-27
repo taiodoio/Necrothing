@@ -3,7 +3,7 @@
 // espansione/achievement → salvataggio → sincronizzazione della vista.
 
 import * as THREE from 'three';
-import { BAT, BUSINESS, FOREST_MARGIN, PET_GIFT, GRAVE_FOOTPRINT, KEEPER_LAMP, LIVE_TICK_MS, SOUL_BELL, STAFF, ZOMBIE_MUD } from '../game/balance.ts';
+import { BAT, BUSINESS, FOREST_MARGIN, GRAVE_FOOTPRINT, KEEPER_LAMP, LIVE_TICK_MS, SOUL_BELL, STAFF, ZOMBIE_MUD } from '../game/balance.ts';
 import { moveTraceDraw, startTraceDraw, traceDrawCells, type TraceDraw } from '../game/trace.ts';
 import { CATALOG, CATALOG_LIST, EDIT_ONLY, rotatedFootprint, TRACEABLE, ZOMBIE_ATTRACTORS } from '../game/catalog.ts';
 import { applyTheme, uiNext, uiPreview } from './uiNext.ts';
@@ -29,6 +29,7 @@ import { annivNote } from '../ui/anniversary.ts';
 import { npcPortrait } from '../ui/npcPortraits.ts';
 import { ROAMER_LABELS } from '../game/spawn.ts';
 import type { CharacterKind } from '../view/characters.ts';
+import { PetGifts } from '../game/petGifts.ts';
 import { Actors, graveSpots, type PetMode, type VisitStop } from '../view/Actors.ts';
 import { Atmosphere } from '../view/Atmosphere.ts';
 import { CameraRig } from '../view/CameraRig.ts';
@@ -1025,18 +1026,15 @@ export class Game {
     this.say({ kind: 'custode', name: this.state.player.name, say, text, wisps: r?.wisps && r.wisps > 0 ? r.wisps : undefined, xp: r?.xp || undefined, img: npcPortrait('custode', this.state.player.look) || undefined });
   }
 
-  /** Coccole e giochi per animale: quanti ne mancano al prossimo regalo (a caso, vedi PET_GIFT). */
-  private petMood = new Map<string, number>();
+  /** Coccole e giochi per animale: quando arriva il prossimo regalo, e quanti ne ha già fatti in questa apertura (game/petGifts.ts). */
+  private petGifts = new PetGifts();
 
-  /** L'animale è contento: ogni tanto, a caso, porta da 1 a 5 fuochi fatui (con la sua notifica). */
+  /** L'animale è contento: ogni tanto, a caso, porta da 1 a 5 fuochi fatui (con la sua notifica), al massimo due volte per apertura. */
   private petJoy(id: string) {
-    const roll = (a: number, b: number) => a + Math.floor(Math.random() * (b - a + 1));
-    const left = (this.petMood.get(id) ?? roll(...PET_GIFT.every)) - 1;
-    if (left > 0) { this.petMood.set(id, left); return; }
-    this.petMood.set(id, roll(...PET_GIFT.every));
     const pet = this.actors.petAt(id);
     if (!pet) return;
-    const n = roll(...PET_GIFT.wisps);
+    const n = this.petGifts.interact(id);
+    if (n === null) return;
     const at = this.actors.petTop(id) ?? undefined;
     let gift: R.ActionResult | null = null;
     if (!this.act((s) => (gift = R.petGift(s, n)), at, true) || !gift) return;
@@ -1346,7 +1344,7 @@ export class Game {
     const memory = g ? undefined : R.entrustedById(this.state, id);
     if (!g && !memory) return;
     if (this.actors.funeralActive) { toast(t('game.rite.busy')); return; }
-    const run = (s: SaveData) => (g ? R.exhumeGrave(s, id) : R.exhumeMemory(s, id));
+    const run = (s: SaveData, now: Date) => (g ? R.exhumeGrave(s, id, now) : R.exhumeMemory(s, id));
     const tree = memory ? this.treeSpot() : null;
     const target = g ? cellCenter(g.x, g.y, GRAVE_FOOTPRINT) : tree?.center.clone().add(new THREE.Vector3(0, 0, 1.95));
     if (!target) { this.act(run); return; }
@@ -1364,7 +1362,7 @@ export class Game {
         if (g) this.world.setHidden(id, true);
         this.effects.cloudPuff(target.clone().setY(this.world.heightAt(target.x, target.z)), DUST, DUST_GLOW);
         let r: R.ActionResult | null = null;
-        if (!this.act((s) => (r = run(s)), undefined, true)) { if (g) this.world.setHidden(id, false); return; }
+        if (!this.act((s, now) => (r = run(s, now)), undefined, true)) { if (g) this.world.setHidden(id, false); return; }
         if (r) this.say({ kind: 'gravedigger', name: t('say.gravedigger.name'), say: t('say.gravedigger.exhumed.say'), text: (r as R.ActionResult).message });
         this.ui.refreshHud();
       },

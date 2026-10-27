@@ -1,2 +1,2 @@
-/** Iniettato da vite.config.ts: commit e data della build. */
-declare const __BUILD__: { commit: string; built: string };
+/** Iniettato da vite.config.ts: commit, data della build e profilo di distribuzione. */
+declare const __BUILD__: { commit: string; built: string; distribution: string };

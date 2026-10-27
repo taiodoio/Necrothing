@@ -10,7 +10,7 @@ import { CATALOG_LIST, rotatedFootprint } from '../src/game/catalog.ts';
 import { evaluateAchievements, rankForXp } from '../src/game/progression.ts';
 import { shortWisps } from '../src/ui/numbers.ts';
 import { moveTraceDraw, startTraceDraw, traceDrawCells } from '../src/game/trace.ts';
-import { DECAY, EXPANSION, RELEASE_LOCKS, WISPS, XP } from '../src/game/balance.ts';
+import { DECAY, EXPANSION, WISPS, XP } from '../src/game/balance.ts';
 
 const NOW = new Date('2026-10-09T12:00:00Z');
 const later = (days) => new Date(NOW.getTime() + days * 86_400_000);
@@ -262,14 +262,14 @@ test('catalogo: ogni voce ha footprint valido e costi coerenti', () => {
 });
 
 test('salvataggio v1 (mappa 48) migrato: oggetti spostati dentro il nuovo recinto', async () => {
-  const { normalizeSave } = await import('../src/game/state.ts');
+  const { normalizeSave, SAVE_VERSION } = await import('../src/game/state.ts');
   const old = createNewGame(NOW, 3);
   old.version = 1;
   old.graves = [{ ...old.graves[0], x: 19, y: 22 }];
   old.placeables = [{ ...old.placeables[0], x: 14, y: 15 }];
   old.world.expansionLevel = 2;
   const s = normalizeSave(JSON.parse(JSON.stringify(old)));
-  assert.equal(s.version, 2);
+  assert.equal(s.version, SAVE_VERSION);
   assert.deepEqual([s.graves[0].x, s.graves[0].y], [27, 30]);
   const area = areaForLevel(s.world.expansionLevel);
   const p = s.placeables[0];
@@ -292,18 +292,17 @@ test('animale domestico: la ciotola non è più in bottega; i salvataggi che l�
   assert.equal(fixed.player.wisps, wisps + 36);
 });
 
-test('Albero dei ricordi: si sblocca a 20 tombe, accoglie una tomba (libera lo spazio) e ne fa tornare il fantasma', () => {
+test('Albero dei ricordi: rango 3 e 20 tombe, accoglie una tomba (libera lo spazio) e ne fa tornare il fantasma', () => {
   const s = createNewGame(NOW, 42);
   s.player.wisps = 1000;
+  assert.equal(R.shopAvailability(s, 'memory_tree', NOW), 'rank', 'serve il rango 3');
   s.player.xp = 99999;
   const base = s.graves.length; // anche le tombe del vecchio custode contano
-  assert.equal(R.shopAvailability(s, 'memory_tree', NOW), 'ok', 'per i test l’albero è subito disponibile');
-  RELEASE_LOCKS.minGraves = true;
-  assert.equal(R.shopAvailability(s, 'memory_tree', NOW), 'graves', 'nella versione finale: bloccato sotto le 20 tombe');
+  assert.equal(R.shopAvailability(s, 'memory_tree', NOW), 'graves', 'bloccato sotto le 20 tombe');
+  assert.throws(() => R.buy(s, 'memory_tree', 1, NOW), /tombe/);
   for (let i = base; i < 20; i++) { const p = spot(s); R.bury(s, draft({ name: `Oggetto ${i}` }), p.x, p.y, NOW); }
   assert.equal(R.graveTotal(s), 20);
   assert.equal(R.shopAvailability(s, 'memory_tree', NOW), 'ok');
-  RELEASE_LOCKS.minGraves = false;
   // senza albero non si affida nulla
   assert.throws(() => R.entrustGrave(s, s.graves[0].id, NOW));
   R.buy(s, 'memory_tree', 1, NOW);
@@ -346,13 +345,14 @@ test('riesumazione: tomba e ricordo dell’albero spariscono col loro registro, 
   const s = createNewGame(NOW, 42);
   s.player.wisps = 1000;
   s.player.xp = 99999;
+  s.player.counters.exhumed = 20 - s.graves.length; // l'albero chiede 20 sepolture (le riesumate contano)
   R.buy(s, 'memory_tree', 1, NOW);
   const at = spot(s, [5, 5]);
   R.placeFromInventory(s, 'memory_tree', at.x, at.y, 0, NOW);
   const [a, b] = s.graves;
   R.entrustGrave(s, b.id, NOW);
   const total = R.graveTotal(s);
-  const xp = s.player.xp, wisps = s.player.wisps;
+  const xp = s.player.xp, wisps = s.player.wisps, exhumed = s.player.counters.exhumed;
   // la tomba: via dal cimitero e dai ricordi, il posto torna libero
   const res = R.exhumeGrave(s, a.id);
   assert.match(res.message, new RegExp(a.name));
@@ -368,7 +368,7 @@ test('riesumazione: tomba e ricordo dell’albero spariscono col loro registro, 
   // niente ricompense tolte né date; le sepolture fatte restano per gli sblocchi
   assert.equal(s.player.xp, xp);
   assert.equal(s.player.wisps, wisps);
-  assert.equal(s.player.counters.exhumed, 2);
+  assert.equal(s.player.counters.exhumed, exhumed + 2);
   assert.equal(R.graveTotal(s), total);
 });
 
@@ -488,17 +488,13 @@ function placeBusiness(s, type) {
   return R.placeFromInventory(s, type, at.x, at.y, 0, NOW);
 }
 
-test('bicicletta: Extra dal rango 2 a 50 fuochi fatui, pezzo unico, non si posa sulla mappa', () => {
+test('bicicletta: Extra dal rango 2 a 60 fuochi fatui, pezzo unico, non si posa sulla mappa', () => {
   const s = richAt(0);
-  // in prova si compra a qualsiasi rango; nella versione finale serve il rango 2
-  assert.equal(R.shopAvailability(s, 'bike', NOW), 'ok');
-  RELEASE_LOCKS.earlyRank = true;
   assert.equal(R.shopAvailability(s, 'bike', NOW), 'rank');
-  RELEASE_LOCKS.earlyRank = false;
   s.player.xp = 500;
   assert.equal(R.shopAvailability(s, 'bike', NOW), 'ok');
   R.buy(s, 'bike', 1, NOW);
-  assert.equal(s.player.wisps, 450);
+  assert.equal(s.player.wisps, 440);
   assert.equal(R.shopAvailability(s, 'bike', NOW), 'owned');
   assert.throws(() => R.placeFromInventory(s, 'bike', 30, 30, 0, NOW), /Non si piazza/);
   assert.equal(R.ownedCount(s, 'bike'), 1);
@@ -545,10 +541,7 @@ test('bar e orto: incasso giornaliero casuale ma stabile, entro i limiti, con te
 
 test('bar e orto: rango 3, pezzi unici, attirano zombie anche senza tombe aperte', () => {
   const s = richAt(500);
-  assert.equal(R.shopAvailability(s, 'zombie_bar', NOW), 'ok'); // in prova
-  RELEASE_LOCKS.earlyRank = true;
   assert.equal(R.shopAvailability(s, 'zombie_bar', NOW), 'rank');
-  RELEASE_LOCKS.earlyRank = false;
   s.player.xp = 1500;
   placeBusiness(s, 'zombie_bar');
   placeBusiness(s, 'brain_farm');
@@ -621,10 +614,13 @@ test('varianti: i salvataggi vecchi trasformano le varianti posate negli oggetti
   assert.ok(createNewGame(NOW, 4).placeables.some((p) => p.type === 'lamp_post_gothic'));
 });
 
-test('nuovi sbloccabili: in prova si comprano subito (rango, stagione e traguardo saltati), il prezzo resta', () => {
+test('nuovi sbloccabili: con rango e traguardi raggiunti (e nella loro stagione) si comprano, il prezzo resta', () => {
   const s = createNewGame(NOW, 7);
   s.player.wisps = 10_000;
-  for (const id of ['keeper_lamp', 'reaper_statue', 'keeper_statue', 'soul_gazebo', 'vampire_crypt', 'lovers_bench', 'skeleton_snowman', 'mystic_staff', 'broom']) {
+  s.player.xp = 99_999;
+  s.player.counters.lightsRepaired = 25;
+  s.player.counters.wispsEarned = 500;
+  for (const id of ['keeper_lamp', 'reaper_statue', 'keeper_statue', 'soul_gazebo', 'vampire_crypt', 'pumpkin_patch', 'mystic_staff', 'broom']) {
     assert.equal(R.shopAvailability(s, id, NOW), 'ok', id);
   }
   const before = s.player.wisps;
@@ -634,10 +630,9 @@ test('nuovi sbloccabili: in prova si comprano subito (rango, stagione e traguard
   assert.equal(before - s.player.wisps, 50);
 });
 
-test('nuovi sbloccabili: a regime servono rango, stagione e traguardo', async () => {
+test('nuovi sbloccabili: servono sempre rango, stagione e traguardo', async () => {
   const { CATALOG, isSeasonallyAvailable } = await import('../src/game/catalog.ts');
-  RELEASE_LOCKS.earlyRank = true;
-  try {
+  {
     const s = createNewGame(NOW, 7);
     s.player.wisps = 10_000;
     assert.equal(R.shopAvailability(s, 'reaper_statue', NOW), 'rank');
@@ -658,7 +653,7 @@ test('nuovi sbloccabili: a regime servono rango, stagione e traguardo', async ()
     assert.ok(isSeasonallyAvailable(altar, 9, 31) && isSeasonallyAvailable(altar, 10, 2));
     assert.ok(!isSeasonallyAvailable(altar, 9, 30) && !isSeasonallyAvailable(altar, 10, 3));
     assert.ok(isSeasonallyAvailable(snow, 11, 20) && isSeasonallyAvailable(snow, 0, 10) && !isSeasonallyAvailable(snow, 1, 1));
-  } finally { RELEASE_LOCKS.earlyRank = false; }
+  }
 });
 
 test('contatori dei traguardi: luci riparate, fuochi fatui guadagnati, pozioni vendute', () => {
@@ -671,6 +666,7 @@ test('contatori dei traguardi: luci riparate, fuochi fatui guadagnati, pozioni v
   R.collectWisp(s, s.world.looseWisps[0].id);
   assert.equal(s.player.counters.wispsEarned, earned + 1);
   s.player.wisps = 1000;
+  s.player.xp = 99_999; // l'angolo della strega è di rango 4
   R.buy(s, 'witch_corner', 1, NOW);
   const at = spot(s, [2, 2]);
   const w = R.placeFromInventory(s, 'witch_corner', at.x, at.y, 0, NOW);
@@ -686,6 +682,7 @@ test('Lampione del Custode: le luci vicine si sporcano ma non si rompono; quelle
   s.player.wisps = 1000;
   const near = s.placeables.find((p) => p.type === 'lamp_post'); // (30, 26)
   const far = s.placeables.find((p) => p.type === 'lamp_post_double'); // (30, 45)
+  s.player.xp = 99_999; s.player.counters.lightsRepaired = 25; // rango 3 e 25 luci riparate
   R.buy(s, 'keeper_lamp', 1, NOW);
   const at = nearestFreeSpot(near.x + 2, near.y, [1, 1], buildOccupancy(s), areaForLevel(0));
   const k = R.placeFromInventory(s, 'keeper_lamp', at.x, at.y, 0, NOW);
@@ -701,6 +698,7 @@ test('Lampione del Custode: le luci vicine si sporcano ma non si rompono; quelle
 test('campana delle anime: si suona una volta al giorno, non se è rotta', () => {
   const s = createNewGame(NOW, 7);
   s.player.wisps = 1000;
+  s.player.xp = 99_999; // rango 4
   R.buy(s, 'soul_bell', 1, NOW);
   const at = spot(s, [2, 2]);
   const b = R.placeFromInventory(s, 'soul_bell', at.x, at.y, 0, NOW);

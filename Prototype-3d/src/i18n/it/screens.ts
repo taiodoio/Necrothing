@@ -63,6 +63,8 @@ export default {
   'shop.lock.owned': 'posseduto',
   // breve: carta della Bottega
   'shop.lock.graves': 'tombe',
+  // breve: carta della Bottega, l'oggetto è nella versione completa del gioco
+  'shop.lock.full': 'Versione completa',
   // breve: carta della Bottega, «R» sta per rango
   'shop.lock.rankShort': 'R{n}',
   // breve: carta della Bottega (oggi la forma è «tombe» anche per 1)
@@ -87,6 +89,10 @@ export default {
   'shop.need.graves.short': 'Seppellisci {goal} · {n}/{goal}',
   'shop.need.graves.long#one': 'Si sblocca con {n} sepolture (contano anche quelle affidate all’albero): ne hai {have}.',
   'shop.need.graves.long#other': 'Si sblocca con {n} sepolture (contano anche quelle affidate all’albero): ne hai {have}.',
+  // breve: pillola sulla carta, l'oggetto è nella versione completa del gioco
+  'shop.need.full.short': 'Versione completa',
+  // dettaglio: perché non si può comprare (accesso commerciale, non lo sblocco)
+  'shop.need.full.long': 'Fa parte della versione completa del gioco.',
   // fuochi fatui che mancano (oggi «Mancano» anche per 1)
   'shop.need.wisps.short#one': 'Mancano {n}',
   'shop.need.wisps.short#other': 'Mancano {n}',
@@ -116,6 +122,8 @@ export default {
   'shop.buy.feat': '{label} ({n}/{goal})',
   // breve: pulsante spento, {season} è il periodo in cui si compra
   'shop.buy.season': 'Solo {season}',
+  // breve: pulsante spento, l'oggetto è nella versione completa
+  'shop.buy.full': 'Nella versione completa',
   // breve: pulsante, seguito dall'icona del fuoco fatuo
   'shop.buy.ctaShort': 'Compra · {n}',
 
@@ -408,6 +416,8 @@ export default {
   'settings.build.dev': 'Versione di sviluppo',
   // {commit} è il codice della versione, {when} data e ora già formattate
   'settings.build.version': 'Versione {commit} · {when}',
+  // tecnico, sotto la versione: il profilo di distribuzione (beta-full, development…)
+  'settings.build.distribution': 'Distribuzione: {profile}',
 
   // ── Foto del cimitero ──
   'photo.title': 'Foto del cimitero',

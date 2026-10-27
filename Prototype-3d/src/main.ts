@@ -15,12 +15,14 @@ import './styles/ui-play.css';
 import './styles/ui-house.css';
 import { setUiNext, setUiPlay, setUiPreview } from './app/uiNext.ts';
 import { bootScreen, nextPaint, runSliced } from './app/boot.ts';
-import { loadSave } from './app/persistence.ts';
+import { loadSave, takeRecoveredNotice } from './app/persistence.ts';
+import { toast } from './ui/dom.ts';
 import { modelJobs } from './view/WorldView.ts';
 import { warmHeroes } from './ui/heroWarm.ts';
 import { restoreThumbs, warmThumbs } from './ui/thumbWarm.ts';
 import { installPlayDecor } from './ui/playDecor.ts';
 import { t } from './i18n/index.ts';
+import { simulateAccess } from './game/entitlement.ts';
 
 const canvas = document.querySelector<HTMLCanvasElement>('#world');
 if (!canvas) throw new Error('Canvas di gioco non trovato.'); // i18n-ok: errore interno, la pagina ha sempre il canvas
@@ -32,6 +34,9 @@ setUiPlay(true);
 // casa del Custode (registro, personalizzazione, vantaggi), requisiti di sblocco in Bottega, morso del vampiro
 setUiPreview(true);
 installPlayDecor();
+// ?access=demo (o full) simula l'accesso commerciale: solo nel profilo development, altrove è ignorato
+const simulated = new URLSearchParams(location.search).get('access');
+if (simulated === 'demo' || simulated === 'full') simulateAccess(simulated);
 
 const boot = bootScreen();
 void (async () => {
@@ -48,7 +53,7 @@ void (async () => {
     // il terreno, il bosco, il sottobosco e tutto il resto: un blocco unico
     boot.stage('boot.step.ground', 0.62);
     await nextPaint();
-    const game = new Game(canvas);
+    const game = new Game(canvas, { state: save ?? undefined });
     (window as unknown as { necro: Game }).necro = game;
     // luci e shader: il primo disegno, poi via la schermata
     boot.stage('boot.step.lanterns', 0.92);
@@ -56,6 +61,8 @@ void (async () => {
     game.start();
     await nextPaint();
     await boot.finish();
+    // il salvataggio non si leggeva: una copia è rimasta da parte (persistence.ts), lo si dice
+    if (takeRecoveredNotice()) toast(t('save.recovered'));
     // nei momenti liberi: le testate animate (albero, casa) e le miniature che mancano
     warmHeroes(game.state);
     warmThumbs(game.state);

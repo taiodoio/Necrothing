@@ -2,7 +2,7 @@
 // foto della galleria e foto degli oggetti sepolti in IndexedDB.
 // Export/import in un file .necro3d (ZIP: vedi backup.ts).
 
-import { normalizeSave, type SaveData } from '../game/state.ts';
+import { normalizeSave, SAVE_VERSION, type SaveData } from '../game/state.ts';
 import { packBackup, unpackBackup, type BackupContent, type MemorialPhoto, type PhotoRecord } from './backup.ts';
 import { t } from '../i18n/index.ts';
 
@@ -15,14 +15,41 @@ let persistence = true;
 export function setPersistence(on: boolean) { persistence = on; }
 export const persistenceOn = () => persistence;
 
+/**
+ * Copie di sicurezza accanto al salvataggio (mai cancellate dal gioco):
+ * - `.pre-v<N>`: com'era prima di migrarlo alla versione N (una per versione);
+ * - `.newer`: una partita di una versione più nuova del gioco, prima di aprirla qui;
+ * - `.unreadable`: un salvataggio che non si leggeva, invece di sovrascriverlo con una partita nuova.
+ */
+const COPY = { pre: (v: number) => `${KEY}.pre-v${v}`, newer: `${KEY}.newer`, unreadable: `${KEY}.unreadable` };
+
+let recovered = false;
+/** All'avvio il salvataggio non si leggeva (ne è rimasta una copia): lo si dice una volta. */
+export function takeRecoveredNotice(): boolean { const r = recovered; recovered = false; return r; }
+
+function keepCopy(key: string, raw: string, overwrite = true) {
+  try { if (overwrite || localStorage.getItem(key) === null) localStorage.setItem(key, raw); } catch (e) { console.warn('Copia del salvataggio non riuscita', e); }
+}
+
 export function loadSave(): SaveData | null {
   if (!persistence) return null;
+  let raw: string | null = null;
+  try { raw = localStorage.getItem(KEY); } catch { return null; }
+  if (!raw) return null;
   try {
-    const raw = localStorage.getItem(KEY);
-    return raw ? normalizeSave(JSON.parse(raw)) : null;
-  } catch {
-    return null;
+    const parsed = JSON.parse(raw) as { version?: unknown };
+    const v = typeof parsed?.version === 'number' ? parsed.version : null;
+    if (v !== null && v < SAVE_VERSION) keepCopy(COPY.pre(SAVE_VERSION), raw, false);
+    if (v !== null && v > SAVE_VERSION) keepCopy(COPY.newer, raw);
+    const state = normalizeSave(parsed);
+    if (state) return state;
+  } catch (e) {
+    console.warn('Salvataggio illeggibile', e);
   }
+  // non si legge: lo si tiene da parte (la partita nuova lo sovrascriverà)
+  keepCopy(COPY.unreadable, raw);
+  recovered = true;
+  return null;
 }
 
 let pending = 0;
@@ -133,6 +160,9 @@ export interface ReadBackup { state: SaveData; content: BackupContent }
 /** Legge un backup (ZIP nuovo, anche ricompresso, o JSON vecchio) senza toccare la partita. */
 export function readBackup(data: ArrayBuffer): ReadBackup {
   const content = unpackBackup(new Uint8Array(data));
+  // da una versione più nuova del gioco: aprirlo qui perderebbe quello che questa versione non conosce
+  const v = (content.state as { version?: unknown } | null)?.version;
+  if (typeof v === 'number' && v > SAVE_VERSION) throw new Error(t('backup.newer'));
   const state = normalizeSave(content.state);
   if (!state) throw new Error(t('backup.corrupt'));
   return { state, content };

@@ -6,7 +6,8 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc --noEmit && vite build",
-    "test": "node --experimental-strip-types --no-warnings --test tests/domain.test.mjs tests/render.test.mjs tests/lowpoly.test.mjs tests/i18n.test.mjs",
+    "build:beta": "tsc --noEmit && VITE_DISTRIBUTION=beta-full vite build",
+    "test": "node --experimental-strip-types --no-warnings --test tests/domain.test.mjs tests/distribution.test.mjs tests/render.test.mjs tests/lowpoly.test.mjs tests/i18n.test.mjs",
     "typecheck": "tsc --noEmit",
     "preview": "vite preview"
   },

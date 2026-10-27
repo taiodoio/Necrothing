@@ -3,8 +3,8 @@
 
 import { terrainSection } from './expansion.ts';
 import { applyBackup, exportBackup, gallery, readBackup, type PhotoRecord, type ReadBackup } from '../app/persistence.ts';
-import { BUSINESS, DECAY, EARLY_ACCESS, EXPANSION, RANKS, RELEASE_LOCKS } from '../game/balance.ts';
-import { CATALOG, CATALOG_LIST, CATEGORY_ORDER, isSeasonallyAvailable, PLACEABLE_CATEGORY_LABELS, repairCost, seasonLabel, type PlaceableCategory, type PlaceableDef } from '../game/catalog.ts';
+import { BUSINESS, DECAY, EXPANSION, RANKS } from '../game/balance.ts';
+import { CATALOG, CATALOG_LIST, CATEGORY_ORDER, PLACEABLE_CATEGORY_LABELS, repairCost, seasonLabel, type PlaceableCategory, type PlaceableDef } from '../game/catalog.ts';
 import {
   CATEGORIES, CATEGORY_LABELS, CUSTOM_CAUSE_MAX, DEATH_CAUSE_LABELS, deathCauseLabel, DEATH_CAUSES, GRAVE_STATE_LABELS,
   GRAVE_TYPE_LABELS, GRAVE_TYPE_MIN_RANK, GRAVE_TYPES, graveVisualState,
@@ -20,6 +20,8 @@ import { houseBoughtView, houseShopDetail, houseShopGrid } from './house.ts';
 import { graveThumb, placeableThumb } from './thumbs.ts';
 import { ACH_COUNT, ACH_ICONS, icon } from './icons.ts';
 import { lpBadgeUrl, lpIconPng } from './lpIcons.ts';
+import { personalGraveLimit } from '../game/entitlement.ts';
+import { distribution } from '../config/distribution.ts';
 import { monoIcon } from './monoIcons.ts';
 import { factLabel, parchment } from './parchment.ts';
 import { previewUrl, warmPreviews } from './previews.ts';
@@ -79,12 +81,13 @@ export async function postcardData(g: { name: string; birthDate: string | null; 
 
 export function openBurial(ui: UI, initial?: R.BurialDraft, startStep = 0) {
   const game = ui.game;
+  // con i limiti della Demo (mai nella beta) oltre le tombe concesse non se ne comincia un'altra
+  if (!initial && !R.canStartBurial(game.state)) { toast(t('rules.bury.demoLimit', { n: personalGraveLimit() ?? 0 })); return; }
   const now = game.now();
   const d: R.BurialDraft = initial ? { ...initial } : R.emptyDraft(now);
   if (!initial) burialPhoto = new BurialPhoto();
   const photo = burialPhoto;
   let step = startStep;
-  const level = rankForXp(game.state.player.xp).level;
   const total = 6;
 
   const render = () => {
@@ -134,7 +137,10 @@ export function openBurial(ui: UI, initial?: R.BurialDraft, startStep = 0) {
       const lit = uiPlay() && game.state.settings.style === 'lowpoly';
       body.append(uiPlay() ? '' : h('p', { class: 'muted' }, t('burial.graveType.intro')), // il lucchetto col rango lo dice già
         h('div', { class: 'grid' }, ...GRAVE_TYPES.map((gt) => {
-          const locked = GRAVE_TYPE_MIN_RANK[gt] > level;
+          // prima l'accesso commerciale, poi il rango (le regole: graveTypeAvailability)
+          const av = R.graveTypeAvailability(game.state, gt);
+          const locked = av !== 'ok';
+          const why = av === 'full' ? t('shop.lock.full') : t('shop.need.rank.short', { n: GRAVE_TYPE_MIN_RANK[gt] });
           const url = lit ? previewUrl(`grave-${gt}`) : null;
           if (url) {
             return h('button', {
@@ -143,13 +149,13 @@ export function openBurial(ui: UI, initial?: R.BurialDraft, startStep = 0) {
               onclick: () => { d.graveType = gt; render(); },
             }, h('span', { class: 'thumb' }, h('img', { class: 'lit', src: url, alt: '', decoding: 'async' }), locked ? h('span', { class: 'lock-over' }, icon('lock', 30)) : null),
             h('b', {}, GRAVE_TYPE_LABELS[gt]),
-            locked ? h('span', { class: 'lock-why' }, t('shop.need.rank.short', { n: GRAVE_TYPE_MIN_RANK[gt] })) : null);
+            locked ? h('span', { class: 'lock-why' }, why) : null);
           }
           return h('button', {
             class: `card ${d.graveType === gt ? 'selected' : ''} ${locked ? 'dim' : ''}`,
             disabled: locked,
             onclick: () => { d.graveType = gt; render(); },
-          }, h('img', { src: graveThumb(gt, game.state.settings.style), alt: '' }), h('b', {}, GRAVE_TYPE_LABELS[gt]), locked ? h('span', { class: 'lock' }, icon('lock', 12), t('burial.graveType.rankShort', { n: GRAVE_TYPE_MIN_RANK[gt] })) : null);
+          }, h('img', { src: graveThumb(gt, game.state.settings.style), alt: '' }), h('b', {}, GRAVE_TYPE_LABELS[gt]), locked ? h('span', { class: 'lock' }, icon('lock', 12), av === 'full' ? t('shop.lock.full') : t('burial.graveType.rankShort', { n: GRAVE_TYPE_MIN_RANK[gt] })) : null);
         })));
     } else if (uiPlay()) {
       // interfaccia «viva»: come la scheda del defunto (la foto è una stampa con la candela, i dati su pergamena)
@@ -223,7 +229,7 @@ export function openEditIntro(ui: UI) {
 
 // ── Bottega ────────────────────────────────────────────────────────────
 
-const LOCK_LABEL: Record<R.ShopAvailability, string> = { ok: '', rank: t('shop.lock.rank'), season: t('shop.lock.season'), feat: t('shop.lock.feat'), owned: t('shop.lock.owned'), graves: t('shop.lock.graves'), funds: '' };
+const LOCK_LABEL: Record<R.ShopAvailability, string> = { ok: '', full: t('shop.lock.full'), rank: t('shop.lock.rank'), season: t('shop.lock.season'), feat: t('shop.lock.feat'), owned: t('shop.lock.owned'), graves: t('shop.lock.graves'), funds: '' };
 
 /** Etichetta del lucchetto sulla carta della Bottega. */
 function lockText(s: SaveData, d: PlaceableDef, av: R.ShopAvailability): string {
@@ -241,31 +247,28 @@ function lockText(s: SaveData, d: PlaceableDef, av: R.ShopAvailability): string 
  */
 export interface UnlockNeed { icon: string; short: string; long: string; progress?: [number, number] }
 export function unlockNeeds(s: SaveData, d: PlaceableDef, now: Date): UnlockNeed[] {
-  const out: UnlockNeed[] = [];
-  const early = !RELEASE_LOCKS.earlyRank && EARLY_ACCESS.has(d.id);
-  if (!early && !isSeasonallyAvailable(d, now.getMonth(), now.getDate())) {
-    const when = seasonLabel(d);
-    // una data o un periodo («1–15 nov») si scrive così; il nome di una festa vuole «a»
-    out.push(/\d|–/.test(when)
-      ? { icon: 'calendar', short: t('shop.need.season.short.date', { when }), long: t('shop.need.season.long.date', { when }) }
-      : { icon: 'calendar', short: t('shop.need.season.short.named', { when }), long: t('shop.need.season.long.named', { when }) });
-  }
-  const rank = rankForXp(s.player.xp);
-  if (!early && d.minRank > rank.level) {
-    const need = RANKS.find((r) => r.level === d.minRank)!;
-    const missing = need.minXp - s.player.xp;
-    out.push({ icon: 'rank', short: t('shop.need.rank.short', { n: d.minRank }), long: t('shop.need.rank.long', { rank: d.minRank, name: need.name, level: rank.level, n: missing, xp: missing.toLocaleString(currentLang()) }), progress: [s.player.xp, need.minXp] });
-  }
-  if (!early && d.feat) {
-    const [n, goal] = R.featProgress(s, d.feat);
-    if (n < goal) out.push({ icon: 'trophy', short: t('shop.need.feat.short', { label: d.feat.label, n, goal }), long: t('shop.need.feat.long', { label: d.feat.label.toLowerCase(), n, goal }), progress: [n, goal] });
-  }
-  if (RELEASE_LOCKS.minGraves && d.minGraves && R.graveTotal(s) < d.minGraves) {
-    const n = R.graveTotal(s);
-    out.push({ icon: 'coffin', short: t('shop.need.graves.short', { goal: d.minGraves, n }), long: t('shop.need.graves.long', { n: d.minGraves, have: n }), progress: [n, d.minGraves] });
-  }
-  if (s.player.wisps < d.cost) out.push({ icon: 'wisp', short: t('shop.need.wisps.short', { n: d.cost - s.player.wisps }), long: t('shop.need.wisps.long', { cost: d.cost, n: d.cost - s.player.wisps }), progress: [s.player.wisps, d.cost] });
-  return out;
+  // cosa manca lo dicono le regole; qui solo come scriverlo
+  return R.unlockRequirements(s, d.id, now).map((r): UnlockNeed => {
+    switch (r.kind) {
+      case 'full': return { icon: 'lock', short: t('shop.need.full.short'), long: t('shop.need.full.long') };
+      case 'season': {
+        const when = seasonLabel(d);
+        // una data o un periodo («1–15 nov») si scrive così; il nome di una festa vuole «a»
+        return /\d|–/.test(when)
+          ? { icon: 'calendar', short: t('shop.need.season.short.date', { when }), long: t('shop.need.season.long.date', { when }) }
+          : { icon: 'calendar', short: t('shop.need.season.short.named', { when }), long: t('shop.need.season.long.named', { when }) };
+      }
+      case 'rank': {
+        const rank = rankForXp(s.player.xp);
+        const need = RANKS.find((x) => x.level === d.minRank)!;
+        const missing = need.minXp - s.player.xp;
+        return { icon: 'rank', short: t('shop.need.rank.short', { n: d.minRank }), long: t('shop.need.rank.long', { rank: d.minRank, name: need.name, level: rank.level, n: missing, xp: missing.toLocaleString(currentLang()) }), progress: [s.player.xp, need.minXp] };
+      }
+      case 'feat': return { icon: 'trophy', short: t('shop.need.feat.short', { label: d.feat!.label, n: r.have!, goal: r.need! }), long: t('shop.need.feat.long', { label: d.feat!.label.toLowerCase(), n: r.have!, goal: r.need! }), progress: [r.have!, r.need!] };
+      case 'graves': return { icon: 'coffin', short: t('shop.need.graves.short', { goal: r.need!, n: r.have! }), long: t('shop.need.graves.long', { n: r.need!, have: r.have! }), progress: [r.have!, r.need!] };
+      case 'funds': return { icon: 'wisp', short: t('shop.need.wisps.short', { n: d.cost - s.player.wisps }), long: t('shop.need.wisps.long', { cost: d.cost, n: d.cost - s.player.wisps }), progress: [s.player.wisps, d.cost] };
+    }
+  });
 }
 
 /** Il requisito come pillola (icona e testo breve) e come riga del dettaglio, con la barra. */
@@ -278,6 +281,7 @@ export const needRows = (needs: UnlockNeed[]) => needs.length ? h('div', { class
 function buyText(s: SaveData, d: PlaceableDef, av: R.ShopAvailability, qty: number): string {
   switch (av) {
     case 'ok': return d.cost ? t('shop.buy.cta', { n: d.cost * qty }) : t('shop.buy.free');
+    case 'full': return t('shop.buy.full');
     case 'funds': return t('shop.buy.noFunds');
     case 'rank': return t('shop.buy.needRank', { n: d.minRank });
     case 'graves': return t('shop.buy.needGraves', { n: d.minGraves ?? 0, have: R.graveTotal(s) });
@@ -331,7 +335,7 @@ export function openShop(ui: UI, cat: PlaceableCategory | 'house' = 'light', sel
         const av = R.shopAvailability(s, d.id, now);
         if (next) {
           // interfaccia nuova: bloccati col lucchetto sopra (e il perché sotto), non comprabili spenti, i tuoi con la spunta
-          const locked = av === 'rank' || av === 'season' || av === 'feat' || av === 'graves';
+          const locked = av === 'full' || av === 'rank' || av === 'season' || av === 'feat' || av === 'graves';
           const owned = av === 'owned';
           return h('button', {
             class: `card ${selected === d.id ? 'selected' : ''} ${locked ? 'locked' : ''} ${av === 'funds' ? 'dim' : ''} ${owned ? 'owned' : ''}`,
@@ -917,7 +921,7 @@ export function openSettings(ui: UI) {
 function buildLabel(): string {
   if (typeof __BUILD__ === 'undefined') return t('settings.build.dev');
   const when = new Date(__BUILD__.built).toLocaleString(currentLang(), { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
-  return t('settings.build.version', { commit: __BUILD__.commit, when });
+  return `${t('settings.build.version', { commit: __BUILD__.commit, when })} · ${t('settings.build.distribution', { profile: distribution().id })}`;
 }
 
 // ── Foto & galleria ────────────────────────────────────────────────────

@@ -18,9 +18,10 @@ si può saltare, e il percorso si può rivedere dalle Impostazioni.
 - **Splash.** È quello di sempre. Solo al primo ingresso (`stage === 'welcome'`) mostra «Entra in Necrothing», col pulsante oro del gioco (`.big-btn`) e una sfumatura scura in basso perché si legga. Nessun contenuto commerciale. Agli avvii successivi lo splash sparisce da solo come prima.
 - **Sfondo.** Fino al tutorial la scena non si vede. Lettera, nome e introduzione stanno su uno sfondo loro (`.ob-solid`): i pannelli del gioco più scuri, con pattern tono su tono, bagliore caldo al centro ed edera in alto. In fondo ci sono, più scure, le lapidi con la terra e la pala del dettaglio delle tombe. Lo sfondo è già sotto lo splash prima che sparisca (`cover()`).
 - **Lucciole.** Punti caldi che vagano e si accendono e spengono; si animano solo con trasformazioni e opacità. Il numero dipende dal livello grafico: 16 in alta, 8 in media, nessuna in bassa né con il movimento ridotto.
-- **Lettera.** È un foglio di carta logora: bordi strappati (una maschera), macchie e grana, pieghe ondulate e qualche grinza.
-  - In alta e media qualità, in 3,6 secondi: arriva piegato in quattro ondeggiando, davanti a una luce calda che tremola. Si apre prima in verticale e poi di lato, con un piccolo rimbalzo. Poi compare il testo e, in basso a destra, un timbro: il fuoco fatuo monocromatico in un cerchio d'inchiostro rovinato, ruotato di 30°.
-  - In bassa qualità non c'è la piega in 3D né il rumore della carta: il foglio sale e appare, poi arriva il timbro.
+- **Lettera.** È un foglio di carta logora: bordi strappati (una maschera), macchie e grana. Le pieghe sono appena accennate, ondulate e sfocate, con qualche grinza.
+  - In alta e media qualità, in 3,6 secondi: arriva piegato in quattro ondeggiando, davanti a una luce calda che tremola. Si apre prima in verticale e poi di lato, con un piccolo rimbalzo. Poi compare il testo.
+  - In bassa qualità non c'è la piega in 3D né il rumore della carta: il foglio sale e appare.
+  - La lettera finisce con un timbro, dopo la firma e a destra, così non copre il testo. È il fuoco fatuo monocromatico in un cerchio d'inchiostro rovinato, ruotato di 30°. Si imprime quando, a lettera aperta, lo si raggiunge scorrendo.
   - Un tocco la apre subito; con il movimento ridotto è già aperta. «Salta» passa al nome; «Continua» compare a lettera aperta.
 - **Nome.** È il nome del Custode, senza registrazione, salvato nella partita. Si cambia in qualsiasi momento dal profilo, con le stesse regole. Le regole (`checkName`):
   - forma NFC, spazi ripetuti ridotti a uno;

@@ -141,13 +141,16 @@ export class Onboarding {
   // ── La lettera ───────────────────────────────────────────────────────
 
   private showLetter() {
-    // il testo scorre; il timbro sta in basso a destra, sulla carta
-    const sheet = h('div', { class: 'ob-sheet' }, h('i', { class: 'ob-stamp', 'aria-hidden': 'true' }), h('div', { class: 'ob-sheet-scroll', tabindex: '0' },
+    // il testo scorre; il timbro chiude la lettera, dopo la firma
+    const stamp = h('i', { class: 'ob-stamp', 'aria-hidden': 'true' });
+    const scroll = h('div', { class: 'ob-sheet-scroll', tabindex: '0' },
       h('div', { class: 'ob-letter' },
         h('h2', {}, t('onboarding.letter.title')),
         ...tList('onboarding.letter.body').map((p) => h('p', {}, p)),
         h('p', { class: 'ob-closing' }, t('onboarding.letter.closing')),
-        h('p', { class: 'ob-sign' }, t('onboarding.letter.sign')))));
+        h('p', { class: 'ob-sign' }, t('onboarding.letter.sign')),
+        stamp));
+    const sheet = h('div', { class: 'ob-sheet' }, scroll);
     // il foglio piegato in quattro: la metà di sotto (con la sua metà destra) si apre in giù, poi le due metà destre si aprono di lato
     const q = (c: string) => h('i', { class: `ob-q ${c}` });
     const fold = h('div', { class: 'ob-fold', 'aria-hidden': 'true' },
@@ -160,11 +163,24 @@ export class Onboarding {
       h('button', { class: 'ob-skip', onclick: next }, t('onboarding.skip')),
       stage,
       h('button', { class: 'big-btn ob-continue', onclick: next }, t('onboarding.continue')));
-    const open = () => { stage.classList.add('open'); layer.classList.remove('playing'); };
+    // il timbro si imprime quando, a lettera aperta, lo si raggiunge scorrendo
+    const watchStamp = () => {
+      if (typeof IntersectionObserver !== 'function') { stamp.classList.add('stamped'); return; }
+      const io = new IntersectionObserver((es) => { if (es.some((e) => e.isIntersecting)) { stamp.classList.add('stamped'); io.disconnect(); } }, { root: scroll, threshold: 0.7 });
+      io.observe(stamp);
+    };
+    let opened = false;
+    const open = () => {
+      if (opened) return;
+      opened = true;
+      stage.classList.add('open'); layer.classList.remove('playing');
+      watchStamp();
+    };
     if (reducedMotion()) { open(); return; }
     stage.classList.add('play');
     layer.classList.add('playing');
-    stage.querySelector('.ob-stamp')!.addEventListener('animationend', open, { once: true });
+    // aperta quando il foglio è comparso (piega in 3D o, in bassa qualità, salita)
+    sheet.addEventListener('animationend', (e) => { if (e.target === sheet) open(); });
     // un tocco durante l'animazione la salta
     stage.addEventListener('pointerdown', open, { once: true });
   }

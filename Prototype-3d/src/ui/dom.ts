@@ -87,11 +87,13 @@ let beforeCloseCb: (() => boolean | Promise<boolean>) | null = null;
  * schermo (con la testata animata lo sono sempre); gli altri si adattano al
  * contenuto, al centro.
  */
-export function openDrawer(title: string, body: Node, opts: { footer?: Node; onClose?: () => void; beforeClose?: () => boolean | Promise<boolean>; full?: boolean } = {}) {
+export function openDrawer(title: string, body: Node, opts: { footer?: Node; onClose?: () => void; beforeClose?: () => boolean | Promise<boolean>; full?: boolean; kind?: string } = {}) {
   const drawer = $('#drawer');
   dropHero();
   dropOverlays();
   drawer.classList.toggle('full', !!opts.full);
+  // che pannello è (per gli stili: più leggero di un :has() sul contenuto)
+  drawer.dataset.kind = opts.kind ?? '';
   $('#drawer-title').textContent = title;
   drawer.classList.toggle('no-title', !title);
   $('#drawer-extra').replaceChildren();

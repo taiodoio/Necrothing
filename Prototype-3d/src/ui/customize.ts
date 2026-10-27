@@ -19,7 +19,7 @@ import { instantiate, LOWPOLY_MATERIALS, type CachedModel } from '../render/mode
 import { t } from '../i18n/index.ts';
 import { closeDrawer, confirmDialog, h, openDrawer, toast } from './dom.ts';
 import type { UI } from './UI.ts';
-import { icon } from './icons.ts';
+import { monoIcon } from './monoIcons.ts';
 import { uiPlay } from '../app/uiNext.ts';
 
 let groundModel: CachedModel | null = null;
@@ -221,8 +221,8 @@ export function openCustomize(ui: UI) {
     if (toTop) content.parentElement?.parentElement?.scrollTo?.({ top: 0 });
   };
   // interfaccia «viva»: ogni scheda con la sua icona
-  const TAB_ICON: Record<LookTab, string> = { aspetto: 'face', capelli: 'comb', vestiti: 'shirt' };
-  for (const [id, label] of panes) tabs.append(h('button', { class: 'tab', role: 'tab', 'data-tab': id, onclick: () => show(id) }, uiPlay() ? icon(TAB_ICON[id], 20) : null, label));
+  const TAB_MONO: Record<LookTab, string> = { aspetto: 'face', capelli: 'comb', vestiti: 'shirt' };
+  for (const [id, label] of panes) tabs.append(h('button', { class: 'tab', role: 'tab', 'data-tab': id, onclick: () => show(id) }, uiPlay() ? monoIcon(TAB_MONO[id], 19) : null, label));
   const body = h('div', { class: 'look' },
     h('div', { class: 'look-stage' }, preview.canvas, tabs),
     lowpoly ? null : h('p', { class: 'muted' }, t('look.ui.styleNote')),
@@ -242,6 +242,7 @@ export function openCustomize(ui: UI) {
     beforeClose: () => !dirty() || confirmDialog({ title: t('look.ui.unsaved.title'), message: t('look.ui.unsaved.text'), ok: t('dialog.close'), cancel: t('look.ui.unsaved.stay'), danger: true }),
     onClose: () => { scroller?.removeEventListener('scroll', onScroll); preview.dispose(); },
     full: true,
+    kind: 'look',
   });
   // appena si scorrono le opzioni il Custode si rimpicciolisce (−30%) e lascia spazio alla lista; in cima torna grande.
   // Il pannello non ricompensa lo scorrimento quando il palco cambia altezza (overflow-anchor), altrimenti rimbalzerebbe.

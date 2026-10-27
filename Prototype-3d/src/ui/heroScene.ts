@@ -288,7 +288,8 @@ export function nightHero(cls: string, clear: [number, number, number], build: (
     const now = performance.now();
     if (!el.isConnected) { stop(); return; }
     raf = requestAnimationFrame(frame);
-    if (document.hidden || now - last < 1000 / FPS - 2) return;
+    // testata ridotta a fascia (si sta scorrendo la lista): si ferma, l'ultimo fotogramma resta
+    if (document.hidden || el.closest('.hero-small') || now - last < 1000 / FPS - 2) return;
     t += last ? Math.min(0.05, (now - last) / 1000) : 1 / FPS;
     last = now;
     resize();

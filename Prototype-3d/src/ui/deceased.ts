@@ -18,6 +18,7 @@ import { annivHero } from './anniversary.ts';
 import { confirmExhume, MEMORY_LABELS, moreActions, postcardData } from './screens.ts';
 import { graveThumb } from './thumbs.ts';
 import { factLabel, parchment } from './parchment.ts';
+import { groundUrl } from './previews.ts';
 import { lpIconPng } from './lpIcons.ts';
 import { uiPlay } from '../app/uiNext.ts';
 import type { UI } from './UI.ts';
@@ -140,9 +141,10 @@ export function openDeceased(ui: UI, id: string, opts: DeceasedOpts = {}) {
     play ? parchment('dc-facts', facts) : facts,
     play && timeline ? h('div', { class: 'dc-divider', 'aria-hidden': 'true' }, icon('pumpkin', 24)) : null,
     timeline,
-    play ? h('div', { class: 'dc-earth', style: 'background-image:url(deco/ground.png)', 'aria-hidden': 'true' }) : null, // i18n-ok: stile
+    play ? h('div', { class: 'dc-earth', style: `background-image:url(${groundUrl()})`, 'aria-hidden': 'true' }) : null, // i18n-ok: stile
   );
   openDrawer('', body, {
+    kind: 'deceased',
     beforeClose: opts.back ? () => { opts.back!(); return false; } : from === 'tree' ? () => { openMemoryTree(ui); return false; } : undefined,
     footer: h('div', { style: 'display:grid;gap:6px' }, moreActions(more), main),
   });

@@ -22,19 +22,22 @@ import { ACH_COUNT, ACH_ICONS, icon } from './icons.ts';
 import { lpBadgeUrl } from './lpIcons.ts';
 import { monoIcon } from './monoIcons.ts';
 import { factLabel, parchment } from './parchment.ts';
+import { previewUrl, warmPreviews } from './previews.ts';
+import { HOUSE_PARTS, HOUSE_ROOFS } from '../game/house.ts';
 import { uiNext, uiPlay, uiPreview } from '../app/uiNext.ts';
 import { remindersAvailable } from '../app/reminders.ts';
 import { currentLang, LANGS, setLang, t, tList } from '../i18n/index.ts';
 
 /**
  * Immagine di un oggetto. Nell'interfaccia «viva» (stile low-poly) è
- * l'anteprima illuminata già pronta in PNG (public/previews, vedi
+ * l'anteprima illuminata già pronta (src/assets/previews, vedi
  * scripts/bake-previews.mjs): di notte, su una zolla d'erba, con le sue luci;
  * altrimenti la miniatura disegnata al momento.
  */
 function itemImg(type: string, style: ArtStyle, cls: 'lit' | 'lit-hero', variant = 0): HTMLElement {
-  return uiPlay() && style === 'lowpoly'
-    ? h('img', { class: cls, src: `previews/${type}.png`, alt: '' })
+  const url = uiPlay() && style === 'lowpoly' ? previewUrl(type) : null;
+  return url
+    ? h('img', { class: cls, src: url, alt: '', decoding: 'async' })
     : h('img', { src: placeableThumb(type, style, variant), alt: '' });
 }
 
@@ -254,7 +257,16 @@ function buyText(s: SaveData, d: PlaceableDef, av: R.ShopAvailability, qty: numb
   }
 }
 
+/** Alla prima apertura di Bottega o Inventario si scaricano in sottofondo tutte le anteprime: cambiando scheda sono già pronte. */
+let previewsWarmed = false;
+function warmAllPreviews() {
+  if (previewsWarmed || !uiPlay()) return;
+  previewsWarmed = true;
+  window.setTimeout(() => warmPreviews([...CATALOG_LIST.map((d) => d.id), ...[...HOUSE_ROOFS, ...HOUSE_PARTS].map((x) => `house-${x.id}`)]), 600);
+}
+
 export function openShop(ui: UI, cat: PlaceableCategory | 'house' = 'light', selected: string | null = null) {
+  warmAllPreviews();
   const game = ui.game;
   const s = game.state;
   const now = game.now();
@@ -405,6 +417,7 @@ export function openShop(ui: UI, cat: PlaceableCategory | 'house' = 'light', sel
 // ── Inventario ─────────────────────────────────────────────────────────
 
 export function openInventory(ui: UI, cat: PlaceableCategory | 'all' = 'all') {
+  warmAllPreviews();
   const game = ui.game;
   const s = game.state;
   let selected: string | null = null;

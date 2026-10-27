@@ -5,7 +5,7 @@
 import { h } from './dom.ts';
 import { monoIcon } from './monoIcons.ts';
 import { parchmentSvg } from './postcard.ts';
-import { svgUrl } from './natureDecor.ts';
+import { svgToPng } from './natureDecor.ts';
 import { uiPlay } from '../app/uiNext.ts';
 
 /** L'icona di ogni voce dei dati (le etichette sono le chiavi dei testi). */
@@ -18,7 +18,7 @@ export type FactKind = keyof typeof FACT_ICONS;
 /** L'etichetta di una voce, con la sua icona nell'interfaccia «viva». */
 export const factLabel = (kind: FactKind, label: string) => (uiPlay() ? [monoIcon(FACT_ICONS[kind], 18), label] : [label]);
 
-/** Riquadro di pergamena: la carta si ridisegna quando cambia misura (a passi di 8 px). */
+/** Riquadro di pergamena: la carta si ridisegna quando cambia misura (a passi di 8 px); finché non è pronta, un fondo color carta. */
 export function parchment(cls: string, ...kids: Array<Node | null>): HTMLElement {
   const el = h('div', { class: `parch ${cls}` }, ...kids);
   let last = '';
@@ -27,7 +27,8 @@ export function parchment(cls: string, ...kids: Array<Node | null>): HTMLElement
     const key = `${w}x${ht}`;
     if (!w || !ht || key === last) return;
     last = key;
-    el.style.setProperty('--parch', svgUrl(parchmentSvg(w, ht, 4)));
+    // la carta ha i filtri (grana, bordi bruciati): la si disegna una volta come immagine
+    void svgToPng(parchmentSvg(w, ht, 4), w, ht).then((png) => { if (png && last === key) el.style.setProperty('--parch', png); });
   }).observe(el);
   return el;
 }

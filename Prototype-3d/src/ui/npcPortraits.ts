@@ -127,13 +127,16 @@ export function wispPortrait(): string {
       v.root.children.filter((o) => (o as THREE.Sprite).isSprite).forEach((o) => v.root.remove(o));
       v.root.children[0].rotation.set(0.06, 0.12, -0.05);
       scene!.add(v.root);
+      v.root.position.set(0, 0, 0);
       v.root.updateMatrixWorld(true);
-      const box = new THREE.Box3().setFromObject(v.root);
-      const c = box.getCenter(new THREE.Vector3()), size = box.getSize(new THREE.Vector3());
-      const h = Math.max(size.y, size.x) * 1.08;
+      // inquadratura fissa, sul centro della fiammella (misure del modello, scala compresa): il riquadro calcolato
+      // dalla scena non è affidabile (il modello è condiviso con i fuochi fatui del gioco) e lo spostava di lato
+      const c = new THREE.Vector3(0, 0.12, 0), h = 1.02;
       const dist = h / (2 * Math.tan(THREE.MathUtils.degToRad(camera.fov / 2)));
-      camera.position.set(c.x, c.y + h * 0.05, c.z + dist);
-      camera.lookAt(c.x, c.y, c.z);
+      renderer!.setSize(SIZE, SIZE, false);
+      camera.aspect = 1; camera.updateProjectionMatrix();
+      camera.position.set(c.x, c.y, c.z + dist);
+      camera.lookAt(c);
       renderer!.render(scene!, camera);
       url = drewSomething(renderer!) ? renderer!.domElement.toDataURL('image/png') : '';
       scene!.remove(v.root);

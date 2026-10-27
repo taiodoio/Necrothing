@@ -19,7 +19,7 @@ import { shopHeader } from './shopHeader.ts';
 import { houseBoughtView, houseShopDetail, houseShopGrid } from './house.ts';
 import { graveThumb, placeableThumb } from './thumbs.ts';
 import { ACH_COUNT, ACH_ICONS, icon } from './icons.ts';
-import { lpBadgeUrl } from './lpIcons.ts';
+import { lpBadgeUrl, lpIconPng } from './lpIcons.ts';
 import { monoIcon } from './monoIcons.ts';
 import { factLabel, parchment } from './parchment.ts';
 import { previewUrl, warmPreviews } from './previews.ts';
@@ -48,7 +48,7 @@ export const tabGlyph = (name: string) => (uiPlay() ? monoIcon(name, 19) : null)
 const tabIcon = (c: PlaceableCategory | 'all') => tabGlyph(CAT_ICON[c]);
 import type { UI } from './UI.ts';
 import { CustodePreview, openCustomize } from './customize.ts';
-import { openDeceased } from './deceased.ts';
+import { heroGlow, openDeceased } from './deceased.ts';
 import { BurialPhoto, loadImage, openPostcard, photoStep, portrait } from './memorial.ts';
 import type { PostcardData } from './postcard.ts';
 import { memorials } from '../app/persistence.ts';
@@ -130,15 +130,45 @@ export function openBurial(ui: UI, initial?: R.BurialDraft, startStep = 0) {
         h('div', { class: 'chips' }, ...EPITAPHS.map((ep) => h('button', { class: 'chip', onclick: () => { d.epitaph = ep; render(); } }, ep))),
       );
     } else if (step === 4) {
+      // interfaccia «viva»: le lapidi illuminate come gli oggetti della Bottega, col lucchetto sopra e il rango sotto
+      const lit = uiPlay() && game.state.settings.style === 'lowpoly';
       body.append(uiPlay() ? '' : h('p', { class: 'muted' }, t('burial.graveType.intro')), // il lucchetto col rango lo dice già
         h('div', { class: 'grid' }, ...GRAVE_TYPES.map((gt) => {
           const locked = GRAVE_TYPE_MIN_RANK[gt] > level;
+          const url = lit ? previewUrl(`grave-${gt}`) : null;
+          if (url) {
+            return h('button', {
+              class: `card ${d.graveType === gt ? 'selected' : ''} ${locked ? 'locked' : ''}`,
+              disabled: locked,
+              onclick: () => { d.graveType = gt; render(); },
+            }, h('span', { class: 'thumb' }, h('img', { class: 'lit', src: url, alt: '', decoding: 'async' }), locked ? h('span', { class: 'lock-over' }, icon('lock', 30)) : null),
+            h('b', {}, GRAVE_TYPE_LABELS[gt]),
+            locked ? h('span', { class: 'lock-why' }, t('shop.need.rank.short', { n: GRAVE_TYPE_MIN_RANK[gt] })) : null);
+          }
           return h('button', {
             class: `card ${d.graveType === gt ? 'selected' : ''} ${locked ? 'dim' : ''}`,
             disabled: locked,
             onclick: () => { d.graveType = gt; render(); },
           }, h('img', { src: graveThumb(gt, game.state.settings.style), alt: '' }), h('b', {}, GRAVE_TYPE_LABELS[gt]), locked ? h('span', { class: 'lock' }, icon('lock', 12), t('burial.graveType.rankShort', { n: GRAVE_TYPE_MIN_RANK[gt] })) : null);
         })));
+    } else if (uiPlay()) {
+      // interfaccia «viva»: come la scheda del defunto (la foto è una stampa con la candela, i dati su pergamena)
+      const url = game.state.settings.style === 'lowpoly' ? previewUrl(`grave-${d.graveType}`) : null;
+      let head: HTMLElement;
+      if (photo.has) {
+        head = portrait(photo.url(), lpIconPng('lumino', 128));
+        head.classList.add('print');
+        head.append(h('span', { class: 'dc-fern', 'aria-hidden': 'true' }));
+      } else head = h('img', { class: 'dc-stone', src: url ?? graveThumb(d.graveType!, game.state.settings.style, 'flowers', 1, 480), alt: '' });
+      body.append(h('div', { class: 'deceased' },
+        h('div', { class: 'hero' }, ...heroGlow(), head, h('h3', {}, d.name || '—'),
+          d.epitaph ? h('div', { class: 'epitaph' }, t('burial.epitaph.quoted', { text: d.epitaph })) : null),
+        parchment('dc-facts', h('dl', { class: 'kv' },
+          h('dt', {}, ...factLabel('category', t('burial.summary.category'))), h('dd', {}, d.category ? CATEGORY_LABELS[d.category] : '—'),
+          h('dt', {}, ...factLabel('lived', t('burial.summary.lived'))), h('dd', {}, d.birthDate ? `${fmtDate(d.birthDate)} → ${fmtDate(d.deathDate)}` : t('deceased.died', { date: fmtDate(d.deathDate) })),
+          h('dt', {}, ...factLabel('cause', t('burial.summary.cause'))), h('dd', {}, deathCauseLabel(d.deathCause, d.deathCauseText)),
+          h('dt', {}, ...factLabel('stone', t('burial.summary.graveType'))), h('dd', {}, d.graveType ? GRAVE_TYPE_LABELS[d.graveType] : '—'))),
+        h('p', { class: 'muted burial-next' }, t('burial.summary.next'))));
     } else {
       const stone = graveThumb(d.graveType!, game.state.settings.style, 'flowers', 1);
       body.append(h('div', { class: 'hero' },
@@ -175,7 +205,7 @@ export function openBurial(ui: UI, initial?: R.BurialDraft, startStep = 0) {
         h('button', { class: 'big-btn', disabled: !stepValid(), onclick: async () => { d.photoId = await photo.store(); closeDrawer(); game.startGravePlacement(d); } }, t('burial.choosePlace'))));
     }
   };
-  openDrawer(t('burial.title'), h('div'), { full: true });
+  openDrawer(t('burial.title'), h('div'), { full: true, kind: 'burial' });
   render();
 }
 

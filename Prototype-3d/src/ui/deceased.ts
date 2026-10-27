@@ -26,6 +26,9 @@ import type { UI } from './UI.ts';
 /** Lucciole attorno all'immagine: posizione (% in orizzontale, px in verticale) e grandezza. */
 const FIREFLIES: Array<[number, number, number]> = [[18, 160, 1], [28, 50, 2], [64, 80, 0], [80, 150, 1], [42, 28, 2], [74, 40, 0], [12, 106, 1]];
 
+/** Alone caldo e lucciole dietro l'immagine in testa (anche nel riepilogo della sepoltura). */
+export const heroGlow = () => [h('span', { class: 'dc-glow', 'aria-hidden': 'true' }), ...FIREFLIES.map(([x, y, k]) => h('i', { class: `dc-fly f${k}`, style: `left:${x}%;top:${y}px`, 'aria-hidden': 'true' }))];
+
 /** Da dove si arriva: decide il pulsante principale e cosa fa la X. */
 export type DeceasedFrom = 'map' | 'tree' | 'registry' | 'note';
 
@@ -135,7 +138,7 @@ export function openDeceased(ui: UI, id: string, opts: DeceasedOpts = {}) {
     : null;
   // il nome c'è già sotto l'immagine: niente titolo in testa
   // interfaccia «viva»: alone caldo e lucciole attorno all'immagine, i dati su pergamena, la terra in fondo
-  const glow = play ? [h('span', { class: 'dc-glow', 'aria-hidden': 'true' }), ...FIREFLIES.map(([x, y, k]) => h('i', { class: `dc-fly f${k}`, style: `left:${x}%;top:${y}px`, 'aria-hidden': 'true' }))] : [];
+  const glow = play ? heroGlow() : [];
   const body = h('div', { class: 'deceased' },
     anniv ?? h('div', { class: 'hero' }, ...glow, head, h('h3', {}, g.name), where,
       g.epitaph ? h('div', { class: 'epitaph' }, t('detail.epitaph.quoted', { text: g.epitaph })) : null),

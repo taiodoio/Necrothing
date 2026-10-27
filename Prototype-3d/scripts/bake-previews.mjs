@@ -1,10 +1,11 @@
 // Salva le immagini statiche dell'interfaccia (src/render/bake.ts), in WebP:
 // l'anteprima di ogni oggetto del catalogo in src/assets/previews/<id>.webp,
-// quella di tetti e aggiunte della casa in src/assets/previews/house-<id>.webp e
+// quella di tetti e aggiunte della casa in src/assets/previews/house-<id>.webp,
+// quella di ogni lapide in src/assets/previews/grave-<tipo>.webp e
 // la terra in fondo alle schede in src/assets/deco/ground.webp. Vite le
 // pubblica col nome che cambia col contenuto (si possono tenere in cache per
 // sempre). Si rifà quando cambia un modello. Serve il server di sviluppo acceso (npx vite --port 5173) e
-// Playwright con Chromium: node scripts/bake-previews.mjs [id …]
+// Playwright con Chromium: node scripts/bake-previews.mjs [id … | grave-<tipo> …]
 import fs from 'node:fs';
 import path from 'node:path';
 
@@ -31,13 +32,15 @@ const ids = only.length ? only : await ev(async () => (await import('/src/game/c
 // si scrive tutto alla fine: un file nuovo in src/assets fa ricaricare la pagina al server di sviluppo
 const out = new Map();
 const save = (rel, url) => out.set(rel, url);
+const grave = (type) => ev(async (type) => (await import('/src/render/bake.ts')).renderGravePreview(type), type);
 for (const id of ids) {
-  save(`previews/${id}.webp`, await ev(async (id) => (await import('/src/render/bake.ts')).renderItemPreview(id), id));
+  save(`previews/${id}.webp`, id.startsWith('grave-') ? await grave(id.slice(6)) : await ev(async (id) => (await import('/src/render/bake.ts')).renderItemPreview(id), id));
   console.log('anteprima', id);
 }
 if (!only.length) {
   const house = await ev(async () => { const H = await import('/src/game/house.ts'); return [...H.HOUSE_ROOFS.filter((r) => r.cost > 0), ...H.HOUSE_PARTS].map((x) => x.id); });
   for (const id of house) { save(`previews/house-${id}.webp`, await ev(async (id) => (await import('/src/render/bake.ts')).renderHousePreview(id), id)); console.log('casa', id); }
+  for (const type of await ev(async () => (await import('/src/game/graves.ts')).GRAVE_TYPES)) { save(`previews/grave-${type}.webp`, await grave(type)); console.log('lapide', type); }
   save('deco/ground.webp', await ev(async () => (await import('/src/render/bake.ts')).renderGround()));
   console.log('terra');
 }

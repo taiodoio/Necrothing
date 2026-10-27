@@ -151,11 +151,13 @@ export class Onboarding {
         h('p', { class: 'ob-sign' }, t('onboarding.letter.sign')),
         stamp));
     const sheet = h('div', { class: 'ob-sheet' }, scroll);
-    // il foglio piegato in quattro: la metà di sotto (con la sua metà destra) si apre in giù, poi le due metà destre si aprono di lato
+    // il foglio piegato in quattro: la metà di sotto (con la sua metà destra) si apre in giù, poi le due metà destre si aprono di lato.
+    // Tre involucri, ognuno col suo movimento: l'arrivo, e i due spostamenti che tengono al centro il foglio mentre si apre
+    // (separati, così le due aperture si sovrappongono senza fermarsi in mezzo)
     const q = (c: string) => h('i', { class: `ob-q ${c}` });
-    const fold = h('div', { class: 'ob-fold', 'aria-hidden': 'true' },
+    const fold = h('div', { class: 'ob-fold', 'aria-hidden': 'true' }, h('div', { class: 'ob-fy' }, h('div', { class: 'ob-fx' },
       h('div', { class: 'ob-half top' }, q('tl'), q('tr flap')),
-      h('div', { class: 'ob-half bottom' }, q('bl'), q('br flap')));
+      h('div', { class: 'ob-half bottom' }, q('bl'), q('br flap')))));
     const stage = h('div', { class: 'ob-stage', 'aria-label': t('onboarding.letter.aria') },
       h('div', { class: 'ob-light', 'aria-hidden': 'true' }), h('div', { class: 'ob-shade', 'aria-hidden': 'true' }), fold, sheet);
     const next = () => this.go('name');

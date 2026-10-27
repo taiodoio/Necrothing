@@ -5,13 +5,21 @@
    le lapidi in fondo e le lucciole. Il livello grafico (.q-low/.q-medium/.q-high)
    decide quanto lavorano le animazioni. */
 
+/* il livello (sfondo, lapidi, lucciole) resta; il contenuto di ogni fase (.ob-content) sfuma dentro e fuori */
 .ob-layer {
-  position: fixed; inset: 0; z-index: 30; display: grid; place-items: center; align-content: center; gap: 14px;
-  padding: calc(16px + var(--safe-t)) 16px calc(16px + var(--safe-b));
+  position: fixed; inset: 0; z-index: 30;
   font-family: "Nunito", system-ui, sans-serif; color: var(--paper);
   animation: obFade 0.35s ease-out both;
 }
+.ob-layer.out { animation: obFadeOut 0.3s ease-in both; pointer-events: none; }
+.ob-content {
+  position: absolute; inset: 0; z-index: 1; display: grid; place-items: center; align-content: center; gap: 14px;
+  padding: calc(16px + var(--safe-t)) 16px calc(16px + var(--safe-b));
+  animation: obFade 0.32s ease-out 0.08s both;
+}
+.ob-content.out { animation: obFadeOut 0.24s ease-in both; pointer-events: none; }
 @keyframes obFade { from { opacity: 0; } }
+@keyframes obFadeOut { to { opacity: 0; } }
 .ob-layer .row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; width: 100%; }
 
 /* lo sfondo: il pattern tono su tono, un bagliore caldo al centro, i bordi che si perdono nel buio, l'edera in alto */
@@ -31,7 +39,6 @@
 }
 .ob-solid::before { left: 0; }
 .ob-solid::after { right: 0; scale: -1 1; }
-.ob-layer > * { position: relative; z-index: 1; }
 /* in fondo le lapidi con la terra e la pala del dettaglio delle tombe, più scure, che sfumano verso l'alto */
 .ob-layer > .ob-ground {
   position: absolute; z-index: 0; left: 0; right: 0; bottom: 0; height: 210px; pointer-events: none;
@@ -58,12 +65,12 @@
     radial-gradient(120% 95% at 50% 45%, rgba(110, 62, 22, 0) 50%, rgba(110, 62, 22, 0.42) 100%),
     linear-gradient(172deg, #f4e7c8 0%, #ebd9b2 55%, #dfc796 100%);
   --ob-ragged: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1000 1400' preserveAspectRatio='none'%3E%3Cpolygon points='6,11 15,16 24,16 33,13 42,12 51,11 60,13 69,11 78,15 87,15 96,19 105,16 114,8 123,8 132,7 141,12 150,13 159,10 168,15 177,11 186,12 195,16 204,11 213,15 222,18 231,21 240,14 249,10 257,8 266,13 275,15 284,14 293,13 302,15 311,11 320,7 329,11 338,15 347,12 356,11 365,13 374,12 383,11 392,12 401,9 410,13 419,17 428,11 437,11 446,17 455,7 464,7 473,10 482,7 491,11 500,18 509,13 518,14 527,17 536,16 545,12 554,11 563,12 572,12 581,12 590,9 599,7 608,6 617,11 626,9 635,10 644,15 653,10 662,7 671,8 680,14 689,10 698,14 707,15 716,15 725,17 734,10 743,9 751,12 760,11 769,16 778,16 787,14 796,7 805,7 814,5 823,8 832,17 841,18 850,18 859,10 868,9 877,13 886,16 895,15 904,11 913,18 922,15 931,8 940,7 949,14 958,8 967,12 976,8 985,15 994,8 986,17 990,26 978,36 985,45 989,54 991,63 988,73 993,82 993,91 992,100 992,109 991,119 990,128 991,137 992,146 981,156 995,165 997,174 997,183 992,193 994,202 991,211 993,220 992,229 988,239 991,248 988,257 991,266 991,276 991,285 990,294 987,303 984,312 988,322 986,331 992,340 993,349 995,359 991,368 995,377 992,386 989,396 993,405 992,414 987,423 994,432 993,442 995,451 979,460 992,469 994,479 989,488 991,497 986,506 990,515 990,525 990,534 990,543 988,552 993,562 990,571 992,580 988,589 992,599 989,608 993,617 994,626 993,635 994,645 996,654 994,663 995,672 994,682 992,691 988,700 990,709 978,718 979,728 989,737 992,746 986,755 987,765 988,774 988,783 986,792 989,801 987,811 991,820 994,829 995,838 994,848 995,857 989,866 993,875 992,885 993,894 993,903 987,912 994,921 994,931 995,940 992,949 992,958 991,968 990,977 977,986 988,995 987,1004 986,1014 988,1023 991,1032 986,1041 988,1051 992,1060 986,1069 987,1078 992,1088 991,1097 989,1106 992,1115 992,1124 995,1134 995,1143 994,1152 990,1161 988,1171 976,1180 986,1189 989,1198 988,1207 988,1217 992,1226 987,1235 986,1244 988,1254 987,1263 985,1272 986,1281 991,1291 988,1300 978,1309 994,1318 991,1327 991,1337 992,1346 991,1355 987,1364 986,1374 993,1383 992,1385 983,1388 974,1389 965,1389 956,1390 947,1383 938,1385 929,1384 920,1390 911,1372 903,1391 894,1390 885,1394 876,1394 867,1396 858,1388 849,1385 840,1384 831,1390 822,1383 813,1391 804,1391 795,1391 786,1389 777,1388 768,1386 759,1389 750,1385 742,1390 733,1386 724,1389 715,1388 706,1387 697,1392 688,1386 679,1392 670,1394 661,1385 652,1388 643,1387 634,1389 625,1389 616,1388 607,1384 598,1390 589,1392 581,1390 572,1391 563,1389 554,1388 545,1393 536,1394 527,1396 518,1386 509,1390 500,1385 491,1391 482,1390 473,1385 464,1369 455,1392 446,1383 437,1370 428,1388 419,1385 411,1385 402,1395 393,1392 384,1387 375,1390 366,1391 357,1394 348,1394 339,1391 330,1395 321,1390 312,1392 303,1388 294,1388 285,1370 276,1390 267,1385 258,1386 250,1393 241,1384 232,1375 223,1390 214,1393 205,1392 196,1396 187,1395 178,1390 169,1387 160,1389 151,1384 142,1386 133,1393 124,1392 115,1390 106,1391 97,1386 89,1391 80,1392 71,1394 62,1396 53,1389 44,1391 35,1387 26,1394 17,1389 12,1394 11,1385 23,1376 12,1366 17,1357 17,1348 11,1339 14,1329 8,1320 10,1311 9,1302 15,1293 11,1283 14,1274 8,1265 13,1256 10,1246 6,1237 11,1228 5,1219 6,1209 6,1200 13,1191 27,1182 9,1173 15,1163 9,1154 9,1145 14,1136 13,1126 14,1117 13,1108 12,1099 16,1090 11,1080 11,1071 9,1062 9,1053 12,1043 6,1034 6,1025 10,1016 7,1006 10,997 11,988 10,979 11,970 8,960 9,951 6,942 6,933 10,923 10,914 12,905 15,896 17,887 12,877 15,868 8,859 8,850 14,840 14,831 13,822 9,813 15,803 11,794 8,785 6,776 6,767 7,757 4,748 8,739 6,730 11,720 7,711 9,702 11,693 8,684 9,674 8,665 8,656 9,647 14,637 10,628 14,619 10,610 11,601 10,591 9,582 6,573 8,564 5,554 6,545 5,536 8,527 6,517 11,508 6,499 12,490 7,481 11,471 11,462 11,453 11,444 10,434 14,425 10,416 12,407 9,398 12,388 7,379 11,370 12,361 10,351 10,342 9,333 9,324 9,314 6,305 7,296 8,287 5,278 5,268 4,259 5,250 8,241 10,231 12,222 10,213 10,204 13,195 12,185 11,176 7,167 10,158 15,148 14,139 9,130 13,121 13,111 11,102 7,93 4,84 6,75 4,65 5,56 9,47 6,38 6,28 9,19' fill='black'/%3E%3C/svg%3E");
-  grid-template-rows: auto 1fr auto; align-content: stretch; justify-items: center;
+  grid-template-rows: 1fr auto; align-content: stretch; justify-items: center; padding-top: calc(64px + var(--safe-t));
 }
 /* livello basso: niente rumore da calcolare, solo i gradienti */
-.ob-letter-layer.q-low { --ob-paper: radial-gradient(120% 95% at 50% 45%, rgba(110, 62, 22, 0) 50%, rgba(110, 62, 22, 0.42) 100%), radial-gradient(30% 20% at 76% 22%, rgba(150, 96, 40, 0.14), rgba(150, 96, 40, 0) 100%), radial-gradient(26% 18% at 24% 72%, rgba(150, 96, 40, 0.12), rgba(150, 96, 40, 0) 100%), linear-gradient(172deg, #f4e7c8 0%, #ebd9b2 55%, #dfc796 100%); }
+.q-low .ob-letter-layer { --ob-paper: radial-gradient(120% 95% at 50% 45%, rgba(110, 62, 22, 0) 50%, rgba(110, 62, 22, 0.42) 100%), radial-gradient(30% 20% at 76% 22%, rgba(150, 96, 40, 0.14), rgba(150, 96, 40, 0) 100%), radial-gradient(26% 18% at 24% 72%, rgba(150, 96, 40, 0.12), rgba(150, 96, 40, 0) 100%), linear-gradient(172deg, #f4e7c8 0%, #ebd9b2 55%, #dfc796 100%); }
 .ob-skip {
-  justify-self: end; min-height: 40px; padding: 8px 18px; border: 0; border-radius: 999px; cursor: pointer;
+  position: absolute; z-index: 5; top: calc(14px + var(--safe-t)); right: calc(14px + var(--safe-r)); min-height: 40px; padding: 8px 18px; border: 0; border-radius: 999px; cursor: pointer;
   background: var(--nat-bg); color: var(--paper); font: 800 14px "Nunito", sans-serif; box-shadow: 0 8px 18px rgba(0, 0, 0, 0.45);
 }
 .ob-stage { position: relative; width: var(--ob-w); height: var(--ob-h); align-self: center; perspective: 1500px; }
@@ -201,8 +208,9 @@
 .ob-coach::before { left: 0; top: 0; }
 .ob-coach::after { right: 0; bottom: 0; rotate: 180deg; }
 @keyframes obCoach { from { opacity: 0; transform: translate(-50%, -14px); } }
-body.drawer-open .ob-coach, body.ob-open .ob-coach { display: none; }
-.ob-coach .ob-bust.small { position: absolute; left: 6px; bottom: 8px; width: 84px; height: 60px; margin: 0; }
+body.drawer-open .ob-coach, body.ob-open .ob-coach:not(.ob-tour-coach) { display: none; }
+/* ancorato in alto: esce sempre di un terzo, anche quando il consiglio è lungo */
+.ob-coach .ob-bust.small { position: absolute; left: 6px; top: 0; width: 84px; height: 74px; margin: 0; }
 .ob-coach .ob-bust.small img { height: 116px; }
 .ob-coach-body p { margin: 0; font-size: 15px; font-weight: 700; line-height: 1.35; }
 .ob-coach-foot { display: flex; justify-content: space-between; align-items: center; gap: 8px; margin-top: 8px; }
@@ -216,24 +224,36 @@ body.drawer-open .ob-coach, body.ob-open .ob-coach { display: none; }
    cambiano solo quando cambia il bersaglio. */
 .ob-beam {
   position: fixed; z-index: 11; left: 0; top: 0; width: 300vmax; height: 300vmax; margin: -150vmax 0 0 -150vmax; pointer-events: none; visibility: hidden; will-change: translate, scale;
-  --rx: 84px; --ry: 84px; --dim: 0.45;
+  --rx: 84px; --ry: 84px; --dim: 0.7;
   background:
-    radial-gradient(ellipse var(--rx) var(--ry) at 50% 50%, rgba(255, 200, 120, 0.12) 0%, rgba(255, 200, 120, 0) 55%),
+    radial-gradient(ellipse var(--rx) var(--ry) at 50% 50%, rgba(255, 214, 150, 0.3) 0%, rgba(255, 214, 150, 0.12) 30%, rgba(255, 214, 150, 0) 52%),
     radial-gradient(ellipse var(--rx) var(--ry) at 50% 50%, rgba(6, 4, 10, 0) 0%, rgba(6, 4, 10, 0) 52%, rgba(6, 4, 10, var(--dim)) 86%);
   animation: obBeam 1.5s ease-in-out infinite alternate;
 }
 @keyframes obBeam { from { scale: 1; } to { scale: 1.06; } }
 .ob-beam.tour { position: fixed; z-index: 0; visibility: visible; --dim: 0.8; }
 
-/* ── Il giro dell'interfaccia: la scena si vede, il resto si spegne ── */
-.ob-tour-layer { background: none; place-items: start center; align-content: start; }
-.ui-next .dialog.modal.ob-card.ob-tour-card { position: fixed; left: 50%; transform: translateX(-50%); top: 40%; z-index: 1; margin-top: 0; }
-.ui-next .dialog.modal.ob-tour-card:not(.with-bust) { padding-top: 18px; }
+/* il cerchio dove toccare: due onde che si allargano dal punto, come un dito che tocca */
+.ob-tap { position: fixed; z-index: 11; left: 0; top: 0; width: 0; height: 0; pointer-events: none; visibility: hidden; }
+.ob-tap i { position: absolute; left: -22px; top: -22px; width: 44px; height: 44px; border-radius: 50%; will-change: transform, opacity;
+  border: 2.5px solid rgba(255, 243, 214, 0.95); box-shadow: 0 0 10px rgba(255, 220, 150, 0.7), inset 0 0 8px rgba(255, 220, 150, 0.45);
+  animation: obTap 1.6s cubic-bezier(0.2, 0.6, 0.35, 1) infinite; }
+.ob-tap i:nth-child(2) { animation-delay: 0.8s; }
+@keyframes obTap { 0% { transform: scale(0.45); opacity: 0; } 15% { opacity: 1; } 100% { transform: scale(1.6); opacity: 0; } }
+
+/* ── Il giro dell'interfaccia: lo stesso consiglio del tutorial, la scena si vede, il resto si spegne ── */
+.ob-tour-layer { padding: 0; }
+.ob-tour-coach { z-index: 2; }
+.ob-coach-title { display: block; margin-bottom: 2px; font: 700 19px/1.1 var(--gothic); color: var(--gold-bright); }
+.ob-coach-acts { display: flex; align-items: center; gap: 8px; }
+.ob-back { border: 0; padding: 4px 10px; border-radius: 999px; background: rgba(0, 0, 0, 0.25); color: var(--paper); font: 800 12.5px var(--pixel); cursor: pointer; }
 
 /* sotto il consiglio scendono i messaggi e le note delle presenze (niente si copre) */
 .ui-next .has-coach :is(.toasts, .npc-note) { top: calc(var(--hud-top) + 34px + var(--coach-h, 96px) + 10px + var(--safe-t)); }
 .ui-next .has-coach.has-note .toasts { top: calc(var(--hud-top) + 34px + var(--coach-h, 96px) + var(--note-h, 64px) + 20px + var(--safe-t)); }
 
 @media (prefers-reduced-motion: reduce) {
-  .ob-layer, .ob-coach, .ob-light, .ob-hero::before, .ob-hero img, .ob-beam, .ob-stamp { animation: none !important; }
+  .ob-layer, .ob-content, .ob-coach, .ob-light, .ob-hero::before, .ob-hero img, .ob-beam, .ob-stamp { animation: none !important; }
+  .ob-tap i { animation: none !important; opacity: 1; }
+  .ob-tap i:nth-child(2) { display: none; }
 }

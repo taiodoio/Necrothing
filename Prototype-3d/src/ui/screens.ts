@@ -874,7 +874,9 @@ export function openSettings(ui: UI) {
       h('p', { class: 'muted' }, remindersAvailable() ? t('settings.reminders.app') : t('settings.reminders.browser')),
       h('div', { class: 'section-title' }, t('settings.section.onboarding')),
       h('p', { class: 'muted' }, t('settings.onboarding.hint')),
-      h('button', { class: 'big-btn ghost', onclick: () => ui.onboarding.replay() }, t('settings.onboarding.replay')),
+      h('div', { class: 'row' },
+        h('button', { class: 'big-btn ghost', onclick: () => ui.onboarding.replayLetter() }, t('settings.onboarding.letter')),
+        h('button', { class: 'big-btn ghost', onclick: () => ui.onboarding.replayTutorial() }, t('settings.onboarding.tutorial'))),
     ],
     graphics: [
       h('div', { class: 'setting' }, t('settings.quality'), seg(s.quality, [['auto', t('settings.quality.auto')], ['low', t('settings.quality.low')], ['medium', t('settings.quality.medium')], ['high', t('settings.quality.high')]], (v) => game.setQuality(v))),

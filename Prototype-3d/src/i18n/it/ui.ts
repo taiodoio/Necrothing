@@ -413,6 +413,8 @@ export default {
   'onboarding.enter': 'Entra in Necrothing',
   // breve: salta la fase in corso (pergamena, nome, introduzione, giro)
   'onboarding.skip': 'Salta',
+  // breve: torna alla scheda o alla pagina di prima
+  'onboarding.back': 'Indietro',
   // breve: chiude la pergamena e va avanti
   'onboarding.continue': 'Continua',
   // titolo della pergamena di benvenuto (forma neutra)
@@ -464,7 +466,7 @@ export default {
   'onboarding.tour.shop.title': 'La Bottega',
   'onboarding.tour.shop.text': 'Toccala per comprare luci, decorazioni e presenze con i fuochi fatui. Quello che compri va nell’Inventario.',
   'onboarding.tour.menu.title': 'Il menu',
-  'onboarding.tour.menu.text': 'Tutto il resto è qui: Seppellisci, Modifica per spostare e sistemare, Inventario, Bottega, Foto, Galleria e Impostazioni, dove puoi rivedere questa introduzione.',
+  'onboarding.tour.menu.text': 'Da qui apri tutto il resto: Seppellisci, Modifica per spostare e sistemare, Inventario, Bottega, Foto, Galleria e Impostazioni, dove puoi rivedere la lettera e rifare il tutorial.',
   // breve: ultimo pulsante del giro
   'onboarding.tour.end': 'Inizia a giocare',
 } satisfies Record<string, string>;

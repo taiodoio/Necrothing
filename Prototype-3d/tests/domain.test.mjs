@@ -14,6 +14,8 @@ import { DECAY, EXPANSION, WISPS, XP } from '../src/game/balance.ts';
 
 const NOW = new Date('2026-10-09T12:00:00Z');
 const later = (days) => new Date(NOW.getTime() + days * 86_400_000);
+/** Si gioca ogni giorno (un'apertura al giorno, fino al giorno `to` compreso): il degrado non ha il tetto dell'assenza. */
+const daily = (s, from, to) => { for (let d = from; d <= to; d++) runCatchUp(s, later(d)); };
 
 function spot(s, fp = [2, 2], near = [22, 44]) {
   return nearestFreeSpot(near[0], near[1], fp, buildOccupancy(s), areaForLevel(s.world.expansionLevel));
@@ -76,7 +78,7 @@ test('simulazione: fiori appassiti → sporca → rotta dopo 10 giorni', () => {
   runCatchUp(s, later(3));
   assert.equal(g.hasFlowers, false);
   assert.equal(g.dirty, true);
-  runCatchUp(s, later(14));
+  daily(s, 4, 14);
   assert.equal(g.broken, true);
 });
 
@@ -89,13 +91,13 @@ test('simulazione: luci e costruzioni si sporcano e si rompono con tempi larghi 
   assert.ok(d.dirty >= DECAY.placeableDirtyDays[0] && d.dirty <= DECAY.placeableDirtyDays[1]);
   assert.ok(d.broken - d.dirty >= DECAY.placeableBreakDays[0] && d.broken - d.dirty <= DECAY.placeableBreakDays[1]);
   assert.deepEqual(placeableDecayDays(lamp), d, 'stabili: riaprendo il gioco non cambiano');
-  runCatchUp(s, later(d.dirty - 1));
+  daily(s, 1, d.dirty - 1);
   assert.equal(lamp.dirty, false, 'non ancora');
   runCatchUp(s, later(d.dirty));
   assert.equal(lamp.dirty, true);
   assert.equal(lamp.broken, false);
   assert.equal(tree.dirty, false, 'l’ambiente non decade');
-  runCatchUp(s, later(d.broken));
+  daily(s, d.dirty + 1, d.broken);
   assert.equal(lamp.broken, true);
   assert.throws(() => R.toggleLight(s, lamp.id), /rotto/);
   // tempi diversi da oggetto a oggetto e da una cura all'altra (non sempre ogni N giorni)
@@ -319,8 +321,8 @@ test('Albero dei ricordi: rango 3 e 20 tombe, accoglie una tomba (libera lo spaz
   assert.ok(canPlaceAt(g.x, g.y, [2, 2], buildOccupancy(s), areaForLevel(s.world.expansionLevel)), 'lo spazio è di nuovo libero');
   assert.equal(s.entrusted.length, 1);
   assert.equal(s.entrusted[0].grave.name, g.name);
-  assert.equal(s.player.wisps, wisps + WISPS.burial, 'ricompensa come una sepoltura');
-  assert.ok(res.xp > 0);
+  assert.equal(s.player.wisps, wisps, 'un rito, non una nuova sepoltura: niente fuochi fatui');
+  assert.equal(res.xp, XP.entrust);
   assert.ok(s.memories.some((m) => m.graveId === g.id && m.type === 'entrusted'));
   assert.equal(R.graveTotal(s), 20, 'le tombe affidate contano ancora');
   // il fantasma del ricordo: ricompensa classica, la visita resta nella sua storia
@@ -384,7 +386,7 @@ test('i pezzi in serie (sentieri, muretti, staccionate, inferriate) non si sporc
   const s = createNewGame(NOW, 4);
   const path = s.placeables.find((p) => p.type === 'path_stone');
   const lamp = s.placeables.find((p) => p.type === 'lamp_post');
-  runCatchUp(s, later(60));
+  daily(s, 1, 60);
   assert.equal(path.dirty, false);
   assert.equal(path.broken, false);
   assert.equal(lamp.broken, true, 'le luci sì');
@@ -437,24 +439,34 @@ test('tombe trascurate: dal primo segno d’incuria (anche solo erbacce) si romp
   w.world.lastSimulationAt = start.toISOString();
   const g = w.graves[0];
   g.weeds = true; g.dirtySince = start.toISOString();
-  runCatchUp(w, day(DECAY.graveBreakDays - 1));
+  for (let d = 1; d < DECAY.graveBreakDays; d++) runCatchUp(w, day(d));
   assert.equal(g.broken, false);
   runCatchUp(w, day(DECAY.graveBreakDays));
   assert.equal(g.broken, true, 'con le sole erbacce si rompe');
-  // lunga assenza: l'incuria è iniziata mentre eri via, non all'apertura → al ritorno alcune sono già rotte
+  // lunga assenza: conta al massimo DECAY.maxAbsenceDays; l'incuria è datata dentro quei giorni → nessuna rotta
   const a = createNewGame(start, 7);
   reset(a);
   a.world.lastSimulationAt = start.toISOString();
   runCatchUp(a, day(25));
-  assert.ok(a.graves.some((x) => x.broken), 'dopo 25 giorni via qualcuna è già rotta');
-  for (const x of a.graves) if (x.dirtySince) assert.ok(new Date(x.dirtySince) <= day(25) && new Date(x.dirtySince) >= start, 'incuria datata dentro l’assenza');
+  assert.ok(a.graves.some((x) => x.dirty || x.weeds), 'trascurate');
+  assert.ok(!a.graves.some((x) => x.broken), 'dopo 25 giorni via nessuna è rotta (l’assenza conta 7 giorni)');
+  for (const x of a.graves) if (x.dirtySince) assert.ok(new Date(x.dirtySince) <= day(25) && new Date(x.dirtySince) >= day(25 - DECAY.maxAbsenceDays), 'incuria datata dentro gli ultimi 7 giorni');
   // fiori appassiti: lo sporco parte da quando sono appassiti
   const f = createNewGame(start, 5);
   reset(f);
   f.world.lastSimulationAt = start.toISOString();
   f.graves[0].hasFlowers = true; f.graves[0].flowersAt = start.toISOString();
-  runCatchUp(f, day(20));
-  assert.equal(f.graves[0].broken, true, 'fiori appassiti al giorno 3 → rotta al giorno 13');
+  for (let d = 1; d <= 20; d++) runCatchUp(f, day(d));
+  assert.equal(f.graves[0].broken, true, 'giocando ogni giorno: fiori appassiti al giorno 3 → rotta al giorno 13');
+  // la stessa tomba, ma 20 giorni via in una volta: appassita e sporca, non rotta
+  const f2 = createNewGame(start, 5);
+  reset(f2);
+  f2.world.lastSimulationAt = start.toISOString();
+  f2.graves[0].hasFlowers = true; f2.graves[0].flowersAt = start.toISOString();
+  runCatchUp(f2, day(20));
+  assert.equal(f2.graves[0].hasFlowers, false);
+  assert.equal(f2.graves[0].dirty, true);
+  assert.equal(f2.graves[0].broken, false, 'via 20 giorni: conta come 7');
   // pulirla ferma il conto
   const c = createNewGame(start, 8);
   reset(c);
@@ -688,7 +700,7 @@ test('Lampione del Custode: le luci vicine si sporcano ma non si rompono; quelle
   const k = R.placeFromInventory(s, 'keeper_lamp', at.x, at.y, 0, NOW);
   assert.equal(keeperProtected(s, near), true);
   assert.equal(keeperProtected(s, far), false);
-  runCatchUp(s, later(60));
+  daily(s, 1, 60);
   assert.equal(near.broken, false);
   assert.equal(near.dirty, true);
   assert.equal(far.broken, true);
@@ -1036,9 +1048,8 @@ test('anniversari: quello di oggi premia, quelli persi restano nei ricordi', asy
   assert.equal(anniversaryYears('2024-02-29', new Date('2027-02-28T12:00:00')), 3);
 });
 
-test('promemoria: anniversari futuri e tombe che stanno per rompersi, uno al giorno per tipo', async () => {
-  const { planReminders, REMINDER_HOURS } = await import('../src/game/reminders.ts');
-  const { DECAY: D } = await import('../src/game/balance.ts');
+test('promemoria: anniversari futuri (uno al giorno) e un solo avviso quando più di metà delle tombe sarà trascurata', async () => {
+  const { planReminders, REMINDER_HOURS, expectedNeglected } = await import('../src/game/reminders.ts');
   const s = createNewGame(NOW, 15);
   s.graves = [];
   const put = (name, deathDate) => { const at = spot(s); return R.bury(s, draft({ name, deathDate }), at.x, at.y, NOW).grave; };
@@ -1054,11 +1065,16 @@ test('promemoria: anniversari futuri e tombe che stanno per rompersi, uno al gio
   assert.ok(oct20 && /2 anniversari/.test(oct20.title) && /Lettore CD/.test(oct20.body) && /Calcolatrice/.test(oct20.body));
   assert.equal(oct20.at.getHours(), REMINDER_HOURS.anniversary);
   assert.ok(ann.some((r) => /Tamagotchi/.test(r.title)));
-  // la sera prima della rottura
-  const brk = plan.find((r) => r.kind === 'breaking');
-  const breaks = new Date(new Date(dirty.dirtySince).getTime() + D.graveBreakDays * 86400000);
-  assert.equal(brk.at.getDate(), new Date(breaks.getTime() - 86400000).getDate());
-  assert.equal(brk.at.getHours(), REMINDER_HOURS.breaking);
+  // trascurate: una notifica sola, il primo giorno in cui se ne aspettano più di metà (oggi 1 su 4)
+  const neg = plan.filter((r) => r.kind === 'neglect');
+  assert.equal(neg.length, 1);
+  assert.equal(neg[0].at.getHours(), REMINDER_HOURS.neglect);
+  const d = Math.round((new Date(neg[0].at.getFullYear(), neg[0].at.getMonth(), neg[0].at.getDate()) - new Date(NOW.getFullYear(), NOW.getMonth(), NOW.getDate())) / 86400000);
+  assert.ok(expectedNeglected(s, NOW, d) > 2 && expectedNeglected(s, NOW, d - 1) <= 2, `giorno ${d}`);
+  // già oltre la metà: lo si vede aprendo, niente notifica
+  s.graves.slice(0, 3).forEach((g) => { g.weeds = true; g.dirtySince = NOW.toISOString(); });
+  assert.equal(planReminders(s, NOW, { days: 40 }).filter((r) => r.kind === 'neglect').length, 0);
+  s.graves.slice(0, 3).forEach((g) => { g.weeds = false; g.dirtySince = null; });
   // in ordine, id stabili, niente nel passato
   assert.ok(plan.every((r, i) => i === 0 || plan[i - 1].at <= r.at));
   assert.deepEqual(planReminders(s, NOW, { days: 40 }).map((r) => r.id), plan.map((r) => r.id));

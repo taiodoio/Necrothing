@@ -14,12 +14,18 @@ export const MAP_SIZE = 64;
 export const FOREST_MARGIN = 12;
 export const GRAVE_FOOTPRINT: [number, number] = [2, 2];
 
+/**
+ * Curva dei ranghi: il primo salto nella prima sessione, il rango 3 a fine
+ * della prima settimana di gioco occasionale, poi più lenta (rango 4 in circa
+ * un mese, 5 in circa due mesi e mezzo). Nessun tetto giornaliero di XP.
+ * Stime e ipotesi: scripts/sim-economy.mjs e il foglio «Game Dynamics».
+ */
 export const RANKS = [
   { level: 1, name: t('balance.rank.guardianAngel'), minXp: 0 },
-  { level: 2, name: t('balance.rank.noviceScrapper'), minXp: 500 },
-  { level: 3, name: t('balance.rank.siliconGravedigger'), minXp: 1500 },
-  { level: 4, name: t('balance.rank.dailyReaper'), minXp: 3500 },
-  { level: 5, name: t('balance.rank.lordOfDecay'), minXp: 7000 },
+  { level: 2, name: t('balance.rank.noviceScrapper'), minXp: 200 },
+  { level: 3, name: t('balance.rank.siliconGravedigger'), minXp: 800 },
+  { level: 4, name: t('balance.rank.dailyReaper'), minXp: 2200 },
+  { level: 5, name: t('balance.rank.lordOfDecay'), minXp: 5000 },
 ] as const;
 
 export const XP = {
@@ -29,8 +35,9 @@ export const XP = {
   cleaned: 5,
   repaired: 8,
   placeableCleaned: 3,
-  share: 25,
   anniversary: 30,
+  /** Affidare una tomba all'albero è un rito, non una nuova sepoltura: come un anniversario. */
+  entrust: 30,
   ghost: 40,
   ghostObject: 70,
   blessing: 20,
@@ -85,6 +92,13 @@ export const DECAY = {
   placeableBreakDays: [8, 20] as readonly [number, number],
   /** Riparare un oggetto costa questa frazione del suo prezzo (min 2). */
   placeableRepairFraction: 0.3,
+  /**
+   * Il tempo passato col gioco chiuso conta al massimo questi giorni per il
+   * degrado: dopo un mese si ritrova il cimitero trascurato come dopo una
+   * settimana (erbacce, sporco, fiori secchi), non rotto e senza debiti.
+   * Mentre si gioca la rottura resta.
+   */
+  maxAbsenceDays: 7,
 } as const;
 
 /** Fuochi fatui sulla mappa: quanti ne compaiono dipende da tombe, cure, fiori. */
@@ -171,6 +185,9 @@ export const HOUSE_PERKS = {
   fruitAnimals: 1.5,
 } as const;
 
+/** Promemoria (se attivati): il cimitero trascurato si segnala quando lo è più di questa quota delle tombe. */
+export const REMINDERS = { neglectShare: 0.5 } as const;
+
 /** Velocità del Custode a piedi (celle al secondo) e moltiplicatori in bicicletta, sulla scopa e da pipistrello. */
 export const CUSTODE_SPEED = { walk: 3.1, bike: 2, broom: 2.6, bat: 2.4 } as const;
 
@@ -197,7 +214,13 @@ export const ZOMBIE_MUD = { chance: 0.35, protectHours: 6, reach: 1 } as const;
 /** Becchino: raggio della vecchia pulizia al tocco; quota delle cose sporche che sistema in ogni giro. */
 export const GRAVEDIGGER = { cleanRadius: 4, roundShare: 0.5 } as const;
 
-export const ECONOMY = { sellRefund: 0.7 } as const;
+export const ECONOMY = {
+  sellRefund: 0.7,
+  /** Riesumare una tomba entro queste ore dalla sepoltura ne annulla la ricompensa (non si sfrutta seppellire e riesumare). */
+  exhumeRefundHours: 24,
+  /** Oggetti che contano per il prestigio: da questo prezzo in su (l'erba da 1 non allarga il recinto). */
+  prestigeMinCost: 3,
+} as const;
 
 /** Prestigio del mausoleo. */
 export const MAUSOLEUM_PRESTIGE = 25;
@@ -220,4 +243,4 @@ export const DISTRICT = { minGraves: 4, adjacency: 3 } as const;
  * Regalo dell'animale domestico: ogni tanto (dopo un numero a caso di coccole
  * o di giochi con l'osso, tra `every`) porta da 1 a 5 fuochi fatui.
  */
-export const PET_GIFT = { every: [3, 6] as const, wisps: [1, 5] as const };
+export const PET_GIFT = { every: [3, 6] as const, wisps: [1, 5] as const, perOpening: 2 };

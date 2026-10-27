@@ -117,9 +117,23 @@ export function runCatchUp(s: SaveData, now: Date): CatchUpReport {
   const elapsedDays = Math.max(0, daysBetween(last, now));
   const rng = createRng(`${s.seed}:${now.toISOString().slice(0, 13)}`);
   const iso = now.toISOString();
+  // il degrado conta al massimo DECAY.maxAbsenceDays di assenza: oltre, gli orologi
+  // dell'incuria (sporca da, fiori del, ultima cura) vanno avanti dello stesso tanto,
+  // come se si fosse stati via solo quei giorni (anniversari e meteo restano veri)
+  const excess = Math.max(0, now.getTime() - last.getTime() - DECAY.maxAbsenceDays * DAY_MS);
+  if (excess > 0) {
+    const later = (at: string) => new Date(new Date(at).getTime() + excess).toISOString();
+    for (const g of s.graves) {
+      if (g.dirtySince) g.dirtySince = later(g.dirtySince);
+      if (g.flowersAt) g.flowersAt = later(g.flowersAt);
+    }
+    for (const p of s.placeables) if (CATALOG[p.type]?.decays) p.caredAt = later(p.caredAt);
+  }
+  const decayFrom = new Date(last.getTime() + excess);
+  const decayDays = Math.max(0, daysBetween(decayFrom, now));
   // un segno d'incuria comparso mentre eri via è comparso in un momento qualsiasi
-  // dell'assenza, non all'apertura: il conto verso «rotta» parte da lì
-  const onset = () => new Date(last.getTime() + rng.next() * Math.max(0, now.getTime() - last.getTime())).toISOString();
+  // dell'assenza (quella che conta), non all'apertura: il conto verso «rotta» parte da lì
+  const onset = () => new Date(decayFrom.getTime() + rng.next() * Math.max(0, now.getTime() - decayFrom.getTime())).toISOString();
   const r: CatchUpReport = {
     elapsedDays, newDirty: 0, newBroken: 0, witheredFlowers: 0, placeablesDirty: 0,
     placeablesBroken: 0, anniversaries: [], anniversaryIds: [], missedAnniversaries: [], blessing: null, wispsAdded: 0, weatherChanged: false, xpGained: 0,
@@ -141,6 +155,7 @@ export function runCatchUp(s: SaveData, now: Date): CatchUpReport {
         r.anniversaryIds.push(g.id);
         s.player.xp += XP.anniversary;
         s.player.wisps += WISPS.anniversary;
+        s.player.counters.wispsEarned += WISPS.anniversary; // come ogni altro guadagno (traguardi, bastone mistico)
         r.xpGained += XP.anniversary;
       } else r.missedAnniversaries.push(g.name);
     }
@@ -153,12 +168,12 @@ export function runCatchUp(s: SaveData, now: Date): CatchUpReport {
         if (!g.dirty) { g.dirty = true; g.dirtySince ??= withered; }
         r.witheredFlowers++;
       }
-    } else if (!g.hasFlowers && elapsedDays > 0 && !g.broken) {
+    } else if (!g.hasFlowers && decayDays > 0 && !g.broken) {
       // erbacce o sporco: il primo segno d'incuria fa partire il conto verso «rotta»
-      if (!g.weeds && rng.chance(Math.min(SIM.weedProbMax, SIM.weedProbPerDay * weedPace * elapsedDays))) {
+      if (!g.weeds && rng.chance(Math.min(SIM.weedProbMax, SIM.weedProbPerDay * weedPace * decayDays))) {
         g.weeds = true; g.dirtySince ??= onset();
       }
-      if (!g.dirty && rng.chance(Math.min(SIM.dirtProbMax, SIM.dirtProbPerDay * elapsedDays))) {
+      if (!g.dirty && rng.chance(Math.min(SIM.dirtProbMax, SIM.dirtProbPerDay * decayDays))) {
         g.dirty = true; g.dirtySince ??= onset(); r.newDirty++;
       }
     }

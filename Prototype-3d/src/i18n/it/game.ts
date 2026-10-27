@@ -49,6 +49,8 @@ export default {
   'rules.repair.graveDone': 'Tomba riparata: torna come nuova.',
   // dopo la riesumazione (dal dettaglio, col becchino): la tomba sparisce col suo registro
   'rules.exhume.done': '{name} è stato riesumato: il posto è di nuovo libero.',
+  // riesumata subito dopo la sepoltura: la ricompensa della sepoltura torna indietro ({xp} XP, {wisps} fuochi fatui)
+  'rules.exhume.doneRevoked': '{name} è stato riesumato appena sepolto: il posto è libero e la sepoltura non conta (−{xp} XP, −{wisps} fuochi fatui).',
   'rules.exhume.memoryDone': '{name} non riposa più tra le radici dell’Albero dei ricordi.',
 
   // ── Regole: becchino, prete, albero dei ricordi ──
@@ -277,12 +279,9 @@ export default {
   'reminder.anniversary.bodyOne': 'Passa al cimitero a ricordarlo: solo oggi.',
   // {names}: elenco dei nomi (reminder.list.*)
   'reminder.anniversary.bodyMany': '{names}: passa al cimitero a ricordarli, solo oggi.',
-  // breve: titolo di notifica
-  'reminder.breaking.titleOne': 'La tomba di {name} sta per rompersi',
-  // breve: titolo di notifica
-  'reminder.breaking.titleMany': '{n} tombe stanno per rompersi',
-  'reminder.breaking.bodyOne': 'Da domani sarà rotta: una pulita e torna come nuova.',
-  'reminder.breaking.bodyMany': '{names}: da domani saranno rotte, passa a pulirle.',
+  // notifica (una sola): più della metà delle tombe è sporca, con le erbacce o rotta; tono gentile, nessuna urgenza
+  'reminder.neglect.title': 'Il cimitero ti aspetta',
+  'reminder.neglect.body': 'Più della metà delle tombe ha bisogno di una pulita. Quando vuoi, passa a sistemarle.',
 
   // ── Nuova partita ──
   // nome di default del giocatore

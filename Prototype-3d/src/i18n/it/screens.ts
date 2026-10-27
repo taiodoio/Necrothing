@@ -245,6 +245,8 @@ export default {
   // conferma della riesumazione: {name} è l'oggetto sepolto
   'exhume.confirm.title': 'Riesumare {name}?',
   'exhume.confirm.grave': 'Arriva il becchino con la carriola: scava, porta via tutto e il terreno torna libero. La tomba sparisce anche dal registro delle sepolture e non si torna indietro.',
+  // si aggiunge alla frase sopra se la tomba è stata fatta da meno di {h} ore
+  'exhume.confirm.revokes': 'È sepolta da meno di {h} ore: la sepoltura non conterà più e perderai {xp} XP e {wisps} fuochi fatui.',
   'exhume.confirm.memory': 'Arriva il becchino con la carriola e lo dissotterra tra le radici. Il ricordo lascia l’albero e il registro delle sepolture, e non si torna indietro.',
   // breve: pulsante della conferma
   'exhume.confirm.ok': 'Riesuma',

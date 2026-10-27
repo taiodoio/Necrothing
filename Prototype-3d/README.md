@@ -51,7 +51,8 @@ npm run build:beta # come sopra, col profilo beta-full esplicito (TestFlight, be
 
 Profili di distribuzione, accesso Demo/Full, classificazione del catalogo e
 salvataggi: vedi `docs/distribuzione-e-accesso.md`. In sviluppo `?access=demo`
-simula l'accesso Demo.
+simula l'accesso Demo. Primo ingresso (splash, pergamena, nome, tutorial, giro)
+e tombe narrative: vedi `docs/primo-ingresso.md`.
 
 Richiede Node ≥ 22.6 (i test usano `--experimental-strip-types`).
 `?seed=717` nell'URL crea una nuova partita con seme fisso (utile per confronti e test);
@@ -109,7 +110,7 @@ interagisci, `B` sali/scendi dalla bici, `F` sali/scendi dalla scopa, `Esc` chiu
   I fiori si portano solo su una tomba pulita.
 - **Luci e costruzioni** si sporcano dopo 3 giorni senza cure e si rompono dopo 7
   (dal foglio Excel); le luci si accendono/spengono, quelle rotte sono spente.
-- **Bottega** (pre-piazzata, tutorial al primo avvio, non eliminabile ma spostabile):
+- **Bottega** (pre-piazzata, non eliminabile ma spostabile):
   acquisto con quantità, pezzi unici, sblocchi per rango, albero di Natale solo a
   dicembre. **Inventario** per categorie con *Inserisci* / *Vendi* (70%).
 - **Varianti come oggetti a sé**: ogni variante si compra per conto suo, con prezzo e

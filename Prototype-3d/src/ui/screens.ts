@@ -11,7 +11,7 @@ import {
 } from '../game/graves.ts';
 import { ACHIEVEMENTS, achievementProgress, nextRank, rankForXp, rankProgress } from '../game/progression.ts';
 import * as R from '../game/rules.ts';
-import { createNewGame, type ArtStyle, type FpsSetting, type SaveData, type ThemeSetting, type TimeOverride } from '../game/state.ts';
+import { createNewGame, type ArtStyle, type FpsSetting, type SaveData, type TimeOverride } from '../game/state.ts';
 import { computePrestige, detectDistricts, DISTRICT_LABELS, expansionStatus } from '../game/world.ts';
 import { newId } from '../game/rng.ts';
 import { $, closeDrawer, confirmDialog, fmtDate, h, type Modal, openDrawer, openModal, progressDialog, setDrawerBody, setDrawerExtra, setDrawerFooter, setDrawerHero, toast, wispPill } from './dom.ts';
@@ -21,6 +21,8 @@ import { graveThumb, placeableThumb } from './thumbs.ts';
 import { ACH_COUNT, ACH_ICONS, icon } from './icons.ts';
 import { lpBadgeUrl, lpIconPng } from './lpIcons.ts';
 import { personalGraveLimit } from '../game/entitlement.ts';
+import { signalOnboarding } from './onboarding.ts';
+import { checkName, NAME_MAX } from '../game/playerName.ts';
 import { distribution } from '../config/distribution.ts';
 import { monoIcon } from './monoIcons.ts';
 import { factLabel, parchment } from './parchment.ts';
@@ -83,6 +85,7 @@ export function openBurial(ui: UI, initial?: R.BurialDraft, startStep = 0) {
   const game = ui.game;
   // con i limiti della Demo (mai nella beta) oltre le tombe concesse non se ne comincia un'altra
   if (!initial && !R.canStartBurial(game.state)) { toast(t('rules.bury.demoLimit', { n: personalGraveLimit() ?? 0 })); return; }
+  signalOnboarding('burialOpened');
   const now = game.now();
   const d: R.BurialDraft = initial ? { ...initial } : R.emptyDraft(now);
   if (!initial) burialPhoto = new BurialPhoto();
@@ -293,7 +296,7 @@ function buyText(s: SaveData, d: PlaceableDef, av: R.ShopAvailability, qty: numb
 
 /** Alla prima apertura di Bottega o Inventario si scaricano in sottofondo tutte le anteprime: cambiando scheda sono già pronte. */
 let previewsWarmed = false;
-function warmAllPreviews() {
+export function warmAllPreviews() {
   if (previewsWarmed || !uiPlay()) return;
   previewsWarmed = true;
   window.setTimeout(() => warmPreviews([...CATALOG_LIST.map((d) => d.id), ...[...HOUSE_ROOFS, ...HOUSE_PARTS].map((x) => `house-${x.id}`)]), 600);
@@ -701,12 +704,15 @@ function keeperTab(ui: UI, openLook: () => void): HTMLElement {
     pen.classList.toggle('active', editing);
   };
   const name = h('input', {
-    class: 'pl-name', value: p.name, maxLength: 24, 'aria-label': t('player.name'), enterkeyhint: 'done',
+    class: 'pl-name', value: p.name, maxLength: NAME_MAX * 2, 'aria-label': t('player.name'), enterkeyhint: 'done',
     onfocus: () => penState(true),
     // uscendo dal campo (spunta, Invio o tocco altrove) il nome si salva e la tastiera si chiude
     onblur: (e: Event) => {
       const el = e.target as HTMLInputElement;
-      const v = el.value.trim() || t('player.defaultName');
+      // stesse regole del primo ingresso (game/playerName.ts); vuoto torna «Custode», un nome non valido resta quello di prima
+      const r = el.value.trim() ? checkName(el.value) : { ok: true as const, name: t('player.defaultName') };
+      if (!r.ok) toast(t(`onboarding.name.error.${r.error}`, { n: NAME_MAX }));
+      const v = r.ok ? r.name : p.name;
       el.value = v;
       if (v !== p.name) { p.name = v; game.afterChange(); }
       penState(false);
@@ -866,11 +872,13 @@ export function openSettings(ui: UI) {
         ? h('label', { class: 'setting' }, t('settings.reminders'), h('input', { type: 'checkbox', checked: s.reminders === true, onchange: (e: Event) => void game.setReminders((e.target as HTMLInputElement).checked) }))
         : null,
       h('p', { class: 'muted' }, remindersAvailable() ? t('settings.reminders.app') : t('settings.reminders.browser')),
+      h('div', { class: 'section-title' }, t('settings.section.onboarding')),
+      h('p', { class: 'muted' }, t('settings.onboarding.hint')),
+      h('button', { class: 'big-btn ghost', onclick: () => ui.onboarding.replay() }, t('settings.onboarding.replay')),
     ],
     graphics: [
       h('div', { class: 'setting' }, t('settings.quality'), seg(s.quality, [['auto', t('settings.quality.auto')], ['low', t('settings.quality.low')], ['medium', t('settings.quality.medium')], ['high', t('settings.quality.high')]], (v) => game.setQuality(v))),
       s.quality === 'auto' ? h('p', { class: 'muted', style: 'margin:-2px 0 4px;font-size:12px' }, t('settings.quality.autoHint')) : null,
-      uiNext() ? h('div', { class: 'setting' }, t('settings.theme'), seg<ThemeSetting>(s.theme, [['auto', t('settings.theme.auto')], ['light', t('settings.theme.light')], ['dark', t('settings.theme.dark')]], (v) => game.setTheme(v))) : null,
       h('div', { class: 'setting' }, t('settings.fps'), seg<FpsSetting>(s.fps, [['auto', t('settings.fps.auto')], ['30', t('settings.fps.30')], ['60', t('settings.fps.60')]], (v) => game.setFps(v))),
       h('p', { class: 'muted', style: 'margin:-2px 0 4px;font-size:12px' }, s.fps === 'auto' ? t('settings.fps.autoHint') : s.fps === '30' ? t('settings.fps.30Hint') : t('settings.fps.60Hint')),
       h('div', { class: 'setting' }, t('settings.time'), seg<TimeOverride>(s.timeOverride, [['auto', t('settings.time.auto')], ['day', t('settings.time.day')], ['dusk', t('settings.time.dusk')], ['night', t('settings.time.night')]], (v) => game.setTimeOverride(v))),

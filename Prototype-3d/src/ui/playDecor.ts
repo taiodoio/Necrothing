@@ -55,9 +55,8 @@ const patternTile = (stroke: string) => `url("${patternTileUrl(stroke)}")`;
 
 export function installPlayDecor() {
   const st = document.documentElement.style;
-  for (const name of ['pumpkin', 'skull', 'leaf', 'coffin', 'ghost', 'bone']) st.setProperty(`--deco-${name}`, lpIconUrl(name));
+  for (const name of ['pumpkin', 'skull', 'leaf', 'coffin', 'ghost', 'bone', 'wisp']) st.setProperty(`--deco-${name}`, lpIconUrl(name));
   // un marrone scuro molto trasparente: sullo sfondo chiaro e su quello scuro resta «tono su tono»
-  st.setProperty('--pattern-light', patternTile('rgba(92, 63, 34, 0.11)'));
   st.setProperty('--pattern-dark', patternTile('rgba(14, 8, 4, 0.32)'));
   installNatureDecor();
 }

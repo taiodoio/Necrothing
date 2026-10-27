@@ -11,12 +11,14 @@ import { createRng, hashString } from './rng.ts';
 import { isoDate } from './time.ts';
 import { t } from '../i18n/index.ts';
 import { distribution } from '../config/distribution.ts';
+import { finishedOnboarding, newOnboarding, normalizeOnboarding, type OnboardingState } from './onboarding.ts';
 
 /**
  * Versione del salvataggio (vedi MIGRATIONS): v2 mappa 64×64 (prima 48×48),
- * recinto iniziale 34×34; v3 il registro delle distribuzioni (`meta`).
+ * recinto iniziale 34×34; v3 il registro delle distribuzioni (`meta`); v4 il
+ * percorso del primo ingresso (`onboarding`).
  */
-export const SAVE_VERSION = 3;
+export const SAVE_VERSION = 4;
 
 export type ArtStyle = 'voxel' | 'miniature' | 'lowpoly';
 export type CameraMode = 'angled' | 'top';
@@ -26,7 +28,6 @@ export type QualitySetting = Quality | 'auto';
 /** Frame al secondo: «auto» = 60 in Alta, 30 in Media e Bassa. */
 export type FpsSetting = 'auto' | '30' | '60';
 /** Tema dell'interfaccia (interfaccia nuova): «auto» segue il tema del telefono. */
-export type ThemeSetting = 'auto' | 'light' | 'dark';
 export type TimeOverride = 'auto' | DayPhase;
 export type Weather = 'clear' | 'fog' | 'rain' | 'storm';
 
@@ -159,7 +160,6 @@ export interface Settings {
   camera: CameraMode;
   quality: QualitySetting;
   fps: FpsSetting;
-  theme: ThemeSetting;
   timeOverride: TimeOverride;
   weatherEffects: boolean;
   /** Sfocatura tilt-shift ai bordi (media/alta qualità). */
@@ -190,6 +190,8 @@ export interface SaveData {
   house: HouseState;
   settings: Settings;
   meta: SaveMeta;
+  /** Il percorso del primo ingresso (pergamena, nome, introduzione, tutorial, giro): game/onboarding.ts. */
+  onboarding: OnboardingState;
 }
 
 /**
@@ -207,7 +209,6 @@ export const DEFAULT_SETTINGS: Settings = {
   camera: 'angled',
   quality: 'auto',
   fps: 'auto',
-  theme: 'auto',
   timeOverride: 'auto',
   weatherEffects: true,
   edgeBlur: true,
@@ -281,6 +282,10 @@ export function createNewGame(now: Date, seed = Math.floor(Math.random() * 1e9))
     P('bones', 23, 31),
     P('vase', 38, 31),
     P('sign', 33, 46, { text: 'Necrothing' }),
+    // attorno alle tre tombe dell'introduzione: un vaso, una lanterna, una corona (si spostano come gli altri)
+    P('vase', 22, 25),
+    P('lantern', 25, 24),
+    P('wreath', 28, 25),
   ];
   for (let y = 22; y <= 48; y++) placeables.push(P('path_stone', 31, y));
   for (let x = 19; x <= 42; x++) if (x !== 31) placeables.push(P('path_stone', x, 22));
@@ -288,20 +293,24 @@ export function createNewGame(now: Date, seed = Math.floor(Math.random() * 1e9))
   placeables.push(P('path_stone', 18, 20), P('path_stone', 18, 21), P('path_stone', 18, 22));
   for (let y = 34; y <= 37; y++) placeables.push(P('path_dirt', 23, y));
 
-  const legacy: Array<[string, GraveType, number, number, Category, DeathCause, string, 'dirty' | 'clean' | 'flowers' | 'broken']> = [
-    [t('state.legacy.floppy.name'), 'rectangular', 20, 24, 'electronics', 'planned_obsolescence', t('state.legacy.floppy.epitaph'), 'dirty'],
-    [t('state.legacy.tamagotchi.name'), 'stone_simple', 23, 24, 'toys', 'owner_negligence', t('state.legacy.tamagotchi.epitaph'), 'clean'],
-    [t('state.legacy.umbrella.name'), 'gothic', 26, 24, 'household', 'fatal_fall', t('state.legacy.umbrella.epitaph'), 'dirty'],
-    [t('state.legacy.walkman.name'), 'celtic_cross', 34, 24, 'electronics', 'battery_betrayal', t('state.legacy.walkman.epitaph'), 'flowers'],
-    [t('state.legacy.succulent.name'), 'victorian', 37, 24, 'plants', 'water_damage', t('state.legacy.succulent.epitaph'), 'clean'],
-    [t('state.legacy.phoneBooth.name'), 'obelisk', 40, 24, 'other', 'planned_obsolescence', t('state.legacy.phoneBooth.epitaph'), 'dirty'],
-    [t('state.legacy.bike.name'), 'angel', 20, 28, 'vehicles', 'fatal_fall', t('state.legacy.bike.epitaph'), 'flowers'],
-    [t('state.legacy.moka.name'), 'marble_cross', 26, 28, 'household', 'owner_negligence', t('state.legacy.moka.epitaph'), 'clean'],
-    [t('state.legacy.dvdPlayer.name'), 'family_memorial', 35, 28, 'electronics', 'battery_betrayal', t('state.legacy.dvdPlayer.epitaph'), 'broken'],
-    [t('state.legacy.bunny.name'), 'decorated_monument', 39, 28, 'toys', 'owner_negligence', t('state.legacy.bunny.epitaph'), 'clean'],
+  // Le tombe narrative: dicono subito di cosa parla il gioco (si curano, si riesumano, si
+  // affidano all'albero come le altre, ma non contano nel limite della Demo). Identificativi
+  // fissi; solo lapidi e decorazioni della Demo. Le prime tre sono quelle dell'introduzione.
+  const legacy: Array<[string, string, GraveType, number, number, Category, DeathCause, string, 'dirty' | 'clean' | 'flowers' | 'broken']> = [
+    ['story-cactus', t('state.story.cactus.name'), 'stone_simple', 20, 24, 'plants', 'owner_negligence', t('state.story.cactus.epitaph'), 'flowers'],
+    ['story-dinner', t('state.story.dinner.name'), 'rectangular', 23, 24, 'abstract', 'mystery', t('state.story.dinner.epitaph'), 'clean'],
+    // un po' trascurata apposta: è la prima che il tutorial fa pulire
+    ['story-gym', t('state.story.gym.name'), 'gothic', 26, 24, 'abstract', 'natural_wear', t('state.story.gym.epitaph'), 'dirty'],
+    ['legacy-4', t('state.legacy.walkman.name'), 'celtic_cross', 34, 24, 'electronics', 'battery_betrayal', t('state.legacy.walkman.epitaph'), 'flowers'],
+    ['legacy-5', t('state.legacy.succulent.name'), 'victorian', 37, 24, 'plants', 'water_damage', t('state.legacy.succulent.epitaph'), 'clean'],
+    ['legacy-6', t('state.legacy.phoneBooth.name'), 'marble_cross', 40, 24, 'other', 'planned_obsolescence', t('state.legacy.phoneBooth.epitaph'), 'dirty'],
+    ['legacy-7', t('state.legacy.bike.name'), 'celtic_cross', 20, 28, 'vehicles', 'fatal_fall', t('state.legacy.bike.epitaph'), 'flowers'],
+    ['legacy-8', t('state.legacy.moka.name'), 'marble_cross', 26, 28, 'household', 'owner_negligence', t('state.legacy.moka.epitaph'), 'clean'],
+    ['legacy-9', t('state.legacy.dvdPlayer.name'), 'victorian', 35, 28, 'electronics', 'battery_betrayal', t('state.legacy.dvdPlayer.epitaph'), 'broken'],
+    ['legacy-10', t('state.legacy.bunny.name'), 'rectangular', 39, 28, 'toys', 'owner_negligence', t('state.legacy.bunny.epitaph'), 'clean'],
   ];
-  const graves: Grave[] = legacy.map(([name, graveType, x, y, category, deathCause, epitaph, cond], i) => ({
-    id: `legacy-${i + 1}`,
+  const graves: Grave[] = legacy.map(([id, name, graveType, x, y, category, deathCause, epitaph, cond], i) => ({
+    id,
     seed: Math.floor(rng.next() * 1e6),
     name, category, deathCause, epitaph, graveType, x, y,
     birthDate: null,
@@ -345,6 +354,7 @@ export function createNewGame(now: Date, seed = Math.floor(Math.random() * 1e9))
     house: defaultHouse(),
     settings: { ...DEFAULT_SETTINGS },
     meta: { firstDistribution: distribution().id, lastDistribution: distribution().id },
+    onboarding: newOnboarding(),
   };
 }
 
@@ -366,6 +376,10 @@ export const MIGRATIONS: ReadonlyArray<{ to: number; run: (d: Partial<SaveData>)
   // il registro delle distribuzioni: una partita di prima viene dalla prova (beta)
   { to: 3, run: (d) => {
     if (!d.meta) d.meta = { firstDistribution: 'beta-full', lastDistribution: 'beta-full' };
+  } },
+  // il percorso del primo ingresso: chi giocava già l'ha fatto (lo può rivedere dalle Impostazioni)
+  { to: 4, run: (d) => {
+    if (!d.onboarding) d.onboarding = finishedOnboarding();
   } },
 ];
 
@@ -433,6 +447,8 @@ export function normalizeSave(raw: unknown): SaveData | null {
   if (data.settings && (data.settings as { camera?: string }).camera !== 'angled') data.settings = { ...data.settings, camera: 'angled' };
   // gli stili di prova (voxel, miniatura) sono stati tolti: il gioco è low-poly
   if (data.settings && data.settings.style !== 'lowpoly') data.settings = { ...data.settings, style: 'lowpoly' };
+  // il tema chiaro è stato tolto: l'interfaccia è solo scura
+  if (data.settings && 'theme' in data.settings) { const { theme: _, ...rest } = data.settings as typeof data.settings & { theme?: unknown }; data.settings = rest as typeof data.settings; }
   return {
     ...base,
     ...data,
@@ -446,6 +462,7 @@ export function normalizeSave(raw: unknown): SaveData | null {
     entrusted: Array.isArray(data.entrusted) ? data.entrusted : [],
     house: normalizeHouse(data.house),
     meta: { firstDistribution: data.meta?.firstDistribution ?? distribution().id, lastDistribution: distribution().id },
+    onboarding: normalizeOnboarding(data.onboarding),
     // una partita di una versione più nuova del gioco resta alla sua versione (le sue migrazioni sono già fatte)
     version: Math.max(from, SAVE_VERSION),
   } as SaveData;

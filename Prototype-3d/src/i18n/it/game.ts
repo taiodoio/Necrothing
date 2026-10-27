@@ -286,13 +286,14 @@ export default {
   // ── Nuova partita ──
   // nome di default del giocatore
   'state.player.defaultName': 'Custode',
+  // le tre tombe narrative dell'introduzione (partita nuova): nome della tomba ed epitaffio
+  'state.story.cactus.name': 'Ernesto, il cactus indistruttibile',
+  'state.story.cactus.epitaph': 'Va bene che necessitava di poca acqua, però…',
+  'state.story.dinner.name': 'La cena di classe',
+  'state.story.dinner.epitaph': 'Oh, poi organizziamo. Per me va bene qualsiasi giorno!',
+  'state.story.gym.name': 'Da lunedì vado in palestra',
+  'state.story.gym.epitaph': 'Ogni domenica risorgeva. Ogni lunedì moriva di nuovo.',
   // lascito del vecchio custode: tombe già presenti a inizio partita (nome dell'oggetto ed epitaffio)
-  'state.legacy.floppy.name': 'Floppy disk 1.44',
-  'state.legacy.floppy.epitaph': 'Conteneva tutto. Ora contiene silenzio.',
-  'state.legacy.tamagotchi.name': 'Tamagotchi',
-  'state.legacy.tamagotchi.epitaph': 'Aveva fame. Sempre.',
-  'state.legacy.umbrella.name': 'Ombrello del 2009',
-  'state.legacy.umbrella.epitaph': 'Si è rovesciato per l’ultima volta.',
   'state.legacy.walkman.name': 'Walkman',
   'state.legacy.walkman.epitaph': 'Il nastro si è fermato a metà canzone.',
   'state.legacy.succulent.name': 'Pianta grassa',

@@ -9,7 +9,7 @@
 .ui-next.ui-play { --gothic: "Grenze Gotisch", "Nunito", serif; }
 
 /* ── Tema scuro grigio violastro, da cimitero ─────────────────────── */
-.ui-next.ui-play:not([data-theme="light"]) {
+.ui-next.ui-play {
   --panel: #3a3545;
   --panel-2: #474154;
   --input: #2e2a38;
@@ -22,7 +22,6 @@
   --shadow: 0 4px 14px rgba(8, 5, 14, 0.45);
 }
 .ui-play { --pattern: var(--pattern-dark); --plate: #3a3545; /* targhette nella scena */ }
-.ui-play[data-theme="light"] { --pattern: var(--pattern-light); }
 
 /* ── Pattern tono su tono (zucche, foglie, teschi, bare) ──────────── */
 .ui-next.ui-play :is(.drawer, .drawer-foot, .player-chip, .clock-block, .slot, .tutorial, .dialog, .wisp-count, .edit-banner, .npc-note) {
@@ -79,23 +78,23 @@
 /* velatura senza sfocatura: una sfocatura sopra la scena 3D va ricalcolata a ogni frame (su iPhone pesa molto) */
 .ui-next.ui-play .scrim, .ui-next.ui-play .dialog-scrim { background: rgba(8, 6, 10, 0.5); }
 .ui-next.ui-play .dialog-scrim.modal-scrim { background: rgba(8, 6, 10, 0.6); }
-.ui-next.ui-play:not([data-theme="light"]) .drawer {
+.ui-next.ui-play .drawer {
   /* gli strati: 7 zone scure, 2 bagliori, l'edera, il gradiente (le misure vanno date una per strato) */
   background-color: transparent; background-image: var(--zones), var(--nat-glow), var(--vines), var(--nat-bg);
   background-size: 100% 100%, 100% 100%, 100% 100%, 100% 100%, 100% 100%, 100% 100%, 100% 100%, 100% 100%, 100% 100%, 100% auto, 100% 100%; background-repeat: no-repeat; box-shadow: var(--nat-shadow);
 }
-.ui-next.ui-play:not([data-theme="light"]) :is(.dialog, .dialog.modal) {
+.ui-next.ui-play :is(.dialog, .dialog.modal) {
   background-color: transparent; background-image: var(--zones-small), var(--nat-glow), var(--vines-dialog), var(--nat-bg);
   background-size: 100% 100%, 100% 100%, 100% 100%, 100% 100%, 100% 100%, 100% auto, 100% 100%; background-repeat: no-repeat; box-shadow: var(--nat-shadow);
 }
-.ui-next.ui-play:not([data-theme="light"]) .drawer-foot { background: linear-gradient(180deg, rgba(30, 26, 38, 0), rgba(30, 26, 38, 0.6) 35%, rgba(26, 22, 33, 0.92)); box-shadow: none; }
+.ui-next.ui-play .drawer-foot { background: linear-gradient(180deg, rgba(30, 26, 38, 0), rgba(30, 26, 38, 0.6) 35%, rgba(26, 22, 33, 0.92)); box-shadow: none; }
 .ui-next.ui-play .drawer-head { border-bottom: 0; }
-.ui-next.ui-play:not([data-theme="light"]) :is(.player-chip, .clock-block, .npc-note, .toast, .slot, .tutorial:not(.welcome), .edit-banner, .area-banner) {
+.ui-next.ui-play :is(.player-chip, .clock-block, .npc-note, .toast, .slot, .tutorial:not(.welcome), .edit-banner, .area-banner) {
   background-color: transparent; background-image: var(--zones-small), var(--vines-hud), var(--nat-bg);
   background-size: 100% 100%, 100% 100%, 100% 100%, 300px auto, 100% 100%; background-repeat: no-repeat; box-shadow: 0 8px 18px rgba(0, 0, 0, 0.45);
 }
 /* i pulsanti della home: solo il gradiente, con un rametto */
-.ui-next.ui-play:not([data-theme="light"]) :is(.map-tools .icon-btn:not(.active), .fab) { background: var(--nat-bg); box-shadow: 0 8px 18px rgba(0, 0, 0, 0.45); }
+.ui-next.ui-play :is(.map-tools .icon-btn:not(.active), .fab) { background: var(--nat-bg); box-shadow: 0 8px 18px rgba(0, 0, 0, 0.45); }
 /* bici, scopa, bastone in uso: il pulsante si accende (oro); il pipistrello col suo anello viola */
 .ui-next.ui-play .map-tools .icon-btn.active { box-shadow: 0 3px 0 var(--primary-deep), 0 8px 18px rgba(0, 0, 0, 0.45); }
 .ui-next.ui-play .map-tools .bat-btn { box-shadow: 0 8px 18px rgba(0, 0, 0, 0.45), 0 0 0 2.5px #a86ad0; }

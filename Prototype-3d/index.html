@@ -40,6 +40,14 @@
       @keyframes bootShine { to { transform: translateX(350%); } }
       .boot-pct { margin: 10px 0 0; color: #ffe2a8; font-size: 20px; font-weight: 800; font-variant-numeric: tabular-nums; text-shadow: 0 2px 0 rgba(0, 0, 0, 0.6); }
       @media (prefers-reduced-motion: reduce) { .boot-bar::after { animation: none; } }
+      /* primo ingresso: il pulsante al posto della barra, con un'ombra in basso perché si legga sul sentiero illuminato */
+      #boot.with-cta::after { content: ''; position: absolute; left: 0; right: 0; bottom: 0; height: 42%; pointer-events: none;
+        background: linear-gradient(180deg, rgba(8, 7, 20, 0) 0%, rgba(8, 7, 20, 0.55) 45%, rgba(8, 7, 20, 0.85) 100%); }
+      #boot.with-cta .boot-load { z-index: 1; }
+      /* il pulsante è quello del gioco (.big-btn, oro): qui solo misura ed entrata */
+      .boot-cta { display: block; width: 100%; font-size: 18px; animation: bootCtaIn 0.45s ease-out both; }
+      @keyframes bootCtaIn { from { opacity: 0; transform: translateY(10px); } }
+      @media (prefers-reduced-motion: reduce) { .boot-cta { animation: none; } }
     </style>
   </head>
   <body>

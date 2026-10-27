@@ -1,7 +1,9 @@
 /* Primo ingresso (ui/onboarding.ts). Parla la stessa lingua del gioco: i pannelli
    «natura e luce» del tema scuro (gradiente, edera, zone scure, bagliore caldo),
    i pulsanti oro, il gotico; niente contorni. Fino al tutorial la scena non si
-   vede: lo sfondo del percorso (.ob-solid) è quello dei pannelli, più scuro. */
+   vede: lo sfondo del percorso (.ob-solid) è quello dei pannelli, più scuro, con
+   le lapidi in fondo e le lucciole. Il livello grafico (.q-low/.q-medium/.q-high)
+   decide quanto lavorano le animazioni. */
 
 .ob-layer {
   position: fixed; inset: 0; z-index: 30; display: grid; place-items: center; align-content: center; gap: 14px;
@@ -12,18 +14,16 @@
 @keyframes obFade { from { opacity: 0; } }
 .ob-layer .row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; width: 100%; }
 
-/* lo sfondo: il pattern tono su tono, un bagliore caldo al centro, i bordi che si perdono nel buio, l'edera negli angoli */
+/* lo sfondo: il pattern tono su tono, un bagliore caldo al centro, i bordi che si perdono nel buio, l'edera in alto */
 .ob-solid {
   background-color: #120e17;
   background-image:
     radial-gradient(55% 40% at 50% 44%, rgba(255, 168, 84, 0.13), rgba(255, 168, 84, 0) 100%),
     radial-gradient(120% 85% at 50% 50%, rgba(4, 2, 8, 0) 45%, rgba(4, 2, 8, 0.9) 100%),
-    var(--fern), var(--fern),
     var(--pattern),
     linear-gradient(165deg, #2b2534 0%, #1c1724 50%, #110d16 100%);
-  background-size: 100% 100%, 100% 100%, 150px auto, 150px auto, 180px 180px, 100% 100%;
-  background-position: 0 0, 0 0, -20px calc(100% + 6px), calc(100% + 30px) calc(100% + 10px), 0 0, 0 0;
-  background-repeat: no-repeat, no-repeat, no-repeat, no-repeat, repeat, no-repeat;
+  background-size: 100% 100%, 100% 100%, 180px 180px, 100% 100%;
+  background-repeat: no-repeat, no-repeat, repeat, no-repeat;
 }
 .ob-solid::before, .ob-solid::after {
   content: ''; position: absolute; top: 0; width: 190px; height: 190px; pointer-events: none; opacity: 0.85;
@@ -32,94 +32,121 @@
 .ob-solid::before { left: 0; }
 .ob-solid::after { right: 0; scale: -1 1; }
 .ob-layer > * { position: relative; z-index: 1; }
+/* in fondo le lapidi con la terra e la pala del dettaglio delle tombe, più scure, che sfumano verso l'alto */
+.ob-layer > .ob-ground {
+  position: absolute; z-index: 0; left: 0; right: 0; bottom: 0; height: 210px; pointer-events: none;
+  background: no-repeat center bottom / max(100%, 560px) auto; filter: brightness(0.6) saturate(0.8);
+  -webkit-mask-image: linear-gradient(180deg, transparent, #000 30%); mask-image: linear-gradient(180deg, transparent, #000 30%);
+}
+/* le lucciole: piccoli punti caldi che vagano e respirano (solo trasformazioni e opacità) */
+.ob-layer > .ob-flies { position: absolute; z-index: 0; inset: 0; pointer-events: none; overflow: hidden; }
+.ob-flies i {
+  position: absolute; left: var(--x); top: var(--y); width: 7px; height: 7px; border-radius: 50%; scale: var(--s); will-change: transform, opacity;
+  background: radial-gradient(circle, #fffbd2 0%, #f4e889 38%, rgba(236, 222, 110, 0) 72%); box-shadow: 0 0 10px 3px rgba(240, 226, 120, 0.4);
+  animation: obFly var(--d) ease-in-out var(--dl) infinite alternate, obBlink var(--b) ease-in-out var(--dl) infinite alternate;
+}
+@keyframes obFly { 0% { transform: translate(0, 0); } 50% { transform: translate(calc(var(--dx) * 0.4), calc(var(--dy) * 0.7)); } 100% { transform: translate(var(--dx), var(--dy)); } }
+@keyframes obBlink { 0% { opacity: 0.08; } 55% { opacity: 1; } 100% { opacity: 0.3; } }
 
-/* ── La lettera: arriva piegata in quattro, si apre davanti a una luce calda, la chiude un sigillo ── */
+/* ── La lettera: arriva piegata in quattro, si apre davanti a una luce calda, porta un timbro ── */
 .ob-letter-layer {
   --ob-w: min(92vw, 470px);
-  --ob-h: min(calc(100dvh - 222px - var(--safe-t) - var(--safe-b)), 660px);
-  --ob-t: 3.4s;
-  /* la carta: un foglio anticato, più scuro ai bordi, con qualche macchia */
-  --ob-paper:
-    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 300 420'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 .45 0 0 0 0 .3 0 0 0 0 .14 0 0 0 .22 0'/%3E%3C/filter%3E%3Crect width='300' height='420' filter='url(%23n)'/%3E%3C/svg%3E"),
-    radial-gradient(120% 95% at 50% 45%, rgba(110, 62, 22, 0) 52%, rgba(110, 62, 22, 0.42) 100%),
-    radial-gradient(40% 30% at 4% 4%, rgba(90, 50, 18, 0.22), rgba(90, 50, 18, 0) 100%),
-    radial-gradient(40% 30% at 96% 97%, rgba(90, 50, 18, 0.2), rgba(90, 50, 18, 0) 100%),
-    radial-gradient(22% 15% at 80% 18%, rgba(150, 96, 40, 0.14), rgba(150, 96, 40, 0) 100%),
-    radial-gradient(18% 13% at 20% 74%, rgba(150, 96, 40, 0.12), rgba(150, 96, 40, 0) 100%),
-    radial-gradient(30% 18% at 62% 90%, rgba(150, 96, 40, 0.09), rgba(150, 96, 40, 0) 100%),
+  --ob-h: min(calc(100dvh - 200px - var(--safe-t) - var(--safe-b)), 680px);
+  --ob-t: 3.6s;
+  /* la carta: anticata, macchiata, con la grana; i bordi strappati sono una maschera */
+  --ob-paper: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 300 420' preserveAspectRatio='none'%3E%3Cfilter id='s' x='0' y='0' width='100%25' height='100%25'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.018 .014' numOctaves='3' seed='4'/%3E%3CfeColorMatrix values='0 0 0 0 .42  0 0 0 0 .25  0 0 0 0 .09  0 0 0 -2.6 1.55'/%3E%3C/filter%3E%3Crect width='300' height='420' filter='url(%23s)' opacity='.38'/%3E%3C/svg%3E"), url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 300 420' preserveAspectRatio='none'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 .45  0 0 0 0 .3  0 0 0 0 .14  0 0 0 .24 0'/%3E%3C/filter%3E%3Crect width='300' height='420' filter='url(%23n)'/%3E%3C/svg%3E"),
+    radial-gradient(120% 95% at 50% 45%, rgba(110, 62, 22, 0) 50%, rgba(110, 62, 22, 0.42) 100%),
     linear-gradient(172deg, #f4e7c8 0%, #ebd9b2 55%, #dfc796 100%);
+  --ob-ragged: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1000 1400' preserveAspectRatio='none'%3E%3Cpolygon points='6,11 15,16 24,16 33,13 42,12 51,11 60,13 69,11 78,15 87,15 96,19 105,16 114,8 123,8 132,7 141,12 150,13 159,10 168,15 177,11 186,12 195,16 204,11 213,15 222,18 231,21 240,14 249,10 257,8 266,13 275,15 284,14 293,13 302,15 311,11 320,7 329,11 338,15 347,12 356,11 365,13 374,12 383,11 392,12 401,9 410,13 419,17 428,11 437,11 446,17 455,7 464,7 473,10 482,7 491,11 500,18 509,13 518,14 527,17 536,16 545,12 554,11 563,12 572,12 581,12 590,9 599,7 608,6 617,11 626,9 635,10 644,15 653,10 662,7 671,8 680,14 689,10 698,14 707,15 716,15 725,17 734,10 743,9 751,12 760,11 769,16 778,16 787,14 796,7 805,7 814,5 823,8 832,17 841,18 850,18 859,10 868,9 877,13 886,16 895,15 904,11 913,18 922,15 931,8 940,7 949,14 958,8 967,12 976,8 985,15 994,8 986,17 990,26 978,36 985,45 989,54 991,63 988,73 993,82 993,91 992,100 992,109 991,119 990,128 991,137 992,146 981,156 995,165 997,174 997,183 992,193 994,202 991,211 993,220 992,229 988,239 991,248 988,257 991,266 991,276 991,285 990,294 987,303 984,312 988,322 986,331 992,340 993,349 995,359 991,368 995,377 992,386 989,396 993,405 992,414 987,423 994,432 993,442 995,451 979,460 992,469 994,479 989,488 991,497 986,506 990,515 990,525 990,534 990,543 988,552 993,562 990,571 992,580 988,589 992,599 989,608 993,617 994,626 993,635 994,645 996,654 994,663 995,672 994,682 992,691 988,700 990,709 978,718 979,728 989,737 992,746 986,755 987,765 988,774 988,783 986,792 989,801 987,811 991,820 994,829 995,838 994,848 995,857 989,866 993,875 992,885 993,894 993,903 987,912 994,921 994,931 995,940 992,949 992,958 991,968 990,977 977,986 988,995 987,1004 986,1014 988,1023 991,1032 986,1041 988,1051 992,1060 986,1069 987,1078 992,1088 991,1097 989,1106 992,1115 992,1124 995,1134 995,1143 994,1152 990,1161 988,1171 976,1180 986,1189 989,1198 988,1207 988,1217 992,1226 987,1235 986,1244 988,1254 987,1263 985,1272 986,1281 991,1291 988,1300 978,1309 994,1318 991,1327 991,1337 992,1346 991,1355 987,1364 986,1374 993,1383 992,1385 983,1388 974,1389 965,1389 956,1390 947,1383 938,1385 929,1384 920,1390 911,1372 903,1391 894,1390 885,1394 876,1394 867,1396 858,1388 849,1385 840,1384 831,1390 822,1383 813,1391 804,1391 795,1391 786,1389 777,1388 768,1386 759,1389 750,1385 742,1390 733,1386 724,1389 715,1388 706,1387 697,1392 688,1386 679,1392 670,1394 661,1385 652,1388 643,1387 634,1389 625,1389 616,1388 607,1384 598,1390 589,1392 581,1390 572,1391 563,1389 554,1388 545,1393 536,1394 527,1396 518,1386 509,1390 500,1385 491,1391 482,1390 473,1385 464,1369 455,1392 446,1383 437,1370 428,1388 419,1385 411,1385 402,1395 393,1392 384,1387 375,1390 366,1391 357,1394 348,1394 339,1391 330,1395 321,1390 312,1392 303,1388 294,1388 285,1370 276,1390 267,1385 258,1386 250,1393 241,1384 232,1375 223,1390 214,1393 205,1392 196,1396 187,1395 178,1390 169,1387 160,1389 151,1384 142,1386 133,1393 124,1392 115,1390 106,1391 97,1386 89,1391 80,1392 71,1394 62,1396 53,1389 44,1391 35,1387 26,1394 17,1389 12,1394 11,1385 23,1376 12,1366 17,1357 17,1348 11,1339 14,1329 8,1320 10,1311 9,1302 15,1293 11,1283 14,1274 8,1265 13,1256 10,1246 6,1237 11,1228 5,1219 6,1209 6,1200 13,1191 27,1182 9,1173 15,1163 9,1154 9,1145 14,1136 13,1126 14,1117 13,1108 12,1099 16,1090 11,1080 11,1071 9,1062 9,1053 12,1043 6,1034 6,1025 10,1016 7,1006 10,997 11,988 10,979 11,970 8,960 9,951 6,942 6,933 10,923 10,914 12,905 15,896 17,887 12,877 15,868 8,859 8,850 14,840 14,831 13,822 9,813 15,803 11,794 8,785 6,776 6,767 7,757 4,748 8,739 6,730 11,720 7,711 9,702 11,693 8,684 9,674 8,665 8,656 9,647 14,637 10,628 14,619 10,610 11,601 10,591 9,582 6,573 8,564 5,554 6,545 5,536 8,527 6,517 11,508 6,499 12,490 7,481 11,471 11,462 11,453 11,444 10,434 14,425 10,416 12,407 9,398 12,388 7,379 11,370 12,361 10,351 10,342 9,333 9,324 9,314 6,305 7,296 8,287 5,278 5,268 4,259 5,250 8,241 10,231 12,222 10,213 10,204 13,195 12,185 11,176 7,167 10,158 15,148 14,139 9,130 13,121 13,111 11,102 7,93 4,84 6,75 4,65 5,56 9,47 6,38 6,28 9,19' fill='black'/%3E%3C/svg%3E");
   grid-template-rows: auto 1fr auto; align-content: stretch; justify-items: center;
 }
+/* livello basso: niente rumore da calcolare, solo i gradienti */
+.ob-letter-layer.q-low { --ob-paper: radial-gradient(120% 95% at 50% 45%, rgba(110, 62, 22, 0) 50%, rgba(110, 62, 22, 0.42) 100%), radial-gradient(30% 20% at 76% 22%, rgba(150, 96, 40, 0.14), rgba(150, 96, 40, 0) 100%), radial-gradient(26% 18% at 24% 72%, rgba(150, 96, 40, 0.12), rgba(150, 96, 40, 0) 100%), linear-gradient(172deg, #f4e7c8 0%, #ebd9b2 55%, #dfc796 100%); }
 .ob-skip {
   justify-self: end; min-height: 40px; padding: 8px 18px; border: 0; border-radius: 999px; cursor: pointer;
   background: var(--nat-bg); color: var(--paper); font: 800 14px "Nunito", sans-serif; box-shadow: 0 8px 18px rgba(0, 0, 0, 0.45);
 }
-.ob-stage { position: relative; width: var(--ob-w); height: var(--ob-h); align-self: center; perspective: 1600px; }
+.ob-stage { position: relative; width: var(--ob-w); height: var(--ob-h); align-self: center; perspective: 1500px; }
 .ob-light {
   position: absolute; left: 50%; top: 50%; width: calc(var(--ob-w) * 1.8); height: calc(var(--ob-h) * 1.3); translate: -50% -50%; pointer-events: none;
   background: radial-gradient(closest-side, rgba(255, 196, 120, 0.5), rgba(255, 160, 80, 0.2) 48%, rgba(255, 140, 60, 0) 100%);
   animation: obFlicker 2.8s ease-in-out infinite alternate;
 }
 @keyframes obFlicker { 0% { opacity: 1; } 45% { opacity: 0.84; } 70% { opacity: 0.95; } 100% { opacity: 0.88; } }
+/* l'ombra del foglio: un'ellisse sfumata sotto (un'ombra vera verrebbe tagliata dai bordi strappati) */
+.ob-shade { position: absolute; left: 4%; right: 4%; top: 6%; bottom: -3%; pointer-events: none; background: radial-gradient(closest-side, rgba(0, 0, 0, 0.55), rgba(0, 0, 0, 0)); }
 .ob-sheet {
-  position: absolute; inset: 0; overflow: hidden; border-radius: 4px; color: #3b2a1e;
-  background-image:
-    linear-gradient(90deg, rgba(0, 0, 0, 0) calc(50% - 1px), rgba(110, 70, 30, 0.16) calc(50% - 1px), rgba(110, 70, 30, 0.16) 50%, rgba(255, 250, 235, 0.32) 50%, rgba(255, 250, 235, 0.32) calc(50% + 1px), rgba(0, 0, 0, 0) calc(50% + 1px)),
-    linear-gradient(180deg, rgba(0, 0, 0, 0) calc(50% - 1px), rgba(110, 70, 30, 0.16) calc(50% - 1px), rgba(110, 70, 30, 0.16) 50%, rgba(255, 250, 235, 0.32) 50%, rgba(255, 250, 235, 0.32) calc(50% + 1px), rgba(0, 0, 0, 0) calc(50% + 1px)),
-    var(--ob-paper);
-  background-size: 100% 100%, 100% 100%, var(--ob-w) var(--ob-h);
-  box-shadow: 0 20px 44px rgba(0, 0, 0, 0.6), inset 0 0 34px rgba(120, 72, 28, 0.26);
+  position: absolute; inset: 0; overflow: hidden; color: #3b2a1e; rotate: -0.6deg;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1000 1400' preserveAspectRatio='none'%3E%3Cpath d='M506.7,0.0 L505.7,35.0 L506.6,70.0 L508.6,105.0 L502.2,140.0 L506.8,175.0 L502.3,210.0 L498.7,245.0 L500.2,280.0 L495.7,315.0 L500.7,350.0 L498.1,385.0 L497.1,420.0 L500.1,455.0 L497.6,490.0 L495.0,525.0 L498.0,560.0 L492.3,595.0 L497.2,630.0 L493.4,665.0 L497.2,700.0 L501.3,735.0 L500.6,770.0 L503.2,805.0 L502.4,840.0 L501.1,875.0 L501.4,910.0 L501.7,945.0 L504.1,980.0 L502.0,1015.0 L502.1,1050.0 L504.8,1085.0 L499.9,1120.0 L501.1,1155.0 L504.3,1190.0 L499.7,1225.0 L498.6,1260.0 L499.5,1295.0 L495.8,1330.0 L495.6,1365.0 L493.1,1400.0' stroke='rgb(100,62,26)' stroke-opacity='.28' stroke-width='2.4' fill='none' vector-effect='non-scaling-stroke' stroke-linecap='round'/%3E%3Cpath d='M506.7,0.0 L505.7,35.0 L506.6,70.0 L508.6,105.0 L502.2,140.0 L506.8,175.0 L502.3,210.0 L498.7,245.0 L500.2,280.0 L495.7,315.0 L500.7,350.0 L498.1,385.0 L497.1,420.0 L500.1,455.0 L497.6,490.0 L495.0,525.0 L498.0,560.0 L492.3,595.0 L497.2,630.0 L493.4,665.0 L497.2,700.0 L501.3,735.0 L500.6,770.0 L503.2,805.0 L502.4,840.0 L501.1,875.0 L501.4,910.0 L501.7,945.0 L504.1,980.0 L502.0,1015.0 L502.1,1050.0 L504.8,1085.0 L499.9,1120.0 L501.1,1155.0 L504.3,1190.0 L499.7,1225.0 L498.6,1260.0 L499.5,1295.0 L495.8,1330.0 L495.6,1365.0 L493.1,1400.0' transform='translate(2.2 1.6)' stroke='rgb(255,250,235)' stroke-opacity='.4' stroke-width='1.6' fill='none' vector-effect='non-scaling-stroke'/%3E%3Cpath d='M0.0,705.3 L33.3,707.2 L66.7,704.6 L100.0,706.7 L133.3,702.9 L166.7,697.2 L200.0,701.3 L233.3,694.8 L266.7,694.3 L300.0,694.5 L333.3,699.1 L366.7,700.2 L400.0,698.1 L433.3,693.7 L466.7,692.4 L500.0,691.8 L533.3,699.6 L566.7,702.1 L600.0,703.0 L633.3,706.5 L666.7,704.5 L700.0,707.2 L733.3,704.5 L766.7,700.3 L800.0,706.0 L833.3,699.9 L866.7,703.9 L900.0,701.7 L933.3,697.8 L966.7,693.3 L1000.0,696.5' stroke='rgb(100,62,26)' stroke-opacity='.28' stroke-width='2.4' fill='none' vector-effect='non-scaling-stroke' stroke-linecap='round'/%3E%3Cpath d='M0.0,705.3 L33.3,707.2 L66.7,704.6 L100.0,706.7 L133.3,702.9 L166.7,697.2 L200.0,701.3 L233.3,694.8 L266.7,694.3 L300.0,694.5 L333.3,699.1 L366.7,700.2 L400.0,698.1 L433.3,693.7 L466.7,692.4 L500.0,691.8 L533.3,699.6 L566.7,702.1 L600.0,703.0 L633.3,706.5 L666.7,704.5 L700.0,707.2 L733.3,704.5 L766.7,700.3 L800.0,706.0 L833.3,699.9 L866.7,703.9 L900.0,701.7 L933.3,697.8 L966.7,693.3 L1000.0,696.5' transform='translate(2.2 1.6)' stroke='rgb(255,250,235)' stroke-opacity='.4' stroke-width='1.6' fill='none' vector-effect='non-scaling-stroke'/%3E%3Cpath d='M90,763 q-19,-0 -50,9' stroke='rgb(110,70,30)' stroke-opacity='.13' stroke-width='1.2' fill='none' vector-effect='non-scaling-stroke'/%3E%3Cpath d='M248,834 q5,41 -2,91' stroke='rgb(110,70,30)' stroke-opacity='.13' stroke-width='1.2' fill='none' vector-effect='non-scaling-stroke'/%3E%3Cpath d='M763,297 q24,21 36,53' stroke='rgb(110,70,30)' stroke-opacity='.13' stroke-width='1.2' fill='none' vector-effect='non-scaling-stroke'/%3E%3Cpath d='M121,1183 q-32,26 -75,61' stroke='rgb(110,70,30)' stroke-opacity='.13' stroke-width='1.2' fill='none' vector-effect='non-scaling-stroke'/%3E%3Cpath d='M85,1127 q-21,23 -54,55' stroke='rgb(110,70,30)' stroke-opacity='.13' stroke-width='1.2' fill='none' vector-effect='non-scaling-stroke'/%3E%3Cpath d='M703,641 q24,11 37,32' stroke='rgb(110,70,30)' stroke-opacity='.13' stroke-width='1.2' fill='none' vector-effect='non-scaling-stroke'/%3E%3Cpath d='M275,128 q31,38 49,87' stroke='rgb(110,70,30)' stroke-opacity='.13' stroke-width='1.2' fill='none' vector-effect='non-scaling-stroke'/%3E%3Cpath d='M664,1128 q-13,19 -38,48' stroke='rgb(110,70,30)' stroke-opacity='.13' stroke-width='1.2' fill='none' vector-effect='non-scaling-stroke'/%3E%3Cpath d='M545,621 q-26,20 -64,50' stroke='rgb(110,70,30)' stroke-opacity='.13' stroke-width='1.2' fill='none' vector-effect='non-scaling-stroke'/%3E%3C/svg%3E"), var(--ob-paper); background-size: 100% 100%, var(--ob-w) var(--ob-h);
+  -webkit-mask: var(--ob-ragged) 0 0 / 100% 100% no-repeat; mask: var(--ob-ragged) 0 0 / 100% 100% no-repeat;
 }
-.ob-sheet-scroll { position: absolute; inset: 0 0 46px; overflow-y: auto; overscroll-behavior: contain; -webkit-overflow-scrolling: touch; outline: none; padding: 30px 26px 16px;
-  -webkit-mask-image: linear-gradient(180deg, #000 calc(100% - 26px), transparent); mask-image: linear-gradient(180deg, #000 calc(100% - 26px), transparent); }
+.ob-sheet-scroll { position: absolute; inset: 0; overflow-y: auto; overscroll-behavior: contain; -webkit-overflow-scrolling: touch; outline: none; padding: 30px 28px 26px;
+  -webkit-mask-image: linear-gradient(180deg, transparent 0, #000 22px, #000 calc(100% - 30px), transparent); mask-image: linear-gradient(180deg, transparent 0, #000 22px, #000 calc(100% - 30px), transparent); }
 .ob-letter { max-width: 34em; margin: 0 auto; font-size: 16.5px; line-height: 1.55; }
-.ob-letter h2 { margin: 0 0 14px; font: 700 30px/1.05 var(--gothic); color: #5a3418; text-align: center; }
+.ob-letter h2 { margin: 0 0 16px; font: 700 30px/1.05 var(--gothic); color: #5a3418; text-align: center; }
 .ob-letter p { margin: 0 0 12px; }
 .ob-letter .ob-closing { margin-top: 18px; font-weight: 800; text-align: center; }
-.ob-letter .ob-sign { font-style: italic; text-align: center; color: #5e4630; }
-.ob-seal {
-  position: absolute; left: 50%; top: calc(var(--ob-h) - 40px); width: 84px; height: 84px; margin-left: -42px; pointer-events: none;
-  background: url('data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120"%3E%3Cdefs%3E%3CradialGradient id="w" cx="38%25" cy="32%25" r="75%25"%3E%3Cstop offset="0" stop-color="%23e2574a"/%3E%3Cstop offset=".55" stop-color="%23a52a20"/%3E%3Cstop offset="1" stop-color="%235e110c"/%3E%3C/radialGradient%3E%3CradialGradient id="e" cx="50%25" cy="50%25" r="50%25"%3E%3Cstop offset=".72" stop-color="%23000" stop-opacity="0"/%3E%3Cstop offset="1" stop-color="%232a0503" stop-opacity=".45"/%3E%3C/radialGradient%3E%3C/defs%3E%3Cpolygon points="112.9,60.0 114.5,65.4 109.6,69.9 107.8,74.5 108.2,80.0 104.5,83.8 100.0,86.7 96.9,90.3 92.5,92.5 89.6,96.0 89.6,104.3 86.8,110.1 80.1,108.5 74.2,106.8 69.5,107.9 64.7,107.4 60.0,107.6 55.1,109.8 50.4,108.1 46.2,105.5 40.0,108.3 33.4,109.8 30.6,104.0 29.3,97.4 26.8,93.2 24.8,88.9 21.0,86.1 13.9,84.6 11.0,80.3 12.6,74.4 10.2,69.9 6.3,65.3 8.3,60.0 12.0,55.3 13.9,50.8 16.7,46.9 17.0,42.2 13.0,34.9 13.4,28.8 20.1,27.2 25.1,25.1 28.0,21.0 32.7,19.2 37.4,17.7 41.3,14.9 46.3,14.7 50.8,13.9 54.8,7.3 60.0,3.0 65.2,7.3 69.5,12.4 73.8,14.4 77.8,17.1 82.3,18.3 88.5,17.4 92.4,20.6 94.3,25.7 99.9,27.3 106.1,29.2 106.3,35.2 104.6,41.5 104.7,46.4 104.2,51.2 106.4,55.4" fill="url%28%23w%29"/%3E%3Cpolygon points="112.9,60.0 114.5,65.4 109.6,69.9 107.8,74.5 108.2,80.0 104.5,83.8 100.0,86.7 96.9,90.3 92.5,92.5 89.6,96.0 89.6,104.3 86.8,110.1 80.1,108.5 74.2,106.8 69.5,107.9 64.7,107.4 60.0,107.6 55.1,109.8 50.4,108.1 46.2,105.5 40.0,108.3 33.4,109.8 30.6,104.0 29.3,97.4 26.8,93.2 24.8,88.9 21.0,86.1 13.9,84.6 11.0,80.3 12.6,74.4 10.2,69.9 6.3,65.3 8.3,60.0 12.0,55.3 13.9,50.8 16.7,46.9 17.0,42.2 13.0,34.9 13.4,28.8 20.1,27.2 25.1,25.1 28.0,21.0 32.7,19.2 37.4,17.7 41.3,14.9 46.3,14.7 50.8,13.9 54.8,7.3 60.0,3.0 65.2,7.3 69.5,12.4 73.8,14.4 77.8,17.1 82.3,18.3 88.5,17.4 92.4,20.6 94.3,25.7 99.9,27.3 106.1,29.2 106.3,35.2 104.6,41.5 104.7,46.4 104.2,51.2 106.4,55.4" fill="url%28%23e%29"/%3E%3Ccircle cx="60" cy="60" r="34" fill="none" stroke="%235a0e0a" stroke-opacity=".55" stroke-width="3"/%3E%3Ccircle cx="60" cy="61.5" r="34" fill="none" stroke="%23ff9d8c" stroke-opacity=".28" stroke-width="1.5"/%3E%3Cpolygon points="65.6,39.8 67.2,46.2 71.2,52.6 73.8,60.2 73.8,67.8 70.6,74.6 64.8,79.0 58.0,80.2 51.6,78.2 47.2,73.0 45.8,66.2 47.2,59.4 51.2,53.4 56.8,49.0 62.0,45.0" fill="%23ff9d8c" fill-opacity=".3" transform="translate%280 1.4%29"/%3E%3Cpolygon points="65.6,39.8 67.2,46.2 71.2,52.6 73.8,60.2 73.8,67.8 70.6,74.6 64.8,79.0 58.0,80.2 51.6,78.2 47.2,73.0 45.8,66.2 47.2,59.4 51.2,53.4 56.8,49.0 62.0,45.0" fill="%236e150f"/%3E%3Ccircle cx="56.6" cy="66.2" r="2.2" fill="%23ef7a6a" fill-opacity=".55"/%3E%3Ccircle cx="63.4" cy="66.2" r="2.2" fill="%23ef7a6a" fill-opacity=".55"/%3E%3Cellipse cx="44" cy="36" rx="14" ry="7" transform="rotate%28-30 44 36%29" fill="%23fff" fill-opacity=".22"/%3E%3C/svg%3E') center / contain no-repeat; filter: drop-shadow(0 5px 6px rgba(40, 6, 4, 0.55)); rotate: -10deg;
+.ob-letter .ob-sign { margin-bottom: 70px; font-style: italic; text-align: center; color: #5e4630; }
+/* il timbro: inchiostro un po' rovinato, in basso a destra, ruotato */
+.ob-stamp {
+  position: absolute; z-index: 1; right: 16px; bottom: 18px; width: 104px; height: 104px; pointer-events: none; rotate: 30deg; opacity: 0.82; mix-blend-mode: multiply;
+  background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 120 120'%3E%3Cfilter id='r' x='-5%25' y='-5%25' width='110%25' height='110%25'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.6' numOctaves='2' seed='3' result='t'/%3E%3CfeDisplacementMap in='SourceGraphic' in2='t' scale='2.2' result='d'/%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.22' numOctaves='3' seed='9' result='g'/%3E%3CfeColorMatrix in='g' values='0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 -2.4 2.05' result='m'/%3E%3CfeComposite in='d' in2='m' operator='in'/%3E%3C/filter%3E%3Cg filter='url(%23r)' fill='rgb(122,40,32)' stroke='rgb(122,40,32)'%3E%3Ccircle cx='60' cy='60' r='54' fill='none' stroke-width='5'/%3E%3Ccircle cx='60' cy='60' r='39' fill='none' stroke-width='1.8'/%3E%3Cg stroke='none'%3E%3Ccircle cx='106.5' cy='60.0' r='1.5'/%3E%3Ccircle cx='103.0' cy='77.8' r='1.5'/%3E%3Ccircle cx='92.9' cy='92.9' r='1.5'/%3E%3Ccircle cx='77.8' cy='103.0' r='1.5'/%3E%3Ccircle cx='60.0' cy='106.5' r='1.5'/%3E%3Ccircle cx='42.2' cy='103.0' r='1.5'/%3E%3Ccircle cx='27.1' cy='92.9' r='1.5'/%3E%3Ccircle cx='17.0' cy='77.8' r='1.5'/%3E%3Ccircle cx='13.5' cy='60.0' r='1.5'/%3E%3Ccircle cx='17.0' cy='42.2' r='1.5'/%3E%3Ccircle cx='27.1' cy='27.1' r='1.5'/%3E%3Ccircle cx='42.2' cy='17.0' r='1.5'/%3E%3Ccircle cx='60.0' cy='13.5' r='1.5'/%3E%3Ccircle cx='77.8' cy='17.0' r='1.5'/%3E%3Ccircle cx='92.9' cy='27.1' r='1.5'/%3E%3Ccircle cx='103.0' cy='42.2' r='1.5'/%3E%3C/g%3E%3Cpath stroke='none' fill-rule='evenodd' d='M68.4,29.8 L70.7,39.1 L76.5,48.4 L80.3,59.4 L80.3,70.4 L75.7,80.3 L67.2,86.7 L57.4,88.4 L48.1,85.5 L41.7,78.0 L39.7,68.1 L41.7,58.3 L47.5,49.6 L55.7,43.2 L63.2,37.4ZM52.0,67.5 a3.1,3.1 0 1,0 6.2,0 a3.1,3.1 0 1,0 -6.2,0ZM62.4,67.5 a3.1,3.1 0 1,0 6.2,0 a3.1,3.1 0 1,0 -6.2,0Z'/%3E%3C/g%3E%3C/svg%3E") center / contain no-repeat;
 }
-/* il foglio piegato: quattro quarti della stessa carta (ognuno col suo pezzo dello sfondo) */
+/* il foglio piegato: quattro quarti della stessa carta (ognuno col suo pezzo di sfondo e di bordo strappato) */
 .ob-fold { position: absolute; inset: 0; transform-style: preserve-3d; display: none; }
 .ob-half { position: absolute; left: 0; width: 100%; height: 50%; transform-style: preserve-3d; }
 .ob-half.top { top: 0; }
 .ob-half.bottom { top: 50%; transform-origin: 50% 0; }
-.ob-q { position: absolute; top: 0; width: 50%; height: 100%; background-image: var(--ob-paper); background-size: var(--ob-w) var(--ob-h); }
+.ob-q { position: absolute; top: 0; width: 50%; height: 100%; background-image: var(--ob-paper); background-size: var(--ob-w) var(--ob-h);
+  -webkit-mask: var(--ob-ragged) 0 0 / var(--ob-w) var(--ob-h) no-repeat; mask: var(--ob-ragged) 0 0 / var(--ob-w) var(--ob-h) no-repeat; }
 .ob-q.tl, .ob-q.bl { left: 0; }
-.ob-q.tr, .ob-q.br { left: 50%; transform-origin: 0 50%; background-position-x: calc(var(--ob-w) / -2); }
-.ob-q.bl, .ob-q.br { background-position-y: calc(var(--ob-h) / -2); }
+.ob-q.tr, .ob-q.br { left: 50%; transform-origin: 0 50%; background-position-x: calc(var(--ob-w) / -2); -webkit-mask-position-x: calc(var(--ob-w) / -2); mask-position-x: calc(var(--ob-w) / -2); }
+.ob-q.bl, .ob-q.br { background-position-y: calc(var(--ob-h) / -2); -webkit-mask-position-y: calc(var(--ob-h) / -2); mask-position-y: calc(var(--ob-h) / -2); }
 .ob-q::after { content: ''; position: absolute; inset: 0; background: rgba(70, 40, 16, 0.42); opacity: 0; }
-/* ogni quarto ha i bordi un po' più scuri: si legge la piega */
-.ob-q::before { content: ''; position: absolute; inset: 0; box-shadow: inset 0 0 16px rgba(110, 62, 22, 0.28), inset 0 0 2px rgba(110, 62, 22, 0.35); }
+/* verso la piega la carta è un po' più scura */
+.ob-q.tl::before, .ob-q.tr::before, .ob-q.bl::before, .ob-q.br::before { content: ''; position: absolute; inset: 0; }
+.ob-q.tl::before { background: linear-gradient(270deg, rgba(110, 62, 22, 0.2), rgba(110, 62, 22, 0) 14%), linear-gradient(0deg, rgba(110, 62, 22, 0.18), rgba(110, 62, 22, 0) 12%); }
+.ob-q.tr::before { background: linear-gradient(90deg, rgba(110, 62, 22, 0.2), rgba(110, 62, 22, 0) 14%), linear-gradient(0deg, rgba(110, 62, 22, 0.18), rgba(110, 62, 22, 0) 12%); }
+.ob-q.bl::before { background: linear-gradient(270deg, rgba(110, 62, 22, 0.2), rgba(110, 62, 22, 0) 14%), linear-gradient(180deg, rgba(110, 62, 22, 0.18), rgba(110, 62, 22, 0) 12%); }
+.ob-q.br::before { background: linear-gradient(90deg, rgba(110, 62, 22, 0.2), rgba(110, 62, 22, 0) 14%), linear-gradient(180deg, rgba(110, 62, 22, 0.18), rgba(110, 62, 22, 0) 12%); }
 .ob-continue { width: min(92vw, 420px); transition: opacity 0.4s ease; }
 .ob-letter-layer.playing .ob-continue { opacity: 0; pointer-events: none; }
 
 .ob-stage.play:not(.open) .ob-fold { display: block; animation: obArrive var(--ob-t) cubic-bezier(0.3, 0.8, 0.3, 1) both, obFoldOut var(--ob-t) linear both; }
-.ob-stage.play:not(.open) .ob-half.bottom { animation: obOpenH var(--ob-t) ease-in-out both; }
-.ob-stage.play:not(.open) .ob-q.flap { animation: obOpenV var(--ob-t) ease-in-out both; }
+.ob-stage.play:not(.open) .ob-half.bottom { animation: obOpenH var(--ob-t) cubic-bezier(0.45, 0, 0.3, 1) both; }
+.ob-stage.play:not(.open) .ob-q.flap { animation: obOpenV var(--ob-t) cubic-bezier(0.45, 0, 0.3, 1) both; }
 .ob-stage.play:not(.open) .ob-half.bottom .ob-q::after { animation: obShadeH var(--ob-t) linear both; }
 .ob-stage.play:not(.open) .ob-q.flap::after { animation: obShadeV var(--ob-t) linear both; }
 .ob-stage.play:not(.open) .ob-sheet { animation: obSheetIn var(--ob-t) linear both; }
-.ob-stage.play:not(.open) .ob-seal { animation: obStamp var(--ob-t) linear both; }
+.ob-stage.play:not(.open) .ob-shade { animation: obShadeIn var(--ob-t) linear both; }
+.ob-stage.play:not(.open) .ob-stamp { animation: obStamp var(--ob-t) linear both; }
 .ob-stage.play:not(.open) .ob-light { animation: obLightIn var(--ob-t) ease-out both, obFlicker 2.8s ease-in-out var(--ob-t) infinite alternate; }
-/* piegato, il pacchetto è il quarto in alto a sinistra: lo si sposta al centro, poi si apre e torna al suo posto */
+/* piegato, il pacchetto è il quarto in alto a sinistra: arriva ondeggiando (inclinato, come un foglio nell'aria), si apre e torna al suo posto */
 @keyframes obArrive {
-  0% { transform: translate(calc(var(--ob-w) / 4), calc(var(--ob-h) / 4 + 70vh)) rotate(-18deg) scale(0.85); }
-  24% { transform: translate(calc(var(--ob-w) / 4), calc(var(--ob-h) / 4)) rotate(-5deg) scale(1); }
-  30% { transform: translate(calc(var(--ob-w) / 4), calc(var(--ob-h) / 4)) rotate(-5deg) scale(1); }
-  50% { transform: translate(calc(var(--ob-w) / 4), 0) rotate(-2deg) scale(1); }
-  70%, 100% { transform: translate(0, 0) rotate(0deg) scale(1); }
+  0% { transform: translate(calc(var(--ob-w) / 4), calc(var(--ob-h) / 4 + 70vh)) rotate(-20deg) rotateX(38deg) rotateY(-14deg) scale(0.85); }
+  14% { transform: translate(calc(var(--ob-w) / 4 + 14px), calc(var(--ob-h) / 4 + 12vh)) rotate(-4deg) rotateX(18deg) rotateY(10deg) scale(0.95); }
+  24% { transform: translate(calc(var(--ob-w) / 4 - 4px), calc(var(--ob-h) / 4)) rotate(-7deg) rotateX(-4deg) rotateY(-3deg) scale(1); }
+  30% { transform: translate(calc(var(--ob-w) / 4), calc(var(--ob-h) / 4)) rotate(-5deg) rotateX(0deg) rotateY(0deg) scale(1); }
+  50% { transform: translate(calc(var(--ob-w) / 4), 0) rotate(-2deg) rotateX(0deg) rotateY(0deg) scale(1); }
+  70%, 100% { transform: translate(0, 0) rotate(-0.6deg) rotateX(0deg) rotateY(0deg) scale(1); }
 }
-@keyframes obFoldOut { 0%, 76% { opacity: 1; } 88%, 100% { opacity: 0; } }
-@keyframes obOpenH { 0%, 30% { transform: rotateX(180deg) translateZ(-2px); } 50%, 100% { transform: rotateX(0deg) translateZ(0); } }
-@keyframes obOpenV { 0%, 50% { transform: rotateY(-180deg) translateZ(-2px); } 70%, 100% { transform: rotateY(0deg) translateZ(0); } }
-@keyframes obShadeH { 0%, 30% { opacity: 0.2; } 40% { opacity: 1; } 50%, 100% { opacity: 0; } }
-@keyframes obShadeV { 0%, 50% { opacity: 0.2; } 60% { opacity: 1; } 70%, 100% { opacity: 0; } }
-@keyframes obSheetIn { 0%, 72% { opacity: 0; } 86%, 100% { opacity: 1; } }
-@keyframes obStamp { 0%, 84% { opacity: 0; transform: scale(1.9); } 94% { opacity: 1; transform: scale(0.92); } 100% { opacity: 1; transform: scale(1); } }
+@keyframes obFoldOut { 0%, 76% { opacity: 1; } 86%, 100% { opacity: 0; } }
+/* le metà si aprono con un piccolo rimbalzo, come carta che ha preso la piega */
+@keyframes obOpenH { 0%, 30% { transform: rotateX(180deg) translateZ(-2px); } 46% { transform: rotateX(-9deg) translateZ(0); } 51% { transform: rotateX(4deg); } 55%, 100% { transform: rotateX(0deg); } }
+@keyframes obOpenV { 0%, 52% { transform: rotateY(-180deg) translateZ(-2px); } 67% { transform: rotateY(8deg) translateZ(0); } 72% { transform: rotateY(-3deg); } 76%, 100% { transform: rotateY(0deg); } }
+@keyframes obShadeH { 0%, 30% { opacity: 0.25; } 39% { opacity: 1; } 48%, 100% { opacity: 0; } }
+@keyframes obShadeV { 0%, 52% { opacity: 0.25; } 60% { opacity: 1; } 68%, 100% { opacity: 0; } }
+@keyframes obSheetIn { 0%, 74% { opacity: 0; } 84%, 100% { opacity: 1; } }
+@keyframes obShadeIn { 0%, 20% { opacity: 0; } 40%, 100% { opacity: 1; } }
+@keyframes obStamp { 0%, 86% { opacity: 0; transform: scale(1.7); } 93% { opacity: 0.9; transform: scale(0.94); } 100% { opacity: 0.82; transform: scale(1); } }
 @keyframes obLightIn { 0% { opacity: 0; transform: scale(0.45); } 30% { opacity: 1; transform: scale(1); } 100% { opacity: 1; transform: scale(1); } }
+/* livello basso: niente piega in 3D, il foglio sale e appare; poi il timbro */
+.q-low .ob-stage.play:not(.open) .ob-fold { display: none; }
+.q-low .ob-stage.play:not(.open) .ob-sheet { animation: obRise 1.6s cubic-bezier(0.2, 0.8, 0.3, 1) both; }
+.q-low .ob-stage.play:not(.open) .ob-shade { animation: obShadeIn 1.6s linear both; }
+.q-low .ob-stage.play:not(.open) .ob-stamp { animation: obStamp 2.2s linear both; }
+.q-low .ob-stage.play:not(.open) .ob-light { animation: obLightIn 1.6s ease-out both; }
+@keyframes obRise { from { opacity: 0; transform: translateY(40px) rotate(-3deg); } }
 
 /* ── Il Custode che parla: il mezzobusto esce dal riquadro e parte da una linea (come nell'HUD) ── */
 .ob-bust { position: relative; flex: none; width: 140px; height: 112px; margin: -40px auto 4px; pointer-events: none; }
@@ -178,38 +205,25 @@ body.drawer-open .ob-coach, body.ob-open .ob-coach { display: none; }
 .ob-progress { font-size: 12px; font-weight: 800; color: var(--muted); }
 .ui-next .ob-coach .npc-note-cta { margin: 0; cursor: pointer; }
 
-/* ── Il segno su cosa toccare: un alone spettrale, tre fuochi fatui che gli girano attorno, un rametto ── */
-.ob-halo { position: fixed; z-index: 11; left: 0; top: 0; width: 64px; height: 64px; translate: -50% -50%; pointer-events: none; visibility: hidden; --orbit-r: 40px; }
-.ob-halo::before { content: ''; position: absolute; inset: 0; border-radius: 50%;
-  background: radial-gradient(closest-side, rgba(143, 240, 212, 0) 50%, rgba(143, 240, 212, 0.5) 78%, rgba(143, 240, 212, 0) 100%);
-  box-shadow: 0 0 22px rgba(143, 240, 212, 0.45), 0 0 46px rgba(255, 190, 110, 0.22); animation: obPulse 1.6s ease-in-out infinite alternate; }
-.ob-halo.on-button::before { border-radius: 22px; background: none; box-shadow: 0 0 18px 4px rgba(143, 240, 212, 0.55), 0 0 40px 6px rgba(255, 190, 110, 0.28); }
-.ob-halo::after { content: ''; position: absolute; left: -16px; top: -16px; width: 36px; height: 36px; background: var(--sprig) no-repeat 0 0 / 100% 100%; filter: drop-shadow(0 2px 2px rgba(0, 0, 0, 0.45)); }
-.ob-orbit { position: absolute; left: 50%; top: 50%; width: 0; height: 0; }
-.ob-orbit i { position: absolute; left: -9px; top: -11px; width: 18px; height: 22px; background: var(--deco-wisp) center / contain no-repeat;
-  filter: drop-shadow(0 0 5px rgba(143, 240, 212, 0.9)); animation: obOrbit 5.4s linear infinite; }
-.ob-orbit i:nth-child(2) { animation-delay: -1.8s; scale: 0.8; }
-.ob-orbit i:nth-child(3) { animation-delay: -3.6s; scale: 0.65; }
-@keyframes obOrbit { from { transform: rotate(0deg) translateY(calc(-1 * var(--orbit-r))) rotate(0deg); } to { transform: rotate(360deg) translateY(calc(-1 * var(--orbit-r))) rotate(-360deg); } }
-@keyframes obPulse { from { opacity: 0.7; scale: 0.92; } to { opacity: 1; scale: 1.06; } }
-.ob-arrow { position: absolute; left: 50%; top: -44px; width: 0; height: 0; margin-left: -10px; border-left: 10px solid transparent; border-right: 10px solid transparent;
-  border-top: 15px solid #ffe2a8; filter: drop-shadow(0 3px 3px rgba(0, 0, 0, 0.6)); animation: obBounce 0.9s ease-in-out infinite alternate; }
-.ob-halo.on-button .ob-arrow { display: none; }
-@keyframes obBounce { to { transform: translateY(8px); } }
+/* ── L'occhio di bue su cosa toccare: tutto si spegne attorno, con una sfumatura ──
+   Un elemento grande quanto tre schermi, col buco trasparente al centro: per
+   seguire il bersaglio basta spostarlo con `translate` (non si ridisegna; con
+   `transform` la pulsazione ingrandirebbe anche lo spostamento); le misure
+   cambiano solo quando cambia il bersaglio. */
+.ob-beam {
+  position: fixed; z-index: 11; left: 0; top: 0; width: 300vmax; height: 300vmax; margin: -150vmax 0 0 -150vmax; pointer-events: none; visibility: hidden; will-change: translate, scale;
+  --rx: 84px; --ry: 84px; --dim: 0.45;
+  background:
+    radial-gradient(ellipse var(--rx) var(--ry) at 50% 50%, rgba(255, 200, 120, 0.12) 0%, rgba(255, 200, 120, 0) 55%),
+    radial-gradient(ellipse var(--rx) var(--ry) at 50% 50%, rgba(6, 4, 10, 0) 0%, rgba(6, 4, 10, 0) 52%, rgba(6, 4, 10, var(--dim)) 86%);
+  animation: obBeam 1.5s ease-in-out infinite alternate;
+}
+@keyframes obBeam { from { scale: 1; } to { scale: 1.06; } }
+.ob-beam.tour { position: fixed; z-index: 0; visibility: visible; --dim: 0.8; }
 
 /* ── Il giro dell'interfaccia: la scena si vede, il resto si spegne ── */
 .ob-tour-layer { background: none; place-items: start center; align-content: start; }
-.ob-spot { position: fixed; z-index: 0; border-radius: 18px; pointer-events: none; transition: left 0.3s ease, top 0.3s ease, width 0.3s ease, height 0.3s ease;
-  box-shadow: 0 0 0 9999px rgba(6, 4, 10, 0.74), 0 0 26px 6px rgba(143, 240, 212, 0.38), 0 0 60px rgba(255, 190, 110, 0.2); }
-.ob-spot::before { content: ''; position: absolute; left: -16px; top: -16px; width: 44px; height: 44px; background: var(--sprig) no-repeat 0 0 / 100% 100%; filter: drop-shadow(0 2px 2px rgba(0, 0, 0, 0.45)); }
-.ob-spot::after { content: ''; position: absolute; right: -12px; top: -14px; width: 26px; height: 26px; background: var(--deco-skull) center / contain no-repeat; rotate: 14deg; filter: drop-shadow(0 2px 2px rgba(0, 0, 0, 0.45)); }
-.ob-spot .ob-orbit { inset: 0; left: 0; top: 0; width: 100%; height: 100%; }
-.ob-spot .ob-orbit i { animation: obBob 1.8s ease-in-out infinite alternate; }
-.ob-spot .ob-orbit i:nth-child(1) { left: auto; right: -14px; top: auto; bottom: 14px; }
-.ob-spot .ob-orbit i:nth-child(2) { left: -12px; top: auto; bottom: -12px; animation-delay: -0.6s; }
-.ob-spot .ob-orbit i:nth-child(3) { left: 46%; top: auto; bottom: -16px; animation-delay: -1.2s; }
-@keyframes obBob { to { transform: translateY(-6px); } }
-.ui-next .dialog.modal.ob-tour-card { position: fixed; left: 50%; transform: translateX(-50%); top: 40%; z-index: 1; margin-top: 0; }
+.ui-next .dialog.modal.ob-card.ob-tour-card { position: fixed; left: 50%; transform: translateX(-50%); top: 40%; z-index: 1; margin-top: 0; }
 .ui-next .dialog.modal.ob-tour-card:not(.with-bust) { padding-top: 18px; }
 
 /* sotto il consiglio scendono i messaggi e le note delle presenze (niente si copre) */
@@ -217,10 +231,5 @@ body.drawer-open .ob-coach, body.ob-open .ob-coach { display: none; }
 .ui-next .has-coach.has-note .toasts { top: calc(var(--hud-top) + 34px + var(--coach-h, 96px) + var(--note-h, 64px) + 20px + var(--safe-t)); }
 
 @media (prefers-reduced-motion: reduce) {
-  .ob-layer, .ob-coach, .ob-light, .ob-hero::before, .ob-hero img, .ob-halo::before, .ob-orbit i, .ob-arrow { animation: none !important; }
-  .ob-spot { transition: none; }
-  /* fermi, i tre fuochi fatui restano distribuiti attorno */
-  .ob-halo .ob-orbit i { transform: translateY(calc(-1 * var(--orbit-r))); }
-  .ob-halo .ob-orbit i:nth-child(2) { transform: rotate(120deg) translateY(calc(-1 * var(--orbit-r))) rotate(-120deg); }
-  .ob-halo .ob-orbit i:nth-child(3) { transform: rotate(240deg) translateY(calc(-1 * var(--orbit-r))) rotate(-240deg); }
+  .ob-layer, .ob-coach, .ob-light, .ob-hero::before, .ob-hero img, .ob-beam { animation: none !important; }
 }

@@ -1,8 +1,10 @@
 // Il primo ingresso: la lettera (arriva piegata in quattro, si apre davanti a
-// una luce calda, chiusa da un sigillo di ceralacca), il nome, quattro schede
-// d'introduzione, il tutorial con azioni vere (un consiglio alla volta e un
-// segno su cosa toccare) e il giro dell'interfaccia (un riquadro illuminato
-// alla volta). Fino al tutorial la scena non si vede: c'è uno sfondo suo. Lo stato è nel
+// una luce calda, timbrata in fondo), il nome, quattro schede d'introduzione,
+// il tutorial con azioni vere (un consiglio alla volta e un occhio di bue su
+// cosa toccare) e il giro dell'interfaccia (un occhio di bue alla volta).
+// Fino al tutorial la scena non si vede: c'è uno sfondo suo, con le lucciole.
+// Animazioni e lucciole seguono il livello grafico (bassa: niente piega in 3D
+// né lucciole). Lo stato è nel
 // salvataggio (game/onboarding.ts): si riprende da dove ci si era fermati.
 // Dalle Impostazioni lo si rivede con uno stato a parte, che non si salva:
 // la partita non cambia (le azioni vere danno le loro ricompense, come sempre).
@@ -15,6 +17,7 @@ import { t, tList } from '../i18n/index.ts';
 import { cellCenter } from '../view/WorldView.ts';
 import { $, closeDrawer, drawerOpen, h, setUiBlocking } from './dom.ts';
 import { lpIconPng } from './lpIcons.ts';
+import { groundUrl } from './previews.ts';
 import { npcPortrait, wispPortrait } from './npcPortraits.ts';
 import type { UI } from './UI.ts';
 
@@ -39,8 +42,9 @@ export class Onboarding {
   private replaying: OnboardingState | null = null;
   private layer: HTMLElement | null = null;
   private coach: HTMLElement | null = null;
-  /** Il segno su cosa toccare: segue un punto della scena o un pulsante (un alone con i fuochi fatui che girano). */
+  /** L'occhio di bue su cosa toccare: segue un punto della scena o un pulsante. */
   private halo: HTMLElement | null = null;
+  private haloKey = '';
   private markerAt: (() => THREE.Vector3 | null) | null = null;
   private haloEl: HTMLElement | null = null;
   /** Il pulsante del menù sopra l'oggetto che fa il passo (quando l'oggetto è selezionato, il segno passa lì). */
@@ -107,21 +111,38 @@ export class Onboarding {
     if (['welcome', 'name', 'intro'].includes(this.o.stage)) this.openLayer('ob-solid');
   }
 
-  /** Un livello sopra tutta la scena (la scena sotto si ferma); `ob-solid` la copre con lo sfondo del percorso. */
+  /**
+   * Un livello sopra tutta la scena (la scena sotto si ferma); `ob-solid` la
+   * copre con lo sfondo del percorso: lapidi, terra e pala in fondo e, se il
+   * livello grafico lo permette, le lucciole.
+   */
   private openLayer(cls: string, ...kids: Array<Node | null>): HTMLElement {
     this.layer?.remove();
-    const layer = h('div', { class: `ob-layer ${cls}`, role: 'dialog', 'aria-modal': 'true' }, ...kids);
+    const q = this.game.uiQuality();
+    const solid = cls.split(' ').includes('ob-solid');
+    const ground = solid && groundUrl() ? h('div', { class: 'ob-ground', 'aria-hidden': 'true', style: `background-image:url(${groundUrl()})` }) : null; // i18n-ok: stile
+    const flies = solid && !reducedMotion() ? this.fireflies(q === 'high' ? 16 : q === 'medium' ? 8 : 0) : null;
+    const layer = h('div', { class: `ob-layer q-${q} ${cls}`, role: 'dialog', 'aria-modal': 'true' }, ground, flies, ...kids);
     document.body.append(layer);
     this.layer = layer;
     setUiBlocking(true);
     return layer;
   }
 
+  /** Lucciole che vagano lente e si accendono e spengono (solo trasformazioni e opacità: costano poco). */
+  private fireflies(n: number): HTMLElement | null {
+    if (!n) return null;
+    const r = (a: number, b: number) => a + Math.random() * (b - a);
+    return h('div', { class: 'ob-flies', 'aria-hidden': 'true' }, ...Array.from({ length: n }, () => h('i', {
+      style: `--x:${r(4, 96).toFixed(1)}%;--y:${r(18, 92).toFixed(1)}%;--dx:${r(-60, 60).toFixed(0)}px;--dy:${r(-70, 40).toFixed(0)}px;--d:${r(5, 9).toFixed(1)}s;--b:${r(1.6, 3.2).toFixed(1)}s;--dl:${(-r(0, 9)).toFixed(1)}s;--s:${r(0.6, 1.2).toFixed(2)}`, // i18n-ok: stile
+    })));
+  }
+
   // ── La lettera ───────────────────────────────────────────────────────
 
   private showLetter() {
-    // il testo scorre sopra il sigillo, che chiude il foglio in fondo
-    const sheet = h('div', { class: 'ob-sheet' }, h('div', { class: 'ob-sheet-scroll', tabindex: '0' },
+    // il testo scorre; il timbro sta in basso a destra, sulla carta
+    const sheet = h('div', { class: 'ob-sheet' }, h('i', { class: 'ob-stamp', 'aria-hidden': 'true' }), h('div', { class: 'ob-sheet-scroll', tabindex: '0' },
       h('div', { class: 'ob-letter' },
         h('h2', {}, t('onboarding.letter.title')),
         ...tList('onboarding.letter.body').map((p) => h('p', {}, p)),
@@ -133,7 +154,7 @@ export class Onboarding {
       h('div', { class: 'ob-half top' }, q('tl'), q('tr flap')),
       h('div', { class: 'ob-half bottom' }, q('bl'), q('br flap')));
     const stage = h('div', { class: 'ob-stage', 'aria-label': t('onboarding.letter.aria') },
-      h('div', { class: 'ob-light', 'aria-hidden': 'true' }), fold, sheet, h('i', { class: 'ob-seal', 'aria-hidden': 'true' }));
+      h('div', { class: 'ob-light', 'aria-hidden': 'true' }), h('div', { class: 'ob-shade', 'aria-hidden': 'true' }), fold, sheet);
     const next = () => this.go('name');
     const layer = this.openLayer('ob-solid ob-letter-layer',
       h('button', { class: 'ob-skip', onclick: next }, t('onboarding.skip')),
@@ -143,7 +164,7 @@ export class Onboarding {
     if (reducedMotion()) { open(); return; }
     stage.classList.add('play');
     layer.classList.add('playing');
-    stage.querySelector('.ob-seal')!.addEventListener('animationend', open, { once: true });
+    stage.querySelector('.ob-stamp')!.addEventListener('animationend', open, { once: true });
     // un tocco durante l'animazione la salta
     stage.addEventListener('pointerdown', open, { once: true });
   }
@@ -224,8 +245,8 @@ export class Onboarding {
     document.body.append(this.coach);
     $('#game').classList.add('has-coach');
     $('#game').style.setProperty('--coach-h', `${this.coach.offsetHeight}px`); // i18n-ok: stile
-    this.halo = h('div', { class: 'ob-halo', 'aria-hidden': 'true' },
-      h('div', { class: 'ob-orbit' }, h('i'), h('i'), h('i')), h('b', { class: 'ob-arrow' }));
+    this.halo = h('div', { class: 'ob-beam', 'aria-hidden': 'true' });
+    this.haloKey = '';
     document.body.append(this.halo);
     if (target instanceof HTMLElement) { this.haloEl = target; return; }
     // un segno sulla scena, che segue la camera
@@ -287,6 +308,16 @@ export class Onboarding {
     }, 400);
   }
 
+  /** Le misure dell'occhio di bue (solo quando cambiano: il resto è uno spostamento, che costa poco). */
+  private beamSize(el: HTMLElement, w: number, h: number) {
+    const key = `${Math.round(w)}x${Math.round(h)}`; // i18n-ok: stile
+    if (key === this.haloKey && el === this.halo) return;
+    if (el === this.halo) this.haloKey = key;
+    // trasparente fino a poco oltre il bersaglio, buio pieno al doppio
+    el.style.setProperty('--rx', `${w + 20}px`); // i18n-ok: stile
+    el.style.setProperty('--ry', `${h + 20}px`); // i18n-ok: stile
+  }
+
   private clearMarks() {
     this.halo?.remove(); this.halo = null; this.markerAt = null; this.haloEl = null; this.ctxAct = null;
   }
@@ -309,10 +340,10 @@ export class Onboarding {
       if (p) r = { x: p.x, y: p.y, w: 64, h: 64 };
     }
     halo.style.visibility = r ? 'visible' : 'hidden';
-    halo.classList.toggle('on-button', !!btn);
     if (!r) return;
-    Object.assign(halo.style, { transform: `translate(${r.x}px, ${r.y}px)`, width: `${r.w}px`, height: `${r.h}px` }); // i18n-ok: stile
-    halo.style.setProperty('--orbit-r', `${Math.max(r.w, r.h) / 2 + 6}px`); // i18n-ok: stile
+    // con `translate` (non `transform`): la pulsazione (`scale`) non deve ingrandire anche lo spostamento
+    halo.style.translate = `${r.x}px ${r.y}px`; // i18n-ok: stile
+    this.beamSize(halo, r.w, r.h);
   }
 
   // ── Il giro dell'interfaccia ─────────────────────────────────────────
@@ -327,7 +358,7 @@ export class Onboarding {
     const stop = stops[Math.min(i, stops.length - 1)];
     const last = i >= stops.length - 1;
     stop.before?.();
-    const spot = h('div', { class: 'ob-spot', 'aria-hidden': 'true' }, h('div', { class: 'ob-orbit' }, h('i'), h('i'), h('i')));
+    const spot = h('div', { class: 'ob-beam tour', 'aria-hidden': 'true' });
     const card = h('div', { class: 'dialog modal ob-card ob-tour-card with-bust' },
       this.bust('small'),
       h('h3', {}, t(`onboarding.tour.${stop.key}.title`)),
@@ -342,7 +373,8 @@ export class Onboarding {
       const r = stop.rect();
       if (!r || !this.layer?.contains(card)) return;
       const pad = 8;
-      Object.assign(spot.style, { left: `${r.left - pad}px`, top: `${r.top - pad}px`, width: `${r.width + pad * 2}px`, height: `${r.height + pad * 2}px` });
+      spot.style.translate = `${r.left + r.width / 2}px ${r.top + r.height / 2}px`; // i18n-ok: stile
+      this.beamSize(spot, r.width + pad * 2, r.height + pad * 2);
       // sotto il riquadro (lasciando posto al mezzobusto che esce dalla scheda), o sopra;
       // se non c'è posto né sopra né sotto (il menù è alto), la scheda si fa senza mezzobusto
       const fits = (lift: number) => {

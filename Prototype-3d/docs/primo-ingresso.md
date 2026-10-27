@@ -16,13 +16,12 @@ si può saltare, e il percorso si può rivedere dalle Impostazioni.
 | `done` | Si gioca | — |
 
 - **Splash.** È quello di sempre. Solo al primo ingresso (`stage === 'welcome'`) mostra «Entra in Necrothing», col pulsante oro del gioco (`.big-btn`) e una sfumatura scura in basso perché si legga. Nessun contenuto commerciale. Agli avvii successivi lo splash sparisce da solo come prima.
-- **Sfondo.** Fino al tutorial la scena non si vede. Lettera, nome e introduzione stanno su uno sfondo loro (`.ob-solid`): i pannelli del gioco più scuri, cioè gradiente, pattern tono su tono, bagliore caldo al centro, edera in alto e felci in basso. È già sotto lo splash prima che sparisca (`cover()`).
-- **Lettera.** In 3,4 secondi:
-  - un foglio di carta anticata, piegato in quattro, arriva dal basso davanti a una luce calda che tremola;
-  - si apre prima in verticale, poi di lato; le pieghe restano segnate;
-  - compare il testo e un sigillo di ceralacca (col fuoco fatuo in rilievo) chiude il foglio in fondo.
-
-  Un tocco la apre subito; con il movimento ridotto è già aperta. Il testo scorre sopra il sigillo. «Salta» passa al nome; «Continua» compare a lettera aperta.
+- **Sfondo.** Fino al tutorial la scena non si vede. Lettera, nome e introduzione stanno su uno sfondo loro (`.ob-solid`): i pannelli del gioco più scuri, con pattern tono su tono, bagliore caldo al centro ed edera in alto. In fondo ci sono, più scure, le lapidi con la terra e la pala del dettaglio delle tombe. Lo sfondo è già sotto lo splash prima che sparisca (`cover()`).
+- **Lucciole.** Punti caldi che vagano e si accendono e spengono; si animano solo con trasformazioni e opacità. Il numero dipende dal livello grafico: 16 in alta, 8 in media, nessuna in bassa né con il movimento ridotto.
+- **Lettera.** È un foglio di carta logora: bordi strappati (una maschera), macchie e grana, pieghe ondulate e qualche grinza.
+  - In alta e media qualità, in 3,6 secondi: arriva piegato in quattro ondeggiando, davanti a una luce calda che tremola. Si apre prima in verticale e poi di lato, con un piccolo rimbalzo. Poi compare il testo e, in basso a destra, un timbro: il fuoco fatuo monocromatico in un cerchio d'inchiostro rovinato, ruotato di 30°.
+  - In bassa qualità non c'è la piega in 3D né il rumore della carta: il foglio sale e appare, poi arriva il timbro.
+  - Un tocco la apre subito; con il movimento ridotto è già aperta. «Salta» passa al nome; «Continua» compare a lettera aperta.
 - **Nome.** È il nome del Custode, senza registrazione, salvato nella partita. Si cambia in qualsiasi momento dal profilo, con le stesse regole. Le regole (`checkName`):
   - forma NFC, spazi ripetuti ridotti a uno;
   - da 1 a 24 caratteri (contati come grafemi);
@@ -81,7 +80,7 @@ Le anteprime del Custode e delle miniature (`warmHeroes`, `warmThumbs`) vengono 
 - **Stile:** `styles/ui-onboarding.css` riusa pannelli, pulsanti e caratteri del gioco (`.dialog.modal`, `.big-btn`, gotico, i pannelli «natura e luce» del tema scuro). Niente contorni.
 - **Il Custode che parla:** nel nome, nel consiglio del tutorial e nelle schede del giro il suo mezzobusto esce dal riquadro per circa un terzo, come nell'HUD. Non sta dentro una forma; sotto ha una linea da cui parte. Nella scheda del menu, se non c'è posto, la scheda resta senza mezzobusto.
 - **Consiglio del tutorial:** ha lo sfondo e i rametti delle notifiche dei personaggi. «Salta il tutorial ›» ha lo stile delle loro CTA.
-- **Segno su cosa toccare:** un alone spettrale con tre fuochi fatui che gli girano attorno e un rametto d'edera. Sulla scena ha anche una freccia; sui pulsanti segue la loro forma. Nel giro, il riquadro illuminato ha l'alone, un rametto, un teschio e i fuochi fatui che ondeggiano.
+- **Occhio di bue:** nel tutorial e nel giro tutto si spegne attorno al bersaglio con una sfumatura, senza decorazioni (più buio nel giro). È un elemento grande tre schermi col buco al centro: segue il bersaglio con `translate`, quindi non si ridisegna, e pulsa piano.
 - **Scena sotto i livelli:** mentre pergamena, nome, introduzione e giro sono aperti, la scena si ferma come sotto un pannello (`setUiBlocking`).
 - **Niente si copre:** messaggi e note delle presenze scendono sotto il consiglio.
 - **Prove:** a 390×844 e 375×667, anche con il movimento ridotto.

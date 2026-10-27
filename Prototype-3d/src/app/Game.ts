@@ -1651,6 +1651,9 @@ export class Game {
 
   private profile(): QualityProfile { return PROFILES[this.level()]; }
 
+  /** Il livello grafico in uso, per l'interfaccia (es. le animazioni del primo ingresso). */
+  uiQuality(): Quality { return this.level(); }
+
   /** Densità di bosco e prato, nebbia e particelle del livello in uso. */
   private baseQuality(): Quality { return this.profile().bake; }
 

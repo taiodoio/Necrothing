@@ -225,9 +225,12 @@ export class Game {
    * Meno frame = meno lavoro per GPU e CPU = meno batteria. Il tetto viene
    * dalla fluidità scelta (Auto: 60 in Alta, 30 in Media e Bassa); da fermo
    * (nessun tocco da IDLE_MS, il Custode fermo) si scende a IDLE_FPS e sotto
-   * i menù a MENU_FPS.
+   * i menù a MENU_FPS. Sotto un pannello la scena non si ridisegna proprio:
+   * resta il fotogramma di quando si è aperto (vedi `drawnUnderMenu`).
    */
   private frameCap = 60;
+  /** Con un pannello aperto il fotogramma sotto il velo c'è già: la logica va avanti, il disegno no. */
+  private drawnUnderMenu = false;
   private idleSaver = true;
   private lastFrameAt = 0;
   private lastActiveAt = 0;
@@ -303,11 +306,16 @@ export class Game {
     this.hudTimer -= dt;
     if (this.hudTimer <= 0) { this.hudTimer = 1; this.ui.refreshClock(); this.refreshBusinesses(); }
 
-    if (!this.renderer.shadowMap.autoUpdate) this.refreshStaticShadows();
-    this.world.updateDecorLod(this.rig.camera);
-    this.renderer.info.reset();
-    this.updateFocus();
-    this.postfx.render(this.scene, this.rig.camera);
+    // sotto un pannello si disegna un fotogramma e poi più nulla (la pagina di misura disegna sempre)
+    const menu = drawerOpen() && this.idleSaver;
+    if (!menu || !this.drawnUnderMenu) {
+      if (!this.renderer.shadowMap.autoUpdate) this.refreshStaticShadows();
+      this.world.updateDecorLod(this.rig.camera);
+      this.renderer.info.reset();
+      this.updateFocus();
+      this.postfx.render(this.scene, this.rig.camera);
+    }
+    this.drawnUnderMenu = menu;
     this.ui.frame();
 
     this.fps.frames++; this.fps.time += dt;
@@ -365,6 +373,7 @@ export class Game {
     this.rig.minView = 6;
     this.updateCameraWorld();
     if (!this.resized) { this.rig.setView(w < 700 ? 24 : 22); this.resized = true; }
+    this.drawnUnderMenu = false; // la tela ridimensionata va ridisegnata anche sotto un pannello
   };
   private resized = false;
 

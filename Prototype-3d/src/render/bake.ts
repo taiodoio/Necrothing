@@ -6,7 +6,9 @@ import * as THREE from 'three';
 import { LP } from './lowpoly/kit.ts';
 import { LPC } from './lowpoly/palette.ts';
 import { weeds } from './lowpoly/details.ts';
-import { getModel, instantiate, lightWorldPos, LOWPOLY_MATERIALS } from './modelCache.ts';
+import { getModel, instantiate, lightWorldPos, LOWPOLY_MATERIALS, type CachedModel } from './modelCache.ts';
+import { houseRoof, houseVariant } from '../game/house.ts';
+import { housePartLP } from './lowpoly/architecture.ts';
 import { graveModel } from './models/graves.ts';
 import { placeableKey, placeableModel } from './models/registry.ts';
 import type { GraveType } from '../game/graves.ts';
@@ -81,13 +83,17 @@ export function renderGround(W = 1080, H = 380, cam = { y: 4.2, z: 9.2, look: 0.
   const camera = new THREE.PerspectiveCamera(cam.fov, W / H, 0.1, 60);
   camera.position.set(0, cam.y, cam.z); camera.lookAt(0, cam.look, 0);
   r.render(scene, camera);
-  const url = canvas.toDataURL('image/png');
+  const url = canvas.toDataURL('image/webp', 0.9);
   r.dispose(); r.forceContextLoss();
   return url;
 }
 
-/** Anteprima di un oggetto come nella reference: su una zolla d'erba tonda, di notte, con le sue luci accese. */
-export function renderItemPreview(type: string, S = 320): string {
+/**
+ * Anteprima di un modello come nella reference: su una zolla d'erba tonda, di
+ * notte, con le sue luci accese. Ritagliata e appoggiata in basso al centro,
+ * così le zolle stanno tutte alla stessa altezza; in WebP (pesa un terzo del PNG).
+ */
+function renderPreview(model: CachedModel, key: string, S: number): string {
   const canvas = document.createElement('canvas');
   canvas.width = S; canvas.height = S;
   const r = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true, preserveDrawingBuffer: true });
@@ -100,15 +106,13 @@ export function renderItemPreview(type: string, S = 320): string {
   const moon = new THREE.DirectionalLight('#b4c6ee', 1.5); moon.position.set(-5, 8, 4);
   const warm = new THREE.DirectionalLight('#ffc98a', 0.6); warm.position.set(5, 3, 6); // luce calda di lato, come le lanterne del cimitero
   scene.add(moon, warm);
-  const v = { type, variant: 0, dirty: false, broken: false, lit: true, seed: 1 };
-  const model = getModel(placeableKey(v), 'lowpoly', () => placeableModel(v), 1);
   const o = instantiate(model, { castShadow: false });
   scene.add(o);
   const box = new THREE.Box3().setFromObject(o);
   const size = box.getSize(new THREE.Vector3()), c = box.getCenter(new THREE.Vector3());
   const rad = Math.max(Math.max(size.x, size.z) * 0.62 + 0.35, size.y * 0.3);
   // la zolla: un disco d'erba basso col bordo di terra, ciuffi e fiori attorno
-  const lp = new LP(`bake:plate:${type}`);
+  const lp = new LP(`bake:plate:${key}`);
   lp.cyl(c.x, -0.16, c.z, rad + 0.05, rad + 0.12, 0.12, 12, LPC.soilDark, { jitter: 0.02 });
   lp.cyl(c.x, -0.05, c.z, rad, rad + 0.04, 0.06, 12, '#3f5536', { jitter: 0.02, vary: 0.12 });
   const built = lp.build();
@@ -128,7 +132,45 @@ export function renderItemPreview(type: string, S = 320): string {
   camera.position.set(c.x + dist * 0.62, box.min.y + h * 0.5 + dist * 0.55, c.z + dist * 0.62);
   camera.lookAt(c.x, box.min.y + h * 0.42, c.z);
   r.render(scene, camera);
-  const url = canvas.toDataURL('image/png');
+  const url = settle(canvas, S);
   r.dispose(); r.forceContextLoss();
   return url;
+}
+
+/** Ritaglia l'immagine e la appoggia in basso al centro (stesso margine per tutte), in WebP. */
+function settle(src: HTMLCanvasElement, S: number): string {
+  const tmp = document.createElement('canvas');
+  tmp.width = tmp.height = S;
+  const g = tmp.getContext('2d')!;
+  g.drawImage(src, 0, 0);
+  const px = g.getImageData(0, 0, S, S).data;
+  let x0 = S, y0 = S, x1 = -1, y1 = -1;
+  for (let y = 0; y < S; y++) for (let x = 0; x < S; x++) if (px[(y * S + x) * 4 + 3] > 8) { if (x < x0) x0 = x; if (x > x1) x1 = x; if (y < y0) y0 = y; if (y > y1) y1 = y; }
+  const out = document.createElement('canvas');
+  out.width = out.height = S;
+  if (x1 >= 0) {
+    const w = x1 - x0 + 1, ht = y1 - y0 + 1, pad = Math.round(S * 0.03);
+    // se non entra, si rimpicciolisce; altrimenti resta com'è
+    const k = Math.min(1, (S - 2 * pad) / w, (S - 2 * pad) / ht);
+    out.getContext('2d')!.drawImage(tmp, x0, y0, w, ht, (S - w * k) / 2, S - pad - ht * k, w * k, ht * k);
+  }
+  return out.toDataURL('image/webp', 0.88);
+}
+
+/** Anteprima di un oggetto del catalogo. */
+export function renderItemPreview(type: string, S = 320): string {
+  const v = { type, variant: 0, dirty: false, broken: false, lit: true, seed: 1 };
+  return renderPreview(getModel(placeableKey(v), 'lowpoly', () => placeableModel(v), 1), type, S);
+}
+
+/** Anteprima di un tetto (la casa con quel tetto) o di un'aggiunta della Casa del Custode. */
+export function renderHousePreview(id: string, S = 320): string {
+  if (houseRoof(id)) return renderItemPreviewVariant('keeper_house', houseVariant({ owned: [id], roof: id, hidden: [] }), S);
+  const m = housePartLP(id);
+  return renderPreview({ geometries: m.geometries, lights: m.lights, height: 1, mats: LOWPOLY_MATERIALS, dedicated: true } as unknown as CachedModel, `house:${id}`, S);
+}
+
+function renderItemPreviewVariant(type: string, variant: number, S: number): string {
+  const v = { type, variant, dirty: false, broken: false, lit: true, seed: 1 };
+  return renderPreview(getModel(placeableKey(v), 'lowpoly', () => placeableModel(v), 1), `${type}:${variant}`, S);
 }

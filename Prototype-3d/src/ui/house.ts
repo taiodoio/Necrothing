@@ -16,6 +16,7 @@ import { currentLang, t } from '../i18n/index.ts';
 import { closeDrawer, confirmDialog, fmtDate, h, openDrawer, setDrawerBody, setDrawerHero, toast, wispPill } from './dom.ts';
 import { icon } from './icons.ts';
 import { uiPlay } from '../app/uiNext.ts';
+import { previewUrl } from './previews.ts';
 import { houseHeader } from './houseHeader.ts';
 import { registryHeader } from './registryHeader.ts';
 import { openDeceased } from './deceased.ts';
@@ -27,6 +28,12 @@ const asModel = (m: LPModel, height: number) => ({ geometries: m.geometries, lig
 const fruitImg = () => modelThumb('frutto-ricordo', asModel(memoryFruitLP(), 1), [1, 1]);
 
 /** Miniatura di un tetto (la casa nuda con quel tetto) o di un'aggiunta da sola. */
+/** L'immagine di un tetto o di un'aggiunta: l'anteprima illuminata (interfaccia «viva») o la miniatura. */
+function houseImg(s: SaveData, id: string, cls: 'lit' | 'lit-hero'): HTMLElement {
+  const url = uiPlay() && s.settings.style === 'lowpoly' ? previewUrl(`house-${id}`) : null;
+  return url ? h('img', { class: cls, src: url, alt: '', decoding: 'async' }) : h('img', { src: houseItemImg(s, id), alt: '' });
+}
+
 export function houseItemImg(s: SaveData, id: string): string {
   if (houseRoof(id)) return placeableThumb('keeper_house', s.settings.style, houseVariant({ owned: [id], roof: id, hidden: [] }));
   return modelThumb(`hpart:${id}`, asModel(housePartLP(id), 1), [1, 1]);
@@ -117,7 +124,7 @@ export function openHouse(ui: UI) {
     const parts = HOUSE_PARTS.filter((p) => s.house.owned.includes(p.id));
     const card = (it: HouseRoof | HousePart, active: boolean, onclick: () => void) =>
       h('button', { class: `card ${active ? 'selected' : ''}`, onclick },
-        h('span', { class: 'thumb' }, h('img', { src: houseItemImg(s, it.id), alt: '' }),
+        h('span', { class: 'thumb' }, houseImg(s, it.id, 'lit'),
           active ? h('span', { class: 'owned-tick' }, icon('check', 15)) : null),
         h('b', {}, it.label),
         h('span', { class: 'price owned' }, active ? t('house.ui.card.shown') : t('house.ui.card.hidden')));
@@ -159,7 +166,7 @@ export function houseShopGrid(s: SaveData, selected: string | null, select: (id:
     const needs = has ? [] : houseNeeds(s, it);
     const locked = needs.some((n) => n.icon === 'lock');
     return h('button', { class: `card ${selected === it.id ? 'selected' : ''} ${locked ? 'locked' : ''} ${!locked && needs.length ? 'dim' : ''} ${has ? 'owned' : ''}`, onclick: () => select(it.id) },
-      h('span', { class: 'thumb' }, h('img', { src: houseItemImg(s, it.id), alt: '' }),
+      h('span', { class: 'thumb' }, houseImg(s, it.id, 'lit'),
         locked ? h('span', { class: 'lock-over' }, icon('lock', 30)) : null,
         has ? h('span', { class: 'owned-tick' }, icon('check', 15)) : null),
       h('b', {}, it.label),
@@ -176,7 +183,7 @@ export function houseShopDetail(ui: UI, id: string, close: () => void, bought: (
   const needs = has ? [] : houseNeeds(s, it);
   const kind = houseRoof(id) ? t('house.ui.shop.kindRoof') : t('house.ui.shop.kindPart');
   return h('div', { class: 'shop-detail' }, wispPill(s.player.wisps),
-    h('div', { class: 'shop-detail-top' }, h('img', { src: houseItemImg(s, id), alt: '' }),
+    h('div', { class: 'shop-detail-top' }, houseImg(s, id, 'lit-hero'),
       h('h3', {}, it.label), h('p', { class: 'muted' }, t(id === 'veggie' ? 'house.ui.shop.subVeggie' : 'house.ui.shop.sub', { kind, rank: it.minRank }))),
     h('p', { class: 'muted', style: 'margin:0' }, it.description),
     'perk' in it ? h('div', { class: 'perk-row' }, icon('unlock', 18), h('p', {}, h('b', {}, `${t('house.ui.shop.perkLabel')} `), it.perk, ` ${t('house.ui.shop.perkNote')}`)) : h('p', { class: 'muted', style: 'margin:0;font-size:12px' }, t('house.ui.shop.cosmetic')),
@@ -199,7 +206,7 @@ function openHouseShop(ui: UI, selected: string | null = null) {
 export function houseBoughtView(ui: UI, id: string, back: () => void, leave: () => void): HTMLElement {
   const s = ui.game.state;
   return h('div', { class: 'shop-detail' }, wispPill(s.player.wisps),
-    h('div', { class: 'shop-detail-top' }, h('img', { src: houseItemImg(s, id), alt: '' }), h('h3', {}, houseItem(id)!.label),
+    h('div', { class: 'shop-detail-top' }, houseImg(s, id, 'lit-hero'), h('h3', {}, houseItem(id)!.label),
       h('p', { class: 'muted' }, t('house.ui.bought.text'))),
     h('div', { class: 'row' },
       h('button', { class: 'big-btn ghost', onclick: back }, t('house.ui.bought.continue')),

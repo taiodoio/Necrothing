@@ -97,16 +97,42 @@ export function darkZones(rgb: string, n: number, seed: number, alpha: number): 
 
 export const svgUrl = (s: string) => `url("data:image/svg+xml;charset=utf-8,${encodeURIComponent(s)}")`;
 
-/** Mette i decori a disposizione del CSS (ui-play.css). */
+/**
+ * Lo stesso disegno come immagine PNG (`url(...)` per il CSS), al doppio della
+ * misura: un'immagine si ridisegna molto più in fretta di un SVG con tanti
+ * tracciati o con i filtri (su Safari soprattutto). Null se non si riesce.
+ */
+export function svgToPng(s: string, w: number, h: number, scale = 2): Promise<string | null> {
+  return new Promise((resolve) => {
+    const im = new Image();
+    im.onload = () => {
+      const c = document.createElement('canvas');
+      c.width = Math.round(w * scale); c.height = Math.round(h * scale);
+      const g = c.getContext('2d');
+      if (!g) { resolve(null); return; }
+      g.drawImage(im, 0, 0, c.width, c.height);
+      try { resolve(`url("${c.toDataURL('image/png')}")`); } catch { resolve(null); }
+      c.width = c.height = 0;
+    };
+    im.onerror = () => resolve(null);
+    im.src = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(s)}`;
+  });
+}
+
+/** Mette i decori a disposizione del CSS (ui-play.css): subito come SVG, poi (appena pronti) come PNG. */
 export function installNatureDecor() {
   const st = document.documentElement.style;
-  st.setProperty('--ivy', svgUrl(ivySvg()));
-  st.setProperty('--sprig', svgUrl(sprigSvg()));
-  st.setProperty('--fern', svgUrl(fernSvg()));
-  st.setProperty('--vines', svgUrl(vinesSvg('#0e0914', 0.22, 400, 900, 5)));
-  st.setProperty('--vines-dialog', svgUrl(vinesSvg('#0e0914', 0.22, 400, 520, 13, { count: 3 })));
-  st.setProperty('--vines-hud', svgUrl(vinesSvg('#0e0914', 0.22, 300, 220, 9, { count: 2, reach: 0.34 })));
-  st.setProperty('--vines-paper', svgUrl(vinesSvg('#784e2a', 0.16, 300, 420, 21, { count: 3, reach: 0.4 })));
+  const set = (name: string, s: string, w: number, h: number) => {
+    st.setProperty(name, svgUrl(s));
+    void svgToPng(s, w, h).then((png) => { if (png) st.setProperty(name, png); });
+  };
+  set('--ivy', ivySvg(), 180, 180);
+  set('--sprig', sprigSvg(), 64, 64);
+  set('--fern', fernSvg(), 90, 70);
+  set('--vines', vinesSvg('#0e0914', 0.22, 400, 900, 5), 400, 900);
+  set('--vines-dialog', vinesSvg('#0e0914', 0.22, 400, 520, 13, { count: 3 }), 400, 520);
+  set('--vines-hud', vinesSvg('#0e0914', 0.22, 300, 220, 9, { count: 2, reach: 0.34 }), 300, 220);
+  set('--vines-paper', vinesSvg('#784e2a', 0.16, 300, 420, 21, { count: 3, reach: 0.4 }), 300, 420);
   st.setProperty('--zones', darkZones('10, 6, 16', 7, 3, 0.34));
   st.setProperty('--zones-small', darkZones('10, 6, 16', 3, 9, 0.3));
   st.setProperty('--zones-paper', darkZones('120, 84, 40', 3, 4, 0.16));

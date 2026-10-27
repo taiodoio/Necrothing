@@ -11,7 +11,7 @@ import {
 } from '../game/graves.ts';
 import { ACHIEVEMENTS, achievementProgress, nextRank, rankForXp, rankProgress } from '../game/progression.ts';
 import * as R from '../game/rules.ts';
-import { createNewGame, type ArtStyle, type FpsSetting, type SaveData, type ThemeSetting, type TimeOverride } from '../game/state.ts';
+import { createNewGame, type ArtStyle, type FpsSetting, type SaveData, type TimeOverride } from '../game/state.ts';
 import { computePrestige, detectDistricts, DISTRICT_LABELS, expansionStatus } from '../game/world.ts';
 import { newId } from '../game/rng.ts';
 import { $, closeDrawer, confirmDialog, fmtDate, h, type Modal, openDrawer, openModal, progressDialog, setDrawerBody, setDrawerExtra, setDrawerFooter, setDrawerHero, toast, wispPill } from './dom.ts';
@@ -879,7 +879,6 @@ export function openSettings(ui: UI) {
     graphics: [
       h('div', { class: 'setting' }, t('settings.quality'), seg(s.quality, [['auto', t('settings.quality.auto')], ['low', t('settings.quality.low')], ['medium', t('settings.quality.medium')], ['high', t('settings.quality.high')]], (v) => game.setQuality(v))),
       s.quality === 'auto' ? h('p', { class: 'muted', style: 'margin:-2px 0 4px;font-size:12px' }, t('settings.quality.autoHint')) : null,
-      uiNext() ? h('div', { class: 'setting' }, t('settings.theme'), seg<ThemeSetting>(s.theme, [['auto', t('settings.theme.auto')], ['light', t('settings.theme.light')], ['dark', t('settings.theme.dark')]], (v) => game.setTheme(v))) : null,
       h('div', { class: 'setting' }, t('settings.fps'), seg<FpsSetting>(s.fps, [['auto', t('settings.fps.auto')], ['30', t('settings.fps.30')], ['60', t('settings.fps.60')]], (v) => game.setFps(v))),
       h('p', { class: 'muted', style: 'margin:-2px 0 4px;font-size:12px' }, s.fps === 'auto' ? t('settings.fps.autoHint') : s.fps === '30' ? t('settings.fps.30Hint') : t('settings.fps.60Hint')),
       h('div', { class: 'setting' }, t('settings.time'), seg<TimeOverride>(s.timeOverride, [['auto', t('settings.time.auto')], ['day', t('settings.time.day')], ['dusk', t('settings.time.dusk')], ['night', t('settings.time.night')]], (v) => game.setTimeOverride(v))),

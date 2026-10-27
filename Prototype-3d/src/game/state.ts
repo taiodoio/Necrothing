@@ -28,7 +28,6 @@ export type QualitySetting = Quality | 'auto';
 /** Frame al secondo: «auto» = 60 in Alta, 30 in Media e Bassa. */
 export type FpsSetting = 'auto' | '30' | '60';
 /** Tema dell'interfaccia (interfaccia nuova): «auto» segue il tema del telefono. */
-export type ThemeSetting = 'auto' | 'light' | 'dark';
 export type TimeOverride = 'auto' | DayPhase;
 export type Weather = 'clear' | 'fog' | 'rain' | 'storm';
 
@@ -161,7 +160,6 @@ export interface Settings {
   camera: CameraMode;
   quality: QualitySetting;
   fps: FpsSetting;
-  theme: ThemeSetting;
   timeOverride: TimeOverride;
   weatherEffects: boolean;
   /** Sfocatura tilt-shift ai bordi (media/alta qualità). */
@@ -211,7 +209,6 @@ export const DEFAULT_SETTINGS: Settings = {
   camera: 'angled',
   quality: 'auto',
   fps: 'auto',
-  theme: 'auto',
   timeOverride: 'auto',
   weatherEffects: true,
   edgeBlur: true,
@@ -450,6 +447,8 @@ export function normalizeSave(raw: unknown): SaveData | null {
   if (data.settings && (data.settings as { camera?: string }).camera !== 'angled') data.settings = { ...data.settings, camera: 'angled' };
   // gli stili di prova (voxel, miniatura) sono stati tolti: il gioco è low-poly
   if (data.settings && data.settings.style !== 'lowpoly') data.settings = { ...data.settings, style: 'lowpoly' };
+  // il tema chiaro è stato tolto: l'interfaccia è solo scura
+  if (data.settings && 'theme' in data.settings) { const { theme: _, ...rest } = data.settings as typeof data.settings & { theme?: unknown }; data.settings = rest as typeof data.settings; }
   return {
     ...base,
     ...data,

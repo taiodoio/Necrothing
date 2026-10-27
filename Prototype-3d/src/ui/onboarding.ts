@@ -1,7 +1,8 @@
-// Il primo ingresso, sopra la scena: la pergamena che si srotola, il nome,
-// quattro schede d'introduzione con la voce del Custode, il tutorial con
-// azioni vere (un consiglio alla volta e un segno su cosa toccare) e il giro
-// dell'interfaccia (un riquadro illuminato alla volta). Lo stato è nel
+// Il primo ingresso: la lettera (arriva piegata in quattro, si apre davanti a
+// una luce calda, chiusa da un sigillo di ceralacca), il nome, quattro schede
+// d'introduzione, il tutorial con azioni vere (un consiglio alla volta e un
+// segno su cosa toccare) e il giro dell'interfaccia (un riquadro illuminato
+// alla volta). Fino al tutorial la scena non si vede: c'è uno sfondo suo. Lo stato è nel
 // salvataggio (game/onboarding.ts): si riprende da dove ci si era fermati.
 // Dalle Impostazioni lo si rivede con uno stato a parte, che non si salva:
 // la partita non cambia (le azioni vere danno le loro ricompense, come sempre).
@@ -14,8 +15,7 @@ import { t, tList } from '../i18n/index.ts';
 import { cellCenter } from '../view/WorldView.ts';
 import { $, closeDrawer, drawerOpen, h, setUiBlocking } from './dom.ts';
 import { lpIconPng } from './lpIcons.ts';
-import { npcPortrait } from './npcPortraits.ts';
-import { parchment } from './parchment.ts';
+import { npcPortrait, wispPortrait } from './npcPortraits.ts';
 import type { UI } from './UI.ts';
 
 let active: Onboarding | null = null;
@@ -24,8 +24,10 @@ export const signalOnboarding = (s: TutorialSignal) => active?.signal(s);
 
 const reducedMotion = () => typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches;
 
-/** Le schede dell'introduzione: icona del gioco e chiave del testo. */
-const INTRO: Array<[string, number]> = [['wisp', 1], ['flower', 2], ['ghost', 3], ['coffin', 4]];
+/** Le schede dell'introduzione: l'immagine (il fuoco fatuo e il fantasma sono quelli della scena) e la chiave del testo. */
+const INTRO: Array<[() => string, number, string]> = [
+  [wispPortrait, 1, 'wisp'], [() => lpIconPng('flower', 160), 2, 'icon'], [() => npcPortrait('ghost'), 3, 'ghost'], [() => lpIconPng('coffin', 160), 4, 'icon'],
+];
 /** Il pulsante del menù dell'oggetto che fa ciascun passo. */
 const CTX_ACT: Partial<Record<TutorialStep, string>> = { visit: 'detail', light: 'light', clean: 'clean' };
 
@@ -37,12 +39,12 @@ export class Onboarding {
   private replaying: OnboardingState | null = null;
   private layer: HTMLElement | null = null;
   private coach: HTMLElement | null = null;
-  private marker: HTMLElement | null = null;
+  /** Il segno su cosa toccare: segue un punto della scena o un pulsante (un alone con i fuochi fatui che girano). */
+  private halo: HTMLElement | null = null;
   private markerAt: (() => THREE.Vector3 | null) | null = null;
+  private haloEl: HTMLElement | null = null;
   /** Il pulsante del menù sopra l'oggetto che fa il passo (quando l'oggetto è selezionato, il segno passa lì). */
   private ctxAct: string | null = null;
-  private ctxGlow: HTMLElement | null = null;
-  private glow: HTMLElement | null = null;
   private waitTimer = 0;
 
   constructor(ui: UI) {
@@ -97,7 +99,15 @@ export class Onboarding {
     setUiBlocking(false);
   }
 
-  /** Un livello sopra tutta la scena, col fondo scurito (la scena sotto si ferma). */
+  /**
+   * Prima che lo splash sparisca: lo sfondo del percorso è già al suo posto
+   * (se la fase in corso lo usa), così la scena non si intravede.
+   */
+  cover() {
+    if (['welcome', 'name', 'intro'].includes(this.o.stage)) this.openLayer('ob-solid');
+  }
+
+  /** Un livello sopra tutta la scena (la scena sotto si ferma); `ob-solid` la copre con lo sfondo del percorso. */
   private openLayer(cls: string, ...kids: Array<Node | null>): HTMLElement {
     this.layer?.remove();
     const layer = h('div', { class: `ob-layer ${cls}`, role: 'dialog', 'aria-modal': 'true' }, ...kids);
@@ -107,31 +117,40 @@ export class Onboarding {
     return layer;
   }
 
-  // ── La pergamena ─────────────────────────────────────────────────────
+  // ── La lettera ───────────────────────────────────────────────────────
 
   private showLetter() {
-    const text = h('div', { class: 'ob-letter' },
-      h('h2', {}, t('onboarding.letter.title')),
-      ...tList('onboarding.letter.body').map((p) => h('p', {}, p)),
-      h('p', { class: 'ob-closing' }, t('onboarding.letter.closing')),
-      h('p', { class: 'ob-sign' }, t('onboarding.letter.sign')));
-    const paper = parchment('ob-paper', text);
-    const scroll = h('div', { class: 'ob-scroll', 'aria-label': t('onboarding.letter.aria') }, h('div', { class: 'ob-roll top' }), paper, h('div', { class: 'ob-roll bottom' }));
+    // il testo scorre sopra il sigillo, che chiude il foglio in fondo
+    const sheet = h('div', { class: 'ob-sheet' }, h('div', { class: 'ob-sheet-scroll', tabindex: '0' },
+      h('div', { class: 'ob-letter' },
+        h('h2', {}, t('onboarding.letter.title')),
+        ...tList('onboarding.letter.body').map((p) => h('p', {}, p)),
+        h('p', { class: 'ob-closing' }, t('onboarding.letter.closing')),
+        h('p', { class: 'ob-sign' }, t('onboarding.letter.sign')))));
+    // il foglio piegato in quattro: la metà di sotto (con la sua metà destra) si apre in giù, poi le due metà destre si aprono di lato
+    const q = (c: string) => h('i', { class: `ob-q ${c}` });
+    const fold = h('div', { class: 'ob-fold', 'aria-hidden': 'true' },
+      h('div', { class: 'ob-half top' }, q('tl'), q('tr flap')),
+      h('div', { class: 'ob-half bottom' }, q('bl'), q('br flap')));
+    const stage = h('div', { class: 'ob-stage', 'aria-label': t('onboarding.letter.aria') },
+      h('div', { class: 'ob-light', 'aria-hidden': 'true' }), fold, sheet, h('i', { class: 'ob-seal', 'aria-hidden': 'true' }));
     const next = () => this.go('name');
-    this.openLayer('ob-letter-layer',
+    const layer = this.openLayer('ob-solid ob-letter-layer',
       h('button', { class: 'ob-skip', onclick: next }, t('onboarding.skip')),
-      scroll,
+      stage,
       h('button', { class: 'big-btn ob-continue', onclick: next }, t('onboarding.continue')));
-    // la carta è già della sua misura (la pergamena si disegna una volta sola): si srotola scoprendola
-    const open = () => scroll.classList.add('open');
+    const open = () => { stage.classList.add('open'); layer.classList.remove('playing'); };
     if (reducedMotion()) { open(); return; }
-    requestAnimationFrame(() => {
-      scroll.style.setProperty('--ob-h', `${paper.offsetHeight}px`);
-      scroll.classList.add('unroll');
-    });
-    scroll.addEventListener('animationend', open, { once: true });
+    stage.classList.add('play');
+    layer.classList.add('playing');
+    stage.querySelector('.ob-seal')!.addEventListener('animationend', open, { once: true });
     // un tocco durante l'animazione la salta
-    scroll.addEventListener('pointerdown', open, { once: true });
+    stage.addEventListener('pointerdown', open, { once: true });
+  }
+
+  /** Il Custode che parla: il suo mezzobusto esce dal riquadro, con una linea da cui parte (come nell'HUD). */
+  private bust(cls = '') {
+    return h('div', { class: `ob-bust ${cls}`, 'aria-hidden': 'true' }, h('img', { src: npcPortrait('custode', this.game.state.player.look), alt: '' }));
   }
 
   // ── Il nome ──────────────────────────────────────────────────────────
@@ -139,7 +158,7 @@ export class Onboarding {
   private showName() {
     const s = this.game.state;
     const fallback = t('state.player.defaultName');
-    const input = h('input', { class: 'ob-input', value: s.player.name === fallback ? '' : s.player.name, maxLength: NAME_MAX * 2, placeholder: fallback, autocomplete: 'off', autocapitalize: 'words', enterkeyhint: 'done', 'aria-label': t('onboarding.name.label') }) as HTMLInputElement;
+    const input = h('input', { value: s.player.name === fallback ? '' : s.player.name, maxLength: NAME_MAX * 2, placeholder: fallback, autocomplete: 'off', autocapitalize: 'words', enterkeyhint: 'done', 'aria-label': t('onboarding.name.label') }) as HTMLInputElement;
     const err = h('p', { class: 'ob-error', role: 'alert' });
     const confirm = () => {
       const r = checkName(input.value);
@@ -151,26 +170,25 @@ export class Onboarding {
     };
     input.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); confirm(); } });
     input.addEventListener('input', () => { err.textContent = ''; });
-    this.openLayer('ob-name-layer', h('div', { class: 'dialog modal ob-card' },
-      h('img', { class: 'ob-portrait', src: npcPortrait('custode', s.player.look), alt: '' }),
+    this.openLayer('ob-solid ob-name-layer', h('div', { class: 'dialog modal ob-card with-bust' },
+      this.bust(),
       h('b', { class: 'ob-say' }, t('onboarding.name.say')),
       h('p', {}, t('onboarding.name.text')),
-      h('label', { class: 'ob-field' }, h('span', {}, t('onboarding.name.label')), input),
+      h('label', { class: 'field ob-field' }, h('span', {}, t('onboarding.name.label')), input),
       err,
       h('p', { class: 'muted ob-hint' }, t('onboarding.name.hint')),
       h('div', { class: 'row' },
         h('button', { class: 'big-btn ghost', onclick: () => this.go('intro') }, t('onboarding.skip')),
         h('button', { class: 'big-btn', onclick: confirm }, t('onboarding.name.ok')))));
-    setTimeout(() => input.focus({ preventScroll: true }), 350);
   }
 
   // ── L'introduzione ───────────────────────────────────────────────────
 
   private showIntro(i = 0) {
-    const [ic, n] = INTRO[i];
+    const [img, n, kind] = INTRO[i];
     const last = i === INTRO.length - 1;
-    this.openLayer('ob-intro-layer', h('div', { class: 'dialog modal ob-card ob-intro' },
-      h('img', { class: 'ob-icon', src: lpIconPng(ic, 128), alt: '' }),
+    this.openLayer('ob-solid ob-intro-layer', h('div', { class: 'dialog modal ob-card ob-intro with-hero' },
+      h('div', { class: `ob-hero ${kind}`, 'aria-hidden': 'true' }, h('img', { src: img(), alt: '' })),
       h('h3', {}, t(`onboarding.intro.${n}.title`, { name: this.game.state.player.name })),
       h('p', {}, t(`onboarding.intro.${n}.text`)),
       h('div', { class: 'ob-dots', 'aria-hidden': 'true' }, ...INTRO.map((_, k) => h('i', { class: k === i ? 'on' : '' }))),
@@ -197,19 +215,20 @@ export class Onboarding {
     this.clearMarks();
     const n = this.o.step + 1;
     this.coach = h('div', { class: 'ob-coach', role: 'status', 'aria-live': 'polite' },
-      h('img', { class: 'ob-coach-face', src: npcPortrait('custode', this.game.state.player.look), alt: '' }),
+      this.bust('small'),
       h('div', { class: 'ob-coach-body' },
         h('p', {}, t(`onboarding.tutorial.${step}`)),
         h('div', { class: 'ob-coach-foot' },
           h('span', { class: 'ob-progress' }, t('onboarding.tutorial.progress', { n, total: TUTORIAL_STEPS.length })),
-          h('button', { class: 'ob-link', onclick: () => this.go('tour') }, t('onboarding.tutorial.skip')))));
+          h('button', { class: 'npc-note-cta', onclick: () => this.go('tour') }, t('onboarding.tutorial.skip'), ' ›'))));
     document.body.append(this.coach);
     $('#game').classList.add('has-coach');
     $('#game').style.setProperty('--coach-h', `${this.coach.offsetHeight}px`); // i18n-ok: stile
-    if (target instanceof HTMLElement) { this.glow = target; target.classList.add('ob-glow'); return; }
+    this.halo = h('div', { class: 'ob-halo', 'aria-hidden': 'true' },
+      h('div', { class: 'ob-orbit' }, h('i'), h('i'), h('i')), h('b', { class: 'ob-arrow' }));
+    document.body.append(this.halo);
+    if (target instanceof HTMLElement) { this.haloEl = target; return; }
     // un segno sulla scena, che segue la camera
-    this.marker = h('div', { class: 'ob-marker', 'aria-hidden': 'true' });
-    document.body.append(this.marker);
     this.markerAt = target.at;
     this.ctxAct = CTX_ACT[step] ?? null;
     if (target.focus) target.focus();
@@ -269,20 +288,31 @@ export class Onboarding {
   }
 
   private clearMarks() {
-    this.marker?.remove(); this.marker = null; this.markerAt = null;
-    this.glow?.classList.remove('ob-glow'); this.glow = null;
-    this.ctxGlow?.classList.remove('ob-glow'); this.ctxGlow = null; this.ctxAct = null;
+    this.halo?.remove(); this.halo = null; this.markerAt = null; this.haloEl = null; this.ctxAct = null;
   }
 
-  /** Ogni frame: il segno segue il suo punto (sparisce sotto un pannello, passa al pulsante giusto se c'è). */
+  /**
+   * Ogni frame: l'alone segue il suo pulsante o il suo punto della scena;
+   * sparisce sotto un pannello e passa al pulsante giusto del menù dell'oggetto, se c'è.
+   */
   frame() {
-    if (!this.marker || !this.markerAt) return;
-    const btn = this.ctxAct ? document.querySelector<HTMLElement>(`#ctx:not([hidden]) [data-ctx="${this.ctxAct}"]`) : null;
-    if (btn !== this.ctxGlow) { this.ctxGlow?.classList.remove('ob-glow'); this.ctxGlow = btn; btn?.classList.add('ob-glow'); }
-    const at = btn ? null : this.markerAt();
-    const p = at && !drawerOpen() ? this.game.project(at) : null;
-    this.marker.style.visibility = p ? 'visible' : 'hidden';
-    if (p) this.marker.style.transform = `translate(${p.x}px, ${p.y}px)`; // i18n-ok: stile
+    const halo = this.halo;
+    if (!halo) return;
+    const btn = this.haloEl ?? (this.ctxAct ? document.querySelector<HTMLElement>(`#ctx:not([hidden]) [data-ctx="${this.ctxAct}"]`) : null);
+    let r: { x: number; y: number; w: number; h: number } | null = null;
+    if (btn && !drawerOpen()) {
+      const b = btn.getBoundingClientRect();
+      if (b.width) r = { x: b.left + b.width / 2, y: b.top + b.height / 2, w: b.width + 14, h: b.height + 14 };
+    } else if (!btn && this.markerAt && !drawerOpen()) {
+      const at = this.markerAt();
+      const p = at ? this.game.project(at) : null;
+      if (p) r = { x: p.x, y: p.y, w: 64, h: 64 };
+    }
+    halo.style.visibility = r ? 'visible' : 'hidden';
+    halo.classList.toggle('on-button', !!btn);
+    if (!r) return;
+    Object.assign(halo.style, { transform: `translate(${r.x}px, ${r.y}px)`, width: `${r.w}px`, height: `${r.h}px` }); // i18n-ok: stile
+    halo.style.setProperty('--orbit-r', `${Math.max(r.w, r.h) / 2 + 6}px`); // i18n-ok: stile
   }
 
   // ── Il giro dell'interfaccia ─────────────────────────────────────────
@@ -297,8 +327,9 @@ export class Onboarding {
     const stop = stops[Math.min(i, stops.length - 1)];
     const last = i >= stops.length - 1;
     stop.before?.();
-    const spot = h('div', { class: 'ob-spot', 'aria-hidden': 'true' });
-    const card = h('div', { class: 'dialog modal ob-card ob-tour-card' },
+    const spot = h('div', { class: 'ob-spot', 'aria-hidden': 'true' }, h('div', { class: 'ob-orbit' }, h('i'), h('i'), h('i')));
+    const card = h('div', { class: 'dialog modal ob-card ob-tour-card with-bust' },
+      this.bust('small'),
       h('h3', {}, t(`onboarding.tour.${stop.key}.title`)),
       h('p', {}, t(`onboarding.tour.${stop.key}.text`)),
       h('div', { class: 'ob-dots', 'aria-hidden': 'true' }, ...stops.map((_, k) => h('i', { class: k === i ? 'on' : '' }))),
@@ -312,8 +343,16 @@ export class Onboarding {
       if (!r || !this.layer?.contains(card)) return;
       const pad = 8;
       Object.assign(spot.style, { left: `${r.left - pad}px`, top: `${r.top - pad}px`, width: `${r.width + pad * 2}px`, height: `${r.height + pad * 2}px` });
-      const below = r.bottom + pad + 14, cardH = card.offsetHeight;
-      card.style.top = below + cardH < window.innerHeight - 12 ? `${below}px` : `${Math.max(12, r.top - pad - 14 - cardH)}px`;
+      // sotto il riquadro (lasciando posto al mezzobusto che esce dalla scheda), o sopra;
+      // se non c'è posto né sopra né sotto (il menù è alto), la scheda si fa senza mezzobusto
+      const fits = (lift: number) => {
+        const cardH = card.offsetHeight, below = r.bottom + pad + 14 + lift, above = r.top - pad - 14 - cardH;
+        if (below + cardH < window.innerHeight - 12) return `${below}px`;
+        return above >= 12 + lift ? `${above}px` : null;
+      };
+      let top = fits(44);
+      if (!top) { card.querySelector('.ob-bust')?.remove(); card.classList.remove('with-bust'); top = fits(0) ?? '12px'; }
+      card.style.top = top;
     };
     requestAnimationFrame(() => requestAnimationFrame(place));
   }

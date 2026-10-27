@@ -183,7 +183,8 @@ test('migrazione v2 → v3: progressi, posizioni e preferenze intatti, e gli acq
   assert.deepEqual(s.placeables.map((p) => [p.id, p.type, p.x, p.y]), raw.placeables.map((p) => [p.id, p.type, p.x, p.y]));
   assert.deepEqual(s.memories, raw.memories);
   assert.deepEqual(s.house, raw.house);
-  assert.deepEqual(s.settings, raw.settings);
+  const { theme: _theme, ...prefs } = raw.settings; // il tema chiaro è stato tolto: la scelta del tema non c'è più
+  assert.deepEqual(s.settings, prefs);
   assert.deepEqual(s.player.look, raw.player.look, 'il cappello da strega indossato resta');
   assert.deepEqual(s.meta, { firstDistribution: 'beta-full', lastDistribution: 'beta-full' });
   // comprati prima dei blocchi: restano tuoi, anche se ora servirebbe il rango

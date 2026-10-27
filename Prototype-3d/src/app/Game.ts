@@ -13,7 +13,7 @@ import type { GraveVisualState } from '../game/graves.ts';
 import { graveVisualState } from '../game/graves.ts';
 import * as R from '../game/rules.ts';
 import { anniversaryYears, catchUpMessage, liveTick, runCatchUp, type CatchUpReport } from '../game/simulation.ts';
-import { createNewGame, type FpsSetting, type ThemeSetting, type Quality, type QualitySetting, type SaveData, type TimeOverride } from '../game/state.ts';
+import { createNewGame, type FpsSetting, type Quality, type QualitySetting, type SaveData, type TimeOverride } from '../game/state.ts';
 import { dayPhaseForHour, type DayPhase } from '../game/time.ts';
 import type { CustodeLook } from '../game/look.ts';
 import { areaForLevel, buildOccupancy, canPlaceAt, gateCells, nearestFreeSpot } from '../game/world.ts';
@@ -157,7 +157,7 @@ export class Game {
     this.rig.jumpTo(start);
     this.rig.follow = this.actors.avatar.pos;
     this.rig.snap();
-    if (uiNext()) applyTheme(this.state.settings.theme);
+    if (uiNext()) applyTheme();
     this.ui = new UI(this);
     this.input = new Input(canvas, {
       tap: (x, y) => this.onTap(x, y),
@@ -1622,14 +1622,6 @@ export class Game {
     this.state.settings.quality = q;
     this.auto = q === 'auto' ? new AutoGovernor(loadAutoProfile()) : null;
     this.applySettingQuality();
-    scheduleSave(this.state);
-    this.ui.refreshSettingsButtons();
-  }
-
-  /** Tema dell'interfaccia nuova: chiaro, scuro o quello del telefono. */
-  setTheme(t: ThemeSetting) {
-    this.state.settings.theme = t;
-    applyTheme(t);
     scheduleSave(this.state);
     this.ui.refreshSettingsButtons();
   }

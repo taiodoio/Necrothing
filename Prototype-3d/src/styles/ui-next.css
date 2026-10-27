@@ -1,7 +1,7 @@
 /* Interfaccia nuova (per ora solo nella pagina di misura, classe .ui-next su
    <html>): pannelli piatti con un unico arrotondamento e un'ombra morbida,
    niente cornici pixel né contorni; Baloo 2 per i titoli e Nunito per il
-   testo; icone low-poly (ui/lpIcons.ts); tema scuro e chiaro (data-theme). */
+   testo; icone low-poly (ui/lpIcons.ts); solo tema scuro. */
 
 .ui-next {
   color-scheme: dark;
@@ -30,24 +30,6 @@
   --pixel: "Nunito", system-ui, sans-serif;
   --gothic: "Baloo 2", "Nunito", sans-serif;
   font-weight: 600;
-}
-.ui-next[data-theme="light"] {
-  color-scheme: light;
-  --panel: #f4ede0;
-  --panel-2: #e8dfce;
-  --input: #fffaf0;
-  --thumb: #e3d8c4;
-  --track: #d8ccb6;
-  --sheet: #e0d5c1;
-  --paper: #3b332b;
-  --muted: #83786b;
-  --gold-bright: #5c3f22;
-  --gold: #a87a36;
-  --spectral: #2f9a82;
-  --danger: #c4513f;
-  --line: rgba(0, 0, 0, 0.05);
-  --edge: rgba(0, 0, 0, 0.12);
-  --shadow: 0 4px 14px rgba(30, 22, 10, 0.28);
 }
 .ui-next, .ui-next body { font-family: var(--pixel); }
 .ui-next * { text-shadow: none !important; }

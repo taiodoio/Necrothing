@@ -431,14 +431,14 @@ export default {
   'onboarding.name.label': 'Il tuo nome',
   'onboarding.name.hint': 'Potrai cambiarlo quando vuoi dal profilo.',
   // pulsante: conferma il nome scritto
-  'onboarding.name.ok': 'Questo è il mio nome',
+  'onboarding.name.ok': 'Sono io',
   'onboarding.name.error.empty': 'Scrivi almeno una lettera.',
   // {n}: caratteri massimi
   'onboarding.name.error.long': 'Al massimo {n} caratteri.',
   'onboarding.name.error.chars': 'Usa lettere, numeri, spazi, apostrofi e trattini.',
-  // introduzione: quattro schede brevi con la voce del Custode; {name}: il nome appena scelto
+  // introduzione: quattro schede brevi; nella prima parla il fuoco fatuo (si presenta), nelle altre il Custode; {name}: il nome appena scelto
   'onboarding.intro.1.title': 'Piacere, {name}.',
-  'onboarding.intro.1.text': 'Le fiammelle azzurre sono fuochi fatui: raccoglile passeggiando. In Bottega diventano lanterne, statue e tutto ciò che ti piace.',
+  'onboarding.intro.1.text': 'Iniziamo con una breve spiegazione. Io sono un fuoco fatuo: mi troverai a fluttuare tra le tombe. Raccoglimi passeggiando e in Bottega diventerò lanterne, statue e tutto ciò che ti piace.',
   'onboarding.intro.2.title': 'Un po’ di cura',
   'onboarding.intro.2.text': 'Le tombe chiedono attenzione: togli le erbacce, porta fiori freschi, ripara quelle rovinate. Non c’è fretta: ti aspettano.',
   'onboarding.intro.3.title': 'Chi passa di qui',
@@ -458,7 +458,7 @@ export default {
   'onboarding.tutorial.bury': 'Quando qualcosa finisce, qui puoi dargli un posto. Tocca Seppellisci per vedere come si fa.',
   // giro dell'interfaccia: quattro tappe
   'onboarding.tour.profile.title': 'Il tuo profilo',
-  'onboarding.tour.profile.text': 'Qui vedi il rango e i fuochi fatui. Toccalo per le statistiche, i traguardi e per cambiare aspetto al Custode.',
+  'onboarding.tour.profile.text': 'Qui vedi il rango e i fuochi fatui. Toccalo per le statistiche e i traguardi; da lì, con «Modifica aspetto», scegli anche come appare il tuo Custode.',
   'onboarding.tour.bury.title': 'Seppellisci',
   'onboarding.tour.bury.text': 'Per dare un posto a ciò che è finito: nome, foto, epitaffio e la lapide che preferisci.',
   'onboarding.tour.shop.title': 'La Bottega',

@@ -5,21 +5,16 @@
 // - toccando un oggetto il Custode ci va e il menù compare quando arriva;
 // - menù contestuale di sole icone;
 // - menù di gioco verticale (icona a tre righe), con l'etichetta a destra;
-// - stile low-poly con tema chiaro e scuro, strumento a traccia, Bottega animata.
+// - stile low-poly a tema scuro, strumento a traccia, Bottega animata.
 
 let on = false;
 
 export const uiNext = () => on;
 
-/** Tema chiaro o scuro dell'interfaccia nuova; «auto» segue il tema del telefono (e i suoi cambi). */
-let themeSetting: 'auto' | 'light' | 'dark' = 'auto';
-const dark = typeof matchMedia === 'function' ? matchMedia('(prefers-color-scheme: dark)') : null;
-const resolve = () => (themeSetting === 'auto' ? (dark && !dark.matches ? 'light' : 'dark') : themeSetting);
-export function applyTheme(t: 'auto' | 'light' | 'dark') {
-  themeSetting = t;
-  document.documentElement.dataset.theme = resolve();
+/** L'interfaccia nuova è solo scura (il tema chiaro è stato tolto). */
+export function applyTheme() {
+  document.documentElement.dataset.theme = 'dark';
 }
-dark?.addEventListener('change', () => { if (themeSetting === 'auto') document.documentElement.dataset.theme = resolve(); });
 
 /** Da chiamare prima di creare il Game. */
 export function setUiNext(v: boolean) {

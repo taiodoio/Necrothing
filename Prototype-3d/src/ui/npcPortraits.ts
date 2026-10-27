@@ -6,6 +6,7 @@
 import * as THREE from 'three';
 import type { CustodeLook } from '../game/look.ts';
 import { buildRig, type CharacterKind } from '../view/characters.ts';
+import { createWispVisual } from '../render/lowpoly/wisp.ts';
 import { alive, drewSomething } from './offscreen.ts';
 
 const SIZE = 192;
@@ -107,4 +108,37 @@ function draw(kind: CharacterKind, look: CustodeLook | undefined, fresh: boolean
     scene!.remove(rig.root);
     return url;
   } catch { return ''; }
+}
+
+/**
+ * Il fuoco fatuo della scena, grande (data URL; vuota senza WebGL): fiammella,
+ * cuore, occhietti e scintille, girato verso chi guarda. L'alone lo fa la pagina.
+ */
+export function wispPortrait(): string {
+  const ready = done.get('wisp');
+  if (ready !== undefined) return ready;
+  let url = '';
+  for (let attempt = 0; attempt < 2 && !url; attempt++) {
+    try {
+      if (attempt > 0 || !alive(renderer)) setup();
+      const v = createWispVisual();
+      v.update(0.6, 0);
+      // niente alone additivo (su fondo trasparente velerebbe tutto); la faccina verso la camera
+      v.root.children.filter((o) => (o as THREE.Sprite).isSprite).forEach((o) => v.root.remove(o));
+      v.root.children[0].rotation.set(0.06, 0.12, -0.05);
+      scene!.add(v.root);
+      v.root.updateMatrixWorld(true);
+      const box = new THREE.Box3().setFromObject(v.root);
+      const c = box.getCenter(new THREE.Vector3()), size = box.getSize(new THREE.Vector3());
+      const h = Math.max(size.y, size.x) * 1.08;
+      const dist = h / (2 * Math.tan(THREE.MathUtils.degToRad(camera.fov / 2)));
+      camera.position.set(c.x, c.y + h * 0.05, c.z + dist);
+      camera.lookAt(c.x, c.y, c.z);
+      renderer!.render(scene!, camera);
+      url = drewSomething(renderer!) ? renderer!.domElement.toDataURL('image/png') : '';
+      scene!.remove(v.root);
+    } catch { url = ''; }
+  }
+  if (url) done.set('wisp', url);
+  return url;
 }

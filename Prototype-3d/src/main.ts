@@ -69,6 +69,8 @@ void (async () => {
     // primo ingresso (o partita nuova): il pulsante sulla schermata iniziale, poi la pergamena;
     // altrimenti la schermata sfuma e si gioca (o si riprende il percorso da dove era rimasto)
     const first = game.state.onboarding.stage === 'welcome';
+    // le fasi a schermo pieno hanno il loro sfondo già sotto lo splash: la scena non si intravede
+    game.ui.onboarding.cover();
     await boot.finish(first ? { cta: t('onboarding.enter') } : undefined);
     if (first || game.state.onboarding.stage !== 'done') setTimeout(warmAllPreviews, 300);
     game.ui.onboarding.resume();

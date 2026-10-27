@@ -335,11 +335,6 @@ export default {
   'settings.quality.medium': 'Media',
   'settings.quality.high': 'Alta',
   'settings.quality.autoHint': 'Auto sceglie Bassa, Media o Alta in base al dispositivo, e scende di livello se il gioco rallenta.',
-  'settings.theme': 'Tema',
-  // breve: pulsanti del tema
-  'settings.theme.auto': 'Auto',
-  'settings.theme.light': 'Chiaro',
-  'settings.theme.dark': 'Scuro',
   'settings.fps': 'Fluidità',
   // breve: pulsanti della fluidità
   'settings.fps.auto': 'Auto',

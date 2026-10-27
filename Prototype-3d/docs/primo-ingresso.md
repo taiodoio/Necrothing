@@ -1,22 +1,28 @@
 # Primo ingresso e onboarding
 
 Come entra in Necrothing chi gioca per la prima volta. Il percorso ha sei fasi:
-splash, pergamena, nome, introduzione, tutorial e giro dell'interfaccia. Ogni fase
+splash, lettera, nome, introduzione, tutorial e giro dell'interfaccia. Ogni fase
 si può saltare, e il percorso si può rivedere dalle Impostazioni.
 
 ## Le fasi
 
 | Fase (`stage`) | Cosa succede | Codice |
 | --- | --- | --- |
-| `welcome` | Splash di caricamento con «Entra in Necrothing», poi la pergamena | `app/boot.ts` (`finish({ cta })`), `ui/onboarding.ts` (`showLetter`) |
+| `welcome` | Splash di caricamento con «Entra in Necrothing», poi la lettera | `app/boot.ts` (`finish({ cta })`), `ui/onboarding.ts` (`showLetter`) |
 | `name` | Il Custode accoglie e chiede il nome | `showName`, `game/playerName.ts` |
 | `intro` | Quattro schede brevi: fuochi fatui, cura, presenze, ricordi | `showIntro` |
 | `tutorial` | Cinque azioni vere nella scena | `showStep`, `targetOf`, `game/onboarding.ts` |
 | `tour` | Quattro tappe: profilo, Seppellisci, Bottega, menu | `showTour` |
 | `done` | Si gioca | — |
 
-- **Splash.** È quello di sempre. Solo al primo ingresso (`stage === 'welcome'`) mostra il pulsante «Entra in Necrothing», con una sfumatura scura in basso perché si legga. Nessun contenuto commerciale. Agli avvii successivi lo splash sparisce da solo come prima.
-- **Pergamena.** La carta ha già la sua misura e viene scoperta dall'alto (`clip-path`) mentre il rullo di sotto scende: un'animazione di 1,8 s. Un tocco la apre subito. Con il movimento ridotto è aperta fin da subito. Il testo scorre dentro la carta; «Salta» e «Continua» passano al nome.
+- **Splash.** È quello di sempre. Solo al primo ingresso (`stage === 'welcome'`) mostra «Entra in Necrothing», col pulsante oro del gioco (`.big-btn`) e una sfumatura scura in basso perché si legga. Nessun contenuto commerciale. Agli avvii successivi lo splash sparisce da solo come prima.
+- **Sfondo.** Fino al tutorial la scena non si vede. Lettera, nome e introduzione stanno su uno sfondo loro (`.ob-solid`): i pannelli del gioco più scuri, cioè gradiente, pattern tono su tono, bagliore caldo al centro, edera in alto e felci in basso. È già sotto lo splash prima che sparisca (`cover()`).
+- **Lettera.** In 3,4 secondi:
+  - un foglio di carta anticata, piegato in quattro, arriva dal basso davanti a una luce calda che tremola;
+  - si apre prima in verticale, poi di lato; le pieghe restano segnate;
+  - compare il testo e un sigillo di ceralacca (col fuoco fatuo in rilievo) chiude il foglio in fondo.
+
+  Un tocco la apre subito; con il movimento ridotto è già aperta. Il testo scorre sopra il sigillo. «Salta» passa al nome; «Continua» compare a lettera aperta.
 - **Nome.** È il nome del Custode, senza registrazione, salvato nella partita. Si cambia in qualsiasi momento dal profilo, con le stesse regole. Le regole (`checkName`):
   - forma NFC, spazi ripetuti ridotti a uno;
   - da 1 a 24 caratteri (contati come grafemi);
@@ -24,7 +30,7 @@ si può saltare, e il percorso si può rivedere dalle Impostazioni.
   - niente emoji né simboli.
 
   Se si salta, il nome resta «Custode».
-- **Introduzione.** Quattro schede con la voce del Custode: raccogliere i fuochi fatui; fiori, pulizia e riparazioni; apparizioni e presenze; creare ricordi e personalizzare.
+- **Introduzione.** Quattro schede: raccogliere i fuochi fatui; fiori, pulizia e riparazioni; apparizioni e presenze; creare ricordi e personalizzare. Nella prima parla il fuoco fatuo, che si presenta, con il modello della scena (fiammella, cuore, occhietti: `wispPortrait`). Nella terza c'è il fantasma della scena.
 - **Tutorial.** Un consiglio in alto e un segno sulla scena che segue la camera. Quando l'oggetto è selezionato, il segno passa al pulsante giusto del suo menu. Ogni passo si completa con l'azione vera, segnalata dal gioco (`signalOnboarding`):
 
   | Passo | Azione | Segnale |
@@ -72,7 +78,10 @@ Le anteprime del Custode e delle miniature (`warmHeroes`, `warmThumbs`) vengono 
 
 ## Interfaccia
 
-- **Stile:** `styles/ui-onboarding.css` riusa pannelli, pulsanti e caratteri del gioco (`.dialog.modal`, `.big-btn`, gotico) e i colori del tema.
+- **Stile:** `styles/ui-onboarding.css` riusa pannelli, pulsanti e caratteri del gioco (`.dialog.modal`, `.big-btn`, gotico, i pannelli «natura e luce» del tema scuro). Niente contorni.
+- **Il Custode che parla:** nel nome, nel consiglio del tutorial e nelle schede del giro il suo mezzobusto esce dal riquadro per circa un terzo, come nell'HUD. Non sta dentro una forma; sotto ha una linea da cui parte. Nella scheda del menu, se non c'è posto, la scheda resta senza mezzobusto.
+- **Consiglio del tutorial:** ha lo sfondo e i rametti delle notifiche dei personaggi. «Salta il tutorial ›» ha lo stile delle loro CTA.
+- **Segno su cosa toccare:** un alone spettrale con tre fuochi fatui che gli girano attorno e un rametto d'edera. Sulla scena ha anche una freccia; sui pulsanti segue la loro forma. Nel giro, il riquadro illuminato ha l'alone, un rametto, un teschio e i fuochi fatui che ondeggiano.
 - **Scena sotto i livelli:** mentre pergamena, nome, introduzione e giro sono aperti, la scena si ferma come sotto un pannello (`setUiBlocking`).
-- **Consiglio del tutorial:** messaggi e note delle presenze scendono sotto il consiglio, così non si coprono.
+- **Niente si copre:** messaggi e note delle presenze scendono sotto il consiglio.
 - **Prove:** a 390×844 e 375×667, anche con il movimento ridotto.

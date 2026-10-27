@@ -59,11 +59,10 @@ export function bootScreen(): BootScreen {
       if (opts.cta) {
         // primo ingresso: il pulsante al posto della barra, sopra un'ombra che lo rende leggibile
         const btn = document.createElement('button');
-        btn.className = 'boot-cta';
+        btn.className = 'big-btn boot-cta';
         btn.textContent = opts.cta;
         el.classList.add('with-cta');
         el.querySelector('.boot-load')?.replaceChildren(btn);
-        btn.focus({ preventScroll: true });
         await new Promise<void>((resolve) => btn.addEventListener('click', () => resolve(), { once: true }));
       }
       el.classList.add('done');

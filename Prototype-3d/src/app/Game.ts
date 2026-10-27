@@ -1660,6 +1660,8 @@ export class Game {
   /** Applica il livello in uso (scelto o di Auto): mondo, luci, materiali, ombre, risoluzione, sfocatura, fluidità. */
   private applySettingQuality() {
     const p = this.profile();
+    // il livello in uso anche per le pagine (animazioni dei pannelli: in bassa niente)
+    document.documentElement.dataset.quality = this.level();
     // ombre ferme: ciò che si muove non proietta ombra (ce l'ha a disco), le altre si ridisegnano solo se cambia la vista
     const still = p.shadows === 'still';
     if (this.world.staticShadows !== still) {

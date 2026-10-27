@@ -291,7 +291,13 @@
 .ui-next .drawer { left: calc(12px + var(--safe-l)); right: calc(12px + var(--safe-r)); top: 50%; bottom: auto; width: auto; height: auto;
   max-height: calc(100% - 28px - var(--safe-t) - var(--safe-b)); translate: 0 -50%; transform: none; padding: 0;
   border-radius: var(--r); overflow: hidden; box-shadow: 0 20px 50px rgba(0, 0, 0, 0.55), inset 0 1px 0 var(--line); animation: modalIn 0.24s cubic-bezier(0.2, 1.25, 0.4, 1) both; }
-@keyframes modalIn { from { opacity: 0; scale: 0.94; } }
+@keyframes modalIn { from { opacity: 0; scale: 0.9; transform: translateY(22px); } }
+/* l'apertura dei pannelli: il pannello sale e si allarga, il velo sfuma; in qualità bassa niente */
+.ui-next .drawer { animation-duration: 0.34s; animation-timing-function: cubic-bezier(0.2, 1.2, 0.35, 1); }
+.ui-next .dialog.modal { animation: modalIn 0.3s cubic-bezier(0.2, 1.2, 0.35, 1) both; }
+.ui-next .scrim:not([hidden]) { animation: scrimIn 0.25s ease-out both; }
+@keyframes scrimIn { from { opacity: 0; } }
+.ui-next[data-quality="low"] :is(.drawer, .dialog.modal, .scrim) { animation: none; }
 .ui-next .drawer-foot { border-radius: 0; padding-bottom: 14px; }
 /* i grandi un po' più bassi dello schermo, al centro: restano finestre, non pagine */
 .ui-next .drawer:is(.with-hero, .full) { top: 50%; bottom: auto; height: min(84%, 720px, calc(100% - 28px - var(--safe-t) - var(--safe-b))); max-height: none; border-radius: var(--r); }
@@ -303,7 +309,7 @@
 @media (min-width: 760px) {
   .ui-next .drawer { left: 50%; right: auto; width: 560px; translate: -50% -50%; }
 }
-@media (prefers-reduced-motion: reduce) { .ui-next .drawer { animation: none; } }
+@media (prefers-reduced-motion: reduce) { .ui-next :is(.drawer, .dialog.modal, .scrim) { animation: none; } }
 
 /* ── La X per uscire dal tracciato sta in alto a destra, come in pannelli e modali ── */
 .ui-next .trace-bar > b, .ui-next .trace-bar > .muted { padding-right: 52px; }

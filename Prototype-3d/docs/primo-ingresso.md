@@ -2,7 +2,9 @@
 
 Come entra in Necrothing chi gioca per la prima volta. Il percorso ha sei fasi:
 splash, lettera, nome, introduzione, tutorial e giro dell'interfaccia. Ogni fase
-si può saltare, e il percorso si può rivedere dalle Impostazioni.
+si può saltare con «Salta», in alto a destra; nelle schede c'è «Indietro», che torna alla scheda o alla pagina di prima. Dalle Impostazioni si rivede la lettera o si rifà il tutorial.
+
+Passando da una fase a schermo pieno all'altra (lettera, nome, introduzione) lo sfondo resta, con le lapidi e le lucciole, e cambiano solo le schede, sfumando. Quando parte il tutorial lo sfondo sfuma via e ricompare la scena.
 
 ## Le fasi
 
@@ -31,7 +33,7 @@ si può saltare, e il percorso si può rivedere dalle Impostazioni.
 
   Se si salta, il nome resta «Custode».
 - **Introduzione.** Quattro schede: raccogliere i fuochi fatui; fiori, pulizia e riparazioni; apparizioni e presenze; creare ricordi e personalizzare. Nella prima parla il fuoco fatuo, che si presenta, con il modello della scena (fiammella, cuore, occhietti: `wispPortrait`). Nella terza c'è il fantasma della scena.
-- **Tutorial.** Un consiglio in alto e un segno sulla scena che segue la camera. Quando l'oggetto è selezionato, il segno passa al pulsante giusto del suo menu. Ogni passo si completa con l'azione vera, segnalata dal gioco (`signalOnboarding`):
+- **Tutorial.** Un consiglio in alto, un occhio di bue e un cerchio animato su dove toccare (due onde che si allargano), che seguono la camera. L'occhio di bue è misurato dalla cima dell'oggetto a dove poggia, così una tomba sta tutta nella luce. Quando l'oggetto è selezionato, il segno passa al pulsante giusto del suo menu. Ogni passo si completa con l'azione vera, segnalata dal gioco (`signalOnboarding`):
 
   | Passo | Azione | Segnale |
   | --- | --- | --- |
@@ -42,7 +44,7 @@ si può saltare, e il percorso si può rivedere dalle Impostazioni.
   | `bury` | toccare Seppellisci | `burialOpened` (`openBurial`) |
 
   Le azioni fuori ordine non contano. Un passo senza bersaglio viene saltato, per esempio quando non c'è nessun fuoco fatuo o nessuna tomba sporca. Il tutorial non dà ricompense proprie: si ricevono solo quelle delle azioni vere, come sempre.
-- **Giro.** Una luce su ogni tappa e una scheda: profilo e statistiche, con l'aspetto del Custode; Seppellisci; Bottega e Inventario; il menu con tutte le voci in una tappa, comprese le Impostazioni. Parte quando la sepoltura aperta nell'ultimo passo viene chiusa.
+- **Giro.** Lo stesso consiglio del tutorial (titolo, testo, «‹ Indietro» e «Avanti ›») e l'occhio di bue su ogni tappa: profilo e statistiche, con l'aspetto del Custode; Seppellisci; Bottega e Inventario (la camera ci va, senza selezionarla); il pulsante del menu, senza aprirlo, con tutte le voci nel testo. La scena resta viva sotto il giro. Parte quando la sepoltura aperta nell'ultimo passo viene chiusa.
 
 ## Stato e salvataggio
 
@@ -54,7 +56,11 @@ si può saltare, e il percorso si può rivedere dalle Impostazioni.
 
 ## Rivedere
 
-Impostazioni › Gioco › Introduzione › «Rivedi l'introduzione» rifà tutte le fasi dalla pergamena. Lo stato del rivedere sta solo in memoria: non viene salvato e non cambia la partita. Le azioni vere fatte nel frattempo danno le loro ricompense normali. Ricaricando a metà si torna al gioco.
+Impostazioni › Gioco › Introduzione ha due pulsanti:
+- **«Rivedi la lettera»:** solo la lettera; con «Continua» o «Salta» si torna al gioco.
+- **«Rifai il tutorial»:** il tutorial e il giro dell'interfaccia, senza lettera né nome.
+
+Lo stato del rivedere sta solo in memoria: non viene salvato e non cambia la partita. Le azioni vere fatte nel frattempo danno le loro ricompense normali. Ricaricando a metà si torna al gioco.
 
 ## Le tombe narrative
 
@@ -79,9 +85,15 @@ Le anteprime del Custode e delle miniature (`warmHeroes`, `warmThumbs`) vengono 
 ## Interfaccia
 
 - **Stile:** `styles/ui-onboarding.css` riusa pannelli, pulsanti e caratteri del gioco (`.dialog.modal`, `.big-btn`, gotico, i pannelli «natura e luce» del tema scuro). Niente contorni.
-- **Il Custode che parla:** nel nome, nel consiglio del tutorial e nelle schede del giro il suo mezzobusto esce dal riquadro per circa un terzo, come nell'HUD. Non sta dentro una forma; sotto ha una linea da cui parte. Nella scheda del menu, se non c'è posto, la scheda resta senza mezzobusto.
+- **Il Custode che parla:** nella scheda del nome e nei consigli del tutorial e del giro il suo mezzobusto esce dal riquadro per circa un terzo, come nell'HUD. Non sta dentro una forma; sotto ha una linea da cui parte.
 - **Consiglio del tutorial:** ha lo sfondo e i rametti delle notifiche dei personaggi. «Salta il tutorial ›» ha lo stile delle loro CTA.
-- **Occhio di bue:** nel tutorial e nel giro tutto si spegne attorno al bersaglio con una sfumatura, senza decorazioni (più buio nel giro). È un elemento grande tre schermi col buco al centro: segue il bersaglio con `translate`, quindi non si ridisegna, e pulsa piano.
+- **Occhio di bue:** nel tutorial e nel giro tutto si spegne attorno al bersaglio con una sfumatura, con una luce calda al centro e senza decorazioni (più buio nel giro). È un elemento grande tre schermi col buco al centro: segue il bersaglio con `translate`, quindi non si ridisegna, e pulsa piano.
 - **Scena sotto i livelli:** mentre pergamena, nome, introduzione e giro sono aperti, la scena si ferma come sotto un pannello (`setUiBlocking`).
 - **Niente si copre:** messaggi e note delle presenze scendono sotto il consiglio.
 - **Prove:** a 390×844 e 375×667, anche con il movimento ridotto.
+
+## I pannelli del gioco
+
+Insieme al percorso, due correzioni che valgono per tutti i pannelli:
+- **Scorrimento:** un pannello si apre sempre dall'alto. Prima, aprendone uno dopo averne scorso un altro, ci si trovava alla posizione di prima: il browser ignora l'azzeramento a pannello nascosto.
+- **Apertura:** il pannello sale e si allarga mentre il velo sfuma, e i dialoghi fanno lo stesso. In qualità bassa e con il movimento ridotto niente animazione. Il livello grafico arriva alla pagina come `data-quality` su `<html>`.

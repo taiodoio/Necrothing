@@ -99,7 +99,6 @@ export function openDrawer(title: string, body: Node, opts: { footer?: Node; onC
   $('#drawer-extra').replaceChildren();
   const b = $('#drawer-body');
   b.replaceChildren(body);
-  b.scrollTop = 0;
   const f = $('#drawer-foot');
   if (opts.footer) { f.hidden = false; f.replaceChildren(opts.footer); } else { f.hidden = true; f.replaceChildren(); }
   onCloseCb = opts.onClose ?? null;
@@ -108,6 +107,11 @@ export function openDrawer(title: string, body: Node, opts: { footer?: Node; onC
   $('#scrim').hidden = false;
   document.body.classList.add('drawer-open');
   $('#bubble').classList.add('hidden');
+  // si parte sempre dall'alto: lo scorrimento va azzerato a pannello visibile (da nascosto il browser lo ignora
+  // e, riaprendolo, rimette la posizione di prima), su tutto ciò che scorre dentro
+  const top = () => { for (const el of [drawer, b, ...drawer.querySelectorAll<HTMLElement>('*')]) if (el.scrollTop) el.scrollTop = 0; };
+  top();
+  requestAnimationFrame(top);
 }
 
 export function setDrawerFooter(node: Node | null) {

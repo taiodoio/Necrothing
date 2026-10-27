@@ -12,6 +12,7 @@ import { housePartLP } from './lowpoly/architecture.ts';
 import { graveModel } from './models/graves.ts';
 import { placeableKey, placeableModel } from './models/registry.ts';
 import type { GraveType } from '../game/graves.ts';
+import { addPresences } from '../ui/thumbs.ts';
 import { sceneryBush, sceneryFlowers, sceneryPebbles, sceneryTuft } from './models/nature.ts';
 
 /** La striscia di terra in fondo alla scheda di una tomba: cumuli, lapidi, la pala piantata, due lanterne accese. */
@@ -93,7 +94,7 @@ export function renderGround(W = 1080, H = 380, cam = { y: 4.2, z: 9.2, look: 0.
  * notte, con le sue luci accese. Ritagliata e appoggiata in basso al centro,
  * così le zolle stanno tutte alla stessa altezza; in WebP (pesa un terzo del PNG).
  */
-function renderPreview(model: CachedModel, key: string, S: number): string {
+function renderPreview(model: CachedModel, key: string, S: number, dress?: (o: THREE.Object3D) => void): string {
   const canvas = document.createElement('canvas');
   canvas.width = S; canvas.height = S;
   const r = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true, preserveDrawingBuffer: true });
@@ -107,6 +108,7 @@ function renderPreview(model: CachedModel, key: string, S: number): string {
   const warm = new THREE.DirectionalLight('#ffc98a', 0.6); warm.position.set(5, 3, 6); // luce calda di lato, come le lanterne del cimitero
   scene.add(moon, warm);
   const o = instantiate(model, { castShadow: false });
+  dress?.(o);
   scene.add(o);
   const box = new THREE.Box3().setFromObject(o);
   const size = box.getSize(new THREE.Vector3()), c = box.getCenter(new THREE.Vector3());
@@ -160,7 +162,8 @@ function settle(src: HTMLCanvasElement, S: number): string {
 /** Anteprima di un oggetto del catalogo. */
 export function renderItemPreview(type: string, S = 320): string {
   const v = { type, variant: 0, dirty: false, broken: false, lit: true, seed: 1 };
-  return renderPreview(getModel(placeableKey(v), 'lowpoly', () => placeableModel(v), 1), type, S);
+  // con chi lo abita (zombie, strega, fantasmi…), come nelle miniature
+  return renderPreview(getModel(placeableKey(v), 'lowpoly', () => placeableModel(v), 1), type, S, (o) => addPresences(o, v, 'lowpoly'));
 }
 
 /** Anteprima di un tetto (la casa con quel tetto) o di un'aggiunta della Casa del Custode. */

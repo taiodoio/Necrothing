@@ -240,7 +240,7 @@ export function openCustomize(ui: UI) {
   openDrawer(t('look.ui.title'), body, {
     footer: h('div', { class: 'row look-foot' }, reset, saveBtn),
     beforeClose: () => !dirty() || confirmDialog({ title: t('look.ui.unsaved.title'), message: t('look.ui.unsaved.text'), ok: t('dialog.close'), cancel: t('look.ui.unsaved.stay'), danger: true }),
-    onClose: () => { scroller?.removeEventListener('scroll', onScroll); preview.dispose(); },
+    onClose: () => { scroller?.removeEventListener('scroll', onScroll); preview.dispose(); stage.remove(); },
     full: true,
     kind: 'look',
   });
@@ -248,6 +248,9 @@ export function openCustomize(ui: UI) {
   // Il pannello non ricompensa lo scorrimento quando il palco cambia altezza (overflow-anchor), altrimenti rimbalzerebbe.
   const stage = body.firstElementChild as HTMLElement;
   const scroller = body.parentElement;
+  // interfaccia «viva»: Custode e schede stanno fuori dalla parte che scorre, sopra la lista,
+  // così non serve un fondo pieno dietro al Custode per coprire le opzioni che ci passano sotto
+  if (uiPlay() && scroller) { stage.classList.add('drawer-pinned'); scroller.before(stage); }
   const onScroll = () => {
     if (!scroller) return;
     if (!stage.isConnected) { scroller.removeEventListener('scroll', onScroll); return; }

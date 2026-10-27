@@ -256,14 +256,10 @@
 .ui-next.ui-play .shop-hero::before { backdrop-filter: none; -webkit-backdrop-filter: none; }
 
 /* ── Personaggio: come le altre schede ────────────────────────────────
-   Il Custode senza riquadro dietro (il palco resta agganciato in cima ma ha il
-   colore del pannello e sfuma in basso, così le opzioni ci scorrono sotto
-   senza vedersi); le schede nella barra bassa con le icone monocromatiche. */
-.ui-next.ui-play:not([data-theme="light"]) .drawer[data-kind="look"] .look-stage {
-  border: 0; box-shadow: none;
-  background: linear-gradient(180deg, rgb(48, 43, 59) 0%, rgb(46, 41, 56) calc(100% - 22px), rgba(46, 41, 56, 0) 100%);
-  padding-bottom: 14px;
-}
+   Il Custode senza niente dietro: lui e le schede stanno fuori dalla parte
+   che scorre (customize.ts, .drawer-pinned), le opzioni scorrono solo sotto;
+   le schede nella barra bassa con le icone monocromatiche. */
+.ui-next.ui-play .drawer[data-kind="look"] > .look-stage { position: relative; top: auto; flex: none; margin: 0 0 6px; background: none; border: 0; box-shadow: none; }
 .ui-next.ui-play .drawer[data-kind="look"] .look-tabs {
   display: grid; grid-auto-flow: column; grid-auto-columns: minmax(70px, 1fr); gap: 4px; padding: 4px; margin: 4px 12px 0; justify-self: stretch;
   border-radius: 15px; background: rgba(28, 23, 35, 0.95); box-shadow: 0 6px 14px rgba(0, 0, 0, 0.3);

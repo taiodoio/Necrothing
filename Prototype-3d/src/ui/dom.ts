@@ -140,21 +140,32 @@ export function setDrawerHero(el: HTMLElement) {
  * diverse per entrare e uscire: la testata che si accorcia non rimbalza.
  */
 function heroOnScroll(e: Event) {
-  const y = (e.currentTarget as HTMLElement).scrollTop;
+  const body = e.currentTarget as HTMLElement;
+  const y = body.scrollTop;
   const drawer = $('#drawer');
-  if (y > 24) drawer.classList.add('hero-small');
-  else if (y < 2) drawer.classList.remove('hero-small');
+  if (y > 24 && !drawer.classList.contains('hero-small')) {
+    // con poco contenuto la lista, allungandosi, non scorrerebbe più: tornerebbe in cima e la
+    // testata si riaprirebbe da sola. Si aggiunge in fondo lo spazio che manca.
+    const shrink = Math.max(0, ($('#drawer > .drawer-hero') as HTMLElement | null)?.offsetHeight ?? 0) - 64;
+    const short = y + shrink + 8 - (body.scrollHeight - body.clientHeight);
+    body.style.setProperty('--hero-slack', `${Math.max(0, Math.ceil(short))}px`);
+    drawer.classList.add('hero-small');
+  } else if (y < 2 && drawer.classList.contains('hero-small')) {
+    drawer.classList.remove('hero-small');
+    body.style.removeProperty('--hero-slack');
+  }
 }
 
-/** Via quello che un pannello ha aperto sopra di sé (il cartellino girato dell'albero). */
+/** Via quello che un pannello ha aperto sopra di sé (il cartellino girato dell'albero) o fissato sopra la lista (il Custode). */
 function dropOverlays() {
-  for (const el of $('#drawer').querySelectorAll(':scope > .drawer-overlay')) el.remove();
+  for (const el of $('#drawer').querySelectorAll(':scope > :is(.drawer-overlay, .drawer-pinned)')) el.remove();
 }
 
 function dropHero() {
   const drawer = $('#drawer');
   drawer.querySelector(':scope > .drawer-hero')?.remove(); // uscendo dal documento la testata si ferma da sola
   drawer.classList.remove('with-hero', 'hero-small');
+  $('#drawer-body').style.removeProperty('--hero-slack');
   $('#drawer-body').removeEventListener('scroll', heroOnScroll);
 }
 

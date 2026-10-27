@@ -173,6 +173,8 @@ button.slot:active, .icon-btn:active, .ctx-actions button:active, .big-btn:activ
 .wisp-pill { display: inline-flex; align-items: center; gap: 5px; height: 34px; padding: 0 12px 0 8px; border-radius: 999px; background: #12151b;
   color: var(--spectral); font-weight: 800; font-size: 16px; font-variant-numeric: tabular-nums; white-space: nowrap; }
 .drawer-body { overflow-y: auto; padding: 10px 10px 16px; -webkit-overflow-scrolling: touch; }
+/* lo spazio in fondo che tiene la testata ridotta quando il contenuto è corto (dom.ts, heroOnScroll) */
+.drawer-body::after { content: ''; display: block; height: var(--hero-slack, 0px); }
 .drawer-foot { padding: 8px 10px calc(10px + var(--safe-b)); border-top: 2px solid #2b2418; display: grid; gap: 6px; background: #12151b; }
 
 .tabs { display: flex; gap: 4px; overflow-x: auto; padding-bottom: 8px; scrollbar-width: none; }

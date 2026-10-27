@@ -92,8 +92,9 @@ export function openDeceased(ui: UI, id: string, opts: DeceasedOpts = {}) {
   const from = opts.from ?? (kept ? 'tree' : 'map');
 
   // la foto, se c'è, al posto della lapide (o del frutto), che resta in piccolo
-  const medal = kept ? fruitImg() : graveThumb(g.graveType, s.settings.style, vs!, g.seed % 4);
   const play = uiPlay();
+  // nell'interfaccia «viva» la lapide si vede grande (240×200): si ritrae a 480 px, o sul telefono è sgranata
+  const medal = kept ? fruitImg() : graveThumb(g.graveType, s.settings.style, vs!, g.seed % 4, play ? 480 : undefined);
   const head = h('img', { class: play ? 'dc-stone' : '', src: medal, alt: '' }) as HTMLElement;
   // interfaccia «viva»: la foto è una stampa appoggiata, con una candela accesa nell'angolo e un ciuffo di foglie
   void parts.photo.then((url) => {

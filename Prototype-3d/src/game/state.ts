@@ -10,9 +10,13 @@ import { CATALOG, FAMILY_MEMBERS, rotatedFootprint } from './catalog.ts';
 import { createRng, hashString } from './rng.ts';
 import { isoDate } from './time.ts';
 import { t } from '../i18n/index.ts';
+import { distribution } from '../config/distribution.ts';
 
-/** v2: mappa 64×64 (prima 48×48), recinto iniziale 34×34. */
-export const SAVE_VERSION = 2;
+/**
+ * Versione del salvataggio (vedi MIGRATIONS): v2 mappa 64×64 (prima 48×48),
+ * recinto iniziale 34×34; v3 il registro delle distribuzioni (`meta`).
+ */
+export const SAVE_VERSION = 3;
 
 export type ArtStyle = 'voxel' | 'miniature' | 'lowpoly';
 export type CameraMode = 'angled' | 'top';
@@ -185,6 +189,17 @@ export interface SaveData {
   /** Casa del Custode: tetto e aggiunte del cortile. */
   house: HouseState;
   settings: Settings;
+  meta: SaveMeta;
+}
+
+/**
+ * Da quali distribuzioni è passata la partita (beta-full, development…).
+ * Solo informativo: non dà né toglie accesso (l'accesso commerciale sta in
+ * game/entitlement.ts e non si salva mai).
+ */
+export interface SaveMeta {
+  firstDistribution: string;
+  lastDistribution: string;
 }
 
 export const DEFAULT_SETTINGS: Settings = {
@@ -329,8 +344,30 @@ export function createNewGame(now: Date, seed = Math.floor(Math.random() * 1e9))
     entrusted: [],
     house: defaultHouse(),
     settings: { ...DEFAULT_SETTINGS },
+    meta: { firstDistribution: distribution().id, lastDistribution: distribution().id },
   };
 }
+
+/**
+ * Migrazioni del salvataggio, una per versione, in ordine: si applicano solo
+ * quelle oltre la versione salvata. Non tolgono mai dati del giocatore (XP,
+ * fuochi fatui, inventario, tombe, ricordi, posizioni, preferenze).
+ */
+export const MIGRATIONS: ReadonlyArray<{ to: number; run: (d: Partial<SaveData>) => void }> = [
+  // la mappa è passata da 48 a 64 celle (centrata): si sposta tutto di 8 celle,
+  // così il vecchio cimitero resta al centro del nuovo recinto
+  { to: 2, run: (d) => {
+    const k = 8;
+    for (const g of d.graves ?? []) { g.x += k; g.y += k; }
+    for (const p of d.placeables ?? []) { p.x += k; p.y += k; }
+    for (const w of d.world?.looseWisps ?? []) { w.x += k; w.y += k; }
+    if (d.world) d.world.expansionLevel = 0;
+  } },
+  // il registro delle distribuzioni: una partita di prima viene dalla prova (beta)
+  { to: 3, run: (d) => {
+    if (!d.meta) d.meta = { firstDistribution: 'beta-full', lastDistribution: 'beta-full' };
+  } },
+];
 
 /** Casa del Custode di un salvataggio vecchio o ritoccato: solo voci note, il tetto in vista tra quelli comprati. */
 function normalizeHouse(raw: Partial<HouseState> | undefined): HouseState {
@@ -347,15 +384,9 @@ export function normalizeSave(raw: unknown): SaveData | null {
   const data = raw as Partial<SaveData>;
   if (typeof data.version !== 'number' || !Array.isArray(data.graves) || !data.player) return null;
   const base = createNewGame(new Date(data.createdAt ?? Date.now()), data.seed ?? hashString('necro'));
-  // v1 → v2: la mappa è passata da 48 a 64 celle (centrata): si sposta tutto
-  // di 8 celle, così il vecchio cimitero resta al centro del nuovo recinto.
-  if (data.version < 2) {
-    const d = 8;
-    for (const g of data.graves ?? []) { g.x += d; g.y += d; }
-    for (const p of data.placeables ?? []) { p.x += d; p.y += d; }
-    for (const w of data.world?.looseWisps ?? []) { w.x += d; w.y += d; }
-    if (data.world) data.world.expansionLevel = 0;
-  }
+  const from = data.version;
+  for (const m of MIGRATIONS) if (from < m.to) m.run(data);
+  // da qui in giù: riparazioni ripetibili (non dipendono dalla versione), per i dati di ogni età
   // la "ciotola" (Animale scheletro) è stata tolta: l'animale arriva con la sua
   // casetta. Chi l'aveva riceve indietro i fuochi fatui spesi.
   const bowls = (data.placeables ?? []).filter((p) => p.type === 'skeleton_pet').length + ((data.inventory as Record<string, number> | undefined)?.skeleton_pet ?? 0);
@@ -414,6 +445,8 @@ export function normalizeSave(raw: unknown): SaveData | null {
     memories: data.memories ?? [],
     entrusted: Array.isArray(data.entrusted) ? data.entrusted : [],
     house: normalizeHouse(data.house),
-    version: SAVE_VERSION,
+    meta: { firstDistribution: data.meta?.firstDistribution ?? distribution().id, lastDistribution: distribution().id },
+    // una partita di una versione più nuova del gioco resta alla sua versione (le sue migrazioni sono già fatte)
+    version: Math.max(from, SAVE_VERSION),
   } as SaveData;
 }

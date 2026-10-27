@@ -68,27 +68,7 @@ export const SIM = {
 } as const;
 
 /** Decadimento & riparazione. */
-/**
- * Sblocchi da attivare solo nella versione finale: per ora (test) l'Albero
- * dei ricordi si compra subito, senza aspettare le 20 tombe, e bicicletta,
- * bar e orto senza aspettare il rango (il prezzo resta).
- */
-export const RELEASE_LOCKS = { minGraves: false, earlyRank: false };
-
-/**
- * Oggetti in prova: con `RELEASE_LOCKS.earlyRank` spento si comprano a
- * qualsiasi rango, in qualsiasi stagione e senza il traguardo che li sblocca
- * (il prezzo resta).
- */
-export const EARLY_ACCESS: ReadonlySet<string> = new Set([
-  'bike', 'zombie_bar', 'brain_farm',
-  'candelabra', 'spirit_lantern', 'skull_garland', 'keeper_lamp', 'book_pile', 'stuffed_crow', 'gargoyle', 'reaper_statue', 'keeper_statue',
-  'soul_bell', 'soul_gazebo', 'cypress', 'glow_shrooms', 'witch_apple', 'swing_tree', 'stone_circle', 'hand_swamp', 'hell_crack',
-  'cat_shelter', 'ghost_picnic', 'witch_corner', 'skeleton_band', 'vampire_crypt',
-  'pumpkin_patch', 'giant_web', 'dead_altar', 'skeleton_snowman', 'fence_lights', 'lovers_bench', 'mystic_staff', 'broom',
-]);
-
-/** Cappelli del Custode che si sbloccano con un traguardo (anche questi liberi in prova). */
+/** Cappelli del Custode che si sbloccano con un traguardo. */
 export const HAT_FEATS = { witch: { counter: 'potionsSold', goal: 30, label: t('feat.potionsSold') } } as const;
 
 export const DECAY = {

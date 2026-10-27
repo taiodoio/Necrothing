@@ -2,6 +2,7 @@
 // Le etichette sono in src/i18n/it/game.ts (grave.*).
 
 import { t } from '../i18n/index.ts';
+import type { Access } from '../config/distribution.ts';
 
 export const CATEGORIES = [
   'electronics', 'plants', 'clothing', 'household', 'toys',
@@ -81,6 +82,12 @@ export const GRAVE_TYPE_LABELS: Record<GraveType, string> = {
 };
 
 /** Rango minimo per scegliere un tipo di lapide nel funnel di sepoltura. */
+/** Accesso commerciale dei tipi di lapide (Demo: rango 1–2). Le tombe del vecchio custode restano come sono. */
+export const GRAVE_TYPE_ACCESS: Record<GraveType, Access> = {
+  stone_simple: 'demo', rectangular: 'demo', gothic: 'demo', celtic_cross: 'demo', marble_cross: 'demo', victorian: 'demo',
+  angel: 'full', obelisk: 'full', family_memorial: 'full', decorated_monument: 'full',
+};
+
 export const GRAVE_TYPE_MIN_RANK: Record<GraveType, number> = {
   stone_simple: 1, rectangular: 1, gothic: 1, celtic_cross: 2, marble_cross: 2,
   angel: 3, obelisk: 3, family_memorial: 4, decorated_monument: 4, victorian: 2,

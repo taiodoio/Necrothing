@@ -21,6 +21,10 @@ export default {
   'backup.invalidImage': 'Immagine non valida.',
   'backup.unknownFile': 'File non riconosciuto come backup Necrothing 3D.',
   'backup.corrupt': 'Backup corrotto.',
+  // il backup viene da una versione del gioco più nuova di questa: importarlo perderebbe dati
+  'backup.newer': 'Questo backup viene da una versione più nuova del gioco: aggiorna il gioco e riprova.',
+  // all'avvio: il salvataggio non si leggeva; una copia resta da parte, non viene cancellata
+  'save.recovered': 'Il salvataggio non si leggeva: ne ho tenuto una copia da parte e si riparte da una partita nuova.',
 
   // ── Qualità ──
   // breve: livello di qualità grafica (pulsante delle Impostazioni)

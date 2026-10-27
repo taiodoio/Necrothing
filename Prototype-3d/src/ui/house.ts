@@ -39,16 +39,17 @@ export function houseItemImg(s: SaveData, id: string): string {
   return modelThumb(`hpart:${id}`, asModel(housePartLP(id), 1), [1, 1]);
 }
 
-/** Cosa manca per un tetto o un'aggiunta: rango e fuochi fatui. */
+/** Cosa manca per un tetto o un'aggiunta (lo dicono le regole: houseRequirements), scritto per la scheda. */
 function houseNeeds(s: SaveData, it: HouseRoof | HousePart): UnlockNeed[] {
-  const out: UnlockNeed[] = [];
-  const rank = rankForXp(s.player.xp);
-  if (it.minRank > rank.level) {
-    const need = RANKS.find((r) => r.level === it.minRank)!;
-    out.push({ icon: 'rank', short: t('house.ui.need.rankShort', { rank: it.minRank }), long: t('house.ui.need.rank', { rank: it.minRank, name: need.name, now: rank.level, xp: (need.minXp - s.player.xp).toLocaleString(currentLang()) }), progress: [s.player.xp, need.minXp] });
-  }
-  if (s.player.wisps < it.cost) out.push({ icon: 'wisp', short: t('house.ui.need.wispsShort', { n: it.cost - s.player.wisps }), long: t('house.ui.need.wisps', { cost: it.cost, n: it.cost - s.player.wisps }), progress: [s.player.wisps, it.cost] });
-  return out;
+  return R.houseRequirements(s, it.id).map((r): UnlockNeed => {
+    if (r.kind === 'full') return { icon: 'lock', short: t('shop.need.full.short'), long: t('shop.need.full.long') };
+    if (r.kind === 'rank') {
+      const rank = rankForXp(s.player.xp);
+      const need = RANKS.find((x) => x.level === it.minRank)!;
+      return { icon: 'rank', short: t('house.ui.need.rankShort', { rank: it.minRank }), long: t('house.ui.need.rank', { rank: it.minRank, name: need.name, now: rank.level, xp: (need.minXp - s.player.xp).toLocaleString(currentLang()) }), progress: [s.player.xp, need.minXp] };
+    }
+    return { icon: 'wisp', short: t('house.ui.need.wispsShort', { n: it.cost - s.player.wisps }), long: t('house.ui.need.wisps', { cost: it.cost, n: it.cost - s.player.wisps }), progress: [s.player.wisps, it.cost] };
+  });
 }
 
 // ── Registro delle sepolture ──────────────────────────────────────────

@@ -44,9 +44,14 @@ fasi, valutazione voxel vs low-poly vs GLB) e
 ```bash
 npm install
 npm run dev        # http://localhost:5173  (galleria asset: /gallery.html, personaggi: /lab.html)
-npm test           # 36 test (dominio, rendering voxel, adapter e generatori low-poly)
-npm run build      # typecheck + build di produzione in dist/
+npm test           # test di dominio, distribuzione e accesso, rendering, generatori low-poly, testi
+npm run build      # typecheck + build di produzione in dist/ (profilo beta-full: accesso Full)
+npm run build:beta # come sopra, col profilo beta-full esplicito (TestFlight, beta Play Store)
 ```
+
+Profili di distribuzione, accesso Demo/Full, classificazione del catalogo e
+salvataggi: vedi `docs/distribuzione-e-accesso.md`. In sviluppo `?access=demo`
+simula l'accesso Demo.
 
 Richiede Node ≥ 22.6 (i test usano `--experimental-strip-types`).
 `?seed=717` nell'URL crea una nuova partita con seme fisso (utile per confronti e test);
@@ -137,13 +142,13 @@ interagisci, `B` sali/scendi dalla bici, `F` sali/scendi dalla scopa, `Esc` chiu
   ma disattivate; con più casette si gestisce ogni animale per conto suo. Quello che fa (libero, al seguito, a
   cuccia) è salvato nella sua casetta e alla riapertura riprende da lì.
 - **Extra** (nuova categoria della Bottega: oggetti che non si posano ma si usano): la
-  **bicicletta** (rango 2, 50 ✦, pezzo unico) porta il Custode al doppio della velocità.
+  **bicicletta** (rango 2, 60 ✦, pezzo unico) porta il Custode al doppio della velocità.
   Si sale e si scende con l'icona sopra il mirino (al posto di quella della vista: la vista
   dall'alto non c'è più, i salvataggi tornano alla vista obliqua); in sella ruote e pedali
   girano con la strada fatta, i piedi seguono i pedali, il fanalino illumina la notte.
   Scendendo la bici sparisce.
-  *In prova*: bici, bar e orto si comprano già a qualsiasi rango (il prezzo resta); il
-  vincolo di rango torna con `RELEASE_LOCKS.earlyRank` in `src/game/balance.ts`.
+  Rango, stagione e traguardi valgono per tutti, anche nella beta (vedi
+  `docs/distribuzione-e-accesso.md`).
 - **Bar degli zombie** e **Orto dei cervelli** (Costruzioni, rango 3, 45 e 35 ✦, pezzi
   unici, 3×2 e 4×3): il bar ha bancone, bara-frigo con le bottiglie, lavagna a lapide e
   pipistrelli, con barista, avventori che brindano coi boccali e un ballerino; nell'orto uno

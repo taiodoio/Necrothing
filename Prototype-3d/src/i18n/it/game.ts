@@ -32,6 +32,8 @@ export default {
   // ── Regole: sepoltura ──
   'rules.bury.abstractToday': 'Hai già seppellito una cosa astratta oggi. Torna domani.',
   'rules.bury.rankTooLow': 'Questa lapide richiede un rango più alto.',
+  // limite della Demo (versione gratuita futura; mai nella beta): {n} tombe proprie, quelle del vecchio custode non contano
+  'rules.bury.demoLimit': 'In questa versione il cimitero accoglie fino a {n} tombe tue.',
   'rules.bury.noSpace': 'Spazio non disponibile: servono 2×2 celle libere.',
   // {name}: nome dell'oggetto sepolto
   'rules.bury.done': '{name} riposa in pace.',
@@ -72,6 +74,10 @@ export default {
   // {feat}: descrizione del traguardo, in minuscolo (es. «la strega deve vendere 30 pozioni»)
   'rules.buy.feat': 'Si sblocca con un traguardo: {feat}.',
   'rules.buy.owned': 'Ne possiedi già uno: è un pezzo unico.',
+  // l'oggetto fa parte della versione completa del gioco (accesso commerciale, non lo sblocco col rango)
+  'rules.access.full': 'Fa parte della versione completa.',
+  // {n}: tombe che servono (contano anche quelle affidate all'albero e riesumate)
+  'rules.buy.graves': 'Si sblocca con {n} tombe.',
   'rules.buy.funds': 'Fuochi fatui insufficienti.',
   'rules.buy.noFunds': 'Servono {amount} fuochi fatui per comprarlo.',
   // {item}: nome dell'oggetto comprato

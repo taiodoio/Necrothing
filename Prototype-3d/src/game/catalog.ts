@@ -5,6 +5,7 @@
 
 import { DECAY } from './balance.ts';
 import { t } from '../i18n/index.ts';
+import type { Access } from '../config/distribution.ts';
 
 export type PlaceableCategory = 'light' | 'decoration' | 'structure' | 'ambient' | 'npc' | 'extra';
 
@@ -26,6 +27,12 @@ export interface PlaceableDef {
   id: string;
   label: string;
   category: PlaceableCategory;
+  /**
+   * Accesso commerciale: `demo` per tutti, `full` solo con la versione completa
+   * (vedi ACCESS sotto). Non è lo sblocco: rango, stagione, traguardo e tombe
+   * valgono sempre, anche con la Full.
+   */
+  access: Access;
   /** Ingombro a terra [larghezza X, profondità Z] in celle (rotazione 0). */
   footprint: [number, number];
   cost: number;
@@ -69,7 +76,7 @@ export interface PlaceableDef {
   description: string;
 }
 
-const defs: PlaceableDef[] = [
+const list: Array<Omit<PlaceableDef, 'access'>> = [
   // ── Luci ──────────────────────────────────────────────────────────────
   { id: 'lamp_post', label: t('item.lampPost.label'), category: 'light', footprint: [1, 1], cost: 8, minRank: 1, decays: true, light: true, description: t('item.lampPost.desc') },
   { id: 'lamp_post_double', label: t('item.lampPostDouble.label'), category: 'light', footprint: [1, 1], cost: 12, minRank: 2, decays: true, light: true, family: 'lamp_post', look: 1, description: t('item.lampPostDouble.desc') },
@@ -123,7 +130,7 @@ const defs: PlaceableDef[] = [
   { id: 'well', label: t('item.well.label'), category: 'structure', footprint: [2, 2], cost: 25, minRank: 2, unique: true, decays: true, description: t('item.well.desc') },
   { id: 'fountain', label: t('item.fountain.label'), category: 'structure', footprint: [3, 3], cost: 40, minRank: 3, unique: true, decays: true, description: t('item.fountain.desc') },
   { id: 'hell_hole', label: t('item.hellHole.label'), category: 'structure', footprint: [2, 2], cost: 45, minRank: 4, unique: true, decays: true, light: true, description: t('item.hellHole.desc') },
-  { id: 'memory_tree', label: t('item.memoryTree.label'), category: 'structure', footprint: [5, 5], cost: 150, minRank: 1, unique: true, minGraves: 20, description: t('item.memoryTree.desc') },
+  { id: 'memory_tree', label: t('item.memoryTree.label'), category: 'structure', footprint: [5, 5], cost: 150, minRank: 3, unique: true, minGraves: 20, description: t('item.memoryTree.desc') },
   { id: 'soul_bell', label: t('item.soulBell.label'), category: 'structure', footprint: [2, 2], cost: 60, minRank: 4, unique: true, decays: true, light: true, description: t('item.soulBell.desc') },
   { id: 'soul_gazebo', label: t('item.soulGazebo.label'), category: 'structure', footprint: [4, 4], cost: 70, minRank: 4, unique: true, decays: true, light: true, description: t('item.soulGazebo.desc') },
   { id: 'pet_house', label: t('item.petHouse.label'), category: 'structure', footprint: [2, 2], cost: 20, minRank: 2, decays: true, description: t('item.petHouse.desc') },
@@ -178,8 +185,36 @@ const defs: PlaceableDef[] = [
   // ── Extra (non si piazzano: si usano) ─────────────────────────────────
   { id: 'mystic_staff', label: t('item.mysticStaff.label'), category: 'extra', footprint: [1, 1], cost: 0, minRank: 4, unique: true, feat: { counter: 'wispsEarned', goal: 500, label: t('feat.wispsEarned') }, description: t('item.mysticStaff.desc') },
   { id: 'broom', label: t('item.broom.label'), category: 'extra', footprint: [1, 2], cost: 120, minRank: 5, unique: true, description: t('item.broom.desc') },
-  { id: 'bike', label: t('item.bike.label'), category: 'extra', footprint: [1, 1], cost: 50, minRank: 2, unique: true, description: t('item.bike.desc') },
+  { id: 'bike', label: t('item.bike.label'), category: 'extra', footprint: [1, 1], cost: 60, minRank: 2, unique: true, description: t('item.bike.desc') },
 ];
+
+/**
+ * Classificazione commerciale (Milestone 2: la Demo). Criterio: Demo gli
+ * oggetti di rango 1–2 non unici e non stagionali, più quelli che ci sono già
+ * nella partita nuova; Full il resto. Ogni oggetto sta in una sola lista
+ * (lo controllano i test); le scelte ancora aperte sono in
+ * docs/distribuzione-e-accesso.md.
+ */
+export const ACCESS: Record<Access, readonly string[]> = {
+  demo: [
+    'lamp_post', 'lamp_post_double', 'lamp_post_gothic', 'lantern', 'lantern_pole', 'lantern_stone', 'ghost_lantern', 'glow_pumpkin', 'skull_candle', 'torch', 'candelabra',
+    'wreath', 'sign', 'angel_statue', 'votive_statue', 'open_coffin', 'bones', 'vase', 'book_pile', 'stuffed_crow', 'urn',
+    'shop', 'keeper_house', 'open_grave', 'wall_stone', 'fence_wood', 'fence_iron', 'arch_stone', 'path_stone', 'path_dirt', 'well', 'pet_house', 'pet_house_cat',
+    'pond', 'dead_tree', 'half_pine', 'xmas_tree', 'toxic_puddle', 'monster_rocks', 'flowerbed', 'poison_shrooms', 'bushes', 'hillock', 'tall_grass', 'cypress', 'glow_shrooms', 'witch_apple', 'mud',
+    'bike',
+  ],
+  full: [
+    'spirit_lantern', 'skull_garland', 'keeper_lamp', 'bonfire', 'candle_tree', 'fence_lights',
+    'gargoyle', 'reaper_statue', 'keeper_statue', 'giant_web', 'dead_altar', 'skeleton_snowman',
+    'gravedigger_house', 'shrine', 'zombie_bar', 'brain_farm', 'mausoleum', 'arch_lights', 'arch_gothic', 'fountain', 'hell_hole', 'memory_tree', 'soul_bell', 'soul_gazebo',
+    'pet_house_rabbit', 'pet_house_duck', 'pet_house_crow',
+    'spectral_tree', 'swing_tree', 'stone_circle', 'hand_swamp', 'hell_crack', 'pumpkin_patch',
+    'zombies_play', 'zombies_dance', 'scarecrow', 'gardener_corner', 'ghosts_ball', 'cat_shelter', 'ghost_picnic', 'witch_corner', 'skeleton_band', 'vampire_crypt', 'lovers_bench',
+    'mystic_staff', 'broom',
+  ],
+};
+const FULL = new Set(ACCESS.full);
+const defs: PlaceableDef[] = list.map((d) => ({ ...d, access: FULL.has(d.id) ? 'full' : 'demo' }));
 
 export const CATALOG: Record<string, PlaceableDef> = Object.fromEntries(defs.map((d) => [d.id, d]));
 export const CATALOG_LIST: readonly PlaceableDef[] = defs;

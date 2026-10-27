@@ -2,9 +2,9 @@
 // rispetto a three/DOM. Ogni azione muta lo SaveData passato e ritorna un
 // esito (messaggio + ricompense) oppure lancia GameError.
 
-import { BUSINESS, DECAY, EARLY_ACCESS, ECONOMY, HAT_FEATS, HOUSE_PERKS, RELEASE_LOCKS, EXPANSION, GRAVE_FOOTPRINT, GRAVEDIGGER, WISP_SPAWN, WISPS, XP, ZOMBIE_MUD } from './balance.ts';
+import { BUSINESS, DECAY, ECONOMY, HAT_FEATS, HOUSE_PERKS, EXPANSION, GRAVE_FOOTPRINT, GRAVEDIGGER, WISP_SPAWN, WISPS, XP, ZOMBIE_MUD } from './balance.ts';
 import { CATALOG, isSeasonallyAvailable, placeableDef, repairCost, rotatedFootprint, type PlaceableDef } from './catalog.ts';
-import { CATEGORIES, CUSTOM_CAUSE_MAX, DEATH_CAUSES, GRAVE_TYPE_MIN_RANK, GRAVE_TYPES, type CauseChoice, type Category, type DeathCause, type GraveType } from './graves.ts';
+import { CATEGORIES, CUSTOM_CAUSE_MAX, DEATH_CAUSES, GRAVE_TYPE_ACCESS, GRAVE_TYPE_MIN_RANK, GRAVE_TYPES, type CauseChoice, type Category, type DeathCause, type GraveType } from './graves.ts';
 import { evaluateAchievements, rankForXp, type AchievementDef } from './progression.ts';
 import { hashString, newId } from './rng.ts';
 import type { RoamerKind } from './spawn.ts';
@@ -12,6 +12,8 @@ import type { Grave, MemoryType, Placed, SaveData } from './state.ts';
 import { isoDate } from './time.ts';
 import { areaForLevel, buildOccupancy, canPlaceAt, cellsOf, computePrestige, nearestFreeSpot } from './world.ts';
 import { houseHasVeggie, houseItem, housePart, housePerk, houseRoof } from './house.ts';
+import { lookOptionAccess, type CustodeLook } from './look.ts';
+import { hasAccess, personalGraveLimit } from './entitlement.ts';
 import { t } from '../i18n/index.ts';
 
 export class GameError extends Error {}
@@ -141,6 +143,30 @@ export function canBuryAbstractToday(s: SaveData, now: Date): boolean {
   return s.player.lastAbstractBurialDate !== isoDate(now);
 }
 
+/**
+ * Le tombe personali nel cimitero: quelle del giocatore, senza le tombe del
+ * vecchio custode (narrative) e senza i ricordi affidati all'albero. È il
+ * conto del limite della Demo, diverso da graveTotal (che vale per gli sblocchi).
+ */
+export function personalGraves(s: SaveData): number {
+  return s.graves.filter((g) => !g.legacy).length;
+}
+
+/** Si può cominciare una sepoltura? (No solo con i limiti della Demo, mai nella beta.) */
+export function canStartBurial(s: SaveData): boolean {
+  const limit = personalGraveLimit();
+  return limit === null || personalGraves(s) < limit;
+}
+
+export type GraveTypeAvailability = 'ok' | 'full' | 'rank';
+
+/** Un tipo di lapide si può scegliere? Prima l'accesso commerciale, poi il rango. */
+export function graveTypeAvailability(s: SaveData, type: GraveType): GraveTypeAvailability {
+  if (!hasAccess(GRAVE_TYPE_ACCESS[type])) return 'full';
+  if (GRAVE_TYPE_MIN_RANK[type] > rankForXp(s.player.xp).level) return 'rank';
+  return 'ok';
+}
+
 export function bury(s: SaveData, d: BurialDraft, x: number, y: number, now: Date): { grave: Grave; result: ActionResult } {
   const errors = validateDraft(d, now);
   const first = Object.values(errors)[0];
@@ -148,9 +174,10 @@ export function bury(s: SaveData, d: BurialDraft, x: number, y: number, now: Dat
   if (d.category === 'abstract' && !canBuryAbstractToday(s, now)) {
     throw new GameError(t('rules.bury.abstractToday'));
   }
-  if (GRAVE_TYPE_MIN_RANK[d.graveType!] > rankForXp(s.player.xp).level) {
-    throw new GameError(t('rules.bury.rankTooLow'));
-  }
+  if (!canStartBurial(s)) throw new GameError(t('rules.bury.demoLimit', { n: personalGraveLimit() ?? 0 }));
+  const typeAv = graveTypeAvailability(s, d.graveType!);
+  if (typeAv === 'full') throw new GameError(t('rules.access.full'));
+  if (typeAv === 'rank') throw new GameError(t('rules.bury.rankTooLow'));
   const occ = buildOccupancy(s);
   if (!canPlaceAt(x, y, GRAVE_FOOTPRINT, occ, areaForLevel(s.world.expansionLevel))) {
     throw new GameError(t('rules.bury.noSpace'));
@@ -362,7 +389,7 @@ export function placedCount(s: SaveData, type: string): number {
   return s.placeables.filter((p) => p.type === type).length;
 }
 
-export type ShopAvailability = 'ok' | 'rank' | 'season' | 'feat' | 'owned' | 'graves' | 'funds';
+export type ShopAvailability = 'ok' | 'full' | 'rank' | 'season' | 'feat' | 'owned' | 'graves' | 'funds';
 
 /** Sepolture che contano per gli sblocchi: nel cimitero, affidate all'albero e anche quelle poi riesumate. */
 export function graveTotal(s: SaveData): number {
@@ -377,21 +404,51 @@ export function featProgress(s: SaveData, feat: NonNullable<PlaceableDef['feat']
 /** Il cappello da strega (e gli altri cappelli a traguardo) si può indossare? */
 export function hatUnlocked(s: SaveData, hat: string): boolean {
   const f = HAT_FEATS[hat as keyof typeof HAT_FEATS];
-  if (!f || !RELEASE_LOCKS.earlyRank) return true; // in prova sono tutti liberi
+  if (!f) return true;
   return (s.player.counters[f.counter] ?? 0) >= f.goal;
 }
 
+export type LookOptionAvailability = 'ok' | 'full' | 'feat';
+
+/** Una scelta d'aspetto si può indossare? Prima l'accesso commerciale, poi il traguardo (cappelli). */
+export function lookOptionAvailability(s: SaveData, key: keyof CustodeLook, value: unknown): LookOptionAvailability {
+  if (!hasAccess(lookOptionAccess(key, value))) return 'full';
+  if (key === 'hat' && !hatUnlocked(s, String(value))) return 'feat';
+  return 'ok';
+}
+
+/**
+ * Si può comprare un oggetto? Prima l'accesso commerciale (Demo/Full), poi lo
+ * sblocco: stagione, rango, traguardo, tombe; poi il prezzo. Lo sblocco vale
+ * per tutti, anche con la Full e nella beta.
+ */
 export function shopAvailability(s: SaveData, type: string, now: Date): ShopAvailability {
   const def = placeableDef(type);
-  const early = !RELEASE_LOCKS.earlyRank && EARLY_ACCESS.has(type);
+  if (!hasAccess(def.access)) return 'full';
   // gli stagionali già comprati restano: si comprano solo nella loro stagione
-  if (!early && !isSeasonallyAvailable(def, now.getMonth(), now.getDate())) return 'season';
-  if (!early && def.minRank > rankForXp(s.player.xp).level) return 'rank';
-  if (!early && def.feat && featProgress(s, def.feat)[0] < def.feat.goal) return 'feat';
+  if (!isSeasonallyAvailable(def, now.getMonth(), now.getDate())) return 'season';
+  if (def.minRank > rankForXp(s.player.xp).level) return 'rank';
+  if (def.feat && featProgress(s, def.feat)[0] < def.feat.goal) return 'feat';
   if (def.unique && ownedCount(s, type) + placedCount(s, type) > 0) return 'owned';
-  if (RELEASE_LOCKS.minGraves && def.minGraves && graveTotal(s) < def.minGraves) return 'graves';
+  if (def.minGraves && graveTotal(s) < def.minGraves) return 'graves';
   if (s.player.wisps < def.cost) return 'funds';
   return 'ok';
+}
+
+/** Un requisito che manca per comprare un oggetto, con quanto si ha e quanto serve (se si può contare). */
+export interface UnlockRequirement { kind: 'full' | 'season' | 'rank' | 'feat' | 'graves' | 'funds'; have?: number; need?: number }
+
+/** Tutto quello che manca per comprare un oggetto, nell'ordine di shopAvailability (le schermate lo mostrano e basta). */
+export function unlockRequirements(s: SaveData, type: string, now: Date): UnlockRequirement[] {
+  const def = placeableDef(type);
+  const out: UnlockRequirement[] = [];
+  if (!hasAccess(def.access)) out.push({ kind: 'full' });
+  if (!isSeasonallyAvailable(def, now.getMonth(), now.getDate())) out.push({ kind: 'season' });
+  if (def.minRank > rankForXp(s.player.xp).level) out.push({ kind: 'rank', have: s.player.xp, need: def.minRank });
+  if (def.feat) { const [n, goal] = featProgress(s, def.feat); if (n < goal) out.push({ kind: 'feat', have: n, need: goal }); }
+  if (def.minGraves && graveTotal(s) < def.minGraves) out.push({ kind: 'graves', have: graveTotal(s), need: def.minGraves });
+  if (s.player.wisps < def.cost) out.push({ kind: 'funds', have: s.player.wisps, need: def.cost });
+  return out;
 }
 
 export function maxBuyable(s: SaveData, type: string): number {
@@ -403,10 +460,12 @@ export function maxBuyable(s: SaveData, type: string): number {
 export function buy(s: SaveData, type: string, qty: number, now: Date): ActionResult {
   const def = placeableDef(type);
   const avail = shopAvailability(s, type, now);
+  if (avail === 'full') throw new GameError(t('rules.access.full'));
   if (avail === 'season') throw new GameError(t('rules.buy.season'));
   if (avail === 'rank') throw new GameError(t('rules.buy.rank', { rank: def.minRank }));
   if (avail === 'feat') throw new GameError(t('rules.buy.feat', { feat: def.feat!.label.toLowerCase() }));
   if (avail === 'owned') throw new GameError(t('rules.buy.owned'));
+  if (avail === 'graves') throw new GameError(t('rules.buy.graves', { n: def.minGraves ?? 0 }));
   const n = Math.max(1, Math.min(qty, maxBuyable(s, type)));
   if (maxBuyable(s, type) < 1) throw new GameError(t('rules.buy.funds'));
   spend(s, def.cost * n, 'rules.buy.noFunds');
@@ -732,15 +791,27 @@ export function ensureKeeperHouse(s: SaveData, now: Date): Placed | null {
   return p;
 }
 
-export type HouseAvailability = 'ok' | 'owned' | 'rank' | 'funds';
+export type HouseAvailability = 'ok' | 'owned' | 'full' | 'rank' | 'funds';
 
 export function houseAvailability(s: SaveData, id: string): HouseAvailability {
   const it = houseItem(id);
   if (!it) throw new GameError(t('rules.house.missing'));
   if (s.house.owned.includes(id)) return 'owned';
+  if (!hasAccess(it.access)) return 'full';
   if (it.minRank > rankForXp(s.player.xp).level) return 'rank';
   if (s.player.wisps < it.cost) return 'funds';
   return 'ok';
+}
+
+/** Cosa manca per un tetto o un'aggiunta della Casa: accesso, rango, fuochi fatui (come unlockRequirements). */
+export function houseRequirements(s: SaveData, id: string): UnlockRequirement[] {
+  const it = houseItem(id);
+  if (!it || s.house.owned.includes(id)) return [];
+  const out: UnlockRequirement[] = [];
+  if (!hasAccess(it.access)) out.push({ kind: 'full' });
+  if (it.minRank > rankForXp(s.player.xp).level) out.push({ kind: 'rank', have: s.player.xp, need: it.minRank });
+  if (s.player.wisps < it.cost) out.push({ kind: 'funds', have: s.player.wisps, need: it.cost });
+  return out;
 }
 
 /** Compra un tetto (e lo mette) o un'aggiunta per la casa: si vede subito, niente inventario. */
@@ -748,6 +819,7 @@ export function buyHousePart(s: SaveData, id: string, now: Date): ActionResult {
   const it = houseItem(id)!;
   const av = houseAvailability(s, id);
   if (av === 'owned') throw new GameError(t('rules.house.owned'));
+  if (av === 'full') throw new GameError(t('rules.access.full'));
   if (av === 'rank') throw new GameError(t('rules.house.rank', { rank: it.minRank }));
   if (av === 'funds') throw new GameError(t('rules.house.funds', { cost: it.cost }));
   s.player.wisps -= it.cost;

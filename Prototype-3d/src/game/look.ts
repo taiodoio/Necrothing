@@ -4,6 +4,7 @@
 // I nomi delle scelte sono in src/i18n/it/game.ts (look.*).
 
 import { t } from '../i18n/index.ts';
+import type { Access } from '../config/distribution.ts';
 
 export type HairStyle = 'tufts' | 'bob' | 'long' | 'curly' | 'longcurly' | 'bun' | 'spiky' | 'none'
   | 'fringe' | 'fringeLong' | 'side' | 'sideLong' | 'wavy' | 'wavyLong' | 'buzz';
@@ -96,6 +97,15 @@ export function lookKey(l: CustodeLook): string {
   for (let i = 0; i < s.length; i++) h = Math.imul(h ^ s.charCodeAt(i), 16777619);
   return (h >>> 0).toString(36);
 }
+
+/**
+ * Accesso commerciale delle scelte d'aspetto: tutte Demo, tranne quelle
+ * elencate qui (il cappello da strega viene con l'Angolo della strega, Full).
+ */
+export const LOOK_ACCESS: { [K in keyof CustodeLook]?: Partial<Record<string, Access>> } = {
+  hat: { witch: 'full' },
+};
+export const lookOptionAccess = (key: keyof CustodeLook, value: unknown): Access => LOOK_ACCESS[key]?.[String(value)] ?? 'demo';
 
 /** Teste senza capelli, barba e baffi (la zucca ha il picciolo, il teschio è osso). */
 export const BALD_HEADS: readonly HeadStyle[] = ['pumpkin', 'skull'];

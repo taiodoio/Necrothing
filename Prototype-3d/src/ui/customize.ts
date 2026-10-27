@@ -159,10 +159,13 @@ export function openCustomize(ui: UI) {
     const disabled = off(key);
     for (const [v, label] of LOOK_STYLES[key] as Array<[CustodeLook[K], string]>) {
       const img = h('img', { alt: '', width: 72, height: 72, draggable: false }) as HTMLImageElement;
-      // il cappello da strega si sblocca con le pozioni della strega
-      const locked = key === 'hat' && !R.hatUnlocked(game.state, String(v)) && look.hat !== v;
-      const feat = locked ? HAT_FEATS[v as keyof typeof HAT_FEATS] : null;
-      const b = h('button', { class: `look-tile${look[key] === v ? ' active' : ''}${locked ? ' locked' : ''}`, 'aria-pressed': String(look[key] === v), disabled: disabled || locked, title: feat ? t('look.ui.hatLocked', { label: feat.label, have: Math.min(feat.goal, game.state.player.counters[feat.counter]), goal: feat.goal }) : undefined, onclick: () => {
+      // le regole dicono se si può indossare (accesso, poi il traguardo: il cappello da strega con le pozioni);
+      // quello che si ha già addosso resta scelto
+      const av = R.lookOptionAvailability(game.state, key, v);
+      const locked = av !== 'ok' && look[key] !== v;
+      const feat = locked && av === 'feat' ? HAT_FEATS[v as keyof typeof HAT_FEATS] : null;
+      const why = !locked ? undefined : feat ? t('look.ui.hatLocked', { label: feat.label, have: Math.min(feat.goal, game.state.player.counters[feat.counter]), goal: feat.goal }) : t('shop.need.full.long');
+      const b = h('button', { class: `look-tile${look[key] === v ? ' active' : ''}${locked ? ' locked' : ''}`, 'aria-pressed': String(look[key] === v), disabled: disabled || locked, title: why, onclick: () => {
         for (const x of Array.from(box.children)) { x.classList.toggle('active', x === b); x.setAttribute('aria-pressed', String(x === b)); }
         apply({ [key]: v } as Partial<CustodeLook>);
       } }, h('span', { class: 'look-thumb' }, img), h('span', { class: 'look-tile-label' }, label));

@@ -453,6 +453,8 @@ export default {
   // il cortile del Custode: azioni vere, un consiglio alla volta; {n} e {total}: il passo
   'onboarding.tutorial.progress': '{n} di {total}',
   'onboarding.yard.skip': 'Salta il cortile',
+  // breve: il passo appena fatto, sul consiglio prima di quello nuovo
+  'onboarding.yard.done': 'Fatto!',
   'onboarding.yard.walk': 'Questo è il cortile della Casa: qui provi tutto, senza fretta. Tocca un punto del prato e il Custode ci va.',
   'onboarding.yard.wisp': 'Eccone uno: un fuoco fatuo. Toccalo per raccoglierlo; ne troverai in giro per il cimitero.',
   'onboarding.yard.clean': 'Questa tomba è trascurata. Toccala e scegli la scopa.',

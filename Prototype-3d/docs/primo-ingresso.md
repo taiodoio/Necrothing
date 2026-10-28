@@ -17,7 +17,7 @@ Passando da una fase a schermo pieno all'altra (lettera, nome, introduzione) lo 
 | `tour` | Quattro tappe: profilo, Seppellisci, Bottega, menu | `showTour` |
 | `done` | Si gioca | — |
 
-- **Splash.** È quello di sempre. Solo al primo ingresso (`stage === 'welcome'`) mostra «Entra in Necrothing», col pulsante oro del gioco (`.big-btn`) e una sfumatura scura in basso perché si legga. Nessun contenuto commerciale. Agli avvii successivi lo splash sparisce da solo come prima.
+- **Splash.** La scena notturna del cimitero (`public/boot/scena.webp`) con logo e veli scuri sopra e sotto. Solo al primo ingresso (`stage === 'welcome'`) mostra «Entra in Necrothing», col pulsante oro del gioco (`.big-btn`) e una sfumatura scura in basso perché si legga. Nessun contenuto commerciale. Agli avvii successivi lo splash sparisce da solo come prima.
 - **Sfondo.** Fino al tutorial la scena non si vede. Lettera, nome e introduzione stanno su uno sfondo loro (`.ob-solid`): i pannelli del gioco più scuri, con pattern tono su tono, bagliore caldo al centro ed edera in alto. In fondo ci sono, più scure, le lapidi con la terra e la pala del dettaglio delle tombe. Lo sfondo è già sotto lo splash prima che sparisca (`cover()`).
 - **Lucciole.** Punti caldi che vagano e si accendono e spengono; si animano solo con trasformazioni e opacità. Il numero dipende dal livello grafico: 16 in alta, 8 in media, nessuna in bassa né con il movimento ridotto.
 - **Lettera.** È un foglio di carta logora: bordi strappati (una maschera), macchie e grana. Le pieghe sono appena accennate, ondulate e sfocate, con qualche grinza.
@@ -32,7 +32,7 @@ Passando da una fase a schermo pieno all'altra (lettera, nome, introduzione) lo 
   - niente emoji né simboli.
 
   Se si salta, il nome resta «Custode».
-- **Introduzione.** Quattro schede: raccogliere i fuochi fatui; fiori, pulizia e riparazioni; apparizioni e presenze; creare ricordi e personalizzare. Nella prima parla il fuoco fatuo, che si presenta, con il modello della scena (fiammella, cuore, occhietti: `wispPortrait`). Nella terza c'è il fantasma della scena.
+- **Introduzione.** Quattro schede: raccogliere i fuochi fatui; fiori, pulizia e riparazioni; apparizioni e presenze; creare ricordi e personalizzare. Nella prima parla il fuoco fatuo, che si presenta, con il modello della scena (fiammella, cuore, occhietti: `wispPortrait`). L'inquadratura è fissa, sul centro della fiammella: il riquadro calcolato dal modello, condiviso con i fuochi fatui del gioco, a volte lo spostava di lato. Nella terza c'è il fantasma della scena.
 - **Tutorial.** Un consiglio in alto, un occhio di bue e un cerchio animato su dove toccare (due onde che si allargano), che seguono la camera. L'occhio di bue è misurato dalla cima dell'oggetto a dove poggia, così una tomba sta tutta nella luce. Quando l'oggetto è selezionato, il segno passa al pulsante giusto del suo menu. Ogni passo si completa con l'azione vera, segnalata dal gioco (`signalOnboarding`):
 
   | Passo | Azione | Segnale |

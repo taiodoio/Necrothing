@@ -1,46 +1,59 @@
 // Il primo ingresso: la lettera (arriva piegata in quattro, si apre davanti a
-// una luce calda, timbrata in fondo), il nome, quattro schede d'introduzione,
-// il tutorial con azioni vere (un consiglio alla volta, un occhio di bue su
-// cosa toccare e un cerchio dove toccare) e il giro dell'interfaccia (lo stesso
-// consiglio, un occhio di bue alla volta). Fino al tutorial la scena non si
+// una luce calda, timbrata in fondo), il nome, quattro schede d'introduzione e
+// il cortile del Custode, una mappa piccola a parte (game/yard.ts) dove si
+// prova tutto con azioni vere: un consiglio alla volta, un occhio di bue su
+// cosa toccare e un cerchio dove toccare. Fino al cortile la scena non si
 // vede: c'è uno sfondo suo, con le lucciole, che resta mentre le schede
-// sfumano l'una nell'altra. «Salta» sta in alto a destra; nelle schede c'è
-// «Indietro». Animazioni e lucciole seguono il livello grafico (bassa: niente
-// piega in 3D né lucciole). Lo stato è nel salvataggio (game/onboarding.ts):
-// si riprende da dove ci si era fermati. Dalle Impostazioni si rivede la
-// lettera o si rifà il tutorial, con uno stato a parte che non si salva: la
-// partita non cambia (le azioni vere danno le loro ricompense, come sempre).
+// sfumano l'una nell'altra (e che copre i cambi di scena). «Salta» sta in alto
+// a destra; nelle schede c'è «Indietro». Animazioni e lucciole seguono il
+// livello grafico (bassa: niente piega in 3D né lucciole). Lo stato è nel
+// salvataggio (game/onboarding.ts): si riprende da dove ci si era fermati.
+// Dalle Impostazioni si rivede la lettera o si rifà il cortile, con uno stato
+// a parte che non si salva: la partita non cambia. Dopo il cortile, nel
+// cimitero vero: il primo obiettivo (la prima sepoltura) e i consigli al
+// momento giusto (game/tips.ts).
 
 import type * as THREE from 'three';
 import { scheduleSave } from '../app/persistence.ts';
 import { checkName, NAME_MAX } from '../game/playerName.ts';
-import { currentStep, tutorialSignal, TUTORIAL_STEPS, type OnboardingStage, type OnboardingState, type TutorialSignal, type TutorialStep } from '../game/onboarding.ts';
+import { currentStep, yardFinished, yardSignal, YARD_STEPS, type OnboardingStage, type OnboardingState, type YardSignal, type YardStep } from '../game/onboarding.ts';
+import { personalGraves } from '../game/rules.ts';
+import { markTip, nextTip } from '../game/tips.ts';
+import { applyYardGift, buildYard, YARD_GIFT, YARD_GRAVE, YARD_LANTERN } from '../game/yard.ts';
 import { t, tList } from '../i18n/index.ts';
 import { cellCenter } from '../view/WorldView.ts';
-import { $, closeDrawer, drawerOpen, h, setUiBlocking } from './dom.ts';
-import { lpIconPng } from './lpIcons.ts';
+import { celebrate } from './celebrate.ts';
+import { $, closeDrawer, drawerOpen, h, setUiBlocking, toast, uiBlocking } from './dom.ts';
+import { lpBadgeUrl, lpIconPng } from './lpIcons.ts';
 import { groundUrl } from './previews.ts';
+import { npcNote } from './npcNote.ts';
 import { npcPortrait, wispPortrait } from './npcPortraits.ts';
 import type { UI } from './UI.ts';
 
+/** Un passo del cortile, o la lanterna spostata in Modifica (dopo, il segno passa a «Fine»). */
+export type OnboardingSignal = YardSignal | 'itemMoved';
+
 let active: Onboarding | null = null;
-/** Qualcosa è successo nel gioco (raccolto un fuoco fatuo, aperta una tomba…): il tutorial ascolta. */
-export const signalOnboarding = (s: TutorialSignal) => active?.signal(s);
+/** Qualcosa è successo nel gioco (raccolto un fuoco fatuo, aperta una tomba…): il cortile ascolta. */
+export const signalOnboarding = (s: OnboardingSignal) => active?.signal(s);
+
+/** Tra due consigli al momento giusto almeno tanto (e il primo non prima di mezzo minuto). */
+const TIP_GAP_MS = 60_000;
+/** Il passaggio dal cortile al cimitero vero dura almeno tanto (lo sfondo con «Il cimitero si sveglia…»). */
+const WAKE_MS = 900;
 
 const reducedMotion = () => typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches;
 
-/** Le fasi a schermo pieno, sullo sfondo del percorso (passando dall'una all'altra lo sfondo resta). */
-const SOLID: readonly OnboardingStage[] = ['welcome', 'name', 'intro'];
+/** Le fasi a schermo pieno, sullo sfondo del percorso (passando dall'una all'altra lo sfondo resta; il cortile si prepara sotto). */
+const SOLID: readonly OnboardingStage[] = ['welcome', 'name', 'intro', 'yard'];
 /** Le schede dell'introduzione: l'immagine (il fuoco fatuo e il fantasma sono quelli della scena) e la chiave del testo. */
 const INTRO: Array<[() => string, number, string]> = [
   [wispPortrait, 1, 'wisp'], [() => lpIconPng('flower', 160), 2, 'icon'], [() => npcPortrait('ghost'), 3, 'ghost'], [() => lpIconPng('coffin', 160), 4, 'icon'],
 ];
-/** Il pulsante del menù dell'oggetto che fa ciascun passo. */
-const CTX_ACT: Partial<Record<TutorialStep, string>> = { visit: 'detail', light: 'light', clean: 'clean' };
-
-/** Un bersaglio sulla scena: dove toccare (`at`), dove poggia (`base`, per misurare l'occhio di bue) e dove guardare. */
-interface SceneTarget { at: () => THREE.Vector3 | null; base: () => THREE.Vector3 | null; focus?: () => void }
-interface TourStop { key: string; rect: () => DOMRect | null; before?: () => void }
+/** Un bersaglio sulla scena: dove toccare (`at`) e dove poggia (`base`, per misurare l'occhio di bue). */
+interface SceneTarget { at: () => THREE.Vector3 | null; base: () => THREE.Vector3 | null }
+/** Un bersaglio: un pulsante (selettore CSS) o un punto della scena. */
+type Target = SceneTarget | string;
 
 export class Onboarding {
   private readonly ui: UI;
@@ -54,17 +67,26 @@ export class Onboarding {
   private halo: HTMLElement | null = null;
   private tap: HTMLElement | null = null;
   private haloKey = '';
-  private sceneTarget: SceneTarget | null = null;
-  private haloEl: HTMLElement | null = null;
-  /** Il pulsante del menù sopra l'oggetto che fa il passo (quando l'oggetto è selezionato, il segno passa lì). */
-  private ctxAct: string | null = null;
+  /** I bersagli del passo, dal più vicino alla fine: il segno va sul primo che si vede. */
+  private targets: (() => Target[]) | null = null;
+  /** Il passo del cortile in vista (null fuori dal cortile). */
+  private step: YardStep | null = null;
+  /** In Modifica la lanterna è stata spostata: ora si tocca «Fine». */
+  private moved = false;
+  /** Il fantasma del passo delle presenze (e quando può arrivarne un altro). */
+  private ghostId: string | null = null;
+  private ghostAt = 0;
   private waitTimer = 0;
-  /** Nel giro: rimette l'occhio di bue sulla tappa a ogni frame (la camera può muoversi ancora). */
-  private tourPlace: (() => void) | null = null;
+  /** Il primo obiettivo: già proposto in questa apertura del gioco. */
+  private goalShown = false;
+  private goalTimer = 0;
+  /** L'ultimo consiglio al momento giusto (all'avvio: come se fosse di mezzo minuto fa). */
+  private lastTipAt = performance.now() - TIP_GAP_MS / 2;
 
   constructor(ui: UI) {
     this.ui = ui;
     active = this;
+    window.setInterval(() => this.tipTick(), 4000);
   }
 
   private get game() { return this.ui.game; }
@@ -80,17 +102,19 @@ export class Onboarding {
       case 'welcome': this.showLetter(!back); break;
       case 'name': this.showName(); break;
       case 'intro': this.showIntro(back ? INTRO.length - 1 : 0); break;
-      case 'tutorial': this.startTutorial(); break;
-      case 'tour': this.showTour(); break;
-      case 'done': break;
+      case 'yard': this.startYard(); break;
+      case 'done': this.scheduleGoal(); break;
     }
   }
 
   /** Dalle Impostazioni: solo la lettera, senza toccare la partita. */
-  replayLetter() { this.replay({ stage: 'welcome', step: 0 }, true); }
+  replayLetter() { this.replay({ stage: 'welcome', step: 0, goal: 'done', tips: [] }, true); }
 
-  /** Dalle Impostazioni: il tutorial e il giro dell'interfaccia, senza toccare la partita (niente lettera né nome). */
-  replayTutorial() { this.replay({ stage: 'tutorial', step: 0 }, false); }
+  /** Dalle Impostazioni: il cortile, senza toccare la partita (niente lettera né nome, niente dono). */
+  replayTutorial() {
+    if (this.game.inYard) return;
+    this.replay({ stage: 'yard', step: 0, goal: 'done', tips: [] }, false);
+  }
 
   private replay(from: OnboardingState, letterOnly: boolean) {
     closeDrawer(true);
@@ -109,15 +133,14 @@ export class Onboarding {
     if (stage === 'done') {
       if (this.replaying) { this.replaying = null; this.letterOnly = false; }
       else this.game.state.settings.shopTutorialDone = true;
+      this.lastTipAt = performance.now();
     }
     this.save();
     this.resume(back);
   }
 
   private cleanup(keepLayer = false) {
-    this.coach?.remove(); this.coach = null; $('#game').classList.remove('has-coach');
-    this.clearMarks();
-    window.clearInterval(this.waitTimer);
+    this.dropCoach();
     if (keepLayer) return;
     // lo sfondo sfuma via (la scena ricompare piano)
     const l = this.layer;
@@ -275,7 +298,7 @@ export class Onboarding {
     const [img, n, kind] = INTRO[i];
     const last = i === INTRO.length - 1;
     this.openLayer('ob-solid ob-intro-layer',
-      this.skipBtn(() => this.go('tutorial')),
+      this.skipBtn(() => this.go('yard')),
       h('div', { class: 'dialog modal ob-card ob-intro with-hero' },
         h('div', { class: `ob-hero ${kind}`, 'aria-hidden': 'true' }, h('img', { src: img(), alt: '' })),
         h('h3', {}, t(`onboarding.intro.${n}.title`, { name: this.game.state.player.name })),
@@ -283,216 +306,318 @@ export class Onboarding {
         h('div', { class: 'ob-dots', 'aria-hidden': 'true' }, ...INTRO.map((_, k) => h('i', { class: k === i ? 'on' : '' }))),
         h('div', { class: 'row' },
           h('button', { class: 'big-btn ghost', onclick: () => (i === 0 ? this.go('name', true) : this.showIntro(i - 1)) }, t('onboarding.back')),
-          h('button', { class: 'big-btn', onclick: () => (last ? this.go('tutorial') : this.showIntro(i + 1)) }, last ? t('onboarding.start') : t('onboarding.next')))));
+          h('button', { class: 'big-btn', onclick: () => (last ? this.go('yard') : this.showIntro(i + 1)) }, last ? t('onboarding.start') : t('onboarding.next')))));
   }
 
-  // ── Il tutorial (azioni vere) ────────────────────────────────────────
+  // ── Il cortile del Custode (azioni vere) ─────────────────────────────
 
-  private startTutorial() {
-    this.cleanup();
-    this.game.recenter();
-    this.showStep();
+  /**
+   * Il cortile al posto della partita, sotto lo sfondo del percorso (che c'è
+   * già arrivando dall'introduzione o all'avvio): dopo un frame si costruisce,
+   * poi lo sfondo sfuma. Rivedendolo dalle Impostazioni la partita non si tocca.
+   */
+  private startYard() {
+    if (!this.layer) this.openLayer('ob-solid');
+    afterPaint(() => {
+      if (!this.game.inYard) this.game.enterYard(buildYard(this.game.state, this.game.now(), this.o));
+      this.cleanup();
+      this.showStep();
+    });
   }
 
-  /** Il consiglio del passo in corso, l'occhio di bue e il cerchio su cosa toccare; se non c'è niente da fare, il passo si salta. */
+  /** Il consiglio del passo in corso, l'occhio di bue e il cerchio su cosa toccare (la camera ci va). */
   private showStep() {
+    this.dropCoach();
     const step = currentStep(this.o);
-    if (!step) { this.waitThenTour(); return; }
-    const target = this.targetOf(step);
-    if (target === null) { this.o.step++; if (this.o.step >= TUTORIAL_STEPS.length) { this.go('tour'); return; } this.save(); this.showStep(); return; }
-    this.coach?.remove();
-    this.clearMarks();
-    const n = this.o.step + 1;
+    if (!step) { if (yardFinished(this.o)) this.waitThenFinale(); return; }
+    this.step = step;
+    this.moved = false;
+    this.ghostId = null;
+    this.coachBox(null, t(`onboarding.yard.${step}`),
+      t('onboarding.tutorial.progress', { n: this.o.step + 1, total: YARD_STEPS.length }),
+      h('button', { class: 'npc-note-cta', onclick: () => this.leaveYard(true) }, t('onboarding.yard.skip'), ' ›'));
+    this.mark(this.targetsOf(step));
+    const look: Partial<Record<YardStep, string>> = { clean: YARD_GRAVE, flowers: YARD_GRAVE, light: YARD_LANTERN, ghost: YARD_GRAVE, sheet: YARD_GRAVE, shop: this.shopId() ?? '' };
+    if (look[step]) this.game.focusEntity(look[step]!);
+  }
+
+  /**
+   * Il consiglio: come le notifiche dei personaggi, col Custode che esce dal
+   * riquadro. Sotto scendono messaggi, note e pannelli (niente si copre).
+   */
+  private coachBox(title: string | null, text: string, progress: string, ...acts: Array<Node | null>) {
     this.coach = h('div', { class: 'ob-coach', role: 'status', 'aria-live': 'polite' },
       this.bust('small'),
       h('div', { class: 'ob-coach-body' },
-        h('p', {}, t(`onboarding.tutorial.${step}`)),
-        h('div', { class: 'ob-coach-foot' },
-          h('span', { class: 'ob-progress' }, t('onboarding.tutorial.progress', { n, total: TUTORIAL_STEPS.length })),
-          h('button', { class: 'npc-note-cta', onclick: () => this.go('tour') }, t('onboarding.tutorial.skip'), ' ›'))));
+        title ? h('b', { class: 'ob-coach-title' }, title) : null,
+        h('p', {}, text),
+        h('div', { class: 'ob-coach-foot' }, h('span', { class: 'ob-progress' }, progress), h('span', { class: 'ob-coach-acts' }, ...acts))));
     document.body.append(this.coach);
-    $('#game').classList.add('has-coach');
-    $('#game').style.setProperty('--coach-h', `${this.coach.offsetHeight}px`); // i18n-ok: stile
+    const game = $('#game');
+    game.classList.add('has-coach');
+    game.style.setProperty('--coach-h', `${this.coach.offsetHeight}px`); // i18n-ok: stile
+    // dove finisce (senza l'animazione d'entrata): i pannelli si aprono sotto
+    game.style.setProperty('--coach-b', `${this.coach.offsetTop + this.coach.offsetHeight}px`); // i18n-ok: stile
+  }
+
+  private dropCoach() {
+    this.coach?.remove(); this.coach = null;
+    $('#game').classList.remove('has-coach');
+    this.clearMarks();
+    window.clearInterval(this.waitTimer);
+  }
+
+  /** L'occhio di bue e il cerchio, sul primo bersaglio della catena che c'è (vedi frame). */
+  private mark(targets: () => Target[]) {
+    this.clearMarks();
+    this.targets = targets;
     this.halo = h('div', { class: 'ob-beam', 'aria-hidden': 'true' });
     this.tap = h('div', { class: 'ob-tap', 'aria-hidden': 'true' }, h('i'), h('i'));
     this.haloKey = '';
     document.body.append(this.halo, this.tap);
-    if (target instanceof HTMLElement) { this.haloEl = target; return; }
-    // un segno sulla scena, che segue la camera
-    this.sceneTarget = target;
-    this.ctxAct = CTX_ACT[step] ?? null;
-    target.focus?.();
   }
 
-  /** Cosa toccare in ogni passo: un punto della scena (con dove guardare), un pulsante, o null (niente da fare: si salta). */
-  private targetOf(step: TutorialStep): SceneTarget | HTMLElement | null {
-    const g = this.game, s = g.state;
-    const entity = (id: string): SceneTarget => ({
-      at: () => g.world.entityTop(id),
-      base: () => g.world.entityTop(id)?.clone().setY(0) ?? null,
-      focus: () => g.focusEntity(id),
-    });
+  private shopId() { return this.game.state.placeables.find((p) => p.type === 'shop')?.id ?? null; }
+
+  /**
+   * Cosa toccare in ogni passo: una catena di bersagli, dal più vicino alla
+   * fine al più lontano (il pulsante di un pannello già aperto, il menù
+   * dell'oggetto, l'oggetto nella scena). Vince il primo che si vede.
+   */
+  private targetsOf(step: YardStep): () => Target[] {
+    const g = this.game;
+    const entity = (id: string): SceneTarget => ({ at: () => g.world.entityTop(id), base: () => g.world.entityTop(id)?.clone().setY(0) ?? null });
+    const point = (x: number, y: number, top: number, base: number): SceneTarget => ({ at: () => cellCenter(x, y, [1, 1]).setY(top), base: () => cellCenter(x, y, [1, 1]).setY(base) });
+    const ctx = (act: string) => `#ctx:not([hidden]) [data-ctx="${act}"]`;
+    const card = (id: string) => `.drawer:not([hidden]) .card[data-item="${id}"]`;
+    // il pulsante pieno del modale della Bottega: «Compra», poi «Posala»
+    const shopCta = '.dialog .shop-detail .row .big-btn:not(.ghost)';
     switch (step) {
-      case 'wisp': {
-        const a = g.actors.avatarCell();
-        const w = [...s.world.looseWisps].sort((p, q) => Math.hypot(p.x - a.x, p.y - a.y) - Math.hypot(q.x - a.x, q.y - a.y))[0];
-        if (!w) return null;
-        const cell = () => s.world.looseWisps.find((x) => x.id === w.id) ?? s.world.looseWisps[0];
-        const at = () => { const c = cell(); return c ? cellCenter(c.x, c.y, [1, 1]).setY(1.1) : null; };
-        return { at, base: () => { const c = cell(); return c ? cellCenter(c.x, c.y, [1, 1]).setY(0.4) : null; }, focus: () => { const p = at(); if (p) g.focusPoint(p); } };
-      }
-      case 'visit': {
-        const grave = s.graves.find((x) => x.id === 'story-dinner') ?? s.graves[0];
-        return grave ? entity(grave.id) : null;
-      }
-      case 'light': {
-        const lights = s.placeables.filter((p) => !p.broken && ['lantern', 'lamp_post', 'lantern_pole', 'lantern_stone', 'lamp_post_double', 'lamp_post_gothic'].includes(p.type));
-        const story = s.graves.find((x) => x.id === 'story-gym');
-        const near = story ? lights.sort((p, q) => Math.hypot(p.x - story.x, p.y - story.y) - Math.hypot(q.x - story.x, q.y - story.y))[0] : lights[0];
-        return near ? entity(near.id) : null;
-      }
-      case 'clean': {
-        const dirty = s.graves.filter((x) => !x.broken && (x.dirty || x.weeds));
-        const grave = dirty.find((x) => x.id === 'story-gym') ?? dirty[0];
-        return grave ? entity(grave.id) : null;
-      }
-      case 'bury': return document.getElementById('bury-fab');
+      case 'walk': return () => [point(23, 20, 0.25, 0)];
+      case 'wisp': return () => { const w = g.state.world.looseWisps[0]; return w ? [point(w.x, w.y, 1.1, 0.4)] : []; };
+      case 'clean': return () => [ctx('clean'), entity(YARD_GRAVE)];
+      case 'flowers': return () => [ctx('flowers'), entity(YARD_GRAVE)];
+      case 'light': return () => [ctx('light'), entity(YARD_LANTERN)];
+      case 'shop': return () => [shopCta, card(YARD_GIFT.item), ctx('shop'), ...(this.shopId() ? [entity(this.shopId()!)] : [])];
+      case 'place': return () => ['#game > .tutorial .pill.primary', shopCta, '.drawer:not([hidden]) .drawer-foot .big-btn:not(.ghost)', card(YARD_GIFT.item), '#bubble.open .slot[data-act="inventory"]', '#fab'];
+      case 'edit': return () => {
+        // la prima volta Modifica si presenta con una scheda: «Inizia»
+        if (!g.editMode) return ['#drawer:not([hidden]) .drawer-foot .big-btn', '#bubble.open .slot[data-act="edit"]', '#fab'];
+        if (this.moved) return ['#edit-done'];
+        // la lanterna appena posata (o quella del cortile)
+        const lamp = [...g.state.placeables].reverse().find((p) => p.type === YARD_GIFT.item);
+        return lamp ? [entity(lamp.id)] : ['#edit-done'];
+      };
+      case 'ghost': return () => {
+        const pos = () => (this.ghostId ? g.roamerPos(this.ghostId) : null);
+        return pos() ? [{ at: () => pos()?.clone().setY(pos()!.y + 1.6) ?? null, base: () => pos()?.clone() ?? null }] : [];
+      };
+      case 'sheet': return () => [ctx('detail'), entity(YARD_GRAVE)];
     }
+  }
+
+  /** Il fantasma del passo: se non c'è (o se n'è andato senza essere toccato) ne arriva un altro. */
+  private keepGhost() {
+    if (this.step !== 'ghost' || (this.ghostId && this.game.roamerPos(this.ghostId))) return;
+    const now = performance.now();
+    if (now < this.ghostAt) return;
+    this.ghostAt = now + 1500;
+    this.ghostId = this.game.spawnGhostAt(YARD_GRAVE);
   }
 
   /** Il gioco segnala un'azione: se è quella del passo, si va avanti. */
-  signal(sig: TutorialSignal) {
-    if (!tutorialSignal(this.o, sig)) return;
+  signal(sig: OnboardingSignal) {
+    if (sig === 'itemMoved') { if (this.step === 'edit') this.moved = true; return; }
+    if (!this.game.inYard || !yardSignal(this.o, sig)) return;
     this.save();
-    if (this.o.stage === 'tour') this.waitThenTour();
-    else this.showStep();
+    this.showStep();
   }
 
-  /** Dopo l'ultimo passo (si è aperta la sepoltura): il giro parte quando il pannello è chiuso. */
-  private waitThenTour() {
-    this.coach?.remove(); this.coach = null; $('#game').classList.remove('has-coach');
-    this.clearMarks();
-    window.clearInterval(this.waitTimer);
+  /** L'ultimo passo apre la scheda della tomba: lì si legge, e chiudendola il cortile è finito. */
+  private waitThenFinale() {
+    this.step = null;
+    const since = performance.now();
+    let open = false;
     this.waitTimer = window.setInterval(() => {
-      if (drawerOpen() || this.game.placement) return;
-      window.clearInterval(this.waitTimer);
-      this.o.stage = 'tour'; this.o.step = 0;
-      this.save();
-      this.showTour();
-    }, 400);
+      // la scheda si apre subito dopo il segnale: allora il consiglio su cosa c'è dentro
+      if (drawerOpen()) {
+        if (!open) {
+          open = true;
+          this.coachBox(null, t('onboarding.yard.sheetOpen'), t('onboarding.tutorial.progress', { n: YARD_STEPS.length, total: YARD_STEPS.length }));
+          this.mark(() => ['#drawer:not([hidden]) #drawer-close']);
+        }
+        return;
+      }
+      if (this.game.placement || (!open && performance.now() - since < 1500)) return;
+      this.dropCoach();
+      this.finale();
+    }, 300);
   }
 
-  /** Le misure dell'occhio di bue, a passi di 8 px: si ridisegna solo quando cambiano davvero (il resto è uno spostamento). */
-  private beamSize(el: HTMLElement, w: number, h: number) {
-    const rw = Math.ceil(w / 8) * 8, rh = Math.ceil(h / 8) * 8;
-    const key = `${rw}x${rh}`; // i18n-ok: stile
-    if (key === this.haloKey && el === this.halo) return;
-    if (el === this.halo) this.haloKey = key;
-    // trasparente fino a poco oltre il bersaglio, buio poco più in là
-    el.style.setProperty('--rx', `${rw + 20}px`); // i18n-ok: stile
-    el.style.setProperty('--ry', `${rh + 20}px`); // i18n-ok: stile
-  }
-
-  private clearMarks() {
-    this.tourPlace = null;
-    this.halo?.remove(); this.halo = null;
-    this.tap?.remove(); this.tap = null;
-    this.sceneTarget = null; this.haloEl = null; this.ctxAct = null;
+  /** «Pronto?»: la finestra delle celebrazioni, col dono di benvenuto (rivedendo, niente dono). */
+  private finale() {
+    const replay = !!this.replaying;
+    celebrate({
+      kicker: t('onboarding.yard.end.kicker'),
+      title: t('onboarding.yard.end.title', { name: this.game.state.player.name }),
+      text: t(replay ? 'onboarding.yard.end.replay' : 'onboarding.yard.end.text'),
+      extra: replay ? undefined : t('onboarding.yard.end.gift', { n: YARD_GIFT.wisps }),
+      badge: lpBadgeUrl('wisp', 'gold'),
+      ok: t(replay ? 'onboarding.yard.end.back' : 'onboarding.yard.end.ok'),
+      onClose: () => this.leaveYard(false),
+    });
   }
 
   /**
-   * Ogni frame: l'occhio di bue e il cerchio seguono il loro pulsante o il loro
-   * oggetto della scena (misurato dalla cima a dove poggia, così una tomba sta
-   * tutta nella luce); spariscono sotto un pannello e passano al pulsante
-   * giusto del menù dell'oggetto, se c'è.
+   * Fuori dal cortile (alla fine o con «Salta»): sotto lo sfondo del percorso
+   * torna il cimitero vero, poi lo sfondo sfuma. Arrivando la prima volta, il
+   * dono di benvenuto e il primo obiettivo.
+   */
+  private leaveYard(skipped: boolean) {
+    this.dropCoach();
+    this.step = null;
+    closeDrawer(true);
+    if (this.game.placement) this.game.cancelPlacement();
+    const replay = !!this.replaying;
+    this.openLayer('ob-solid ob-wake', h('p', { class: 'ob-wake-text' }, t('onboarding.yard.loading')));
+    const from = performance.now();
+    afterPaint(() => {
+      this.game.leaveYard();
+      if (!replay) {
+        applyYardGift(this.game.state);
+        this.game.afterChange();
+      }
+      // lo sfondo resta almeno un attimo: è un passaggio, non un lampo
+      window.setTimeout(() => {
+        this.go('done');
+        if (!replay && skipped) toast(t('onboarding.yard.giftToast', { n: YARD_GIFT.wisps }));
+      }, Math.max(0, WAKE_MS - (performance.now() - from)));
+    });
+  }
+
+  // ── Dopo il cortile: il primo obiettivo e i consigli al momento giusto ──
+
+  /** Il primo obiettivo (la prima sepoltura), se c'è ancora: una volta per apertura del gioco. */
+  private scheduleGoal() {
+    const s = this.game.state;
+    if (this.replaying || this.goalShown || s.onboarding.goal !== 'pending') return;
+    if (personalGraves(s) > 0) { s.onboarding.goal = 'done'; this.save(); return; }
+    window.clearTimeout(this.goalTimer);
+    this.goalTimer = window.setTimeout(() => this.showGoal(), 1400);
+  }
+
+  /** «Il tuo primo addio»: «Seppellisci ›» apre la sepoltura, «Più tardi» la rimanda alla prossima volta. */
+  private showGoal() {
+    const g = this.game;
+    if (g.state.onboarding.goal !== 'pending' || this.coach) return;
+    if (this.busy()) { this.goalTimer = window.setTimeout(() => this.showGoal(), 1500); return; }
+    this.goalShown = true;
+    this.coachBox(t('onboarding.goal.title'), t('onboarding.goal.text'), '',
+      h('button', { class: 'ob-back', onclick: () => this.dropCoach() }, t('onboarding.goal.later')),
+      h('button', { class: 'npc-note-cta', onclick: () => { this.dropCoach(); document.getElementById('bury-fab')?.click(); } }, t('onboarding.goal.go'), ' ›'));
+    this.mark(() => ['#bury-fab']);
+  }
+
+  /** La prima sepoltura è fatta (Game): via il primo obiettivo, se è ancora in vista. */
+  goalReached() {
+    window.clearTimeout(this.goalTimer);
+    if (this.coach && !this.step) this.dropCoach();
+    this.save();
+  }
+
+  /** Il giocatore è impegnato: un pannello, un dialogo, una scelta del posto, una notifica. */
+  private busy(): boolean {
+    const g = this.game;
+    return drawerOpen() || uiBlocking() || !!g.placement || g.editMode || g.inYard || !!document.querySelector('.dialog-scrim, .npc-note');
+  }
+
+  /** Ogni tanto: se è il momento, un consiglio (uno alla volta, non troppo spesso, mai mentre si è impegnati). */
+  private tipTick() {
+    const g = this.game, s = g.state;
+    if (s.onboarding.stage !== 'done' || this.replaying || this.coach || this.busy()) return;
+    if (performance.now() - this.lastTipAt < TIP_GAP_MS) return;
+    const tip = nextTip(s);
+    if (!tip) return;
+    markTip(s, tip.id);
+    this.save();
+    this.lastTipAt = performance.now();
+    const at = tip.at;
+    npcNote({
+      kind: 'custode', name: s.player.name, img: npcPortrait('custode', s.player.look) || undefined,
+      say: t(`tips.${tip.id}.say`), text: t(`tips.${tip.id}.text`),
+      action: at ? { label: t('tips.show'), run: () => { g.focusEntity(at); g.goTo(at); } } : undefined,
+    });
+  }
+
+  /** Le misure dell'occhio di bue, a passi di 8 px: si ridisegna solo quando cambiano davvero (il resto è uno spostamento). */
+  private beamSize(w: number, h: number) {
+    const rw = Math.ceil(w / 8) * 8, rh = Math.ceil(h / 8) * 8;
+    const key = `${rw}x${rh}`; // i18n-ok: stile
+    if (key === this.haloKey || !this.halo) return;
+    this.haloKey = key;
+    // trasparente fino a poco oltre il bersaglio, buio poco più in là
+    this.halo.style.setProperty('--rx', `${rw + 20}px`); // i18n-ok: stile
+    this.halo.style.setProperty('--ry', `${rh + 20}px`); // i18n-ok: stile
+  }
+
+  private clearMarks() {
+    this.halo?.remove(); this.halo = null;
+    this.tap?.remove(); this.tap = null;
+    this.targets = null;
+  }
+
+  /**
+   * Ogni frame: l'occhio di bue e il cerchio vanno sul primo bersaglio che si
+   * vede (un oggetto della scena è misurato dalla cima a dove poggia, così una
+   * tomba sta tutta nella luce; sotto un pannello la scena non conta).
    */
   frame() {
-    this.tourPlace?.();
     const halo = this.halo, tap = this.tap;
-    if (!halo || !tap) return;
-    const btn = this.haloEl ?? (this.ctxAct ? document.querySelector<HTMLElement>(`#ctx:not([hidden]) [data-ctx="${this.ctxAct}"]`) : null);
-    let r: { x: number; y: number; w: number; h: number; tx: number; ty: number } | null = null;
-    if (drawerOpen()) r = null;
-    else if (btn) {
-      const b = btn.getBoundingClientRect();
-      if (b.width) { const x = b.left + b.width / 2, y = b.top + b.height / 2; r = { x, y, w: b.width + 14, h: b.height + 14, tx: x, ty: y }; }
-    } else if (this.sceneTarget) {
-      const top = this.sceneTarget.at(), base = this.sceneTarget.base();
-      const pt = top ? this.game.project(top) : null, pb = base ? this.game.project(base) : null;
-      if (pt && pb) {
-        const d = Math.hypot(pt.x - pb.x, pt.y - pb.y);
-        const x = (pt.x + pb.x) / 2, y = (pt.y + pb.y) / 2;
-        r = { x, y, w: Math.max(120, d * 1.8 + 60), h: Math.max(110, d * 1.2 + 70), tx: x, ty: y };
+    if (!halo || !tap || !this.targets) return;
+    this.keepGhost();
+    const covered = drawerOpen() || !!document.querySelector('.dialog-scrim');
+    let r: { x: number; y: number; w: number; h: number } | null = null;
+    // dove comincia (in alto) quel che va toccato nella scena o nel menù dell'oggetto
+    let edge: number | null = null;
+    // dentro un pannello il buio attorno è più leggero (il pannello si deve leggere)
+    let inPanel = false;
+    for (const tg of this.targets()) {
+      if (typeof tg === 'string') {
+        const el = document.querySelector<HTMLElement>(tg);
+        const b = el && shown(el) ? el.getBoundingClientRect() : null;
+        if (b && b.width && b.height) { r = { x: b.left + b.width / 2, y: b.top + b.height / 2, w: b.width + 14, h: b.height + 14 }; if (el!.closest('#ctx')) edge = b.top; inPanel = !!el!.closest('.drawer, .dialog'); break; }
+        continue;
       }
+      if (covered) continue;
+      const top = tg.at(), base = tg.base();
+      const pt = top ? this.game.project(top) : null, pb = base ? this.game.project(base) : null;
+      if (!pt || !pb) continue;
+      const d = Math.hypot(pt.x - pb.x, pt.y - pb.y);
+      r = { x: (pt.x + pb.x) / 2, y: (pt.y + pb.y) / 2, w: Math.max(120, d * 1.8 + 60), h: Math.max(110, d * 1.2 + 70) };
+      // sopra l'oggetto compare il suo menù: un po' di spazio anche per quello
+      edge = pt.y - 80;
+      break;
     }
+    // nel cortile niente da toccare sotto il consiglio: la scena scende piano finché si vede
+    const limit = this.step && this.coach && !covered ? this.coach.offsetTop + this.coach.offsetHeight + 16 : null;
+    if (limit !== null && edge !== null && edge < limit) this.game.nudgeView(limit - edge);
     halo.style.visibility = tap.style.visibility = r ? 'visible' : 'hidden';
     if (!r) return;
+    halo.classList.toggle('soft', inPanel);
     // con `translate` (non `transform`): la pulsazione (`scale`) non deve ingrandire anche lo spostamento
-    halo.style.translate = `${r.x}px ${r.y}px`; // i18n-ok: stile
-    tap.style.translate = `${r.tx}px ${r.ty}px`; // i18n-ok: stile
-    this.beamSize(halo, r.w, r.h);
+    halo.style.translate = tap.style.translate = `${r.x}px ${r.y}px`; // i18n-ok: stile
+    this.beamSize(r.w, r.h);
   }
+}
 
-  // ── Il giro dell'interfaccia ─────────────────────────────────────────
+/** Dopo che lo sfondo è stato disegnato: il cambio di scena (pesante) non lo fa saltare. */
+function afterPaint(fn: () => void) {
+  requestAnimationFrame(() => requestAnimationFrame(() => window.setTimeout(fn, 0)));
+}
 
-  /** Le tappe: come il tutorial, un consiglio in alto e l'occhio di bue (il menù non si apre: basta il suo pulsante). */
-  private showTour(i = this.o.step) {
-    const stops: TourStop[] = [
-      { key: 'profile', rect: () => $('#player-chip').getBoundingClientRect() },
-      { key: 'bury', rect: () => document.getElementById('bury-fab')?.getBoundingClientRect() ?? null },
-      { key: 'shop', before: () => this.focusShop(), rect: () => this.shopRect() },
-      { key: 'menu', rect: () => $('#fab').getBoundingClientRect() },
-    ];
-    i = Math.min(i, stops.length - 1);
-    const stop = stops[i];
-    const last = i === stops.length - 1;
-    if ($('#bubble').classList.contains('open')) this.ui.closeBubble();
-    stop.before?.();
-    const to = (k: number) => { this.o.step = k; this.save(); this.showTour(k); };
-    const spot = h('div', { class: 'ob-beam tour', 'aria-hidden': 'true' });
-    const coach = h('div', { class: 'ob-coach ob-tour-coach', role: 'status', 'aria-live': 'polite' },
-      this.bust('small'),
-      h('div', { class: 'ob-coach-body' },
-        h('b', { class: 'ob-coach-title' }, t(`onboarding.tour.${stop.key}.title`)),
-        h('p', {}, t(`onboarding.tour.${stop.key}.text`)),
-        h('div', { class: 'ob-coach-foot' },
-          h('span', { class: 'ob-progress' }, t('onboarding.tutorial.progress', { n: i + 1, total: stops.length })),
-          h('span', { class: 'ob-coach-acts' },
-            i > 0 ? h('button', { class: 'ob-back', onclick: () => to(i - 1) }, '‹ ', t('onboarding.back')) : null,
-            h('button', { class: 'npc-note-cta', onclick: () => (last ? this.endTour() : to(i + 1)) }, last ? t('onboarding.tour.end') : t('onboarding.next'), ' ›')))));
-    this.openLayer('ob-tour-layer', spot, coach, this.skipBtn(() => this.endTour()));
-    // l'occhio di bue segue la tappa (la camera si sta ancora spostando)
-    let key = '';
-    this.tourPlace = () => {
-      const r = stop.rect();
-      if (!r) return;
-      const pad = 8, x = Math.round(r.left + r.width / 2), y = Math.round(r.top + r.height / 2);
-      if (`${x},${y}` === key) return; // i18n-ok: stile
-      key = `${x},${y}`; // i18n-ok: stile
-      spot.style.translate = `${x}px ${y}px`; // i18n-ok: stile
-      this.beamSize(spot, r.width + pad * 2, r.height + pad * 2);
-    };
-    this.tourPlace();
-  }
-
-  /** La camera sulla Bottega, senza selezionarla (il Custode resta dov'è, niente menù dell'oggetto). */
-  private focusShop() {
-    const shop = this.game.state.placeables.find((p) => p.type === 'shop');
-    if (shop) this.game.focusEntity(shop.id);
-  }
-
-  /** La Bottega sullo schermo: un riquadro attorno al suo tetto. */
-  private shopRect(): DOMRect | null {
-    const shop = this.game.state.placeables.find((p) => p.type === 'shop');
-    const top = shop ? this.game.world.entityTop(shop.id) : null;
-    const p = top ? this.game.project(top) : null;
-    return p ? new DOMRect(p.x - 70, p.y - 30, 140, 130) : null;
-  }
-
-  private endTour() {
-    this.tourPlace = null;
-    this.game.select(null);
-    this.game.recenter();
-    this.go('done');
-  }
+/** Si vede: niente `hidden` attorno (né pannelli nascosti con le classi del gioco). */
+function shown(el: HTMLElement): boolean {
+  if (el.closest('[hidden], .hidden')) return false;
+  const check = (el as HTMLElement & { checkVisibility?: () => boolean }).checkVisibility;
+  return check ? check.call(el) : true;
 }

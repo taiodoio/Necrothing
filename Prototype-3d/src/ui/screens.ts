@@ -84,9 +84,10 @@ export async function postcardData(g: { name: string; birthDate: string | null; 
 
 export function openBurial(ui: UI, initial?: R.BurialDraft, startStep = 0) {
   const game = ui.game;
+  // nel cortile si prova soltanto: la prima sepoltura si fa nel cimitero vero (dove resta)
+  if (game.inYard) { toast(t('onboarding.yard.noBury')); return; }
   // con i limiti della Demo (mai nella beta) oltre le tombe concesse non se ne comincia un'altra
   if (!initial && !R.canStartBurial(game.state)) { toast(t('rules.bury.demoLimit', { n: personalGraveLimit() ?? 0 })); return; }
-  signalOnboarding('burialOpened');
   const now = game.now();
   const d: R.BurialDraft = initial ? { ...initial } : R.emptyDraft(now);
   if (!initial) burialPhoto = new BurialPhoto();
@@ -343,6 +344,7 @@ export function openShop(ui: UI, cat: PlaceableCategory | 'house' = 'light', sel
           const owned = av === 'owned';
           return h('button', {
             class: `card ${selected === d.id ? 'selected' : ''} ${locked ? 'locked' : ''} ${av === 'funds' ? 'dim' : ''} ${owned ? 'owned' : ''}`,
+            'data-item': d.id,
             onclick: () => pick(d.id),
           },
           h('span', { class: 'thumb' }, itemImg(d.id, s.settings.style, 'lit'),
@@ -415,6 +417,7 @@ export function openShop(ui: UI, cat: PlaceableCategory | 'house' = 'light', sel
         class: 'big-btn', disabled: av !== 'ok',
         onclick: () => {
           if (!game.act((st, n) => R.buy(st, d.id, qty, n))) return;
+          signalOnboarding('itemBought');
           // gli Extra non si posano: si usano (dalle icone accanto al mirino)
           const how: Record<string, string> = {
             bike: t('shop.bought.bike'),
@@ -467,7 +470,7 @@ export function openInventory(ui: UI, cat: PlaceableCategory | 'all' = 'all') {
     const grid = types.length ? h('div', { class: 'grid' }, ...types.map((d) => {
       const owned = s.inventory[d.id] ?? 0;
       const placed = s.placeables.filter((p) => p.type === d.id).length;
-      return h('button', { class: `card ${owned === 0 ? 'dim' : ''} ${selected === d.id ? 'selected' : ''}`, onclick: () => { if (owned) { selected = d.id; render(); } else toast(t('inventory.allPlaced', { item: d.label })); } },
+      return h('button', { class: `card ${owned === 0 ? 'dim' : ''} ${selected === d.id ? 'selected' : ''}`, 'data-item': d.id, onclick: () => { if (owned) { selected = d.id; render(); } else toast(t('inventory.allPlaced', { item: d.label })); } },
         itemImg(d.id, s.settings.style, 'lit'),
         h('b', {}, d.label),
         h('small', {}, placed ? t('inventory.placed', { n: placed }) : t('inventory.stored')),

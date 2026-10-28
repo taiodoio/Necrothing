@@ -52,11 +52,19 @@ export function loadSave(): SaveData | null {
   return null;
 }
 
+/**
+ * Il cortile del primo ingresso è una partita a parte, mai salvata: mentre c'è
+ * si salva al suo posto la partita vera (che ha lo stesso stato del percorso,
+ * quindi i passi fatti nel cortile restano). null: si salva quel che arriva.
+ */
+let saveInstead: SaveData | null = null;
+export function setSaveInstead(real: SaveData | null) { saveInstead = real; }
+
 let pending = 0;
 export function saveNow(state: SaveData) {
   if (!persistence) return;
   try {
-    localStorage.setItem(KEY, JSON.stringify(state));
+    localStorage.setItem(KEY, JSON.stringify(saveInstead ?? state));
   } catch (e) {
     console.warn('Salvataggio non riuscito', e);
   }

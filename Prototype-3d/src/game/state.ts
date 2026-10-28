@@ -190,7 +190,7 @@ export interface SaveData {
   house: HouseState;
   settings: Settings;
   meta: SaveMeta;
-  /** Il percorso del primo ingresso (pergamena, nome, introduzione, tutorial, giro): game/onboarding.ts. */
+  /** Il percorso del primo ingresso (pergamena, nome, introduzione, cortile, primo obiettivo, consigli): game/onboarding.ts. */
   onboarding: OnboardingState;
 }
 

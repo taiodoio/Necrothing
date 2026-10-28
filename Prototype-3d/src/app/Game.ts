@@ -684,9 +684,13 @@ export class Game {
 
   // ── Posizionamento (sepoltura & inventario) ──────────────────────────
 
-  /** Da dove parte la scelta del posto: accanto al Custode (lo si vede sempre, a differenza del centro della vista). */
+  /**
+   * Da dove parte la scelta del posto: accanto al Custode, a destra (lo si vede
+   * sempre, a differenza del centro della vista; sopra di lui l'oggetto lo coprirebbe).
+   */
   private placementOriginCell() {
-    return worldToCell(this.actors.avatar.pos);
+    const c = worldToCell(this.actors.avatar.pos);
+    return { x: c.x + 2, y: c.y };
   }
 
   startGravePlacement(draft: R.BurialDraft) {
@@ -1892,6 +1896,7 @@ export class Game {
     this.clearRoamers();
     this.replaceState(yard);
     this.rig.setView(YARD_VIEW);
+    this.snapToKeeper();
   }
 
   /** Via il cortile: torna la partita vera (il tempo passato intanto si recupera). */
@@ -1906,6 +1911,14 @@ export class Game {
     runCatchUp(this.state, this.now());
     this.afterChange();
     this.rig.setView(window.innerWidth < 700 ? 24 : 22);
+    this.snapToKeeper();
+  }
+
+  /** La camera subito sul Custode (cambiando partita restava dov'era: magari lontano). */
+  private snapToKeeper() {
+    this.rig.follow = this.actors.avatar.pos;
+    this.rig.jumpTo(this.actors.avatar.pos);
+    this.rig.snap();
   }
 
   /** Via le presenze in giro (cambiando partita non c'entrano più). */

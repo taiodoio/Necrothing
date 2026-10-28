@@ -21,9 +21,9 @@
   animation: celPop 0.7s cubic-bezier(0.25, 1.6, 0.4, 1) 0.12s both; }
 @keyframes celPop { 0% { opacity: 0; transform: scale(0.2) rotate(-30deg); } 60% { opacity: 1; } 100% { transform: scale(1) rotate(0deg); } }
 .cel-badge .ach-n { z-index: 3; right: 10px; top: 10px; min-width: 30px; height: 28px; font-size: 15px; animation: celPop 0.5s cubic-bezier(0.25, 1.6, 0.4, 1) 0.45s both; }
-.cel-rays { position: absolute; z-index: 0; left: 50%; top: 50%; width: 320px; height: 320px; margin: -160px 0 0 -160px; border-radius: 50%; pointer-events: none;
+.cel-rays { position: absolute; z-index: 0; left: 50%; top: 50%; width: 236px; height: 236px; margin: -118px 0 0 -118px; border-radius: 50%; pointer-events: none;
   background: repeating-conic-gradient(from 0deg, rgba(255, 214, 140, 0.32) 0deg 9deg, rgba(255, 214, 140, 0) 9deg 22.5deg);
-  -webkit-mask-image: radial-gradient(closest-side, #000 25%, transparent 100%); mask-image: radial-gradient(closest-side, #000 25%, transparent 100%);
+  -webkit-mask-image: radial-gradient(closest-side, #000 40%, transparent 100%); mask-image: radial-gradient(closest-side, #000 40%, transparent 100%);
   animation: celRays 14s linear infinite, celFade 0.6s ease-out 0.2s both; }
 @keyframes celRays { to { rotate: 360deg; } }
 .cel-glow { position: absolute; z-index: 1; left: 50%; top: 50%; width: 210px; height: 210px; margin: -105px 0 0 -105px; border-radius: 50%; pointer-events: none;
@@ -76,20 +76,17 @@
 }
 .ui-next .photo-tip i { width: 34px; height: 34px; background: no-repeat center / contain; }
 .ui-next .photo-layer.moved .photo-tip { opacity: 0; translate: -50% -10px; }
-/* la barra: chiudi, scatta, galleria */
-.ui-next .photo-bar { bottom: calc(22px + var(--safe-b)); gap: 30px; }
-.ui-next .photo-btn { width: 54px; height: 54px; border: 0; border-radius: 50%; display: grid; place-items: center; cursor: pointer;
-  background: var(--nat-bg); box-shadow: 0 8px 18px rgba(0, 0, 0, 0.45); }
-.ui-next .photo-btn i { width: 26px; height: 26px; background: no-repeat center / contain; }
-/* lo scatto: un anello chiaro e un disco dorato che si schiaccia sotto il dito */
-.ui-next .shutter {
-  position: relative; width: 82px; height: 82px; padding: 0; border: 0; border-radius: 50%; cursor: pointer; border-image: none; clip-path: none; /* niente più ottagono pixel */
-  background: rgba(255, 246, 228, 0.16); box-shadow: inset 0 0 0 4px #fff3d6, 0 10px 22px rgba(0, 0, 0, 0.55), 0 0 26px rgba(255, 210, 130, 0.35);
-}
-.ui-next .shutter span { position: absolute; inset: 10px; border-radius: 50%; background: radial-gradient(circle at 38% 32%, #ffe7b0, var(--primary) 55%, var(--primary-deep));
-  box-shadow: 0 3px 0 rgba(120, 80, 30, 0.6), inset 0 2px 0 rgba(255, 255, 255, 0.5); transition: transform 0.12s ease; }
-.ui-next .shutter:active { transform: none; box-shadow: inset 0 0 0 4px #fff3d6, 0 6px 14px rgba(0, 0, 0, 0.5); }
-.ui-next .shutter:active span { transform: scale(0.86); }
+/* la barra: chiudi, scatta, galleria. Gli stessi pulsanti della mappa: quadrati arrotondati col gradiente
+   del gioco e un rametto; lo scatto è grande e dorato come il pulsante del menù */
+.ui-next .photo-bar { bottom: calc(22px + var(--safe-b)); gap: 26px; align-items: center; }
+.ui-next .photo-btn, .ui-next .shutter { position: relative; isolation: isolate; border: 0; padding: 0; display: grid; place-items: center; cursor: pointer; border-image: none; clip-path: none; }
+.ui-next .photo-btn { width: 60px; height: 60px; border-radius: var(--r); background: var(--nat-bg); box-shadow: 0 8px 18px rgba(0, 0, 0, 0.45); }
+.ui-next .photo-btn i { width: 28px; height: 28px; background: no-repeat center / contain; }
+.ui-next .shutter { width: 80px; height: 80px; border-radius: 20px; background: linear-gradient(165deg, #f6d48a, #e0aa52);
+  box-shadow: 0 4px 0 var(--primary-deep), 0 12px 24px rgba(0, 0, 0, 0.5), 0 0 26px rgba(255, 210, 130, 0.3); transition: transform 0.1s ease, box-shadow 0.1s ease; }
+.ui-next .shutter i { width: 42px; height: 42px; background: no-repeat center / contain; filter: drop-shadow(0 2px 1px rgba(120, 76, 20, 0.45)); }
+.ui-next .shutter:active { transform: translateY(3px); box-shadow: 0 1px 0 var(--primary-deep), 0 6px 14px rgba(0, 0, 0, 0.5); }
+.ui-next .photo-btn::before, .ui-next .shutter::before { content: ''; position: absolute; z-index: -1; left: 0; top: 0; width: 30px; height: 30px; pointer-events: none; background: var(--sprig) no-repeat 0 0 / 100% 100%; }
 .ui-next .flash { animation-duration: 0.45s; animation-timing-function: ease-out; }
 
 /* ── Le stampe: la foto appena fatta, la galleria ─────────────────── */
@@ -112,7 +109,9 @@
 .photo-thumb:nth-child(3n + 2) .photo-print { rotate: 1.6deg; }
 .photo-thumb:nth-child(3n) .photo-print { rotate: -0.8deg; }
 .photo-thumb:active .photo-print { transform: scale(0.97); }
-.photo-empty { display: grid; justify-items: center; gap: 14px; padding: 40px 12px; text-align: center; }
+.photo-empty { display: grid; justify-items: center; gap: 14px; padding: 24px 12px; text-align: center; }
+/* galleria vuota: l'invito al centro del pannello, non in cima */
+.ui-next .drawer[data-kind="gallery"] .drawer-body:has(> .photo-empty) { display: grid; align-content: center; }
 .photo-empty-icon { width: 84px; height: 84px; background: no-repeat center / contain; opacity: 0.9; filter: drop-shadow(0 8px 12px rgba(0, 0, 0, 0.45)); }
 .ui-next .photo-empty p { margin: 0; max-width: 26em; color: var(--muted); font-size: 15px; line-height: 1.45; }
 .photo-count { font-size: 13px; }

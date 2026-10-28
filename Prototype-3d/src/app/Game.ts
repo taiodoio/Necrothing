@@ -1846,7 +1846,7 @@ export class Game {
     this.rig.jumpTo(at);
   }
 
-  /** Cattura un rettangolo (px CSS) della scena in bianco e nero. */
+  /** Cattura un rettangolo (px CSS) della scena, a colori. */
   capture(rect: { x: number; y: number; w: number; h: number }): string {
     this.postfx.render(this.scene, this.rig.camera);
     const src = this.renderer.domElement;
@@ -1857,15 +1857,8 @@ export class Game {
     out.height = Math.round(rect.h * sy * scale);
     const g = out.getContext('2d')!;
     g.drawImage(src, rect.x * sx, rect.y * sy, rect.w * sx, rect.h * sy, 0, 0, out.width, out.height);
-    const img = g.getImageData(0, 0, out.width, out.height);
-    const d = img.data;
-    for (let i = 0; i < d.length; i += 4) {
-      let l = 0.299 * d[i] + 0.587 * d[i + 1] + 0.114 * d[i + 2];
-      l = Math.max(0, Math.min(255, (l - 128) * 1.12 + 132));
-      d[i] = d[i + 1] = d[i + 2] = l;
-    }
-    g.putImageData(img, 0, 0);
-    return out.toDataURL('image/jpeg', 0.9);
+    // a colori: il filtro (seppia, bianco e nero, rovinata) si sceglie dopo, come nella foto della sepoltura
+    return out.toDataURL('image/jpeg', 0.92);
   }
 
   replaceState(next: SaveData) {

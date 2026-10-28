@@ -430,7 +430,7 @@ export default {
   // notifica
   'photo.galleryUnavailable': 'Galleria non disponibile in questo browser.',
   'photo.result.title': 'La tua foto',
-  'photo.result.text': 'In bianco e nero, come un vecchio ricordo. Salvala per ritrovarla in Galleria.',
+  'photo.result.text': 'Scorri sulla foto per cambiare filtro, poi salvala: la ritrovi in Galleria.',
   // testo alternativo dell'immagine
   'photo.result.alt': 'Foto del cimitero',
   // notifica

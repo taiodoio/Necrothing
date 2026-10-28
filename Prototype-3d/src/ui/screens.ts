@@ -54,6 +54,7 @@ import type { UI } from './UI.ts';
 import { CustodePreview, openCustomize } from './customize.ts';
 import { heroGlow, openDeceased } from './deceased.ts';
 import { BurialPhoto, loadImage, openPostcard, photoStep, portrait } from './memorial.ts';
+import { applyPhotoFilter, PHOTO_FILTER_LABELS, PHOTO_FILTERS, type PhotoFilter } from './photoFilters.ts';
 import type { PostcardData } from './postcard.ts';
 import { memorials } from '../app/persistence.ts';
 
@@ -1006,7 +1007,7 @@ function photoOverlay(ui: UI) {
     $('#game').append(flash);
     setTimeout(() => flash.remove(), 450);
     close();
-    photoResult(ui, url);
+    void photoResult(ui, url);
   };
 }
 
@@ -1023,19 +1024,60 @@ async function sharePhoto(url: string) {
   else { const a = h('a', { href: url, download: 'necrothing.jpg' }); a.click(); }
 }
 
-function photoResult(ui: UI, url: string) {
+/** La foto appena scattata: a colori, col filtro da scegliere come nella sepoltura (si scorre sulla foto o con le frecce). */
+async function photoResult(ui: UI, url: string) {
+  const img = await loadImage(url);
+  const base = document.createElement('canvas');
+  base.width = img.naturalWidth; base.height = img.naturalHeight;
+  base.getContext('2d')!.drawImage(img, 0, 0);
+  const cache = new Map<PhotoFilter, string>([['none', url]]);
+  let filter: PhotoFilter = 'none';
+  const filtered = () => {
+    let u = cache.get(filter);
+    if (!u) {
+      const c = applyPhotoFilter(base, filter, 11);
+      u = c.toDataURL('image/jpeg', 0.9);
+      c.width = c.height = 0; // sul telefono la memoria per le tele è poca
+      cache.set(filter, u);
+    }
+    return u;
+  };
+  const date = fmtDate(new Date().toISOString());
+  const body = h('div', { class: 'photo-result' });
+  const go = (dir: number) => {
+    const k = Math.max(0, Math.min(PHOTO_FILTERS.length - 1, PHOTO_FILTERS.indexOf(filter) + dir));
+    if (PHOTO_FILTERS[k] !== filter) { filter = PHOTO_FILTERS[k]; render(false); }
+  };
+  const render = (first: boolean) => {
+    const print = photoPrint(filtered(), date, first ? 'fresh' : '');
+    // scorrimento orizzontale sulla foto: a sinistra il filtro dopo, a destra quello prima
+    const pic = print.querySelector('img')!;
+    let x0: number | null = null;
+    pic.setAttribute('draggable', 'false');
+    pic.addEventListener('dragstart', (e) => e.preventDefault());
+    pic.addEventListener('pointerdown', (e) => { e.preventDefault(); x0 = e.clientX; pic.setPointerCapture(e.pointerId); });
+    pic.addEventListener('pointerup', (e) => { if (x0 === null) return; const dx = e.clientX - x0; x0 = null; if (Math.abs(dx) > 36) go(dx < 0 ? 1 : -1); });
+    pic.addEventListener('pointercancel', () => { x0 = null; });
+    const i = PHOTO_FILTERS.indexOf(filter);
+    body.replaceChildren(print,
+      h('div', { class: 'filter-switch' },
+        h('button', { class: 'icon-btn small', 'aria-label': t('memorial.filter.prev'), disabled: i === 0, onclick: () => go(-1) }, '‹'),
+        h('div', {}, h('b', {}, PHOTO_FILTER_LABELS[filter]), h('div', { class: 'swipe-dots' }, ...PHOTO_FILTERS.map((_, k) => h('i', { class: k === i ? 'on' : '' })))),
+        h('button', { class: 'icon-btn small', 'aria-label': t('memorial.filter.next'), disabled: i === PHOTO_FILTERS.length - 1, onclick: () => go(1) }, '›')),
+      h('p', { class: 'muted' }, t('photo.result.text')));
+  };
+  render(true);
   const save = async () => {
-    const rec: PhotoRecord = { id: newId('ph'), createdAt: new Date().toISOString(), dataUrl: url };
+    const rec: PhotoRecord = { id: newId('ph'), createdAt: new Date().toISOString(), dataUrl: filtered() };
     await gallery.add(rec).catch(() => toast(t('photo.galleryUnavailable')));
     ui.game.act((s, n) => R.recordPhoto(s, n));
   };
-  openDrawer(t('photo.result.title'), h('div', { class: 'photo-result' },
-    photoPrint(url, fmtDate(new Date().toISOString()), 'fresh'),
-    h('p', { class: 'muted' }, t('photo.result.text'))), {
+  openDrawer(t('photo.result.title'), body, {
     kind: 'photo',
+    onClose: () => { base.width = base.height = 0; },
     footer: h('div', { class: 'row' },
       h('button', { class: 'big-btn danger', onclick: () => { closeDrawer(); toast(t('photo.deleted')); } }, t('photo.delete')),
-      h('button', { class: 'big-btn ghost', onclick: async () => { await save(); await sharePhoto(url); closeDrawer(); } }, t('photo.share')),
+      h('button', { class: 'big-btn ghost', onclick: async () => { await save(); await sharePhoto(filtered()); closeDrawer(); } }, t('photo.share')),
       h('button', { class: 'big-btn', onclick: async () => { await save(); closeDrawer(); } }, t('photo.save'))),
   });
 }

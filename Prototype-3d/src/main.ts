@@ -14,6 +14,7 @@ import './styles/ui-next.css';
 import './styles/ui-play.css';
 import './styles/ui-house.css';
 import './styles/ui-onboarding.css';
+import './styles/ui-moments.css';
 import { setUiNext, setUiPlay, setUiPreview } from './app/uiNext.ts';
 import { bootScreen, nextPaint, runSliced } from './app/boot.ts';
 import { loadSave, takeRecoveredNotice } from './app/persistence.ts';

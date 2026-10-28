@@ -40,8 +40,20 @@ export default {
   'game.error.generic': 'Qualcosa è andato storto.',
   // breve: numero che vola sul posto dopo un’azione
   'game.reward.xp': '+{n} XP',
-  // notifica: {name} è il nome del traguardo raggiunto
-  'game.achievement': 'Traguardo: {name}',
+  // celebrazione (finestra al centro) di un traguardo o di un nuovo rango
+  'celebrate.ach.kicker': 'Traguardo raggiunto',
+  'celebrate.rank.kicker': 'Nuovo rango',
+  // {n}: il numero del rango
+  'celebrate.rank.text': 'Sei salito al rango {n}. Il cimitero ti riconosce un po’ di più.',
+  // {what}: «12 oggetti in Bottega e 2 lapidi»
+  'celebrate.rank.unlocks': 'Si sbloccano {what}.',
+  'celebrate.rank.items#one': '{n} oggetto in Bottega',
+  'celebrate.rank.items#other': '{n} oggetti in Bottega',
+  'celebrate.rank.stones#one': '{n} lapide',
+  'celebrate.rank.stones#other': '{n} lapidi',
+  'celebrate.rank.and': ' e ',
+  // breve: chiude la celebrazione
+  'celebrate.ok': 'Evviva!',
   'game.locate.missing': 'Non si trova più sulla mappa.',
   'game.interact.none': 'Avvicinati a una tomba o a un oggetto.',
 

@@ -430,12 +430,13 @@ export default {
   // notifica
   'photo.galleryUnavailable': 'Galleria non disponibile in questo browser.',
   'photo.result.title': 'La tua foto',
+  'photo.result.text': 'In bianco e nero, come un vecchio ricordo. Salvala per ritrovarla in Galleria.',
   // testo alternativo dell'immagine
   'photo.result.alt': 'Foto del cimitero',
   // notifica
   'photo.deleted': 'Foto eliminata.',
-  // breve: pulsante
-  'photo.delete': 'Elimina',
+  // breve: pulsante (la foto appena fatta non si tiene)
+  'photo.delete': 'Scarta',
   // breve: pulsante
   'photo.share': 'Condividi',
   // breve: pulsante
@@ -443,7 +444,15 @@ export default {
 
   // ── Galleria ──
   'gallery.title': 'Galleria',
-  'gallery.empty': 'Nessuna foto, per ora. Usa “Foto” dalla bolla delle azioni.',
+  'gallery.empty': 'Nessuna foto, per ora. Inquadra un angolo del cimitero che ti piace e scatta.',
+  // breve: pulsante della galleria vuota
+  'gallery.shoot': 'Scatta una foto',
+  // accanto al titolo: quante foto ci sono
+  'gallery.count#one': '{n} foto',
+  'gallery.count#other': '{n} foto',
+  // conferma prima di eliminare una foto della galleria
+  'gallery.delete.title': 'Eliminare la foto?',
+  'gallery.delete.text': 'Sparisce dalla Galleria e non si può recuperare.',
   // breve: pulsante
   'gallery.back': 'Indietro',
   // breve: pulsante

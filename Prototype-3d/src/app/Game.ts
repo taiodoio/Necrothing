@@ -24,6 +24,8 @@ import { graveModel } from '../render/models/graves.ts';
 import { placeableKey, placeableModel, placeableSeed, seedCount, type PVis } from '../render/models/registry.ts';
 import { UI } from '../ui/UI.ts';
 import { confirmDialog, drawerOpen, floater, toast, uiBlocking } from '../ui/dom.ts';
+import { celebrateAchievement, celebrateRank } from '../ui/celebrate.ts';
+import { rankForXp } from '../game/progression.ts';
 import { npcNote, type NpcNote } from '../ui/npcNote.ts';
 import { annivNote } from '../ui/anniversary.ts';
 import { npcPortrait } from '../ui/npcPortraits.ts';
@@ -119,6 +121,7 @@ export class Game {
     const urlSeed = Number(params.get('seed'));
     this.state = opts.state ?? loadSave() ?? createNewGame(now, Number.isFinite(urlSeed) && urlSeed > 0 ? urlSeed : undefined);
     this.state.settings.style = 'lowpoly'; // l'unico stile del gioco (voxel e miniatura erano prove)
+    this.shownRank = rankForXp(this.state.player.xp).level;
     if (this.state.settings.quality === 'auto') this.auto = new AutoGovernor(loadAutoProfile());
     const q = this.baseQuality();
     this.renderer = new THREE.WebGLRenderer({ canvas, antialias: opts.antialias ?? q !== 'low', powerPreference: 'high-performance', preserveDrawingBuffer: false });
@@ -465,11 +468,18 @@ export class Game {
     if (r.xp) floater(p.x - 18, p.y + 10, t('game.reward.xp', { n: r.xp }), 'xp');
   }
 
-  /** Dopo ogni cambiamento: espansione/achievement, salvataggio, vista, HUD. */
+  /** Il rango già festeggiato (all'avvio quello della partita: si festeggiano solo i salti fatti giocando). */
+  private shownRank = 1;
+
+    /** Dopo ogni cambiamento: espansione/achievement, salvataggio, vista, HUD. */
   afterChange() {
     const now = this.now();
     const { achievements } = R.afterAction(this.state, now);
-    for (const a of achievements) toast(t('game.achievement', { name: a.name }), 'ach');
+    // un nuovo rango e i traguardi: una celebrazione ciascuno, in coda (il rango prima)
+    const rank = rankForXp(this.state.player.xp).level;
+    for (let r = this.shownRank + 1; r <= rank; r++) celebrateRank(r);
+    this.shownRank = Math.max(this.shownRank, rank);
+    for (const a of achievements) celebrateAchievement(a);
     scheduleSave(this.state);
     const area = this.world.area;
     this.world.sync(this.state);
@@ -1860,6 +1870,7 @@ export class Game {
 
   replaceState(next: SaveData) {
     this.state = next;
+    this.shownRank = rankForXp(next.player.xp).level;
     this.select(null);
     this.placement = null;
     this.world.setStyle(next.settings.style, next, true);

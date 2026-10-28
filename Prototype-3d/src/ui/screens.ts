@@ -18,7 +18,7 @@ import { $, closeDrawer, confirmDialog, fmtDate, h, type Modal, openDrawer, open
 import { shopHeader } from './shopHeader.ts';
 import { houseBoughtView, houseShopDetail, houseShopGrid } from './house.ts';
 import { graveThumb, placeableThumb } from './thumbs.ts';
-import { ACH_COUNT, ACH_ICONS, icon } from './icons.ts';
+import { ACH_COUNT, ACH_ICONS, hydrateIcons, icon } from './icons.ts';
 import { lpBadgeUrl, lpIconPng } from './lpIcons.ts';
 import { personalGraveLimit } from '../game/entitlement.ts';
 import { signalOnboarding } from './onboarding.ts';
@@ -951,10 +951,11 @@ function photoOverlay(ui: UI) {
   const layer = $('#photo-layer');
   const rectEl = $('#photo-rect');
   const W = window.innerWidth, H = window.innerHeight;
-  const r = { x: W * 0.12, y: H * 0.22, w: W * 0.76, h: Math.min(H * 0.5, W * 0.76) };
+  const r = { x: W * 0.1, y: H * 0.24, w: W * 0.8, h: Math.min(H * 0.46, W * 0.8) };
   const apply = () => Object.assign(rectEl.style, { left: `${r.x}px`, top: `${r.y}px`, width: `${r.w}px`, height: `${r.h}px` });
   apply();
   layer.hidden = false;
+  layer.classList.remove('moved');
   $('#bubble').classList.add('hidden');
   $('#game').classList.add('tools-off'); // niente pulsanti della mappa sotto la barra dello scatto
   let mode: string | null = null;
@@ -965,6 +966,7 @@ function photoOverlay(ui: UI) {
     if (!mode) return;
     last = { x: e.clientX, y: e.clientY };
     layer.setPointerCapture(e.pointerId);
+    rectEl.classList.add('dragging');
   };
   const move = (e: PointerEvent) => {
     if (!mode) return;
@@ -978,8 +980,10 @@ function photoOverlay(ui: UI) {
     r.w = Math.max(80, Math.min(W, r.w)); r.h = Math.max(80, Math.min(H, r.h));
     r.x = Math.max(0, Math.min(W - r.w, r.x)); r.y = Math.max(0, Math.min(H - r.h, r.y));
     apply();
+    // spostato il riquadro, il consiglio si fa da parte
+    layer.classList.add('moved');
   };
-  const up = () => { mode = null; };
+  const up = () => { mode = null; rectEl.classList.remove('dragging'); };
   layer.addEventListener('pointerdown', down);
   layer.addEventListener('pointermove', move);
   layer.addEventListener('pointerup', up);
@@ -992,8 +996,10 @@ function photoOverlay(ui: UI) {
     layer.removeEventListener('pointerup', up);
     $('#photo-shoot').onclick = null;
     $('#photo-cancel').onclick = null;
+    $('#photo-gallery').onclick = null;
   };
   $('#photo-cancel').onclick = close;
+  $('#photo-gallery').onclick = () => { close(); void openGallery(ui); };
   $('#photo-shoot').onclick = () => {
     const url = ui.game.capture(r);
     const flash = h('div', { class: 'flash' });
@@ -1002,6 +1008,11 @@ function photoOverlay(ui: UI) {
     close();
     photoResult(ui, url);
   };
+}
+
+/** Una foto come stampa: il bordo chiaro, più alto in basso, con la data scritta. */
+function photoPrint(url: string, date: string, cls = '') {
+  return h('figure', { class: `photo-print ${cls}` }, h('img', { src: url, alt: t('photo.result.alt') }), h('figcaption', {}, date));
 }
 
 async function sharePhoto(url: string) {
@@ -1018,9 +1029,12 @@ function photoResult(ui: UI, url: string) {
     await gallery.add(rec).catch(() => toast(t('photo.galleryUnavailable')));
     ui.game.act((s, n) => R.recordPhoto(s, n));
   };
-  openDrawer(t('photo.result.title'), h('div', {}, h('img', { class: 'photo-view', src: url, alt: t('photo.result.alt') })), {
+  openDrawer(t('photo.result.title'), h('div', { class: 'photo-result' },
+    photoPrint(url, fmtDate(new Date().toISOString()), 'fresh'),
+    h('p', { class: 'muted' }, t('photo.result.text'))), {
+    kind: 'photo',
     footer: h('div', { class: 'row' },
-      h('button', { class: 'big-btn ghost', style: 'color:var(--danger)', onclick: () => { closeDrawer(); toast(t('photo.deleted')); } }, t('photo.delete')),
+      h('button', { class: 'big-btn danger', onclick: () => { closeDrawer(); toast(t('photo.deleted')); } }, t('photo.delete')),
       h('button', { class: 'big-btn ghost', onclick: async () => { await save(); await sharePhoto(url); closeDrawer(); } }, t('photo.share')),
       h('button', { class: 'big-btn', onclick: async () => { await save(); closeDrawer(); } }, t('photo.save'))),
   });
@@ -1028,20 +1042,30 @@ function photoResult(ui: UI, url: string) {
 
 export async function openGallery(ui: UI) {
   const photos = await gallery.list().catch(() => [] as PhotoRecord[]);
+  const count = () => setDrawerExtra(photos.length ? h('span', { class: 'wisp-pill photo-count' }, t('gallery.count', { n: photos.length })) : null);
   const render = () => {
+    count();
     setDrawerFooter(null);
     setDrawerBody(photos.length
-      ? h('div', { class: 'photo-grid' }, ...photos.map((p) => h('button', { onclick: () => view(p) }, h('img', { src: p.dataUrl, alt: fmtDate(p.createdAt) }))))
-      : h('p', { class: 'muted' }, t('gallery.empty')));
+      // le stampe in griglia, un po' storte come appoggiate sul tavolo
+      ? h('div', { class: 'photo-wall' }, ...photos.map((p) => h('button', { class: 'photo-thumb', 'aria-label': fmtDate(p.createdAt), onclick: () => view(p) }, photoPrint(p.dataUrl, fmtDate(p.createdAt)))))
+      : h('div', { class: 'photo-empty' },
+        h('i', { class: 'photo-empty-icon', 'data-icon': 'photo' }),
+        h('p', {}, t('gallery.empty')),
+        h('button', { class: 'big-btn', onclick: () => { closeDrawer(); startPhoto(ui); } }, t('gallery.shoot'))));
+    hydrateIcons();
   };
   const view = (p: PhotoRecord) => {
-    setDrawerBody(h('div', {}, h('img', { class: 'photo-view', src: p.dataUrl, alt: '' }), h('p', { class: 'muted' }, fmtDate(p.createdAt))));
+    setDrawerBody(h('div', { class: 'photo-result' }, photoPrint(p.dataUrl, fmtDate(p.createdAt), 'big')));
     setDrawerFooter(h('div', { class: 'row' },
       h('button', { class: 'big-btn ghost', onclick: () => render() }, t('gallery.back')),
-      h('button', { class: 'big-btn ghost', style: 'color:var(--danger)', onclick: async () => { await gallery.remove(p.id); photos.splice(photos.indexOf(p), 1); render(); } }, t('gallery.delete')),
+      h('button', { class: 'big-btn danger', onclick: async () => {
+        const yes = await confirmDialog({ title: t('gallery.delete.title'), message: t('gallery.delete.text'), ok: t('gallery.delete'), danger: true });
+        if (!yes) return;
+        await gallery.remove(p.id); photos.splice(photos.indexOf(p), 1); render();
+      } }, t('gallery.delete')),
       h('button', { class: 'big-btn', onclick: () => sharePhoto(p.dataUrl) }, t('gallery.share'))));
   };
-  openDrawer(t('gallery.title'), h('div'), { full: true });
+  openDrawer(t('gallery.title'), h('div'), { full: true, kind: 'gallery' });
   render();
-  void ui;
 }

@@ -1,5 +1,5 @@
 // Decori naturali dell'interfaccia, disegnati una volta all'avvio e passati al
-// CSS come immagini (variabili --ivy, --sprig, --fern, --vines-*, --zones-*):
+// CSS come immagini (variabili --ivy, --sprig, --sprig-round, --fern, --vines-*, --zones-*):
 // l'edera negli angoli dei pannelli, i rametti su HUD, notifiche e finestre, il
 // ciuffo di foglie accanto alla foto e, sullo sfondo, rami d'edera che entrano
 // dai bordi e zone più scure sfumate.
@@ -37,6 +37,28 @@ export function sprigSvg(): string {
   let s = branchPath('M2 10 C 18 6, 34 4, 60 5', 1.8) + branchPath('M8 2 C 6 20, 5 36, 4 60', 1.8);
   [[16, 8, 6, 70], [27, 6, 5.5, -110], [38, 5, 5, 75], [50, 5, 4, -100], [7, 18, 6, 160], [6, 29, 5.5, 20], [5, 40, 4.5, 165], [5, 50, 3.5, 15]].forEach(([x, y, r, a], i) => { s += leaf(x, y, r, a, G[i % G.length]); });
   return svg(64, 64, s + flower(11, 11, 4, '#e9d8f2') + flower(30, 10, 2.6, '#f2b8c8') + '<circle cx="18" cy="17" r="1.6" fill="#a5372a"/>');
+}
+
+/**
+ * Rametto per un angolo molto arrotondato (lo scatto della foto, dorato: lì i due
+ * rami dritti del rametto normale formavano una «L» squadrata). Il ramo segue
+ * l'arco dell'angolo (raggio 27 su 64, centro in 32,32) e prosegue dritto
+ * lungo i due lati; le foglie sono perpendicolari al ramo, una fuori e una dentro.
+ */
+export function sprigRoundSvg(): string {
+  const at = (deg: number): Pt => [32 + 27 * Math.cos((deg * Math.PI) / 180), 32 + 27 * Math.sin((deg * Math.PI) / 180)];
+  // ramo sottile e caldo: sul dorato quello scuro del rametto normale disegnava un contorno
+  let s = `<path d="M5 48 L5 32 A27 27 0 0 1 32 5 L48 5" fill="none" stroke="#7a5a2e" stroke-width="1.3" stroke-linecap="round"/>`;
+  // [punto, direzione verso l'esterno in gradi, grandezza]: fitte sull'arco, più piccole verso le punte
+  const leaves: Array<[Pt, number, number]> = [
+    [at(184), 4, 6.5], [at(196), 196, 7], [at(208), 28, 6.5], [at(220), 220, 7], [at(232), 52, 6.5], [at(244), 244, 7], [at(256), 76, 6.5], [at(266), 266, 6.5],
+    [[38, 5], 90, 5.5], [[44, 5], 270, 4.5], [[5, 38], 180, 5.5], [[5, 44], 0, 4.5],
+  ];
+  // la foglia disegnata punta in alto (-90°): ruotata di direzione + 90, inclinata di 25° verso la punta del ramo
+  leaves.forEach(([[x, y], dir, r], i) => { s += leaf(Number(x.toFixed(1)), Number(y.toFixed(1)), r, dir + 90 + (i % 2 ? -25 : 25), G[i % G.length]); });
+  const [fx, fy] = at(225), [bx, by] = at(204);
+  return svg(64, 64, s + flower(Number(fx.toFixed(1)), Number(fy.toFixed(1)), 4.5, '#e9d8f2') + flower(32, 5, 3, '#f2b8c8') + flower(5, 30, 2.6, '#f2b8c8')
+    + `<circle cx="${(bx + 4).toFixed(1)}" cy="${(by + 2).toFixed(1)}" r="1.6" fill="#a5372a"/>`);
 }
 
 /** Ciuffo di foglie e fiori ai piedi della foto. */
@@ -128,6 +150,7 @@ export function installNatureDecor() {
   };
   set('--ivy', ivySvg(), 180, 180);
   set('--sprig', sprigSvg(), 64, 64);
+  set('--sprig-round', sprigRoundSvg(), 64, 64);
   set('--fern', fernSvg(), 90, 70);
   set('--vines', vinesSvg('#0e0914', 0.22, 400, 900, 5), 400, 900);
   set('--vines-dialog', vinesSvg('#0e0914', 0.22, 400, 520, 13, { count: 3 }), 400, 520);

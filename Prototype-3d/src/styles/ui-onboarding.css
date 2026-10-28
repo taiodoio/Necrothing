@@ -210,6 +210,16 @@
 .ob-coach::before { left: 0; top: 0; }
 .ob-coach::after { right: 0; bottom: 0; rotate: 180deg; }
 @keyframes obCoach { from { opacity: 0; transform: translate(-50%, -14px); } }
+/* passo fatto: un guizzo e un bagliore dorato, la scritta si spegne, «Fatto!» con la spunta; poi svanisce */
+.ob-coach.done { animation: obDone 0.5s cubic-bezier(0.2, 1.4, 0.4, 1) both; box-shadow: 0 0 0 2px rgba(240, 196, 110, 0.75), 0 0 26px rgba(240, 196, 110, 0.45), 0 8px 18px rgba(0, 0, 0, 0.45); }
+.ob-coach.done .ob-coach-body p { opacity: 0.55; transition: opacity 0.2s; }
+@keyframes obDone { 0% { transform: translate(-50%, 0) scale(1); } 40% { transform: translate(-50%, 0) scale(1.04); } 100% { transform: translate(-50%, 0) scale(1); } }
+.ob-done { display: inline-flex; align-items: center; gap: 6px; padding: 4px 12px 4px 6px; border-radius: 999px; background: var(--primary); color: #2a1d10;
+  font: 800 13px var(--pixel, inherit); animation: obDonePop 0.45s cubic-bezier(0.2, 1.6, 0.4, 1) both; }
+.ob-done .pxi, .ob-done svg, .ob-done img { width: 16px; height: 16px; }
+@keyframes obDonePop { from { opacity: 0; transform: scale(0.4); } }
+.ob-coach.out { opacity: 0; transform: translate(-50%, -10px); transition: opacity 0.24s ease, transform 0.24s ease; animation: none; }
+[data-quality="low"] .ob-coach.done { animation: none; }
 body.ob-open .ob-coach { display: none; }
 /* ancorato in alto: esce sempre di un terzo, anche quando il consiglio è lungo */
 .ob-coach .ob-bust.small { position: absolute; left: 6px; top: 0; width: 84px; height: 74px; margin: 0; }
@@ -268,7 +278,8 @@ body.ob-open .ob-coach { display: none; }
 .ui-next .has-coach.has-note .toasts { top: calc(var(--coach-b, 180px) + var(--note-h, 64px) + 20px); }
 
 @media (prefers-reduced-motion: reduce) {
-  .ob-layer, .ob-content, .ob-coach, .ob-light, .ob-hero::before, .ob-hero img, .ob-beam, .ob-stamp, .ob-wake-text { animation: none !important; }
+  .ob-layer, .ob-content, .ob-coach, .ob-light, .ob-hero::before, .ob-hero img, .ob-beam, .ob-stamp, .ob-wake-text, .ob-done { animation: none !important; }
+  .ob-coach.out { transition: none; }
   .ob-tap i { animation: none !important; opacity: 1; }
   .ob-tap i:nth-child(2) { display: none; }
 }

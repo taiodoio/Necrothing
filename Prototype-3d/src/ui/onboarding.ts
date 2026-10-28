@@ -25,6 +25,7 @@ import { cellCenter } from '../view/WorldView.ts';
 import { celebrate } from './celebrate.ts';
 import { $, closeDrawer, drawerOpen, h, setUiBlocking, toast, uiBlocking } from './dom.ts';
 import { lpBadgeUrl, lpIconPng } from './lpIcons.ts';
+import { icon } from './icons.ts';
 import { groundUrl } from './previews.ts';
 import { npcNote } from './npcNote.ts';
 import { npcPortrait, wispPortrait } from './npcPortraits.ts';
@@ -41,6 +42,8 @@ export const signalOnboarding = (s: OnboardingSignal) => active?.signal(s);
 const TIP_GAP_MS = 60_000;
 /** Il passaggio dal cortile al cimitero vero dura almeno tanto (lo sfondo con «Il cimitero si sveglia…»). */
 const WAKE_MS = 900;
+/** Passo fatto: quanto si vede il «Fatto!» e quanto ci mette il consiglio a svanire. */
+const DONE_MS = 750, COACH_OUT_MS = 240;
 
 const reducedMotion = () => typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches;
 
@@ -81,6 +84,8 @@ export class Onboarding {
   private ghostId: string | null = null;
   private ghostAt = 0;
   private waitTimer = 0;
+  /** Il passo appena fatto: quanto resta il «Fatto!» prima del consiglio nuovo. */
+  private doneTimer = 0;
   /** Il primo obiettivo: già proposto in questa apertura del gioco. */
   private goalShown = false;
   private goalTimer = 0;
@@ -366,6 +371,7 @@ export class Onboarding {
   }
 
   private dropCoach() {
+    window.clearTimeout(this.doneTimer);
     this.coach?.remove(); this.coach = null;
     $('#game').classList.remove('has-coach');
     this.clearMarks();
@@ -435,7 +441,29 @@ export class Onboarding {
     if (sig === 'itemMoved') { if (this.step === 'edit') this.moved = true; return; }
     if (!this.game.inYard || !yardSignal(this.o, sig)) return;
     this.save();
-    this.showStep();
+    this.stepDone();
+  }
+
+  /**
+   * Passo fatto: il consiglio di prima lo dice («Fatto!», con la spunta e un
+   * guizzo dorato), poi svanisce e arriva quello nuovo. Senza, cambiava solo
+   * la scritta e non si capiva di aver fatto la cosa giusta. Il consiglio resta
+   * al suo posto fino al cambio: pannelli e messaggi sotto non si spostano.
+   */
+  private stepDone() {
+    const old = this.coach;
+    window.clearTimeout(this.doneTimer);
+    if (!old) { this.showStep(); return; }
+    this.clearMarks();
+    if (!old.classList.contains('done')) {
+      old.classList.add('done');
+      old.querySelector('.ob-coach-foot')?.replaceChildren(h('span', { class: 'ob-done', role: 'status' }, icon('check', 16), t('onboarding.yard.done')));
+    }
+    const quick = reducedMotion();
+    this.doneTimer = window.setTimeout(() => {
+      old.classList.add('out');
+      this.doneTimer = window.setTimeout(() => this.showStep(), quick ? 0 : COACH_OUT_MS);
+    }, quick ? 450 : DONE_MS);
   }
 
   /** L'ultimo passo apre la scheda della tomba: lì si legge, e chiudendola il cortile è finito. */

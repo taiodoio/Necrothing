@@ -62,6 +62,8 @@ Una mappa piccola, costruita in memoria al posto della partita (`buildYard`, `Ga
 | `ghost` | toccare il fantasma che arriva | `presenceMet` (Game) |
 | `sheet` | aprire la scheda della tomba | `graveOpened` (scheda) |
 
+**Passo fatto.** Il consiglio di prima lo dice: un guizzo e un bagliore dorato, la scritta si spegne e al posto di «n di 10» compare «Fatto!» con la spunta. Il buio dell'occhio di bue si toglie un attimo. Dopo tre quarti di secondo il consiglio svanisce e arriva quello nuovo. Fino al cambio resta al suo posto, così pannelli e messaggi sotto non si spostano. In qualità bassa niente guizzo; con il movimento ridotto il «Fatto!» resta meno e il cambio è immediato.
+
 Con la scheda aperta il consiglio spiega «Altro» (riesumare, affidare all'albero); chiudendola il cortile è finito. I fuochi fatui come moneta non si spiegano di nuovo: lo fa già la prima scheda dell'introduzione. Nel cortile si impara il gesto, e in Bottega si vede a cosa servono.
 
 **L'occhio di bue.** Per ogni passo c'è una catena di bersagli, dal più vicino alla fine al più lontano, e il segno va sul primo che si vede. Per comprare, per esempio: «Compra» nel modale, la lanterna nella Bottega aperta, «Bottega» nel menu dell'oggetto, la Bottega nella scena. Altri dettagli:

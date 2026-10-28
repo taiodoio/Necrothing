@@ -237,8 +237,9 @@ body.ob-open .ob-coach { display: none; }
 /* in qualità bassa l’occhio di bue sta fermo (niente pulsazione) */
 [data-quality="low"] .ob-beam { animation: none; }
 
-/* il cerchio dove toccare: due onde che si allargano dal punto, come un dito che tocca */
-.ob-tap { position: fixed; z-index: 19; left: 0; top: 0; width: 0; height: 0; pointer-events: none; visibility: hidden; }
+/* il cerchio dove toccare: due onde che si allargano dal punto, come un dito che tocca; sopra a tutto,
+   anche a ciò che sta sopra il buio (la barra di Modifica con «Fine») */
+.ob-tap { position: fixed; z-index: 22; left: 0; top: 0; width: 0; height: 0; pointer-events: none; visibility: hidden; }
 .ob-tap i { position: absolute; left: -22px; top: -22px; width: 44px; height: 44px; border-radius: 50%; will-change: transform, opacity;
   border: 2.5px solid rgba(255, 243, 214, 0.95); box-shadow: 0 0 10px rgba(255, 220, 150, 0.7), inset 0 0 8px rgba(255, 220, 150, 0.45);
   animation: obTap 1.6s cubic-bezier(0.2, 0.6, 0.35, 1) infinite; }

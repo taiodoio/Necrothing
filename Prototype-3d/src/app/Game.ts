@@ -24,6 +24,8 @@ import { graveModel } from '../render/models/graves.ts';
 import { placeableKey, placeableModel, placeableSeed, seedCount, type PVis } from '../render/models/registry.ts';
 import { UI } from '../ui/UI.ts';
 import { confirmDialog, drawerOpen, floater, toast, uiBlocking } from '../ui/dom.ts';
+import { celebrateAchievement, celebrateRank } from '../ui/celebrate.ts';
+import { rankForXp } from '../game/progression.ts';
 import { npcNote, type NpcNote } from '../ui/npcNote.ts';
 import { annivNote } from '../ui/anniversary.ts';
 import { npcPortrait } from '../ui/npcPortraits.ts';
@@ -119,6 +121,7 @@ export class Game {
     const urlSeed = Number(params.get('seed'));
     this.state = opts.state ?? loadSave() ?? createNewGame(now, Number.isFinite(urlSeed) && urlSeed > 0 ? urlSeed : undefined);
     this.state.settings.style = 'lowpoly'; // l'unico stile del gioco (voxel e miniatura erano prove)
+    this.shownRank = rankForXp(this.state.player.xp).level;
     if (this.state.settings.quality === 'auto') this.auto = new AutoGovernor(loadAutoProfile());
     const q = this.baseQuality();
     this.renderer = new THREE.WebGLRenderer({ canvas, antialias: opts.antialias ?? q !== 'low', powerPreference: 'high-performance', preserveDrawingBuffer: false });
@@ -465,11 +468,18 @@ export class Game {
     if (r.xp) floater(p.x - 18, p.y + 10, t('game.reward.xp', { n: r.xp }), 'xp');
   }
 
-  /** Dopo ogni cambiamento: espansione/achievement, salvataggio, vista, HUD. */
+  /** Il rango già festeggiato (all'avvio quello della partita: si festeggiano solo i salti fatti giocando). */
+  private shownRank = 1;
+
+    /** Dopo ogni cambiamento: espansione/achievement, salvataggio, vista, HUD. */
   afterChange() {
     const now = this.now();
     const { achievements } = R.afterAction(this.state, now);
-    for (const a of achievements) toast(t('game.achievement', { name: a.name }), 'ach');
+    // un nuovo rango e i traguardi: una celebrazione ciascuno, in coda (il rango prima)
+    const rank = rankForXp(this.state.player.xp).level;
+    for (let r = this.shownRank + 1; r <= rank; r++) celebrateRank(r);
+    this.shownRank = Math.max(this.shownRank, rank);
+    for (const a of achievements) celebrateAchievement(a);
     scheduleSave(this.state);
     const area = this.world.area;
     this.world.sync(this.state);
@@ -1836,7 +1846,7 @@ export class Game {
     this.rig.jumpTo(at);
   }
 
-  /** Cattura un rettangolo (px CSS) della scena in bianco e nero. */
+  /** Cattura un rettangolo (px CSS) della scena, a colori. */
   capture(rect: { x: number; y: number; w: number; h: number }): string {
     this.postfx.render(this.scene, this.rig.camera);
     const src = this.renderer.domElement;
@@ -1847,19 +1857,13 @@ export class Game {
     out.height = Math.round(rect.h * sy * scale);
     const g = out.getContext('2d')!;
     g.drawImage(src, rect.x * sx, rect.y * sy, rect.w * sx, rect.h * sy, 0, 0, out.width, out.height);
-    const img = g.getImageData(0, 0, out.width, out.height);
-    const d = img.data;
-    for (let i = 0; i < d.length; i += 4) {
-      let l = 0.299 * d[i] + 0.587 * d[i + 1] + 0.114 * d[i + 2];
-      l = Math.max(0, Math.min(255, (l - 128) * 1.12 + 132));
-      d[i] = d[i + 1] = d[i + 2] = l;
-    }
-    g.putImageData(img, 0, 0);
-    return out.toDataURL('image/jpeg', 0.9);
+    // a colori: il filtro (seppia, bianco e nero, rovinata) si sceglie dopo, come nella foto della sepoltura
+    return out.toDataURL('image/jpeg', 0.92);
   }
 
   replaceState(next: SaveData) {
     this.state = next;
+    this.shownRank = rankForXp(next.player.xp).level;
     this.select(null);
     this.placement = null;
     this.world.setStyle(next.settings.style, next, true);

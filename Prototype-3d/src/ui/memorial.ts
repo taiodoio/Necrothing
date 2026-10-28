@@ -9,10 +9,9 @@ import { h, openModal, progressDialog, toast } from './dom.ts';
 import { icon } from './icons.ts';
 import { uiPlay } from '../app/uiNext.ts';
 import { t } from '../i18n/index.ts';
-import { applyPhotoFilter, PHOTO_FILTER_LABELS, squareCrop, type PhotoFilter } from './photoFilters.ts';
+import { applyPhotoFilter, PHOTO_FILTER_LABELS, PHOTO_FILTERS as FILTERS, squareCrop, type PhotoFilter } from './photoFilters.ts';
 import { drawPostcard, sharePostcard, type PostcardData } from './postcard.ts';
 
-const FILTERS: PhotoFilter[] = ['none', 'sepia', 'bw', 'worn'];
 
 export const loadImage = (src: string) => new Promise<HTMLImageElement>((res, rej) => { const i = new Image(); i.onload = () => res(i); i.onerror = rej; i.src = src; });
 

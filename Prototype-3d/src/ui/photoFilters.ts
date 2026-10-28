@@ -1,4 +1,4 @@
-// Filtri per la foto dell'oggetto da seppellire: si applicano ai pixel (non
+// Filtri per le foto (dell'oggetto da seppellire e del cimitero): si applicano ai pixel (non
 // con CSS), così la foto salvata, esportata e messa sulla cartolina è già
 // filtrata. Tutto deterministico: lo stesso seme dà gli stessi graffi.
 
@@ -6,6 +6,9 @@ import { createRng } from '../game/rng.ts';
 import { t } from '../i18n/index.ts';
 
 export type PhotoFilter = 'none' | 'sepia' | 'bw' | 'worn';
+
+/** I filtri nell'ordine in cui si scorrono (foto della sepoltura e foto del cimitero). */
+export const PHOTO_FILTERS: readonly PhotoFilter[] = ['none', 'sepia', 'bw', 'worn'];
 
 export const PHOTO_FILTER_LABELS: Record<PhotoFilter, string> = {
   none: t('filter.none'),

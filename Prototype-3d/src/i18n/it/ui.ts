@@ -32,8 +32,8 @@ export default {
   'page.fab.aria': 'Apri azioni',
   // per i lettori di schermo: il pulsante di scatto della foto
   'page.photo.shoot': 'Scatta',
-  // breve: suggerimento nella barra della foto
-  'page.photo.hint': 'Sposta gli angoli',
+  // suggerimento in alto mentre si inquadra la foto
+  'page.photo.hint': 'Trascina il riquadro o i suoi angoli per scegliere cosa fotografare.',
 
   // ── Menù di gioco ──
   // breve: voce del menù (sotto l'icona)

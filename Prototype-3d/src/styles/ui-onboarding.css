@@ -197,8 +197,9 @@
 
 /* ── Il consiglio del cortile: come le notifiche dei personaggi ────── */
 /* sopra pannelli e dialoghi (che si aprono sotto di lui: vedi più giù) */
+/* in alto: l'HUD sotto è comunque spento dall'occhio di bue (il mezzobusto esce di ~42 px sopra) */
 .ob-coach {
-  position: fixed; z-index: 20; left: 50%; top: calc(var(--hud-top, 64px) + 34px + var(--safe-t)); transform: translateX(-50%);
+  position: fixed; z-index: 20; left: 50%; top: calc(48px + var(--safe-t)); transform: translateX(-50%);
   width: min(calc(100vw - 20px - var(--safe-l) - var(--safe-r)), 460px); min-height: 82px; padding: 10px 12px 10px 96px; border-radius: var(--r);
   isolation: isolate; color: var(--paper); font-family: "Nunito", system-ui, sans-serif;
   background-color: transparent; background-image: var(--zones-small), var(--vines-hud), var(--nat-bg);
@@ -250,11 +251,12 @@ body.ob-open .ob-coach { display: none; }
 .ob-back { border: 0; padding: 4px 10px; border-radius: 999px; background: rgba(0, 0, 0, 0.25); color: var(--paper); font: 800 12.5px var(--pixel); cursor: pointer; }
 
 /* sotto il consiglio scendono i messaggi, le note delle presenze, la barra di Modifica e i pannelli (niente si copre) */
-.ui-next .has-coach :is(.toasts, .npc-note, .edit-banner) { top: calc(var(--hud-top) + 34px + var(--coach-h, 96px) + 10px + var(--safe-t)); }
+/* e stanno sopra il buio dell'occhio di bue: si devono leggere (e «Fine» toccare) */
+.ui-next .has-coach :is(.toasts, .npc-note, .edit-banner) { top: calc(var(--coach-b, 180px) + 10px); z-index: 21; }
 /* in Modifica i messaggi scendono anche sotto la sua barra */
-.ui-next .has-coach:has(.edit-banner:not([hidden])) .toasts { top: calc(var(--hud-top) + 34px + var(--coach-h, 96px) + 72px + var(--safe-t)); }
-.ui-next #game.has-coach #drawer { top: calc(var(--coach-b, 180px) + 10px); bottom: auto; translate: 0 0; max-height: calc(100% - var(--coach-b, 180px) - 22px - var(--safe-b)); }
-.ui-next .has-coach .dialog-scrim { padding-top: calc(var(--coach-b, 180px) + 10px); }
+.ui-next .has-coach:has(.edit-banner:not([hidden])) .toasts { top: calc(var(--coach-b, 180px) + 72px); }
+.ui-next #game.has-coach #drawer { top: calc(var(--coach-b, 180px) + 10px); bottom: auto; translate: 0 0; max-height: calc(100% - var(--coach-b, 180px) - 22px - var(--safe-b)); transition: top 0.25s ease, max-height 0.25s ease; }
+.ui-next .has-coach .dialog-scrim { padding-top: calc(var(--coach-b, 180px) + 10px); transition: padding-top 0.25s ease; }
 .ui-next .has-coach .dialog-scrim .dialog.modal { max-height: calc(100dvh - var(--coach-b, 180px) - 26px - var(--safe-b)); }
 @media (min-width: 760px) { .ui-next #game.has-coach #drawer { translate: -50% 0; } }
 
@@ -262,7 +264,7 @@ body.ob-open .ob-coach { display: none; }
 .ob-wake-text { margin: 0; font: 700 20px/1.2 var(--gothic); color: var(--gold-bright); text-align: center; text-shadow: 0 2px 10px rgba(0, 0, 0, 0.6); animation: obWake 1.6s ease-in-out infinite alternate; }
 @keyframes obWake { from { opacity: 0.55; } }
 .ob-layer.q-low .ob-wake-text { animation: none; }
-.ui-next .has-coach.has-note .toasts { top: calc(var(--hud-top) + 34px + var(--coach-h, 96px) + var(--note-h, 64px) + 20px + var(--safe-t)); }
+.ui-next .has-coach.has-note .toasts { top: calc(var(--coach-b, 180px) + var(--note-h, 64px) + 20px); }
 
 @media (prefers-reduced-motion: reduce) {
   .ob-layer, .ob-content, .ob-coach, .ob-light, .ob-hero::before, .ob-hero img, .ob-beam, .ob-stamp, .ob-wake-text { animation: none !important; }

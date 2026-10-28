@@ -73,6 +73,10 @@ export class Onboarding {
   private step: YardStep | null = null;
   /** In Modifica la lanterna è stata spostata: ora si tocca «Fine». */
   private moved = false;
+  /** Il bersaglio nella scena era fuori dallo schermo e la camera ci è già andata (una volta per passo). */
+  private framed = false;
+  /** I bersagli dentro un pannello già fatti scorrere in vista. */
+  private scrolled = new WeakSet<HTMLElement>();
   /** Il fantasma del passo delle presenze (e quando può arrivarne un altro). */
   private ghostId: string | null = null;
   private ghostAt = 0;
@@ -333,6 +337,7 @@ export class Onboarding {
     this.step = step;
     this.moved = false;
     this.ghostId = null;
+    this.framed = false;
     this.coachBox(null, t(`onboarding.yard.${step}`),
       t('onboarding.tutorial.progress', { n: this.o.step + 1, total: YARD_STEPS.length }),
       h('button', { class: 'npc-note-cta', onclick: () => this.leaveYard(true) }, t('onboarding.yard.skip'), ' ›'));
@@ -436,19 +441,15 @@ export class Onboarding {
   /** L'ultimo passo apre la scheda della tomba: lì si legge, e chiudendola il cortile è finito. */
   private waitThenFinale() {
     this.step = null;
+    // la scheda si apre subito dopo il segnale: il consiglio su cosa c'è dentro c'è già, così si apre
+    // al suo posto, sotto il consiglio (comparendo dopo la sposterebbe di colpo)
+    this.coachBox(null, t('onboarding.yard.sheetOpen'), t('onboarding.tutorial.progress', { n: YARD_STEPS.length, total: YARD_STEPS.length }));
+    this.mark(() => ['#drawer:not([hidden]) #drawer-close']);
     const since = performance.now();
-    let open = false;
+    let opened = false;
     this.waitTimer = window.setInterval(() => {
-      // la scheda si apre subito dopo il segnale: allora il consiglio su cosa c'è dentro
-      if (drawerOpen()) {
-        if (!open) {
-          open = true;
-          this.coachBox(null, t('onboarding.yard.sheetOpen'), t('onboarding.tutorial.progress', { n: YARD_STEPS.length, total: YARD_STEPS.length }));
-          this.mark(() => ['#drawer:not([hidden]) #drawer-close']);
-        }
-        return;
-      }
-      if (this.game.placement || (!open && performance.now() - since < 1500)) return;
+      if (drawerOpen()) { opened = true; return; }
+      if (this.game.placement || (!opened && performance.now() - since < 1500)) return;
       this.dropCoach();
       this.finale();
     }, 300);
@@ -584,6 +585,12 @@ export class Onboarding {
     for (const tg of this.targets()) {
       if (typeof tg === 'string') {
         const el = document.querySelector<HTMLElement>(tg);
+        // in un pannello che scorre, fuori vista: il pannello scorre fin lì (una volta per elemento)
+        const box = el && !this.scrolled.has(el) ? scroller(el) : null;
+        if (el && box) {
+          const b0 = el.getBoundingClientRect(), v = box.getBoundingClientRect();
+          if (b0.top < v.top || b0.bottom > v.bottom) { this.scrolled.add(el); el.scrollIntoView({ block: 'center', behavior: reducedMotion() ? 'auto' : 'smooth' }); }
+        }
         const b = el && shown(el) ? el.getBoundingClientRect() : null;
         if (b && b.width && b.height) { r = { x: b.left + b.width / 2, y: b.top + b.height / 2, w: b.width + 14, h: b.height + 14 }; if (el!.closest('#ctx')) edge = b.top; inPanel = !!el!.closest('.drawer, .dialog'); break; }
         continue;
@@ -592,6 +599,8 @@ export class Onboarding {
       const top = tg.at(), base = tg.base();
       const pt = top ? this.game.project(top) : null, pb = base ? this.game.project(base) : null;
       if (!pt || !pb) continue;
+      // fuori dallo schermo (la camera guardava altrove): ci si va, una volta
+      if (this.step && !this.framed && (pb.x < 0 || pb.x > innerWidth || pb.y < 0 || pb.y > innerHeight)) { this.framed = true; this.game.focusPoint(base!); }
       const d = Math.hypot(pt.x - pb.x, pt.y - pb.y);
       r = { x: (pt.x + pb.x) / 2, y: (pt.y + pb.y) / 2, w: Math.max(120, d * 1.8 + 60), h: Math.max(110, d * 1.2 + 70) };
       // sopra l'oggetto compare il suo menù: un po' di spazio anche per quello
@@ -613,6 +622,15 @@ export class Onboarding {
 /** Dopo che lo sfondo è stato disegnato: il cambio di scena (pesante) non lo fa saltare. */
 function afterPaint(fn: () => void) {
   requestAnimationFrame(() => requestAnimationFrame(() => window.setTimeout(fn, 0)));
+}
+
+/** Il contenitore che scorre attorno a un elemento (pannello, modale), se c'è. */
+function scroller(el: HTMLElement): HTMLElement | null {
+  for (let p = el.parentElement; p && p !== document.body; p = p.parentElement) {
+    const o = getComputedStyle(p).overflowY;
+    if ((o === 'auto' || o === 'scroll') && p.scrollHeight > p.clientHeight + 1) return p;
+  }
+  return null;
 }
 
 /** Si vede: niente `hidden` attorno (né pannelli nascosti con le classi del gioco). */

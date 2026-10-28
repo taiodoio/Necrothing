@@ -38,9 +38,10 @@ export function buildYard(real: SaveData, now: Date, onboarding: OnboardingState
   });
   const keep = new Set(['shop-17-17', 'bushes-26-17', 'half_pine-16-24']);
   const placeables: Placed[] = fresh.placeables.filter((p) => keep.has(p.id) || (p.type === 'path_stone' && ((p.x === 18 && p.y <= 22) || (p.y === 22 && p.x < EAST))));
-  // la Casa vera (col suo tetto); senza, la mette ensureKeeperHouse accanto alla Bottega
+  // la Casa (tetto e aggiunte sono quelli veri, in `house`), sempre allo stesso posto: nella
+  // partita vera può stare ovunque, anche fuori da quello che qui è il cortile
   const house = real.placeables.find((p) => p.type === 'keeper_house');
-  if (house) placeables.push(structuredClone(house));
+  placeables.push(P('keeper_house', 20, 16, { id: house?.id ?? 'yard-house' }));
   placeables.push(P('lantern', 23, 25, { id: YARD_LANTERN, lit: after(step, 'light') }));
   if (after(step, 'place')) placeables.push(P('lantern', 23, 20, { id: BOUGHT_LANTERN, lit: false }));
   // lo steccato: lungo il lato sud e il lato est (a nord e a ovest c'è già il recinto del cimitero)

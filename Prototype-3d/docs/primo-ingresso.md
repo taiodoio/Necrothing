@@ -36,7 +36,7 @@ Passando da una fase a schermo pieno all'altra (lettera, nome, introduzione) lo 
 ## Il cortile del Custode
 
 Una mappa piccola, costruita in memoria al posto della partita (`buildYard`, `Game.enterYard`). Dentro c'è solo quel che serve, tutto a pochi passi e chiuso da uno steccato:
-- la Casa (quella vera, col suo tetto) e la Bottega;
+- la Casa, col tetto e le aggiunte della partita vera, ma sempre allo stesso posto (nella partita vera può stare ovunque, anche fuori dal cortile), e la Bottega;
 - una tomba trascurata, «Da lunedì vado in palestra»;
 - una lanterna spenta, due celle più in là: accanto alla tomba la si toccava e veniva selezionata la tomba;
 - due fuochi fatui, lontani dalla strada del primo passo, così non si raccolgono per sbaglio.
@@ -47,7 +47,7 @@ Una mappa piccola, costruita in memoria al posto della partita (`buildYard`, `Ga
 - quello che si guadagna (fuochi fatui, esperienza) resta lì;
 - Seppellisci non si apre: la prima sepoltura si fa nel cimitero vero.
 
-**I passi.** Un consiglio in alto, con il Custode che esce dal riquadro, «n di 10» e «Salta il cortile ›». Ogni passo si completa con l'azione vera, segnalata dal gioco (`signalOnboarding`); le azioni fuori ordine non contano.
+**I passi.** Un consiglio in cima allo schermo (l'HUD sotto è comunque spento dall'occhio di bue), con il Custode che esce dal riquadro, «n di 10» e «Salta il cortile ›». Entrando e uscendo dal cortile la camera va subito sul Custode: prima restava dove guardava nella partita vera, e i primi bersagli finivano fuori dallo schermo. Ogni passo si completa con l'azione vera, segnalata dal gioco (`signalOnboarding`); le azioni fuori ordine non contano.
 
 | Passo | Azione | Segnale |
 | --- | --- | --- |
@@ -67,11 +67,15 @@ Con la scheda aperta il consiglio spiega «Altro» (riesumare, affidare all'albe
 **L'occhio di bue.** Per ogni passo c'è una catena di bersagli, dal più vicino alla fine al più lontano, e il segno va sul primo che si vede. Per comprare, per esempio: «Compra» nel modale, la lanterna nella Bottega aperta, «Bottega» nel menu dell'oggetto, la Bottega nella scena. Altri dettagli:
 - **Pannelli:** sopra un pannello la scena non conta, e il buio attorno è più leggero, perché il pannello si deve leggere.
 - **Camera:** se quel che va toccato (o il menu che gli compare sopra) sta per finire sotto il consiglio, la scena scende piano.
+- **Fuori dallo schermo:** se un bersaglio della scena è fuori dallo schermo, la camera ci va (una volta per passo).
+- **Pannelli che scorrono:** se il bersaglio sta più in basso in un pannello o in un modale (la lanterna in Bottega, «Compra» su uno schermo basso), il pannello scorre fin lì.
 - **Fantasma:** se se ne va senza essere toccato, ne arriva un altro.
 
-**Modifica.** La barra di Modifica, con «Fine», scende sotto il consiglio, come i messaggi; il consiglio dice «Quando hai finito, tocca «Fine»». La prima volta Modifica si presenta con la sua scheda: il segno va su «Inizia», poi sulla lanterna, e quando la si è spostata su «Fine».
+**Posare.** Quel che si posa (oggetti e tombe, anche fuori dal cortile) parte da due celle a destra del Custode, non sopra di lui.
 
-**I pannelli sotto il consiglio.** Bottega, Inventario, scheda della tomba e dialoghi si aprono sotto il consiglio, che resta sopra, così non si coprono a vicenda.
+**Modifica.** La barra di Modifica, con «Fine», scende sotto il consiglio, come i messaggi, e sta sopra il buio dell'occhio di bue; il consiglio dice «Quando hai finito, tocca «Fine»». La prima volta Modifica si presenta con la sua scheda: il segno va su «Inizia», poi sulla lanterna, e quando la si è spostata su «Fine».
+
+**I pannelli sotto il consiglio.** Bottega, Inventario, scheda della tomba e dialoghi si aprono sotto il consiglio, che resta sopra, così non si coprono a vicenda. Messaggi e notifiche ricevuti intanto stanno sopra il buio dell'occhio di bue. Aprendo la scheda della tomba il consiglio nuovo c'è già, così la scheda si apre al suo posto (comparendo dopo la spostava di colpo); se il consiglio cambia altezza, pannelli e dialoghi scivolano piano.
 
 **La fine.** La finestra delle celebrazioni, «Pronto, {nome}?», con il dono di benvenuto: la lanterna comprata e 20 fuochi fatui (`applyYardGift`), e «Inizia il gioco». Saltando il cortile il dono arriva lo stesso, con un messaggio. Poi lo sfondo del percorso, con «Il cimitero si sveglia…», copre il cambio di scena (almeno 0,9 secondi, perché sia un passaggio e non un lampo), e il cimitero vero compare. I modelli del cimitero sono già caricati dall'avvio, quindi il cambio è un ridisegno sotto lo sfondo: non serve rimettere la schermata di caricamento.
 

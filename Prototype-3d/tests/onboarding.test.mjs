@@ -122,6 +122,14 @@ test('il cortile è piccolo, a parte e con quel che serve; la partita vera non c
   assert.doesNotThrow(() => buildOccupancy(y));
   const ids = y.placeables.map((p) => p.id);
   assert.equal(new Set(ids).size, ids.length, 'id distinti');
+  // la Casa sta sempre nel cortile, anche se nella partita vera è stata spostata lontano (che non cambia)
+  const far = createNewGame(NOW, 3);
+  R.ensureKeeperHouse(far, NOW);
+  const home = far.placeables.find((p) => p.type === 'keeper_house');
+  home.x = 40; home.y = 40;
+  const yh = buildYard(far, NOW).placeables.find((p) => p.type === 'keeper_house');
+  assert.deepEqual([yh.x, yh.y, yh.id], [20, 16, home.id]);
+  assert.deepEqual([home.x, home.y], [40, 40]);
   // il cortile si salva? no: normalizzato resta una partita valida, ma non è mai quella del giocatore
   assert.ok(normalizeSave(JSON.parse(JSON.stringify(y))));
 });

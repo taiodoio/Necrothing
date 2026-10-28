@@ -43,7 +43,7 @@ import { cellCenter, HALF, worldToCell, WorldView } from '../view/WorldView.ts';
 import { WalkTarget } from '../view/walkTarget.ts';
 import { AutoGovernor, detectTier, newAutoProfile, PROFILES, QUALITY_LABELS, type AutoProfile, type QualityProfile } from './AutoQuality.ts';
 import { Input } from './Input.ts';
-import { loadSave, persistenceOn, saveNow, scheduleSave } from './persistence.ts';
+import { loadSave, persistenceOn, saveNow, scheduleSave, setSaveInstead } from './persistence.ts';
 import { closedCoffinLP } from '../render/lowpoly/memoryTree.ts';
 import { currentLang, t, tList } from '../i18n/index.ts';
 
@@ -71,6 +71,8 @@ export interface Placement {
 const VOXEL_RES: Record<Quality, number> = { low: 1.0, medium: 1.6, high: 2.0 };
 /** Nuvola di terra degli scavi del becchino (sepoltura e riesumazione). */
 const DUST = '#a08a6c', DUST_GLOW = '#3a2e22';
+/** Nel cortile la camera sta vicina: tutto entra nell'inquadratura. */
+const YARD_VIEW = 16;
 
 export class Game {
   state: SaveData;
@@ -336,6 +338,8 @@ export class Game {
   }
 
   private onLiveTick() {
+    // nel cortile del primo ingresso il tempo è fermo: niente presenze a caso, niente fuochi fatui nuovi
+    if (this.realState) return;
     const now = this.now();
     const res = liveTick(this.state, now, ++this.liveSalt);
     for (const s of res.spawns) {
@@ -391,7 +395,7 @@ export class Game {
     saveNow(this.state);
     this.renderer.setAnimationLoop(null);
     // i promemoria si ripianificano adesso: da qui in poi il gioco non gira
-    void syncReminders(this.state, this.now());
+    void syncReminders(this.realState ?? this.state, this.now());
     this.onPaused?.();
   };
 
@@ -430,10 +434,13 @@ export class Game {
     this.clock.getDelta();
     this.lastFrameAt = 0;
     this.markActive();
-    const report = runCatchUp(this.state, this.now());
-    this.afterChange();
-    const msg = catchUpMessage(this.announceAnniversaries(report, 400));
-    if (msg) toast(msg);
+    // nel cortile il tempo è fermo (la partita vera recupera quando ci si torna)
+    if (!this.realState) {
+      const report = runCatchUp(this.state, this.now());
+      this.afterChange();
+      const msg = catchUpMessage(this.announceAnniversaries(report, 400));
+      if (msg) toast(msg);
+    }
     this.renderer.setAnimationLoop(this.loop);
   };
 
@@ -476,10 +483,13 @@ export class Game {
     const now = this.now();
     const { achievements } = R.afterAction(this.state, now);
     // un nuovo rango e i traguardi: una celebrazione ciascuno, in coda (il rango prima)
+    // (nel cortile niente: quel che si fa lì non resta)
     const rank = rankForXp(this.state.player.xp).level;
-    for (let r = this.shownRank + 1; r <= rank; r++) celebrateRank(r);
+    if (!this.realState) {
+      for (let r = this.shownRank + 1; r <= rank; r++) celebrateRank(r);
+      for (const a of achievements) celebrateAchievement(a);
+    }
     this.shownRank = Math.max(this.shownRank, rank);
-    for (const a of achievements) celebrateAchievement(a);
     scheduleSave(this.state);
     const area = this.world.area;
     this.world.sync(this.state);
@@ -640,7 +650,7 @@ export class Game {
       switch (action) {
         case 'clean': this.actors.work(); if (this.act((s, n) => (grave ? R.cleanGrave(s, id, n) : R.cleanPlaceable(s, id, n)), center, 'rewarded') && grave) signalOnboarding('graveCleaned'); break;
         case 'repair': this.actors.work(1.6); this.act((s, n) => (grave ? R.repairGrave(s, id, n) : R.repairPlaceable(s, id, n)), center, 'rewarded'); break;
-        case 'flowers': this.actors.work(0.8); this.act((s, n) => R.bringFlowers(s, id, n), center, 'rewarded'); break;
+        case 'flowers': this.actors.work(0.8); if (this.act((s, n) => R.bringFlowers(s, id, n), center, 'rewarded')) signalOnboarding('flowersBrought'); break;
         case 'light': if (this.act((s) => R.toggleLight(s, id), center)) signalOnboarding('lightToggled'); break;
         case 'rotate': this.act((s) => R.rotateEntity(s, id)); break;
         case 'store': this.act((s) => R.storePlaceable(s, id)); this.select(null); break;
@@ -663,8 +673,10 @@ export class Game {
   }
 
   setEditMode(on: boolean) {
+    const was = this.editMode;
     this.editMode = on;
     if (!on) { this.world.endPreview(); this.select(null); }
+    if (was && !on) signalOnboarding('editDone');
     this.refreshKeeperArea();
     this.ui.refreshEditBanner();
     this.ui.refreshContext();
@@ -819,6 +831,9 @@ export class Game {
     if (p.kind === 'grave') {
       try {
         const { grave, result } = R.bury(this.state, p.draft!, p.x, p.y, now);
+        // il primo obiettivo (la prima sepoltura) è fatto
+        this.state.onboarding.goal = 'done';
+        this.ui.onboarding.goalReached();
         this.placement = null;
         this.refreshPlacement();
         this.afterChange();
@@ -850,6 +865,7 @@ export class Game {
       this.placement = null;
       this.refreshPlacement();
       if ((this.state.inventory[type] ?? 0) > 0) toast(t('game.place.left', { n: this.state.inventory[type] }));
+      signalOnboarding('itemPlaced');
     }
   }
 
@@ -934,7 +950,7 @@ export class Game {
     if (this.selection) { this.select(null); if (this.editMode) return; }
     const g = this.groundCell(x, y);
     if (g && !this.editMode) {
-      if (this.actors.walkTo(g.cell)) this.markWalk();
+      if (this.actors.walkTo(g.cell)) { this.markWalk(); signalOnboarding('walked'); }
       this.rig.follow = this.actors.avatar.pos;
     }
   }
@@ -1194,6 +1210,7 @@ export class Game {
         : graveId ? { label: t('note.seeGrave'), run: () => this.ui.openGrave(graveId) } : undefined });
     this.effects.puff(r.pos, r.kind === 'ghost' ? '#cfeee6' : r.kind === 'zombie' ? '#9bd34a' : '#e8dfcc');
     this.actors.removeRoamer(id);
+    if (met) signalOnboarding('presenceMet');
     // interfaccia di prima: si apre subito la scheda del ricordo, con la visita in testa
     if (!uiNext() && r.memoryId && visit) this.ui.openMemory(r.memoryId, visit);
   }
@@ -1456,7 +1473,7 @@ export class Game {
     if (!owned || !d) return;
     if (d.id === '__placement') return;
     this.world.endPreview();
-    if (d.valid) this.act((s) => R.moveEntity(s, d.id, d.x, d.y));
+    if (d.valid) { if (this.act((s) => R.moveEntity(s, d.id, d.x, d.y))) signalOnboarding('itemMoved'); }
     else { toast(t('game.move.busy')); this.world.sync(this.state); }
     this.world.select(d.id);
     this.refreshKeeperArea();
@@ -1861,6 +1878,41 @@ export class Game {
     return out.toDataURL('image/jpeg', 0.92);
   }
 
+  // ── Il cortile del primo ingresso ────────────────────────────────────
+
+  /** Mentre c'è il cortile (game/yard.ts): la partita vera, che aspetta e si salva al suo posto. */
+  private realState: SaveData | null = null;
+  get inYard() { return !!this.realState; }
+
+  /** Al posto della partita, il cortile (la partita vera resta da parte, intatta). */
+  enterYard(yard: SaveData) {
+    if (!this.realState) this.realState = this.state;
+    setSaveInstead(this.realState);
+    if (this.editMode) this.setEditMode(false);
+    this.clearRoamers();
+    this.replaceState(yard);
+    this.rig.setView(YARD_VIEW);
+  }
+
+  /** Via il cortile: torna la partita vera (il tempo passato intanto si recupera). */
+  leaveYard() {
+    const real = this.realState;
+    if (!real) return;
+    this.realState = null;
+    setSaveInstead(null);
+    this.clearRoamers();
+    if (this.editMode) this.setEditMode(false);
+    this.replaceState(real);
+    runCatchUp(this.state, this.now());
+    this.afterChange();
+    this.rig.setView(window.innerWidth < 700 ? 24 : 22);
+  }
+
+  /** Via le presenze in giro (cambiando partita non c'entrano più). */
+  private clearRoamers() {
+    for (const id of [...this.actors.roamers.keys()]) this.actors.removeRoamer(id, false);
+  }
+
   replaceState(next: SaveData) {
     this.state = next;
     this.shownRank = rankForXp(next.player.xp).level;
@@ -1908,6 +1960,23 @@ export class Game {
   }
 
   /** Solo sviluppo/test: forza la comparsa di una presenza. */
+  /** La scena scende di `dy` px (un po' alla volta): il cortile tiene ciò che va toccato fuori da sotto il consiglio. */
+  nudgeView(dy: number) {
+    this.rig.panPixels(0, Math.min(14, dy));
+  }
+
+  /** Un fantasma accanto a una tomba (il cortile: la prima presenza); ritorna il suo id. */
+  spawnGhostAt(graveId: string): string | null {
+    const g = this.state.graves.find((x) => x.id === graveId);
+    return g ? this.actors.spawnRoamer({ kind: 'ghost', graveId }, cellCenter(g.x, g.y + 2, [2, 1])).id : null;
+  }
+
+  /** Dove sta una presenza (null se se n'è andata). */
+  roamerPos(id: string): THREE.Vector3 | null {
+    const r = this.actors.roamerAt(id);
+    return r && r.dying <= 0 ? r.pos : null;
+  }
+
   debugSpawn(kind: Parameters<Actors['spawnRoamer']>[0]['kind'], rare = false) {
     const g = this.state.graves[0];
     this.actors.spawnRoamer({ kind, rare, graveId: g?.id }, g && kind === 'ghost' ? cellCenter(g.x, g.y + 2, [2, 1]) : undefined, kind === 'zombie' ? this.zombieGoal() : undefined);

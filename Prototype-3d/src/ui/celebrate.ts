@@ -26,6 +26,9 @@ export interface Celebration {
   count?: number;
   /** Etichetta del grado (Bronzo, Argento, Oro). */
   tier?: string;
+  /** Il pulsante, se non «Evviva!», e cosa fare chiudendo (la fine del cortile: «Inizia il gioco»). */
+  ok?: string;
+  onClose?: () => void;
 }
 
 const queue: Celebration[] = [];
@@ -69,6 +72,7 @@ function show(c: Celebration) {
     document.removeEventListener('keydown', onKey, true);
     scrim.classList.add('out');
     window.setTimeout(() => { scrim.remove(); showing = false; window.setTimeout(pump, 250); }, reducedMotion() ? 0 : 220);
+    c.onClose?.();
   };
   const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape' || e.key === 'Enter') { e.stopPropagation(); e.preventDefault(); close(); } };
   const card = h('div', { class: 'dialog modal cel-card', role: 'alertdialog', 'aria-modal': 'true', 'aria-label': `${c.kicker}: ${c.title}`, onclick: (e: Event) => e.stopPropagation() },
@@ -81,7 +85,7 @@ function show(c: Celebration) {
     c.tier ? h('span', { class: 'cel-tier' }, c.tier) : null,
     h('p', {}, c.text),
     c.extra ? h('p', { class: 'cel-extra' }, c.extra) : null,
-    h('button', { class: 'big-btn', onclick: close }, t('celebrate.ok')));
+    h('button', { class: 'big-btn', onclick: close }, c.ok ?? t('celebrate.ok')));
   const scrim = h('div', { class: 'dialog-scrim cel-scrim', onclick: close }, card);
   ($('#drawer').parentElement ?? document.body).append(scrim);
   document.addEventListener('keydown', onKey, true);

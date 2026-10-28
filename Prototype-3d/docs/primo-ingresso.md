@@ -1,10 +1,10 @@
 # Primo ingresso e onboarding
 
-Come entra in Necrothing chi gioca per la prima volta. Il percorso ha sei fasi:
-splash, lettera, nome, introduzione, tutorial e giro dell'interfaccia. Ogni fase
-si può saltare con «Salta», in alto a destra; nelle schede c'è «Indietro», che torna alla scheda o alla pagina di prima. Dalle Impostazioni si rivede la lettera o si rifà il tutorial.
+Come entra in Necrothing chi gioca per la prima volta. Il percorso ha cinque fasi:
+splash, lettera, nome, introduzione e il cortile del Custode, una mappa piccola
+dove si prova tutto. Ogni fase si può saltare con «Salta», in alto a destra; nelle schede c'è «Indietro», che torna alla scheda o alla pagina di prima. Dopo il cortile, nel cimitero vero, arrivano il primo obiettivo (la prima sepoltura) e i consigli al momento giusto. Dalle Impostazioni si rivede la lettera o si rifà il cortile.
 
-Passando da una fase a schermo pieno all'altra (lettera, nome, introduzione) lo sfondo resta, con le lapidi e le lucciole, e cambiano solo le schede, sfumando. Quando parte il tutorial lo sfondo sfuma via e ricompare la scena.
+Passando da una fase a schermo pieno all'altra (lettera, nome, introduzione) lo sfondo resta, con le lapidi e le lucciole, e cambiano solo le schede, sfumando. Sotto lo stesso sfondo si prepara il cortile, poi lo sfondo sfuma e il cortile compare.
 
 ## Le fasi
 
@@ -13,12 +13,11 @@ Passando da una fase a schermo pieno all'altra (lettera, nome, introduzione) lo 
 | `welcome` | Splash di caricamento con «Entra in Necrothing», poi la lettera | `app/boot.ts` (`finish({ cta })`), `ui/onboarding.ts` (`showLetter`) |
 | `name` | Il Custode accoglie e chiede il nome | `showName`, `game/playerName.ts` |
 | `intro` | Quattro schede brevi: fuochi fatui, cura, presenze, ricordi | `showIntro` |
-| `tutorial` | Cinque azioni vere nella scena | `showStep`, `targetOf`, `game/onboarding.ts` |
-| `tour` | Quattro tappe: profilo, Seppellisci, Bottega, menu | `showTour` |
-| `done` | Si gioca | — |
+| `yard` | Il cortile del Custode: dieci azioni vere | `game/yard.ts`, `startYard`, `showStep`, `targetsOf` |
+| `done` | Si gioca; il primo obiettivo e i consigli | `showGoal`, `tipTick`, `game/tips.ts` |
 
 - **Splash.** La scena notturna del cimitero (`public/boot/scena.webp`) con logo e veli scuri sopra e sotto. Solo al primo ingresso (`stage === 'welcome'`) mostra «Entra in Necrothing», col pulsante oro del gioco (`.big-btn`) e una sfumatura scura in basso perché si legga. Nessun contenuto commerciale. Agli avvii successivi lo splash sparisce da solo come prima.
-- **Sfondo.** Fino al tutorial la scena non si vede. Lettera, nome e introduzione stanno su uno sfondo loro (`.ob-solid`): i pannelli del gioco più scuri, con pattern tono su tono, bagliore caldo al centro ed edera in alto. In fondo ci sono, più scure, le lapidi con la terra e la pala del dettaglio delle tombe. Lo sfondo è già sotto lo splash prima che sparisca (`cover()`).
+- **Sfondo.** Fino al cortile la scena non si vede. Lettera, nome e introduzione stanno su uno sfondo loro (`.ob-solid`): i pannelli del gioco più scuri, con pattern tono su tono, bagliore caldo al centro ed edera in alto. In fondo ci sono, più scure, le lapidi con la terra e la pala del dettaglio delle tombe. Lo sfondo è già sotto lo splash prima che sparisca (`cover()`).
 - **Lucciole.** Punti caldi che vagano e si accendono e spengono; si animano solo con trasformazioni e opacità. Il numero dipende dal livello grafico: 16 in alta, 8 in media, nessuna in bassa né con il movimento ridotto.
 - **Lettera.** È un foglio di carta logora: bordi strappati (una maschera), macchie e grana. Le pieghe sono appena accennate, ondulate e sfocate, con qualche grinza.
   - In alta e media qualità, in 3,4 secondi e in un movimento solo, senza soste: il foglio arriva piegato in quattro ondeggiando, davanti a una luce calda che tremola. Mentre rallenta si apre la metà di sotto, e prima che finisca comincia ad aprirsi di lato; ogni apertura chiude con un filo di rimbalzo. Poi compare il testo. Arrivo e spostamenti stanno su involucri separati (`.ob-fold`, `.ob-fy`, `.ob-fx`), così le fasi si sovrappongono.
@@ -33,34 +32,77 @@ Passando da una fase a schermo pieno all'altra (lettera, nome, introduzione) lo 
 
   Se si salta, il nome resta «Custode».
 - **Introduzione.** Quattro schede: raccogliere i fuochi fatui; fiori, pulizia e riparazioni; apparizioni e presenze; creare ricordi e personalizzare. Nella prima parla il fuoco fatuo, che si presenta, con il modello della scena (fiammella, cuore, occhietti: `wispPortrait`). L'inquadratura è fissa, sul centro della fiammella: il riquadro calcolato dal modello, condiviso con i fuochi fatui del gioco, a volte lo spostava di lato. Nella terza c'è il fantasma della scena.
-- **Tutorial.** Un consiglio in alto, un occhio di bue e un cerchio animato su dove toccare (due onde che si allargano), che seguono la camera. L'occhio di bue è misurato dalla cima dell'oggetto a dove poggia, così una tomba sta tutta nella luce. Quando l'oggetto è selezionato, il segno passa al pulsante giusto del suo menu. Ogni passo si completa con l'azione vera, segnalata dal gioco (`signalOnboarding`):
 
-  | Passo | Azione | Segnale |
-  | --- | --- | --- |
-  | `wisp` | raccogliere il fuoco fatuo più vicino | `wispCollected` (Game) |
-  | `visit` | aprire la scheda di «La cena di classe» | `graveOpened` (`openDeceased`) |
-  | `light` | accendere o spegnere la lanterna vicina a «Da lunedì vado in palestra» | `lightToggled` (Game) |
-  | `clean` | pulire una tomba sporca, di preferenza «Da lunedì vado in palestra» | `graveCleaned` (Game) |
-  | `bury` | toccare Seppellisci | `burialOpened` (`openBurial`) |
+## Il cortile del Custode
 
-  Le azioni fuori ordine non contano. Un passo senza bersaglio viene saltato, per esempio quando non c'è nessun fuoco fatuo o nessuna tomba sporca. Il tutorial non dà ricompense proprie: si ricevono solo quelle delle azioni vere, come sempre.
-- **Giro.** Lo stesso consiglio del tutorial (titolo, testo, «‹ Indietro» e «Avanti ›») e l'occhio di bue su ogni tappa: profilo e statistiche, con l'aspetto del Custode; Seppellisci; Bottega e Inventario (la camera ci va, senza selezionarla); il pulsante del menu, senza aprirlo, con tutte le voci nel testo. La scena resta viva sotto il giro. Parte quando la sepoltura aperta nell'ultimo passo viene chiusa.
+Una mappa piccola, costruita in memoria al posto della partita (`buildYard`, `Game.enterYard`). Dentro c'è solo quel che serve, tutto a pochi passi e chiuso da uno steccato:
+- la Casa (quella vera, col suo tetto) e la Bottega;
+- una tomba trascurata, «Da lunedì vado in palestra»;
+- una lanterna spenta, due celle più in là: accanto alla tomba la si toccava e veniva selezionata la tomba;
+- due fuochi fatui, lontani dalla strada del primo passo, così non si raccolgono per sbaglio.
+
+**Una partita a parte.** La partita vera resta da parte, intatta, e si salva al posto del cortile (`setSaveInstead`): il cortile non finisce mai nel salvataggio. Le due partite hanno in comune lo stato del percorso, quindi i passi fatti restano. Nel cortile:
+- il tempo è fermo: niente presenze a caso, niente fuochi fatui nuovi, niente recupero del tempo passato;
+- niente celebrazioni di rango e traguardi;
+- quello che si guadagna (fuochi fatui, esperienza) resta lì;
+- Seppellisci non si apre: la prima sepoltura si fa nel cimitero vero.
+
+**I passi.** Un consiglio in alto, con il Custode che esce dal riquadro, «n di 10» e «Salta il cortile ›». Ogni passo si completa con l'azione vera, segnalata dal gioco (`signalOnboarding`); le azioni fuori ordine non contano.
+
+| Passo | Azione | Segnale |
+| --- | --- | --- |
+| `walk` | toccare il prato: il Custode ci va | `walked` (Game) |
+| `wisp` | raccogliere un fuoco fatuo | `wispCollected` (Game) |
+| `clean` | pulire la tomba | `graveCleaned` (Game) |
+| `flowers` | portarle i fiori | `flowersBrought` (Game) |
+| `light` | accendere la lanterna | `lightToggled` (Game) |
+| `shop` | comprare una lanterna in Bottega | `itemBought` (Bottega) |
+| `place` | posarla (subito, o dall'Inventario) | `itemPlaced` (Game) |
+| `edit` | in Modifica spostarla, poi «Fine» | `editDone` (Game) |
+| `ghost` | toccare il fantasma che arriva | `presenceMet` (Game) |
+| `sheet` | aprire la scheda della tomba | `graveOpened` (scheda) |
+
+Con la scheda aperta il consiglio spiega «Altro» (riesumare, affidare all'albero); chiudendola il cortile è finito. I fuochi fatui come moneta non si spiegano di nuovo: lo fa già la prima scheda dell'introduzione. Nel cortile si impara il gesto, e in Bottega si vede a cosa servono.
+
+**L'occhio di bue.** Per ogni passo c'è una catena di bersagli, dal più vicino alla fine al più lontano, e il segno va sul primo che si vede. Per comprare, per esempio: «Compra» nel modale, la lanterna nella Bottega aperta, «Bottega» nel menu dell'oggetto, la Bottega nella scena. Altri dettagli:
+- **Pannelli:** sopra un pannello la scena non conta, e il buio attorno è più leggero, perché il pannello si deve leggere.
+- **Camera:** se quel che va toccato (o il menu che gli compare sopra) sta per finire sotto il consiglio, la scena scende piano.
+- **Fantasma:** se se ne va senza essere toccato, ne arriva un altro.
+
+**Modifica.** La barra di Modifica, con «Fine», scende sotto il consiglio, come i messaggi; il consiglio dice «Quando hai finito, tocca «Fine»». La prima volta Modifica si presenta con la sua scheda: il segno va su «Inizia», poi sulla lanterna, e quando la si è spostata su «Fine».
+
+**I pannelli sotto il consiglio.** Bottega, Inventario, scheda della tomba e dialoghi si aprono sotto il consiglio, che resta sopra, così non si coprono a vicenda.
+
+**La fine.** La finestra delle celebrazioni, «Pronto, {nome}?», con il dono di benvenuto: la lanterna comprata e 20 fuochi fatui (`applyYardGift`), e «Inizia il gioco». Saltando il cortile il dono arriva lo stesso, con un messaggio. Poi lo sfondo del percorso, con «Il cimitero si sveglia…», copre il cambio di scena (almeno 0,9 secondi, perché sia un passaggio e non un lampo), e il cimitero vero compare. I modelli del cimitero sono già caricati dall'avvio, quindi il cambio è un ridisegno sotto lo sfondo: non serve rimettere la schermata di caricamento.
+
+## Dopo il cortile
+
+- **Il primo obiettivo.** «Il tuo primo addio», nello stile del consiglio, con l'occhio di bue sul pulsante della sepoltura. «Seppellisci ›» la apre, «Più tardi» la rimanda alla prossima apertura del gioco. Si chiude per sempre alla prima sepoltura (`onboarding.goal`).
+- **I consigli al momento giusto** (`game/tips.ts`). Una notifica del Custode, una volta sola ciascuno, con «Mostrami» quando parla di qualcosa nella scena:
+  - una tomba rotta;
+  - un oggetto rovinato;
+  - un animale con la sua casetta;
+  - l'Albero dei ricordi;
+  - le foto, dopo la prima sepoltura se non se n'è ancora fatta una.
+
+  Arrivano solo quando il giocatore è libero (niente pannelli, dialoghi, Modifica, scelta del posto, notifiche), almeno un minuto l'uno dall'altro. Il primo arriva non prima di mezzo minuto dall'apertura.
 
 ## Stato e salvataggio
 
-`SaveData.onboarding = { stage, step }` è la versione 4 del salvataggio (`game/onboarding.ts`).
+`SaveData.onboarding = { stage, step, goal, tips }` (`game/onboarding.ts`); il salvataggio resta alla versione 4, perché i campi nuovi li completa `normalizeOnboarding`.
 - **Partita nuova:** comincia da `welcome`. Anche «Nuova partita» rifà tutto il percorso.
-- **Salvataggi esistenti:** la migrazione v4 li segna come `done`, così chi gioca già non vede niente.
-- **Ripresa:** ogni fase e ogni passo si salvano subito. Chiudendo il gioco a metà, si riprende da lì, senza il pulsante dello splash se si era già oltre `welcome`.
+- **Salvataggi esistenti:** la migrazione v4 li segna come `done`, così chi gioca già non vede niente. Chi aveva già finito non riceve neanche il primo obiettivo né i consigli.
+- **Il percorso di prima:** chi era a metà del vecchio tutorial o del giro riprende dal cortile.
+- **Ripresa:** ogni fase e ogni passo si salvano subito. Chiudendo il gioco a metà, si riprende da lì, senza il pulsante dello splash se si era già oltre `welcome`. Il cortile si ricostruisce com'era a quel passo: tomba pulita, lanterna accesa, lanterna comprata o posata.
 - **Valori sbagliati:** con `normalizeOnboarding`, una fase sconosciuta diventa `done` e un passo fuori misura torna dentro i limiti.
 
 ## Rivedere
 
 Impostazioni › Gioco › Introduzione ha due pulsanti:
 - **«Rivedi la lettera»:** solo la lettera; con «Continua» o «Salta» si torna al gioco.
-- **«Rifai il tutorial»:** il tutorial e il giro dell'interfaccia, senza lettera né nome.
+- **«Rifai il tutorial»:** il cortile, senza lettera né nome e senza dono; alla fine «Torna al cimitero».
 
-Lo stato del rivedere sta solo in memoria: non viene salvato e non cambia la partita. Le azioni vere fatte nel frattempo danno le loro ricompense normali. Ricaricando a metà si torna al gioco.
+Lo stato del rivedere sta solo in memoria: non viene salvato e non cambia la partita, perché il cortile è sempre una partita a parte. Ricaricando a metà si torna al gioco.
 
 ## Le tombe narrative
 
@@ -80,16 +122,17 @@ Prendono il posto di Floppy, Tamagotchi e Ombrello, ma solo nelle partite nuove:
 
 ## Caricamento progressivo
 
-Le anteprime del Custode e delle miniature (`warmHeroes`, `warmThumbs`) vengono preparate prima di chiudere lo splash. Il resto delle anteprime (`warmAllPreviews`) si prepara in sottofondo durante pergamena, nome e tutorial: quando si apre Bottega o Seppellisci, le immagini ci sono già.
+Le anteprime del Custode e delle miniature (`warmHeroes`, `warmThumbs`) vengono preparate prima di chiudere lo splash. Il resto delle anteprime (`warmAllPreviews`) si prepara in sottofondo durante pergamena, nome e cortile: quando si apre Bottega o Seppellisci, le immagini ci sono già.
 
 ## Interfaccia
 
 - **Stile:** `styles/ui-onboarding.css` riusa pannelli, pulsanti e caratteri del gioco (`.dialog.modal`, `.big-btn`, gotico, i pannelli «natura e luce» del tema scuro). Niente contorni.
-- **Il Custode che parla:** nella scheda del nome e nei consigli del tutorial e del giro il suo mezzobusto esce dal riquadro per circa un terzo, come nell'HUD. Non sta dentro una forma; sotto ha una linea da cui parte.
-- **Consiglio del tutorial:** ha lo sfondo e i rametti delle notifiche dei personaggi. «Salta il tutorial ›» ha lo stile delle loro CTA.
-- **Occhio di bue:** nel tutorial e nel giro tutto si spegne attorno al bersaglio con una sfumatura, con una luce calda al centro e senza decorazioni (più buio nel giro). È un elemento grande tre schermi col buco al centro: segue il bersaglio con `translate`, quindi non si ridisegna, e pulsa piano.
-- **Scena sotto i livelli:** mentre pergamena, nome, introduzione e giro sono aperti, la scena si ferma come sotto un pannello (`setUiBlocking`).
-- **Niente si copre:** messaggi e note delle presenze scendono sotto il consiglio.
+- **Il Custode che parla:** nella scheda del nome, nei consigli del cortile e nel primo obiettivo il suo mezzobusto esce dal riquadro per circa un terzo, come nell'HUD. Non sta dentro una forma; sotto ha una linea da cui parte.
+- **Consiglio del cortile:** ha lo sfondo e i rametti delle notifiche dei personaggi. «Salta il cortile ›» ha lo stile delle loro CTA.
+- **Occhio di bue:** nel cortile e nel primo obiettivo tutto si spegne attorno al bersaglio con una sfumatura, con una luce calda al centro e senza decorazioni. È un elemento grande tre schermi col buco al centro: segue il bersaglio con `translate`, quindi non si ridisegna, e pulsa piano; in qualità bassa sta fermo.
+- **Scena sotto i livelli:** mentre pergamena, nome e introduzione sono aperti, e durante i cambi di scena, la scena si ferma come sotto un pannello (`setUiBlocking`).
+- **Niente si copre:** messaggi, note delle presenze, la barra di Modifica e i pannelli scendono sotto il consiglio.
+- **Livello grafico:** il cortile pesa meno della mappa piena (pochi oggetti, simulazione ferma). In qualità bassa valgono le regole di sempre: niente lucciole, niente scintille nella finestra finale, niente animazioni dei pannelli.
 - **Prove:** a 390×844 e 375×667, anche con il movimento ridotto.
 
 ## I pannelli del gioco

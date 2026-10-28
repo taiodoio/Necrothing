@@ -416,7 +416,7 @@ export default {
   // breve: due pulsanti affiancati
   'settings.onboarding.letter': 'Rivedi la lettera',
   'settings.onboarding.tutorial': 'Rifai il tutorial',
-  'settings.onboarding.hint': 'La lettera di benvenuto, oppure il tutorial e il giro dell’interfaccia. La partita non cambia.',
+  'settings.onboarding.hint': 'La lettera di benvenuto, oppure il cortile dove si prova tutto. La partita non cambia.',
   // {commit} è il codice della versione, {when} data e ora già formattate
   'settings.build.version': 'Versione {commit} · {when}',
   // tecnico, sotto la versione: il profilo di distribuzione (beta-full, development…)

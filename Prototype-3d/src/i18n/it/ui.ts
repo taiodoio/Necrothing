@@ -450,23 +450,50 @@ export default {
   // breve: pulsanti delle schede
   'onboarding.next': 'Avanti',
   'onboarding.start': 'Iniziamo',
-  // tutorial con azioni vere: un consiglio alla volta; {n} e {total}: il passo
+  // il cortile del Custode: azioni vere, un consiglio alla volta; {n} e {total}: il passo
   'onboarding.tutorial.progress': '{n} di {total}',
-  'onboarding.tutorial.skip': 'Salta il tutorial',
-  'onboarding.tutorial.wisp': 'Vedi quella fiammella azzurra? È un fuoco fatuo: toccala e vai a raccoglierla.',
-  'onboarding.tutorial.visit': 'Ogni tomba ha una storia. Tocca una tomba e apri la sua scheda.',
-  'onboarding.tutorial.light': 'Le lanterne si accendono e si spengono: tocca la lanterna e prova.',
-  'onboarding.tutorial.clean': '«Da lunedì vado in palestra» è piena di erbacce: toccala e puliscila.',
-  'onboarding.tutorial.bury': 'Quando qualcosa finisce, qui puoi dargli un posto. Tocca Seppellisci per vedere come si fa.',
-  // giro dell'interfaccia: quattro tappe
-  'onboarding.tour.profile.title': 'Il tuo profilo',
-  'onboarding.tour.profile.text': 'Qui vedi il rango e i fuochi fatui. Toccalo per le statistiche e i traguardi; da lì, con «Modifica aspetto», scegli anche come appare il tuo Custode.',
-  'onboarding.tour.bury.title': 'Seppellisci',
-  'onboarding.tour.bury.text': 'Per dare un posto a ciò che è finito: nome, foto, epitaffio e la lapide che preferisci.',
-  'onboarding.tour.shop.title': 'La Bottega',
-  'onboarding.tour.shop.text': 'Toccala per comprare luci, decorazioni e presenze con i fuochi fatui. Quello che compri va nell’Inventario.',
-  'onboarding.tour.menu.title': 'Il menu',
-  'onboarding.tour.menu.text': 'Da qui apri tutto il resto: Seppellisci, Modifica per spostare e sistemare, Inventario, Bottega, Foto, Galleria e Impostazioni, dove puoi rivedere la lettera e rifare il tutorial.',
-  // breve: ultimo pulsante del giro
-  'onboarding.tour.end': 'Inizia a giocare',
+  'onboarding.yard.skip': 'Salta il cortile',
+  'onboarding.yard.walk': 'Questo è il cortile della Casa: qui provi tutto, senza fretta. Tocca un punto del prato e il Custode ci va.',
+  'onboarding.yard.wisp': 'Eccone uno: un fuoco fatuo. Toccalo per raccoglierlo; ne troverai in giro per il cimitero.',
+  'onboarding.yard.clean': 'Questa tomba è trascurata. Toccala e scegli la scopa.',
+  'onboarding.yard.flowers': 'Ora è pulita: portale dei fiori. Una tomba trascurata a lungo si rompe, e ripararla costa.',
+  'onboarding.yard.light': 'Le lanterne si accendono e si spengono: tocca questa e accendila.',
+  'onboarding.yard.shop': 'Tocca la Bottega e compra una lanterna: si paga in fuochi fatui.',
+  'onboarding.yard.place': 'Fatto! Ora posala dove vuoi. Quello che compri e non posi aspetta nell’Inventario, nel menu: da lì puoi anche rivenderlo.',
+  'onboarding.yard.edit': 'Apri il menu e scegli Modifica, poi trascina la lanterna dove preferisci. Quando hai finito, tocca «Fine».',
+  'onboarding.yard.ghost': 'Qualcuno è venuto a trovarti. Tocca il fantasma: ti racconta qualcosa e ti lascia un regalo.',
+  'onboarding.yard.sheet': 'Ogni tomba ha la sua scheda. Tocca la tomba e aprila con la lente.',
+  'onboarding.yard.sheetOpen': 'Qui ci sono la sua storia e i suoi ricordi. In «Altro» puoi riesumarla o affidarla all’albero. Chiudi la scheda quando hai finito.',
+  'onboarding.yard.noBury': 'Nel cortile si prova soltanto: la prima sepoltura la farai nel tuo cimitero.',
+  // la fine del cortile: la finestra delle celebrazioni; {name}: il nome del Custode, {n}: i fuochi fatui del dono
+  'onboarding.yard.end.kicker': 'Il cortile è in ordine',
+  'onboarding.yard.end.title': 'Pronto, {name}?',
+  'onboarding.yard.end.text': 'Ora ti aspetta il cimitero vero. Per cominciare, un dono di benvenuto:',
+  'onboarding.yard.end.gift': 'la lanterna che hai comprato e {n} fuochi fatui.',
+  'onboarding.yard.end.replay': 'Torniamo al tuo cimitero: è tutto come l’hai lasciato.',
+  // breve: pulsanti della fine del cortile
+  'onboarding.yard.end.ok': 'Inizia il gioco',
+  'onboarding.yard.end.back': 'Torna al cimitero',
+  // il cambio di scena, sullo sfondo del percorso
+  'onboarding.yard.loading': 'Il cimitero si sveglia…',
+  // saltando il cortile il dono arriva lo stesso; {n}: i fuochi fatui
+  'onboarding.yard.giftToast': 'Un dono di benvenuto: una lanterna, nell’Inventario, e {n} fuochi fatui.',
+  // il primo obiettivo, nel cimitero vero
+  'onboarding.goal.title': 'Il tuo primo addio',
+  'onboarding.goal.text': 'Qualcosa a cui tenevi se n’è andato? Dagli una tomba: scegli la lapide, scrivi l’epitaffio, scatta il ricordo.',
+  // breve: pulsanti del primo obiettivo
+  'onboarding.goal.later': 'Più tardi',
+  'onboarding.goal.go': 'Seppellisci',
+  // i consigli al momento giusto: una notifica del Custode, una volta sola; .say è la sua battuta
+  'tips.show': 'Mostrami',
+  'tips.graveBroken.say': 'Uh, questa va sistemata.',
+  'tips.graveBroken.text': 'C’è una tomba rotta. Toccala e scegli «Ripara»: costa qualche fuoco fatuo, e torna come nuova.',
+  'tips.itemBroken.say': 'Si è rovinato qualcosa.',
+  'tips.itemBroken.text': 'Anche gli oggetti si rovinano col tempo: toccalo e scegli «Ripara». Le luci vicino al Lampione del Custode non si rompono.',
+  'tips.pet.say': 'Abbiamo compagnia!',
+  'tips.pet.text': 'Un animale ha casa da te. Toccalo per coccolarlo o giocarci: ogni tanto ti porta un regalo.',
+  'tips.memoryTree.say': 'Che albero!',
+  'tips.memoryTree.text': 'L’Albero dei ricordi custodisce le tombe che non vuoi più tra le altre: dalla scheda di una tomba scegli «Affida all’albero», e il ricordo resta qui.',
+  'tips.photo.say': 'Un momento da ricordare.',
+  'tips.photo.text': 'Dal menu puoi scattare una foto al cimitero: la ritrovi in Galleria, con i filtri della sepoltura.',
 } satisfies Record<string, string>;

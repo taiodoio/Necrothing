@@ -26,6 +26,7 @@ import { setPersistence } from './app/persistence.ts';
 import { setUiNext, setUiPlay, setUiPreview } from './app/uiNext.ts';
 import { installPlayDecor } from './ui/playDecor.ts';
 import type { FpsSetting, Quality } from './game/state.ts';
+import { finishedOnboarding } from './game/onboarding.ts';
 import { fullCemetery } from './game/fullCemetery.ts';
 import { planReminders } from './game/reminders.ts';
 import { areaForLevel } from './game/world.ts';
@@ -79,7 +80,7 @@ state.settings.fps = 'auto';
 state.settings.edgeBlur = true;
 state.settings.timeOverride = 'night';
 state.settings.shopTutorialDone = true;
-state.onboarding = { stage: 'done', step: 0 }; // niente primo ingresso sopra alla scena
+state.onboarding = finishedOnboarding(); // niente primo ingresso sopra alla scena
 const genMs = performance.now() - t0;
 const canvas = document.querySelector<HTMLCanvasElement>('#world')!;
 const t1 = performance.now();

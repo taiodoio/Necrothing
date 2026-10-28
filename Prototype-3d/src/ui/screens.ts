@@ -1046,30 +1046,50 @@ async function photoResult(ui: UI, url: string) {
     return u;
   };
   const date = fmtDate(new Date().toISOString());
-  const body = h('div', { class: 'photo-result' });
+  // la stampa resta la stessa: cambiando filtro si scambia solo l'immagine, quando la nuova è già decodificata
+  // (rifacendo tutto, la prima volta il pannello si accorciava per un attimo e sembrava sparire)
+  const print = photoPrint(url, date, 'fresh');
+  const pic = print.querySelector('img')!;
+  pic.width = base.width; pic.height = base.height; // le proporzioni ci sono subito, anche prima che l'immagine arrivi
+  const label = h('b', {}, PHOTO_FILTER_LABELS[filter]);
+  const dots = PHOTO_FILTERS.map((_, k) => h('i', { class: k === 0 ? 'on' : '' }));
+  const prev = h('button', { class: 'icon-btn small', 'aria-label': t('memorial.filter.prev'), disabled: true, onclick: () => go(-1) }, '‹') as HTMLButtonElement;
+  const next = h('button', { class: 'icon-btn small', 'aria-label': t('memorial.filter.next'), onclick: () => go(1) }, '›') as HTMLButtonElement;
+  let shown = 0;
+  const show = async () => {
+    const i = PHOTO_FILTERS.indexOf(filter), ticket = ++shown;
+    label.textContent = PHOTO_FILTER_LABELS[filter];
+    dots.forEach((d, k) => d.classList.toggle('on', k === i));
+    prev.disabled = i === 0; next.disabled = i === PHOTO_FILTERS.length - 1;
+    const u = filtered();
+    const ready = new Image();
+    ready.src = u;
+    await ready.decode().catch(() => undefined);
+    if (ticket === shown) pic.src = u; // scorrendo veloce vince l'ultimo
+  };
   const go = (dir: number) => {
     const k = Math.max(0, Math.min(PHOTO_FILTERS.length - 1, PHOTO_FILTERS.indexOf(filter) + dir));
-    if (PHOTO_FILTERS[k] !== filter) { filter = PHOTO_FILTERS[k]; render(false); }
+    if (PHOTO_FILTERS[k] !== filter) { filter = PHOTO_FILTERS[k]; void show(); }
   };
-  const render = (first: boolean) => {
-    const print = photoPrint(filtered(), date, first ? 'fresh' : '');
-    // scorrimento orizzontale sulla foto: a sinistra il filtro dopo, a destra quello prima
-    const pic = print.querySelector('img')!;
-    let x0: number | null = null;
-    pic.setAttribute('draggable', 'false');
-    pic.addEventListener('dragstart', (e) => e.preventDefault());
-    pic.addEventListener('pointerdown', (e) => { e.preventDefault(); x0 = e.clientX; pic.setPointerCapture(e.pointerId); });
-    pic.addEventListener('pointerup', (e) => { if (x0 === null) return; const dx = e.clientX - x0; x0 = null; if (Math.abs(dx) > 36) go(dx < 0 ? 1 : -1); });
-    pic.addEventListener('pointercancel', () => { x0 = null; });
-    const i = PHOTO_FILTERS.indexOf(filter);
-    body.replaceChildren(print,
-      h('div', { class: 'filter-switch' },
-        h('button', { class: 'icon-btn small', 'aria-label': t('memorial.filter.prev'), disabled: i === 0, onclick: () => go(-1) }, '‹'),
-        h('div', {}, h('b', {}, PHOTO_FILTER_LABELS[filter]), h('div', { class: 'swipe-dots' }, ...PHOTO_FILTERS.map((_, k) => h('i', { class: k === i ? 'on' : '' })))),
-        h('button', { class: 'icon-btn small', 'aria-label': t('memorial.filter.next'), disabled: i === PHOTO_FILTERS.length - 1, onclick: () => go(1) }, '›')),
-      h('p', { class: 'muted' }, t('photo.result.text')));
+  // scorrimento orizzontale sulla foto: a sinistra il filtro dopo, a destra quello prima
+  let x0: number | null = null;
+  pic.setAttribute('draggable', 'false');
+  pic.addEventListener('dragstart', (e) => e.preventDefault());
+  pic.addEventListener('pointerdown', (e) => { e.preventDefault(); x0 = e.clientX; pic.setPointerCapture(e.pointerId); });
+  pic.addEventListener('pointerup', (e) => { if (x0 === null) return; const dx = e.clientX - x0; x0 = null; if (Math.abs(dx) > 36) go(dx < 0 ? 1 : -1); });
+  pic.addEventListener('pointercancel', () => { x0 = null; });
+  const body = h('div', { class: 'photo-result' }, print,
+    h('div', { class: 'filter-switch' }, prev, h('div', {}, label, h('div', { class: 'swipe-dots' }, ...dots)), next),
+    h('p', { class: 'muted' }, t('photo.result.text')));
+  // gli altri filtri si preparano nei momenti liberi, uno alla volta: al primo cambio sono già pronti
+  const idle = (fn: () => void) => { if (typeof requestIdleCallback === 'function') requestIdleCallback(fn, { timeout: 1500 }); else setTimeout(fn, 300); };
+  const warm = (k: number) => {
+    if (k >= PHOTO_FILTERS.length || !base.width) return;
+    const keep = filter;
+    filter = PHOTO_FILTERS[k]; filtered(); filter = keep;
+    idle(() => warm(k + 1));
   };
-  render(true);
+  window.setTimeout(() => idle(() => warm(1)), 500);
   const save = async () => {
     const rec: PhotoRecord = { id: newId('ph'), createdAt: new Date().toISOString(), dataUrl: filtered() };
     await gallery.add(rec).catch(() => toast(t('photo.galleryUnavailable')));

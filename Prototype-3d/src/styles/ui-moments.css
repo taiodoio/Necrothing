@@ -87,6 +87,8 @@
 .ui-next .shutter i { width: 42px; height: 42px; background: no-repeat center / contain; filter: drop-shadow(0 2px 1px rgba(120, 76, 20, 0.45)); }
 .ui-next .shutter:active { transform: translateY(3px); box-shadow: 0 1px 0 var(--primary-deep), 0 6px 14px rgba(0, 0, 0, 0.5); }
 .ui-next .photo-btn::before, .ui-next .shutter::before { content: ''; position: absolute; z-index: -1; left: 0; top: 0; width: 30px; height: 30px; pointer-events: none; background: var(--sprig) no-repeat 0 0 / 100% 100%; }
+/* lo scatto (dorato, angoli più tondi): il rametto curvo che segue l'angolo, grande quanto il suo arrotondamento */
+.ui-next .shutter::before { width: 40px; height: 40px; background-image: var(--sprig-round, var(--sprig)); }
 .ui-next .flash { animation-duration: 0.45s; animation-timing-function: ease-out; }
 
 /* ── Le stampe: la foto appena fatta, la galleria ─────────────────── */

@@ -1,0 +1,784 @@
+<!doctype html>
+<html lang="it" class="ui-next ui-play" data-theme="dark">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <meta name="color-scheme" content="dark" />
+    <title>Necrothing — Design system</title>
+  </head>
+  <body class="ds">
+    <div class="ds-wrap">
+
+      <!-- ═════════════════════ Testata ═════════════════════ -->
+      <header class="ds-top">
+        <h1>Necrothing · Design system</h1>
+        <p class="lead">«Natura e luce»: un cimitero di notte, pannelli viola-grigi con l'edera che entra dai bordi, oro caldo per ciò che si può fare e verde acqua per i fuochi fatui. Qui sotto ci sono i componenti veri: stessi fogli di stile, stesse icone e stesse decorazioni del gioco, quindi la pagina non può invecchiare. Per ogni esempio c'è il markup da copiare.</p>
+        <div class="ds-controls">
+          Qualità grafica:
+          <div class="seg">
+            <button class="active" data-set-quality="high">Alta</button>
+            <button data-set-quality="medium">Media</button>
+            <button data-set-quality="low">Bassa</button>
+          </div>
+          <span>(cambia <code>html[data-quality]</code>, come nel gioco: riaprire la pagina per rivedere le entrate)</span>
+        </div>
+      </header>
+      <nav class="ds-nav" aria-label="Indice">
+        <a href="#uso">Come usarlo</a><a href="#principi">Principi</a><a href="#colori">Colori</a><a href="#tipografia">Caratteri</a>
+        <a href="#forme">Forme</a><a href="#icone">Icone</a><a href="#decorazioni">Decorazioni</a><a href="#pulsanti">Pulsanti</a>
+        <a href="#campi">Campi</a><a href="#hud">HUD</a><a href="#pannelli">Pannelli</a><a href="#carte">Carte</a>
+        <a href="#notifiche">Notifiche</a><a href="#carta">Carta</a><a href="#momenti">Momenti</a><a href="#movimento">Movimento</a><a href="#nuovo">Nuovo elemento</a>
+      </nav>
+
+      <!-- ═════════════════════ Come usarlo ═════════════════════ -->
+      <section class="ds-sec" id="uso">
+        <h2>Come usarlo con Claude</h2>
+        <p class="sub">Apri questa pagina (o passala a Claude) prima di chiedere un elemento nuovo. Claude la legge come un contratto: i token, le classi e le regole sono quelli che deve usare, non quelli che gli sembrano più belli.</p>
+        <div class="ds-example plain">
+          <p class="ds-label">Un prompt che funziona</p>
+          <div class="ds-live col">
+            <p>Crea <b>[elemento o funzione]</b> seguendo <code>design-system.html</code>.</p>
+            <ul>
+              <li>Usa solo i token (<code>var(--panel)</code>, <code>--primary</code>…) e le classi che esistono già; se manca qualcosa, dimmelo prima di inventarlo.</li>
+              <li>Lo stile va nel foglio giusto (vedi la tabella sotto), non in uno nuovo.</li>
+              <li>I testi con <code>t('chiave')</code> in <code>src/i18n/it/</code>, e aggiorna il foglio delle traduzioni.</li>
+              <li>Provalo a 390×844 e 390×664, in qualità alta e bassa e con il movimento ridotto, e mandami le schermate.</li>
+            </ul>
+          </div>
+        </div>
+        <h3>Dove sta cosa</h3>
+        <div class="ds-scroll">
+          <table class="ds-table">
+            <thead><tr><th>File</th><th>Cosa contiene</th></tr></thead>
+            <tbody>
+              <tr><td><code>styles/main.css</code></td><td>Base e impaginazione (HUD, menù, drawer, campi, banner). Gran parte è il vecchio stile pixel: sopra c'è <code>ui-next</code>.</td></tr>
+              <tr><td><code>styles/ui-next.css</code></td><td>I token (<code>--r</code>, <code>--panel</code>, <code>--primary</code>…) e i componenti piatti: pannelli, pulsanti, schede, carte, modali, notifiche dei personaggi.</td></tr>
+              <tr><td><code>styles/ui-play.css</code></td><td>Il tema «natura e luce»: gradiente dei pannelli, pattern, rametti negli angoli, testate, pergamena, schede in barra bassa, scheda del defunto.</td></tr>
+              <tr><td><code>styles/ui-house.css</code></td><td>Profilo del Custode, registro, casa, traguardi (<code>.pl-chip</code>, <code>.ach-card</code>).</td></tr>
+              <tr><td><code>styles/ui-onboarding.css</code></td><td>Lettera, schede d'ingresso, il Custode che parla (<code>.ob-bust</code>), il consiglio (<code>.ob-coach</code>), occhio di bue e cerchio.</td></tr>
+              <tr><td><code>styles/ui-moments.css</code></td><td>Celebrazioni, scatto, stampe e galleria.</td></tr>
+              <tr><td><code>ui/dom.ts</code></td><td><code>h()</code> per costruire elementi, <code>openDrawer</code>, <code>openModal</code>, <code>confirmDialog</code>, <code>toast</code>.</td></tr>
+              <tr><td><code>ui/npcNote.ts</code>, <code>ui/celebrate.ts</code></td><td>Notifica dei personaggi e finestra di celebrazione.</td></tr>
+              <tr><td><code>ui/lpIcons.ts</code>, <code>ui/monoIcons.ts</code></td><td>Icone colorate (<code>icon()</code>) e monocromatiche (<code>monoIcon()</code>), medaglie (<code>lpBadgeUrl</code>).</td></tr>
+              <tr><td><code>ui/natureDecor.ts</code>, <code>ui/playDecor.ts</code></td><td>Disegnano rametti, edera, pattern e li danno al CSS come variabili.</td></tr>
+              <tr><td><code>i18n/it/*.ts</code></td><td>Tutti i testi, per chiave.</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- ═════════════════════ Principi ═════════════════════ -->
+      <section class="ds-sec" id="principi">
+        <h2>Principi</h2>
+        <p class="sub">Sono le decisioni già prese, spesso dopo una prova che non andava. Se un elemento nuovo ne viola una, probabilmente è sbagliato l'elemento.</p>
+        <ol class="ds-rules">
+          <li><b>Solo tema scuro.</b> Il tema chiaro non esiste più; niente varianti chiare, nemmeno per un singolo pannello (le carte e le pergamene sono «oggetti»: carta su un tavolo scuro, non un tema).</li>
+          <li><b>Niente contorni.</b> I pannelli si staccano con tinta, gradiente e ombra morbida, mai con un bordo. <code>.ui-next * { border-image: none !important }</code> lo impone. Fanno eccezione gli stati: la selezione è un anello oro da 2,5 px (<code>box-shadow</code>), il campo attivo un anello da 2 px.</li>
+          <li><b>Un solo arrotondamento.</b> <code>--r</code> 16 px per pannelli e pulsanti, <code>--r-s</code> 12 px per ciò che sta dentro un pannello, pillole a 999 px. Angoli squadrati e a gradino (il vecchio stile pixel) non si usano più.</li>
+          <li><b>L'oro è l'azione principale, e una sola per schermata.</b> Pieno (<code>--primary</code>) con un filo di spessore sotto (<code>0 3px 0 var(--primary-deep)</code>). Le azioni secondarie sono <code>.ghost</code>, quelle che distruggono <code>.danger</code> (testo rosato su fondo scuro, mai un rosso pieno).</li>
+          <li><b>Il verde acqua è il fuoco fatuo.</b> <code>--spectral</code> vale per i fuochi fatui, i prezzi e i guadagni, e per ciò che è «vivo» (fantasmi, spunte di possesso). Non è un colore decorativo.</li>
+          <li><b>Titoli gotici, testo leggibile.</b> Grenze Gotisch dorato chiaro per titoli e nomi; Nunito 600–800 per tutto il resto. Mai sotto 12 px, mai maiuscoletto lungo (solo i piccoli titoli sopra una sezione, a 12 px con spaziatura).</li>
+          <li><b>Natura e luce, in angoli opposti.</b> Pannelli e riquadri hanno un rametto che sta <i>dietro</i> il contenuto (<code>z-index: -1</code> dentro un contesto isolato), in due angoli opposti; i pannelli grandi hanno l'edera. Mai due decorazioni diverse sullo stesso elemento.</li>
+          <li><b>I personaggi escono dal riquadro.</b> Il Custode e gli altri che parlano sporgono di circa un terzo sopra il bordo, come nell'HUD, con una linea sotto (<code>.ob-bust</code>). Non sono chiusi in una forma.</li>
+          <li><b>Sulla scena 3D niente sfocature.</b> Né <code>backdrop-filter</code> né <code>filter: blur</code> sopra il canvas: vanno ricalcolati a ogni frame e su iPhone pesano molto. Velature con tinta unita.</li>
+          <li><b>Si anima solo trasformazione e opacità.</b> Da 0,2 a 0,5 s; entrate «elastiche» con <code>cubic-bezier(0.2, 1.2, 0.35, 1)</code>. Tutto si spegne con <code>html[data-quality="low"]</code> e con <code>prefers-reduced-motion</code> (vedi «Movimento»).</li>
+          <li><b>Un pannello si apre sempre dall'alto.</b> Aprendone uno dopo averne scorso un altro, il contenuto riparte da cima (<code>openDrawer</code> lo fa). Lo stesso vale per i modali.</li>
+          <li><b>Si tocca con un dito.</b> Nessun bersaglio sotto i 44 px; si progetta a 390×844 e si controlla anche a 390×664 (Safari con le barre). Margini di sicurezza con <code>--safe-t/b/l/r</code>.</li>
+          <li><b>I testi non stanno nel codice.</b> <code>t('chiave')</code> con la chiave in <code>src/i18n/it/*.ts</code>; le stringhe di stile che non sono testi si segnano <code>// i18n-ok: stile</code>. Tono: il Custode, leggero, termini neutri (niente «benvenuto/a»).</li>
+          <li><b>Ogni cosa deve dire che è andata a buon fine.</b> Un passo fatto, una cosa comprata, un traguardo: c'è un segno (la spunta, il bagliore, la celebrazione), non solo una scritta che cambia.</li>
+        </ol>
+      </section>
+
+      <!-- ═════════════════════ Colori ═════════════════════ -->
+      <section class="ds-sec" id="colori">
+        <h2>Colori</h2>
+        <p class="sub">I valori si leggono dal CSS di questa pagina, quindi sono quelli del gioco adesso. Si usano sempre come variabile, mai come valore.</p>
+        <h3>Superfici</h3>
+        <div class="ds-swatches">
+          <div class="ds-sw" data-var="--panel"><i></i><b>--panel</b><code></code><small>Pannelli, HUD, pulsanti sulla scena</small></div>
+          <div class="ds-sw" data-var="--panel-2"><i></i><b>--panel-2</b><code></code><small>Dentro un pannello: schede, carte, chip, pulsanti ghost</small></div>
+          <div class="ds-sw" data-var="--sheet"><i></i><b>--sheet</b><code></code><small>Il piede dei pannelli (pulsanti in fondo)</small></div>
+          <div class="ds-sw" data-var="--input"><i></i><b>--input</b><code></code><small>Campi di testo, caselle</small></div>
+          <div class="ds-sw" data-var="--thumb"><i></i><b>--thumb</b><code></code><small>Fondo di miniature e ritratti</small></div>
+          <div class="ds-sw" data-var="--track"><i></i><b>--track</b><code></code><small>Binari di barre e puntini spenti</small></div>
+          <div class="ds-sw" data-var="--ink"><i></i><b>--ink</b><code></code><small>Il fondo della pagina e della scena spenta</small></div>
+        </div>
+        <h3>Testo</h3>
+        <div class="ds-swatches">
+          <div class="ds-sw" data-var="--paper"><i></i><b>--paper</b><code></code><small>Testo corrente</small></div>
+          <div class="ds-sw" data-var="--muted"><i></i><b>--muted</b><code></code><small>Spiegazioni, etichette, secondario</small></div>
+          <div class="ds-sw" data-var="--gold-bright"><i></i><b>--gold-bright</b><code></code><small>Titoli, nomi, accenti</small></div>
+          <div class="ds-sw" data-color="#2f230f"><i></i><b>--on-primary</b><code>#2f230f</code><small>Testo sull'oro (anche #2a1f12 su gradienti)</small></div>
+        </div>
+        <h3>Accenti e stato</h3>
+        <div class="ds-swatches">
+          <div class="ds-sw" data-var="--primary"><i></i><b>--primary</b><code></code><small>Azione principale, selezione, barre piene</small></div>
+          <div class="ds-sw" data-var="--primary-deep"><i></i><b>--primary-deep</b><code></code><small>Il filo di spessore sotto i pulsanti oro</small></div>
+          <div class="ds-sw" data-var="--gold"><i></i><b>--gold</b><code></code><small>Oro scuro (rare tracce, bordi)</small></div>
+          <div class="ds-sw" data-var="--spectral"><i></i><b>--spectral</b><code></code><small>Fuochi fatui, prezzi, guadagni, «vivo»</small></div>
+          <div class="ds-sw" data-var="--danger"><i></i><b>--danger</b><code></code><small>Distruggere, errori, avvisi</small></div>
+        </div>
+        <h3>Linee e ombre</h3>
+        <div class="ds-swatches">
+          <div class="ds-sw" data-var="--line"><i></i><b>--line</b><code></code><small>Filo di luce in cima ai pannelli, separatori</small></div>
+          <div class="ds-sw" data-var="--edge"><i></i><b>--edge</b><code></code><small>Anello dei campi di testo</small></div>
+          <div class="ds-sw" data-var="--shadow"><i></i><b>--shadow</b><code></code><small>Ombra morbida di pannelli e pulsanti</small></div>
+        </div>
+        <h3>Colori fissi (non sono token)</h3>
+        <p class="sub">Pochi colori sono scritti direttamente, perché descrivono un oggetto e non il tema. Se ne serve un altro, aggiungilo qui prima.</p>
+        <div class="ds-swatches">
+          <div class="ds-sw" data-color="#f6d48a"><i style="background: linear-gradient(165deg, #f6d48a, #e0aa52)"></i><b>Oro pieno</b><code>#f6d48a → #e0aa52</code><small>Menù (FAB), scatto, scheda attiva (#f6d48a → #e8b65e)</small></div>
+          <div class="ds-sw" data-color="#ead8b0"><i></i><b>Pergamena</b><code>#ead8b0</code><small>Fondo; inchiostro #3a2a22, etichette #7a6656, avviso #a5372a</small></div>
+          <div class="ds-sw" data-color="#f6efdf"><i style="background: linear-gradient(170deg, #f6efdf, #e9dfca)"></i><b>Carta delle stampe</b><code>#f6efdf → #e9dfca</code><small>Foto e galleria; scritta #6b5640</small></div>
+          <div class="ds-sw" data-color="#a86ad0"><i></i><b>Viola pipistrello</b><code>#a86ad0</code><small>L'anello del pulsante in volo</small></div>
+        </div>
+      </section>
+
+      <!-- ═════════════════════ Caratteri ═════════════════════ -->
+      <section class="ds-sec" id="tipografia">
+        <h2>Caratteri</h2>
+        <p class="sub"><code>--gothic</code> è Grenze Gotisch (titoli e nomi), <code>--pixel</code> è Nunito (il nome è rimasto dal vecchio stile). Nunito si usa a 600, 700 e 800.</p>
+        <div class="ds-type">
+          <div><small>Titolo pagina<br />Grenze 700 · 40</small><span class="t-h1">Il cortile del Custode</span></div>
+          <div><small>Titolo pannello<br />Grenze 700 · 30</small><span class="t-h2">Inventario</span></div>
+          <div><small>Titolo sezione, nome<br />Grenze 700 · 23</small><span class="t-h3">Lanterna da terra</span></div>
+          <div><small>Testo<br />Nunito 600 · 16 / 1.45</small><span class="t-body">Le tombe chiedono attenzione: togli le erbacce, porta fiori freschi, ripara quelle rovinate.</span></div>
+          <div><small>Secondario<br />Nunito 600 · 14 / <code>--muted</code></small><span class="t-muted">Una fiammella paziente, che non chiede nulla.</span></div>
+          <div><small>Soprattitolo<br />Nunito 800 · 12 · maiuscolo</small><span class="t-kicker">Traguardo raggiunto</span></div>
+          <div><small>Numeri<br />Nunito 800 · tabulare</small><span class="t-num">1.250</span></div>
+        </div>
+      </section>
+
+      <!-- ═════════════════════ Forme ═════════════════════ -->
+      <section class="ds-sec" id="forme">
+        <h2>Forme e profondità</h2>
+        <p class="sub">Tinta unita o gradiente, angoli tondi e un'ombra: la profondità è tutta qui.</p>
+        <div class="ds-shapes">
+          <div class="ds-shape s1"><i></i>Pannello<br /><code>--r</code> 16 · <code>--shadow</code></div>
+          <div class="ds-shape s2"><i></i>Dentro un pannello<br /><code>--r-s</code> 12 · senza ombra</div>
+          <div class="ds-shape s3"><i></i>Azione principale<br />filo <code>primary-deep</code></div>
+          <div class="ds-shape s4"><i></i>Natura e luce<br /><code>--nat-bg</code> · <code>--nat-shadow</code></div>
+          <div class="ds-shape s5"><i></i>Campo<br /><code>--input</code> · anello <code>--edge</code></div>
+        </div>
+        <h3>Misure fisse</h3>
+        <div class="ds-scroll">
+          <table class="ds-table">
+            <thead><tr><th>Cosa</th><th>Misura</th><th>Note</th></tr></thead>
+            <tbody>
+              <tr><td>Riquadri dell'HUD</td><td>64 px (<code>--hud-top</code>)</td><td>Custode e ora/meteo, stessa altezza</td></tr>
+              <tr><td>Pulsanti della mappa</td><td>60 px (<code>--hud</code>)</td><td>Menù, centra, bici, scopa, bastone</td></tr>
+              <tr><td>Voci del menù</td><td>58 px alte, ≥ 188 larghe</td><td>Icona 40 px, ognuna un po' storta</td></tr>
+              <tr><td>Pulsante grande</td><td>≥ 52 px</td><td><code>.big-btn</code>, a tutta larghezza</td></tr>
+              <tr><td>Menù dell'oggetto</td><td>56 px</td><td>Solo icone, <code>.ctx-actions button</code></td></tr>
+              <tr><td>Pulsante piccolo / schede</td><td>44 px / barra da 46 px</td><td>Minimo assoluto per un tocco: 44 px</td></tr>
+              <tr><td>Scatto della foto</td><td>80 px (altri: 60)</td><td>Angolo da 20 px</td></tr>
+              <tr><td>Ritmo degli spazi</td><td>6 · 8 · 10 · 12 · 14 · 16</td><td>Dentro un pannello 12; tra le righe 8–10</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- ═════════════════════ Icone ═════════════════════ -->
+      <section class="ds-sec" id="icone">
+        <h2>Icone e medaglie</h2>
+        <p class="sub">Due famiglie, mai mescolate nello stesso punto: quelle <b>colorate</b> low-poly stanno su pulsanti, menù e riquadri; quelle <b>monocromatiche</b> stanno dove deve contare il colore del testo (schede, pergamena, cronologia). Si creano in JS con <code>icon('wisp', 18)</code> e <code>monoIcon('light', 19)</code>; nell'HTML statico con <code>&lt;i data-icon="wisp"&gt;</code> e <code>hydrateIcons()</code>.</p>
+        <h3>Colorate</h3>
+        <div class="ds-icons" id="lp-icons"></div>
+        <h3>Monocromatiche</h3>
+        <div class="ds-icons" id="mono-icons"></div>
+        <h3>Medaglie</h3>
+        <p class="sub">Il grado (bronzo, argento, oro) è scritto a mano in ogni traguardo. <code>locked</code> è il grigio dei traguardi non ancora presi. Si ottengono con <code>lpBadgeUrl(icona, grado)</code>.</p>
+        <div class="ds-badges">
+          <figure><img data-badge="trophy:bronze" alt="" />bronzo</figure>
+          <figure><img data-badge="trophy:silver" alt="" />argento</figure>
+          <figure><img data-badge="trophy:gold" alt="" />oro</figure>
+          <figure><img data-badge="trophy:locked" alt="" />locked</figure>
+          <figure><img data-badge="rank:gold" alt="" />rango</figure>
+          <figure><img data-badge="wisp:gold" alt="" />fuoco fatuo</figure>
+        </div>
+      </section>
+
+      <!-- ═════════════════════ Decorazioni ═════════════════════ -->
+      <section class="ds-sec" id="decorazioni">
+        <h2>Decorazioni</h2>
+        <p class="sub">Si disegnano una volta all'avvio (<code>installPlayDecor()</code>) e arrivano al CSS come variabili. Non si copiano mai in un file: si usa la variabile.</p>
+        <div class="ds-decor">
+          <figure class="d-sprig"><i></i><span class="cv"><code>--sprig</code></span><span>Rametto d'angolo (HUD, pulsanti, notifiche, finestre)</span></figure>
+          <figure class="d-sprig-round"><i></i><span class="cv"><code>--sprig-round</code></span><span>Rametto curvo per angoli molto tondi (lo scatto)</span></figure>
+          <figure class="d-ivy"><i></i><span class="cv"><code>--ivy</code></span><span>Edera d'angolo dei pannelli grandi (a destra si specchia)</span></figure>
+          <figure class="d-fern"><i></i><span class="cv"><code>--fern</code></span><span>Ciuffo di foglie ai piedi di una foto</span></figure>
+          <figure class="d-vines"><i></i><span class="cv"><code>--vines</code> <code>-dialog</code> <code>-hud</code> <code>-paper</code></span><span>Rami d'edera che entrano dai bordi</span></figure>
+          <figure class="d-zones"><i></i><span class="cv"><code>--zones</code> <code>-small</code> <code>-paper</code></span><span>Zone scure sfumate</span></figure>
+          <figure class="d-glow"><i></i><span class="cv"><code>--nat-glow</code></span><span>Bagliore caldo ai lati</span></figure>
+          <figure class="d-pattern"><i></i><span class="cv"><code>--pattern-dark</code></span><span>Pattern tono su tono (zucche, foglie, teschi, bare)</span></figure>
+        </div>
+        <p class="ds-note">I rametti negli angoli stanno <b>dietro</b> il contenuto: un pseudo-elemento <code>::before</code> con <code>z-index: -1</code> su un elemento con <code>isolation: isolate</code>. Così non coprono mai testi e ritratti.</p>
+      </section>
+
+      <!-- ═════════════════════ Pulsanti ═════════════════════ -->
+      <section class="ds-sec" id="pulsanti">
+        <h2>Pulsanti</h2>
+        <p class="sub">Una sola azione dorata per schermata. Tutti scendono di 1 px quando si premono (<code>:active</code>).</p>
+        <div class="ds-grid">
+          <div class="ds-example">
+            <p class="ds-label">Pulsante grande</p>
+            <div class="ds-live col">
+              <button class="big-btn">Seppellisci</button>
+              <button class="big-btn ghost">Più tardi</button>
+              <button class="big-btn danger">Riesuma</button>
+              <button class="big-btn" disabled>Mancano 2 fuochi fatui</button>
+            </div>
+          </div>
+          <div class="ds-example">
+            <p class="ds-label">Coppia (Indietro / Avanti, Annulla / Conferma)</p>
+            <div class="ds-live col">
+              <div class="row"><button class="big-btn ghost">Indietro</button><button class="big-btn">Avanti</button></div>
+            </div>
+          </div>
+          <div class="ds-example">
+            <p class="ds-label">Pillole</p>
+            <div class="ds-live">
+              <button class="pill">Annulla</button>
+              <button class="pill primary">Posa</button>
+              <button class="pill danger">Scarta</button>
+              <button class="pill primary">Compra · 5 <i data-icon="wisp" style="--s: 14px"></i></button>
+            </div>
+          </div>
+          <div class="ds-example">
+            <p class="ds-label">Nelle notifiche (invito)</p>
+            <div class="ds-live">
+              <button class="npc-note-cta" style="margin: 0">Mostrami ›</button>
+              <button class="ob-back">‹ Indietro</button>
+            </div>
+          </div>
+          <div class="ds-example">
+            <p class="ds-label">Pulsanti a icona</p>
+            <div class="ds-live">
+              <button class="icon-btn"><i data-icon="target"></i></button>
+              <button class="icon-btn active"><i data-icon="broom"></i></button>
+              <button class="icon-btn small"><i data-icon="close"></i></button>
+            </div>
+          </div>
+        </div>
+        <h3>Lo scatto della foto</h3>
+        <div class="ds-example">
+          <p class="ds-label">Chiudi · scatto · galleria (quello grande è l'unico dorato)</p>
+          <div class="ds-live bare">
+            <div class="ds-stage night" style="height: 170px">
+              <div data-snippet style="display: contents">
+                <div class="photo-bar">
+                  <button class="photo-btn" aria-label="Annulla"><i data-icon="close"></i></button>
+                  <button class="shutter" aria-label="Scatta"><i data-icon="photo"></i></button>
+                  <button class="photo-btn" aria-label="Galleria"><i data-icon="gallery"></i></button>
+                </div>
+              </div>
+            </div>
+          </div>
+          <details class="ds-code"><summary>Markup</summary><pre></pre></details>
+        </div>
+      </section>
+
+      <!-- ═════════════════════ Campi ═════════════════════ -->
+      <section class="ds-sec" id="campi">
+        <h2>Campi e controlli</h2>
+        <div class="ds-grid">
+          <div class="ds-example">
+            <p class="ds-label">Campo di testo e area</p>
+            <div class="ds-live col">
+              <div class="field"><label>Nome</label><input value="Il mio vecchio walkman" /></div>
+              <div class="field"><label>Epitaffio</label><textarea>Finché le pile ressero.</textarea></div>
+            </div>
+          </div>
+          <div class="ds-example">
+            <p class="ds-label">Scelte (chip)</p>
+            <div class="ds-live col">
+              <div class="chips">
+                <button class="chip active">Elettronica</button><button class="chip">Piante</button><button class="chip">Giocattoli</button><button class="chip">Astratto</button>
+              </div>
+            </div>
+          </div>
+          <div class="ds-example">
+            <p class="ds-label">Segmenti e interruttore</p>
+            <div class="ds-live col">
+              <div class="seg"><button>Auto</button><button class="active">Media</button><button>Alta</button></div>
+              <label class="setting">Non mostrare più<input type="checkbox" checked /></label>
+              <label class="setting">Promemoria<input type="checkbox" /></label>
+            </div>
+          </div>
+          <div class="ds-example">
+            <p class="ds-label">Quantità, passi, cursore</p>
+            <div class="ds-live col">
+              <div class="qty"><button>−</button><b>2</b><button>+</button></div>
+              <div class="steps"><i class="on"></i><i class="on"></i><i class="on"></i><i></i><i></i><i></i></div>
+              <input type="range" class="terrain-slider" min="0" max="100" value="40" style="--open: 40%" />
+            </div>
+          </div>
+          <div class="ds-example">
+            <p class="ds-label">Menu a discesa</p>
+            <div class="ds-live col">
+              <label class="setting language-setting">
+                <span>Lingua</span>
+                <div class="language-control">
+                  <button class="language-trigger" aria-haspopup="listbox" aria-expanded="false"><span class="language-value">Italiano</span><span class="language-chevron" aria-hidden="true">⌄</span></button>
+                  <div class="language-options" role="listbox" aria-label="Lingua" hidden>
+                    <div class="language-option selected" role="option" aria-selected="true" lang="it" tabindex="-1"><span>Italiano</span><span class="language-check" aria-hidden="true">✓</span></div>
+                    <div class="language-option" role="option" aria-selected="false" lang="en" tabindex="-1"><span>English</span><span class="language-check" aria-hidden="true"></span></div>
+                    <div class="language-option" role="option" aria-selected="false" lang="ja" tabindex="-1"><span>日本語</span><span class="language-check" aria-hidden="true"></span></div>
+                  </div>
+                </div>
+              </label>
+            </div>
+          </div>
+          <div class="ds-example">
+            <p class="ds-label">Pastiglia dei fuochi fatui</p>
+            <div class="ds-live">
+              <span class="wisp-pill"><i data-icon="wisp" style="--s: 18px"></i>1.250</span>
+              <span class="wisp-pill"><i data-icon="wisp" style="--s: 18px"></i>5</span>
+            </div>
+          </div>
+        </div>
+        <p class="ds-note">Il menu a discesa mantiene un elenco accessibile da tastiera con bersagli di 48 px. I campi della sepoltura hanno un aspetto loro in <code>ui-play.css</code>. Per un modulo nuovo, parti da qui e aggiungi la variante allo stesso modo.</p>
+      </section>
+
+      <!-- ═════════════════════ HUD ═════════════════════ -->
+      <section class="ds-sec" id="hud">
+        <h2>HUD e menù di gioco</h2>
+        <p class="sub">Tutto quello che sta sopra la scena. Il riquadro del Custode è alto 64 px: nome, barra del rango e fuochi fatui; il rango è il numerino sul ritratto; il ritratto esce da sopra e dai lati.</p>
+        <div class="ds-example">
+          <p class="ds-label">In alto, a destra e in basso (tocca il menù)</p>
+          <div class="ds-live bare">
+            <div class="ds-stage night" style="height: 560px">
+              <div data-snippet style="display: contents">
+                <header class="hud-top">
+                  <button class="player-chip">
+                    <span class="chip-avatar" aria-hidden="true"><img data-custode="hud" alt="" /></span>
+                    <span class="chip-body">
+                      <strong>TaioDoio</strong>
+                      <span class="xp-row">
+                        <span class="xp-bar"><i style="width: 62%"></i></span>
+                        <span class="wisp-count"><i class="wisp-icon" data-icon="wisp"></i><span>30</span></span>
+                      </span>
+                    </span>
+                    <span class="rank-badge">4</span>
+                  </button>
+                  <div class="hud-right">
+                    <div class="clock-block"><strong>21:40</strong><small><i data-icon="moon" style="--s: 24px"></i></small></div>
+                  </div>
+                </header>
+                <div class="map-tools">
+                  <button class="icon-btn active"><i data-icon="broom"></i></button>
+                  <button class="icon-btn"><i data-icon="target"></i></button>
+                </div>
+                <nav class="bubble open" id="ds-bubble">
+                  <button class="fab" aria-label="Menù"><i data-icon="menu"></i></button>
+                  <div class="slots">
+                    <button class="slot"><i data-icon="bury"></i><small>Seppellisci</small></button>
+                    <button class="slot active"><i data-icon="edit"></i><small>Modifica</small></button>
+                    <button class="slot"><i data-icon="bag"></i><small>Inventario</small></button>
+                    <button class="slot"><i data-icon="shop"></i><small>Bottega</small></button>
+                  </div>
+                </nav>
+              </div>
+            </div>
+          </div>
+          <details class="ds-code"><summary>Markup</summary><pre></pre></details>
+        </div>
+        <h3>Menù dell'oggetto</h3>
+        <div class="ds-example">
+          <p class="ds-label">Solo icone, sopra l'oggetto toccato; il costo è un numerino sull'icona</p>
+          <div class="ds-live bare">
+            <div class="ds-stage" style="height: 130px">
+              <div data-snippet style="display: contents">
+                <div class="ctx" style="left: 195px; top: 100px">
+                  <div class="ctx-actions">
+                    <button><i data-icon="search" style="--s: 28px"></i></button>
+                    <button class="primary"><i data-icon="broom" style="--s: 28px"></i></button>
+                    <button class="primary"><i data-icon="hammer" style="--s: 28px"></i><em>6</em></button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <details class="ds-code"><summary>Markup</summary><pre></pre></details>
+        </div>
+      </section>
+
+      <!-- ═════════════════════ Pannelli ═════════════════════ -->
+      <section class="ds-sec" id="pannelli">
+        <h2>Pannelli e finestre</h2>
+        <p class="sub">Sono finestre al centro, staccate dai bordi, con tutti gli angoli arrotondati (non più fogli dal basso). Si creano con <code>openDrawer(titolo, contenuto, opzioni)</code>; quelli corti sono alti quanto il contenuto, quelli con <code>.full</code> o <code>.with-hero</code> quasi tutto lo schermo. La velatura dietro è <code>.scrim</code> (tinta unita, mai sfocata).</p>
+        <div class="ds-example">
+          <p class="ds-label">Pannello con schede, griglia e piede</p>
+          <div class="ds-live bare">
+            <div class="ds-stage night" style="height: 640px">
+              <div data-snippet style="display: contents">
+                <div class="scrim"></div>
+                <section class="drawer full">
+                  <header class="drawer-head">
+                    <h2>Inventario</h2>
+                    <div class="drawer-extra"></div>
+                    <button class="icon-btn small" aria-label="Chiudi"><i data-icon="close"></i></button>
+                  </header>
+                  <div class="drawer-body">
+                    <div class="tabs">
+                      <button class="tab active"><span data-mono="all"></span>Tutto</button>
+                      <button class="tab"><span data-mono="light"></span>Luci</button>
+                      <button class="tab"><span data-mono="flower"></span>Decori</button>
+                      <button class="tab"><span data-mono="fence"></span>Costruzioni</button>
+                    </div>
+                    <div class="grid">
+                      <button class="card selected"><span class="thumb"><img class="lit" data-preview="lantern" alt="" /></span><b>Lanterna da terra</b><small>1 posata</small><span class="badge">2</span></button>
+                      <button class="card"><span class="thumb"><img class="lit" data-preview="lamp_post" alt="" /></span><b>Lampione</b><small>in magazzino</small></button>
+                      <button class="card"><span class="thumb"><img class="lit" data-preview="wreath" alt="" /></span><b>Corona di fiori</b><small>1 posata</small></button>
+                    </div>
+                  </div>
+                  <footer class="drawer-foot">
+                    <div class="row"><b>Lanterna da terra</b><span class="muted" style="text-align: right">ne hai 2</span></div>
+                    <div class="row"><button class="big-btn ghost">Vendi</button><button class="big-btn">Posa</button></div>
+                  </footer>
+                </section>
+              </div>
+            </div>
+          </div>
+          <details class="ds-code"><summary>Markup</summary><pre></pre></details>
+        </div>
+        <div class="ds-grid wide" style="margin-top: 18px">
+          <div class="ds-example">
+            <p class="ds-label">Dialogo di conferma</p>
+            <div class="ds-live bare">
+              <div class="ds-stage night" style="height: 330px">
+                <div data-snippet style="display: contents">
+                  <div class="dialog-scrim">
+                    <div class="dialog" role="alertdialog">
+                      <h3>Eliminare la foto?</h3>
+                      <p>Una volta eliminata non si può riavere.</p>
+                      <div class="row"><button class="big-btn ghost">Annulla</button><button class="big-btn danger">Elimina</button></div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <details class="ds-code"><summary>Markup</summary><pre></pre></details>
+          </div>
+          <div class="ds-example">
+            <p class="ds-label">Modale sopra un pannello (acquisto)</p>
+            <div class="ds-live bare">
+              <div class="ds-stage night" style="height: 330px">
+                <div data-snippet style="display: contents">
+                  <div class="dialog-scrim modal-scrim">
+                    <div class="dialog modal" role="dialog">
+                      <button class="icon-btn small modal-close" aria-label="Chiudi"><i data-icon="close"></i></button>
+                      <div class="modal-body">
+                        <div class="shop-detail">
+                          <span class="wisp-pill"><i data-icon="wisp" style="--s: 18px"></i>30</span>
+                          <div class="shop-detail-top"><img class="lit-hero" data-preview="lantern" alt="" /><h3>Lanterna da terra</h3></div>
+                          <div class="row"><button class="big-btn ghost">Chiudi</button><button class="big-btn">Compra · 5 <i data-icon="wisp" style="--s: 18px"></i></button></div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <details class="ds-code"><summary>Markup</summary><pre></pre></details>
+          </div>
+        </div>
+        <p class="ds-note">Le testate animate (Bottega, Registro, Albero, Casa) usano <code>.drawer.with-hero</code> con un <code>canvas</code> in <code>.drawer-hero</code>: si costruiscono in JS (<code>shopHeader.ts</code>, <code>registryHeader.ts</code>…) e qui non si mostrano. Quando il contenuto scorre la testata si riduce a una fascia da 64 px (<code>.hero-small</code>).</p>
+      </section>
+
+      <!-- ═════════════════════ Carte ═════════════════════ -->
+      <section class="ds-sec" id="carte">
+        <h2>Carte e schede</h2>
+        <p class="sub">Le carte oggetto sono senza riquadro: l'anteprima illuminata (<code>img.lit</code>) è grande, con un bagliore caldo dietro e aria tra immagine e testo. Gli stati si leggono da un anello, da un lucchetto o da un'opacità, mai da un colore di sfondo diverso.</p>
+        <div class="ds-example">
+          <p class="ds-label">Normale · selezionata · da sbloccare · non basta · tua</p>
+          <div class="ds-live bare">
+            <div class="ds-stage night" style="height: 440px">
+              <div data-snippet style="display: contents">
+                <section class="drawer" style="top: 12px; translate: 0 0; bottom: 12px; height: auto; max-height: none">
+                  <div class="drawer-body">
+                    <div class="grid" style="grid-template-columns: repeat(3, 1fr)">
+                      <button class="card"><span class="thumb"><img class="lit" data-preview="lantern" alt="" /></span><b>Lanterna</b><span class="price">5 <i data-icon="wisp" style="--s: 12px"></i></span></button>
+                      <button class="card selected"><span class="thumb"><img class="lit" data-preview="lamp_post" alt="" /></span><b>Lampione</b><span class="price">8 <i data-icon="wisp" style="--s: 12px"></i></span></button>
+                      <button class="card locked"><span class="thumb"><img class="lit" data-preview="lamp_post_gothic" alt="" /><span class="lock-over"><i data-icon="lock" style="--s: 30px"></i></span></span><b>Lampione gotico</b><span class="lock-why">Rango 3</span></button>
+                      <button class="card dim"><span class="thumb"><img class="lit" data-preview="torch" alt="" /></span><b>Torcia</b><span class="price">Mancano 2</span></button>
+                      <button class="card owned"><span class="thumb"><img class="lit" data-preview="wreath" alt="" /></span><b>Corona</b><span class="price owned">Tuo</span><span class="badge">2</span></button>
+                    </div>
+                  </div>
+                </section>
+              </div>
+            </div>
+          </div>
+          <details class="ds-code"><summary>Markup</summary><pre></pre></details>
+        </div>
+        <h3>Profilo e traguardi</h3>
+        <div class="ds-grid">
+          <div class="ds-example">
+            <p class="ds-label">Tasselli del profilo (<code>.pl-chip</code>)</p>
+            <div class="ds-live col">
+              <div class="pl-chips">
+                <div class="pl-chip"><i data-icon="rank" style="--s: 30px"></i><b>4</b><small>Rango</small></div>
+                <div class="pl-chip"><i data-icon="xp" style="--s: 30px"></i><b>2.410</b><small>Punti Necro</small><div class="xp-bar pl-bar"><i style="width: 40%"></i></div></div>
+                <div class="pl-chip"><i data-icon="wisp" style="--s: 30px"></i><b>30</b><small>Fuochi fatui</small></div>
+                <div class="pl-chip"><i data-icon="prestige" style="--s: 30px"></i><b>142</b><small>Prestigio</small></div>
+              </div>
+            </div>
+          </div>
+          <div class="ds-example">
+            <p class="ds-label">Traguardo preso e da prendere</p>
+            <div class="ds-live col">
+              <div class="ach-list">
+                <div class="ach-card got"><img data-badge="trophy:silver" alt="" style="width: 64px; height: 64px" /><div><b>Dieci tombe</b><div class="muted">Seppellisci dieci cose.</div></div></div>
+                <div class="ach-card"><img data-badge="trophy:locked" alt="" style="width: 64px; height: 64px" /><div><b>Mietitore</b><div class="muted">Raggiungi il Rango 5.</div></div></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ═════════════════════ Notifiche ═════════════════════ -->
+      <section class="ds-sec" id="notifiche">
+        <h2>Notifiche, consigli e guida</h2>
+        <p class="sub">Tre cose diverse: il <b>toast</b> dice un esito in una riga, la <b>notifica del personaggio</b> racconta una cosa che succede nel mondo, il <b>consiglio</b> (<code>.ob-coach</code>) guida un'azione e porta l'occhio di bue.</p>
+        <div class="ds-grid">
+          <div class="ds-example">
+            <p class="ds-label">Toast</p>
+            <div class="ds-live col" style="justify-items: start">
+              <div class="toast">Acceso.</div>
+              <div class="toast ach"><i data-icon="trophy" style="--s: 18px"></i>Lanterna posata</div>
+            </div>
+          </div>
+        </div>
+        <div class="ds-grid wide" style="margin-top: 18px">
+          <div class="ds-example">
+            <p class="ds-label">Notifica del personaggio (con invito)</p>
+            <div class="ds-live bare">
+              <div class="ds-stage night" style="height: 130px">
+                <div data-snippet style="display: contents">
+                  <div class="npc-note with-action">
+                    <img data-custode alt="" />
+                    <div class="npc-note-head"><b class="say"><span>Uh, questa va sistemata.</span></b><small>Custode</small></div>
+                    <p>C'è una tomba rotta. Toccala e scegli «Ripara»: costa qualche fuoco fatuo.</p>
+                    <button class="npc-note-cta">Mostrami ›</button>
+                    <button class="npc-note-x" aria-label="Chiudi"><i data-icon="close" style="--s: 14px"></i></button>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <details class="ds-code"><summary>Markup</summary><pre></pre></details>
+          </div>
+          <div class="ds-example">
+            <p class="ds-label">Con guadagno (fuochi fatui, esperienza)</p>
+            <div class="ds-live bare">
+              <div class="ds-stage night" style="height: 130px">
+                <div data-snippet style="display: contents">
+                  <div class="npc-note">
+                    <img data-custode alt="" />
+                    <div class="npc-note-head"><b class="say"><span>Ooooh…</span></b><small>Fantasma</small><span class="gain"><i data-icon="wisp" style="--s: 12px"></i>+2</span><span class="gain xp">+40 XP</span></div>
+                    <p>Un'apparizione si dissolve nella nebbia.</p>
+                    <button class="npc-note-x" aria-label="Chiudi"><i data-icon="close" style="--s: 14px"></i></button>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <details class="ds-code"><summary>Markup</summary><pre></pre></details>
+          </div>
+        </div>
+        <h3>Il consiglio e l'occhio di bue</h3>
+        <div class="ds-grid wide">
+          <div class="ds-example">
+            <p class="ds-label">Consiglio con il cerchio su dove toccare</p>
+            <div class="ds-live bare">
+              <div class="ds-stage night" style="height: 330px">
+                <div data-snippet style="display: contents">
+                  <div class="ob-beam" style="visibility: visible; translate: 195px 250px; --rx: 130px; --ry: 120px"></div>
+                  <div class="ob-tap" style="visibility: visible; translate: 195px 250px"><i></i><i></i></div>
+                  <div class="ob-coach">
+                    <div class="ob-bust small"><img data-custode alt="" /></div>
+                    <div class="ob-coach-body">
+                      <p>Questa tomba è trascurata. Toccala e scegli la scopa.</p>
+                      <div class="ob-coach-foot"><span class="ob-progress">3 di 10</span><button class="npc-note-cta">Salta il cortile ›</button></div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <details class="ds-code"><summary>Markup</summary><pre></pre></details>
+          </div>
+          <div class="ds-example">
+            <p class="ds-label">Passo fatto: «Fatto!» poi svanisce e arriva il nuovo</p>
+            <div class="ds-live bare">
+              <div class="ds-stage night" style="height: 330px">
+                <div data-snippet style="display: contents">
+                  <div class="ob-coach done">
+                    <div class="ob-bust small"><img data-custode alt="" /></div>
+                    <div class="ob-coach-body">
+                      <p>Questa tomba è trascurata. Toccala e scegli la scopa.</p>
+                      <div class="ob-coach-foot"><span class="ob-done"><i data-icon="check" style="--s: 16px"></i>Fatto!</span></div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <details class="ds-code"><summary>Markup</summary><pre></pre></details>
+          </div>
+        </div>
+        <div class="ds-grid wide" style="margin-top: 18px">
+          <div class="ds-example">
+            <p class="ds-label">Banner di Modifica</p>
+            <div class="ds-live bare">
+              <div class="ds-stage night" style="height: 80px">
+                <div data-snippet style="display: contents">
+                  <div class="edit-banner">
+                    <i data-icon="edit"></i><span>Tocca un elemento e trascinalo</span>
+                    <button class="pill primary">Fine</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <details class="ds-code"><summary>Markup</summary><pre></pre></details>
+          </div>
+          <div class="ds-example">
+            <p class="ds-label">Barra di posizionamento</p>
+            <div class="ds-live bare">
+              <div class="ds-stage night" style="height: 160px">
+                <div data-snippet style="display: contents">
+                  <div class="tutorial" style="bottom: 14px">
+                    <b><i data-icon="target" style="--s: 18px"></i>Lanterna da terra</b>
+                    <span class="muted">Tocca dove vuoi posarla.</span>
+                    <div class="row"><button class="pill">Annulla</button><button class="pill primary">Posa</button></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <details class="ds-code"><summary>Markup</summary><pre></pre></details>
+          </div>
+        </div>
+        <p class="ds-note warn">Con un consiglio in vista (<code>#game.has-coach</code>) messaggi, notifiche, banner di Modifica, pannelli e dialoghi scendono <b>sotto</b> il consiglio (variabile <code>--coach-b</code>), e il cerchio sta sopra a tutto. Una guida nuova deve rispettare questo ordine, altrimenti si coprono a vicenda.</p>
+      </section>
+
+      <!-- ═════════════════════ Carta ═════════════════════ -->
+      <section class="ds-sec" id="carta">
+        <h2>Carta: pergamena, stampe, cartellini</h2>
+        <p class="sub">Dove c'è una cosa <i>scritta</i> (dati, descrizioni, foto) il fondo è carta, con inchiostro scuro e icone monocromatiche. È l'unico posto chiaro dell'interfaccia, ed è un oggetto appoggiato sul tavolo scuro.</p>
+        <div class="ds-grid">
+          <div class="ds-example">
+            <p class="ds-label">Pergamena (descrizione e dati)</p>
+            <div class="ds-live col">
+              <div class="parch dc-facts">
+                <p class="p-desc">Una fiammella paziente, che non chiede nulla.</p>
+                <dl class="kv">
+                  <dt><span data-mono="tag" data-size="18"></span>Categoria</dt><dd>Luci</dd>
+                  <dt><span data-mono="all" data-size="18"></span>Acquistabili</dt><dd>fino a 2</dd>
+                  <dt><span data-mono="hammer" data-size="18"></span>Condizione</dt><dd class="warn">Rotta</dd>
+                </dl>
+              </div>
+            </div>
+          </div>
+          <div class="ds-example">
+            <p class="ds-label">Stampa (foto e galleria)</p>
+            <div class="ds-live" style="justify-content: center">
+              <figure class="photo-print ds-photo-sample" style="rotate: -1.6deg">
+                <img data-preview="grave-gothic" alt="" />
+                <figcaption>28 ott 2026</figcaption>
+              </figure>
+            </div>
+          </div>
+        </div>
+        <p class="ds-note">La pergamena si disegna alla sua misura (<code>parchment()</code> in <code>ui/parchment.ts</code>): non si costruisce a mano in HTML, qui è fatta come nel gioco. Le etichette di una voce hanno la loro icona monocromatica (<code>FACT_ICONS</code>).</p>
+      </section>
+
+      <!-- ═════════════════════ Momenti ═════════════════════ -->
+      <section class="ds-sec" id="momenti">
+        <h2>Momenti</h2>
+        <p class="sub">Una cosa importante succede in una finestra al centro: il medaglione esce dal bordo, davanti a una raggiera e a un bagliore, con qualche scintilla. Si usa per un traguardo, un rango e la fine di un percorso; non per un esito qualsiasi (quello è un toast). Si crea con <code>celebrate({ kicker, title, text, badge, ok })</code>.</p>
+        <div class="ds-example">
+          <p class="ds-label">Celebrazione</p>
+          <div class="ds-live bare">
+            <div class="ds-stage night" style="height: 470px">
+              <div data-snippet style="display: contents">
+                <div class="dialog-scrim cel-scrim">
+                  <div class="dialog modal cel-card" role="alertdialog">
+                    <div class="cel-badge" aria-hidden="true">
+                      <i class="cel-rays"></i><i class="cel-glow"></i>
+                      <img data-badge="rank:gold" alt="" />
+                      <span class="ach-n">4</span>
+                    </div>
+                    <small class="cel-kicker">Nuovo rango</small>
+                    <h3>Mietitore quotidiano</h3>
+                    <span class="cel-tier">Oro</span>
+                    <p>Sei arrivato al rango 4.</p>
+                    <p class="cel-extra">Sblocchi 22 oggetti in Bottega e 3 lapidi.</p>
+                    <button class="big-btn">Evviva!</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <details class="ds-code"><summary>Markup</summary><pre></pre></details>
+        </div>
+      </section>
+
+      <!-- ═════════════════════ Movimento ═════════════════════ -->
+      <section class="ds-sec" id="movimento">
+        <h2>Movimento, qualità e livelli</h2>
+        <h3>Qualità grafica</h3>
+        <p class="sub">Il gioco ha tre livelli (alta, media, bassa; più «auto»). <code>Game.uiQuality()</code> dice quello in uso e <code>html[data-quality]</code> lo porta al CSS. Un elemento nuovo deve avere un comportamento per ognuno.</p>
+        <div class="ds-scroll">
+          <table class="ds-table">
+            <thead><tr><th>Cosa</th><th>Alta</th><th>Media</th><th>Bassa</th></tr></thead>
+            <tbody>
+              <tr><td>Lucciole (percorso d'ingresso)</td><td>16</td><td>8</td><td>0</td></tr>
+              <tr><td>Scintille (celebrazione)</td><td>18</td><td>10</td><td>0</td></tr>
+              <tr><td>Raggiera e bagliore</td><td>girano / pulsano</td><td>idem</td><td>fermi, solo dissolvenza</td></tr>
+              <tr><td>Apertura di pannelli e modali</td><td>sale e si allarga</td><td>idem</td><td>nessuna animazione</td></tr>
+              <tr><td>Occhio di bue</td><td>pulsa piano</td><td>idem</td><td>fermo</td></tr>
+              <tr><td>Lettera piegata in 3D</td><td>sì</td><td>sì</td><td>sale e appare</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <h3>Movimento ridotto</h3>
+        <p class="sub"><code>@media (prefers-reduced-motion: reduce)</code>: niente entrate, niente rotazioni, niente rimbalzi; gli stati si leggono comunque (la spunta di «Fatto!» resta, il guizzo no).</p>
+        <h3>Come si anima</h3>
+        <ul>
+          <li>Solo <code>transform</code>, <code>opacity</code>, <code>translate</code>, <code>rotate</code>, <code>scale</code>. Mai <code>top</code>, <code>left</code>, <code>width</code> o <code>height</code> in animazione (tranne le transizioni di posizione dei pannelli sotto il consiglio, brevi).</li>
+          <li>Durate: 0,2 s per un'uscita, 0,3–0,5 s per un'entrata, 14 s per una rotazione lenta.</li>
+          <li>Entrata «elastica»: <code>cubic-bezier(0.2, 1.2, 0.35, 1)</code>; uscita: <code>ease-in</code>.</li>
+          <li>Il segno di un passo fatto (spunta, bagliore) dura quanto serve per essere visto: circa 0,75 s.</li>
+        </ul>
+        <h3>Livelli (z-index)</h3>
+        <div class="ds-z">
+          <div><b>4</b><span>Pulsanti della mappa (<code>.map-tools</code>)</span></div>
+          <div><b>5</b><span>HUD in alto, banner di Modifica</span></div>
+          <div><b>7–8</b><span>Menù dell'oggetto, notifiche dei personaggi, menù di gioco, velatura dei pannelli</span></div>
+          <div><b>9</b><span>Pannelli (<code>.drawer</code>)</span></div>
+          <div><b>10–11</b><span>Scatto della foto, lampo</span></div>
+          <div><b>12–13</b><span>Messaggi (toast), dialoghi</span></div>
+          <div><b>19–22</b><span>Guida: occhio di bue 19, consiglio 20, banner/messaggi/notifiche durante il consiglio 21, cerchio 22</span></div>
+          <div><b>30</b><span>Percorso d'ingresso a schermo pieno (lettera, nome, introduzione)</span></div>
+          <div><b>40</b><span>Celebrazioni</span></div>
+        </div>
+      </section>
+
+      <!-- ═════════════════════ Nuovo elemento ═════════════════════ -->
+      <section class="ds-sec" id="nuovo">
+        <h2>Prima di consegnare un elemento nuovo</h2>
+        <p class="sub">Una lista da spuntare, uguale per tutti: te, Claude e chi guarda la PR.</p>
+        <ol class="ds-rules">
+          <li><b>Riuso.</b> Ho cercato un componente uguale o simile in questa pagina? Se ne ho aggiunto uno, è qui, con markup e snippet.</li>
+          <li><b>Token.</b> Nessun colore, raggio, ombra o carattere scritto a mano se esiste una variabile. I valori fissi nuovi sono nella tabella «Colori fissi».</li>
+          <li><b>Forma.</b> Niente contorni, niente angoli squadrati, una sola azione oro, rametti dietro il contenuto in angoli opposti.</li>
+          <li><b>Bersagli.</b> Ogni tocco è almeno 44 px; l'azione principale sta dove arriva il pollice.</li>
+          <li><b>Livelli.</b> Funziona in qualità alta, media e bassa e con il movimento ridotto. Niente sfocature sulla scena. Si anima solo trasformazione e opacità.</li>
+          <li><b>Ordine.</b> Se compare sopra la scena, sa dove sta rispetto a consiglio, notifiche e pannelli (tabella dei livelli).</li>
+          <li><b>Esito.</b> Chi tocca vede che è andata (spunta, bagliore, celebrazione), non solo una scritta diversa.</li>
+          <li><b>Testi.</b> Tutti con <code>t('chiave')</code>; foglio delle traduzioni aggiornato; nessun testo che inizia con <code>+</code>, <code>=</code>, <code>-</code> o <code>@</code> senza l'apostrofo davanti nel foglio.</li>
+          <li><b>Schermate.</b> 390×844 e 390×664, qualità media e bassa, e mandate insieme alla PR.</li>
+          <li><b>Controlli.</b> <code>npm test</code>, <code>npx tsc --noEmit -p .</code>, <code>npm run build</code> e il controllo dei testi (<code>node scripts/i18n-check.mjs --count</code> deve dare 0).</li>
+        </ol>
+      </section>
+
+    </div>
+    <script type="module" src="/src/designSystem.ts"></script>
+  </body>
+</html>

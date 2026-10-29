@@ -1,0 +1,120 @@
+/* I momenti: la celebrazione di un traguardo o di un rango (ui/celebrate.ts),
+   e lo scatto, la foto appena fatta e la galleria (ui/screens.ts). Stessa
+   lingua delle schede del primo ingresso: pannelli «natura e luce», il gotico
+   dorato, pulsanti oro, le stampe con il bordo chiaro. Le animazioni pesanti
+   si spengono in qualità bassa e con il movimento ridotto. */
+
+/* ── La celebrazione ─────────────────────────────────────────────── */
+.ui-next .dialog-scrim.cel-scrim { z-index: 40; background: radial-gradient(60% 45% at 50% 42%, rgba(60, 40, 14, 0.55), rgba(6, 4, 10, 0.86)); animation: celFade 0.25s ease-out both; }
+.ui-next .dialog-scrim.cel-scrim.out { animation: celFadeOut 0.22s ease-in both; }
+@keyframes celFade { from { opacity: 0; } }
+@keyframes celFadeOut { to { opacity: 0; } }
+.ui-next .dialog.modal.cel-card {
+  width: min(92vw, 380px); margin-top: 70px; padding: 0 20px 18px; overflow: visible; max-height: none;
+  display: grid; gap: 8px; justify-items: center; text-align: center;
+  animation: celCard 0.5s cubic-bezier(0.2, 1.3, 0.35, 1) both;
+}
+@keyframes celCard { from { opacity: 0; transform: translateY(30px) scale(0.86); } }
+/* il medaglione esce dal bordo: davanti a una raggiera che gira e a un bagliore caldo */
+.cel-badge { position: relative; width: 150px; height: 150px; margin-top: -84px; }
+.cel-badge img { position: relative; z-index: 2; width: 100%; height: 100%; filter: drop-shadow(0 10px 14px rgba(0, 0, 0, 0.5));
+  animation: celPop 0.7s cubic-bezier(0.25, 1.6, 0.4, 1) 0.12s both; }
+@keyframes celPop { 0% { opacity: 0; transform: scale(0.2) rotate(-30deg); } 60% { opacity: 1; } 100% { transform: scale(1) rotate(0deg); } }
+.cel-badge .ach-n { z-index: 3; right: 10px; top: 10px; min-width: 30px; height: 28px; font-size: 15px; animation: celPop 0.5s cubic-bezier(0.25, 1.6, 0.4, 1) 0.45s both; }
+.cel-rays { position: absolute; z-index: 0; left: 50%; top: 50%; width: 236px; height: 236px; margin: -118px 0 0 -118px; border-radius: 50%; pointer-events: none;
+  background: repeating-conic-gradient(from 0deg, rgba(255, 214, 140, 0.32) 0deg 9deg, rgba(255, 214, 140, 0) 9deg 22.5deg);
+  -webkit-mask-image: radial-gradient(closest-side, #000 40%, transparent 100%); mask-image: radial-gradient(closest-side, #000 40%, transparent 100%);
+  animation: celRays 14s linear infinite, celFade 0.6s ease-out 0.2s both; }
+@keyframes celRays { to { rotate: 360deg; } }
+.cel-glow { position: absolute; z-index: 1; left: 50%; top: 50%; width: 210px; height: 210px; margin: -105px 0 0 -105px; border-radius: 50%; pointer-events: none;
+  background: radial-gradient(closest-side, rgba(255, 220, 150, 0.7), rgba(255, 180, 90, 0.25) 55%, rgba(255, 160, 60, 0)); animation: celGlow 2.4s ease-in-out 0.3s infinite alternate; }
+@keyframes celGlow { from { opacity: 0.75; scale: 0.94; } to { opacity: 1; scale: 1.06; } }
+/* scintille che scoppiano dal medaglione */
+.cel-sparks { position: absolute; z-index: 3; left: 50%; top: 50%; width: 0; height: 0; pointer-events: none; }
+.cel-sparks i { position: absolute; left: -4px; top: -4px; width: 8px; height: 8px; border-radius: 50%; scale: var(--s); opacity: 0; will-change: transform, opacity;
+  background: radial-gradient(circle, #fffbe0 0%, #ffd77a 45%, rgba(255, 200, 90, 0) 72%); box-shadow: 0 0 8px 2px rgba(255, 214, 120, 0.55);
+  animation: celSpark 1.1s cubic-bezier(0.15, 0.7, 0.3, 1) var(--dl) both; }
+@keyframes celSpark { 0% { opacity: 1; transform: translate(0, 0); } 70% { opacity: 1; } 100% { opacity: 0; transform: translate(var(--tx), var(--ty)); } }
+.cel-kicker { margin-top: 2px; font: 800 12px var(--pixel); letter-spacing: 0.14em; text-transform: uppercase; color: var(--spectral); }
+.cel-card h3 { margin: 0; font: 700 32px/1.05 var(--gothic); color: var(--gold-bright); }
+.cel-tier { padding: 3px 12px; border-radius: 999px; background: rgba(0, 0, 0, 0.28); font: 800 12px var(--pixel); color: var(--gold-bright); }
+.ui-next .cel-card p { margin: 0; font-size: 16px; line-height: 1.45; color: var(--paper); }
+.ui-next .cel-card p.cel-extra { font-size: 14px; color: var(--muted); }
+.cel-card .big-btn { margin-top: 8px; }
+.ui-next[data-quality="low"] :is(.cel-rays, .cel-glow) { animation: celFade 0.3s ease-out both; }
+@media (prefers-reduced-motion: reduce) {
+  .ui-next :is(.cel-scrim, .cel-card, .cel-badge img, .cel-badge .ach-n, .cel-rays, .cel-glow) { animation: none !important; }
+}
+
+/* ── Lo scatto: il riquadro arrotondato con gli angoli da prendere, la griglia dei terzi, il consiglio in alto ── */
+.ui-next .photo-layer { font-family: var(--pixel); }
+.ui-next .photo-rect {
+  border: 2px solid rgba(255, 246, 228, 0.92); border-radius: 20px; box-shadow: 0 0 0 9999px rgba(6, 4, 10, 0.58), 0 0 24px rgba(255, 214, 150, 0.25) inset;
+  background: linear-gradient(90deg, transparent calc(33.33% - 0.5px), rgba(255, 246, 228, 0.22) calc(33.33% - 0.5px), rgba(255, 246, 228, 0.22) calc(33.33% + 0.5px), transparent calc(33.33% + 0.5px), transparent calc(66.66% - 0.5px), rgba(255, 246, 228, 0.22) calc(66.66% - 0.5px), rgba(255, 246, 228, 0.22) calc(66.66% + 0.5px), transparent calc(66.66% + 0.5px)),
+    linear-gradient(180deg, transparent calc(33.33% - 0.5px), rgba(255, 246, 228, 0.22) calc(33.33% - 0.5px), rgba(255, 246, 228, 0.22) calc(33.33% + 0.5px), transparent calc(33.33% + 0.5px), transparent calc(66.66% - 0.5px), rgba(255, 246, 228, 0.22) calc(66.66% - 0.5px), rgba(255, 246, 228, 0.22) calc(66.66% + 0.5px), transparent calc(66.66% + 0.5px));
+  transition: box-shadow 0.2s ease; cursor: move;
+}
+.ui-next .photo-rect.dragging { box-shadow: 0 0 0 9999px rgba(6, 4, 10, 0.66), 0 0 30px rgba(255, 214, 150, 0.4) inset; }
+/* gli angoli: archi arrotondati e spessi, con un'area di presa più grande del segno */
+.ui-next .photo-rect i { width: 44px; height: 44px; border: 0; padding: 0; background: none; touch-action: none; }
+.ui-next .photo-rect i::before { content: ''; position: absolute; width: 28px; height: 28px; border: 5px solid var(--primary); filter: drop-shadow(0 2px 3px rgba(0, 0, 0, 0.5)); }
+.ui-next .photo-rect i[data-h="nw"] { left: -12px; top: -12px; }
+.ui-next .photo-rect i[data-h="ne"] { right: -12px; top: -12px; }
+.ui-next .photo-rect i[data-h="sw"] { left: -12px; bottom: -12px; }
+.ui-next .photo-rect i[data-h="se"] { right: -12px; bottom: -12px; }
+.ui-next .photo-rect i[data-h="nw"]::before { left: 9px; top: 9px; border-right: 0; border-bottom: 0; border-top-left-radius: 22px; }
+.ui-next .photo-rect i[data-h="ne"]::before { right: 9px; top: 9px; border-left: 0; border-bottom: 0; border-top-right-radius: 22px; }
+.ui-next .photo-rect i[data-h="sw"]::before { left: 9px; bottom: 9px; border-right: 0; border-top: 0; border-bottom-left-radius: 22px; }
+.ui-next .photo-rect i[data-h="se"]::before { right: 9px; bottom: 9px; border-left: 0; border-top: 0; border-bottom-right-radius: 22px; }
+/* il consiglio: come le notifiche del gioco, in alto; quando si sposta il riquadro si fa da parte */
+.ui-next .photo-tip {
+  position: absolute; left: 50%; top: calc(var(--hud-top) + 22px + var(--safe-t)); translate: -50% 0; width: min(calc(100vw - 24px), 420px); margin: 0;
+  display: grid; grid-template-columns: 34px 1fr; gap: 10px; align-items: center; padding: 10px 14px; border-radius: var(--r); pointer-events: none;
+  background-color: transparent; background-image: var(--zones-small), var(--vines-hud), var(--nat-bg);
+  background-size: 100% 100%, 100% 100%, 100% 100%, 300px auto, 100% 100%; background-repeat: no-repeat; box-shadow: 0 8px 18px rgba(0, 0, 0, 0.45);
+  color: var(--paper); font-size: 14px; font-weight: 700; line-height: 1.3; transition: opacity 0.3s ease, translate 0.3s ease;
+}
+.ui-next .photo-tip i { width: 34px; height: 34px; background: no-repeat center / contain; }
+.ui-next .photo-layer.moved .photo-tip { opacity: 0; translate: -50% -10px; }
+/* la barra: chiudi, scatta, galleria. Gli stessi pulsanti della mappa: quadrati arrotondati col gradiente
+   del gioco e un rametto; lo scatto è grande e dorato come il pulsante del menù */
+.ui-next .photo-bar { bottom: calc(22px + var(--safe-b)); gap: 26px; align-items: center; }
+.ui-next .photo-btn, .ui-next .shutter { position: relative; isolation: isolate; border: 0; padding: 0; display: grid; place-items: center; cursor: pointer; clip-path: none; }
+.ui-next .photo-btn { width: 60px; height: 60px; border-radius: var(--r); background: var(--nat-bg); box-shadow: 0 8px 18px rgba(0, 0, 0, 0.45); }
+.ui-next .photo-btn i { width: 28px; height: 28px; background: no-repeat center / contain; }
+.ui-next .shutter { width: 80px; height: 80px; border-radius: 20px; background: linear-gradient(165deg, #f6d48a, #e0aa52);
+  box-shadow: 0 4px 0 var(--primary-deep), 0 12px 24px rgba(0, 0, 0, 0.5), 0 0 26px rgba(255, 210, 130, 0.3); transition: transform 0.1s ease, box-shadow 0.1s ease; }
+.ui-next .shutter i { width: 42px; height: 42px; background: no-repeat center / contain; filter: drop-shadow(0 2px 1px rgba(120, 76, 20, 0.45)); }
+.ui-next .shutter:active { transform: translateY(3px); box-shadow: 0 1px 0 var(--primary-deep), 0 6px 14px rgba(0, 0, 0, 0.5); }
+.ui-next .photo-btn::before, .ui-next .shutter::before { content: ''; position: absolute; z-index: -1; left: 0; top: 0; width: 30px; height: 30px; pointer-events: none; background: var(--sprig) no-repeat 0 0 / 100% 100%; }
+/* lo scatto (dorato, angoli più tondi): il rametto curvo che segue l'angolo, grande quanto il suo arrotondamento */
+.ui-next .shutter::before { width: 40px; height: 40px; background-image: var(--sprig-round, var(--sprig)); }
+.ui-next .flash { animation-duration: 0.45s; animation-timing-function: ease-out; }
+
+/* ── Le stampe: la foto appena fatta, la galleria ─────────────────── */
+.photo-print { position: relative; margin: 0; padding: 10px 10px 34px; border-radius: 4px; background: linear-gradient(170deg, #f6efdf, #e9dfca);
+  box-shadow: 0 16px 26px rgba(0, 0, 0, 0.5), 0 4px 8px rgba(0, 0, 0, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.6); }
+.photo-print img { display: block; width: 100%; aspect-ratio: 4 / 3; object-fit: cover; border-radius: 2px; background: #2a2632; box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.25); }
+.photo-print figcaption { position: absolute; left: 10px; right: 10px; bottom: 7px; text-align: center; font: italic 700 14px/1.2 "Nunito", sans-serif; color: #6b5640; }
+.photo-result { display: grid; justify-items: center; gap: 14px; padding: 8px 4px 4px; }
+.photo-result .photo-print { width: min(100%, 330px); rotate: -1.6deg; }
+.photo-result .photo-print.big { width: 100%; rotate: -1deg; }
+.photo-result .photo-print img { aspect-ratio: auto; max-height: 52vh; }
+.photo-result .photo-print.fresh { animation: printIn 0.55s cubic-bezier(0.2, 1.2, 0.35, 1) both; }
+@keyframes printIn { from { opacity: 0; transform: translateY(26px) rotate(5deg) scale(0.9); } }
+.ui-next .photo-result p.muted { margin: 0; text-align: center; font-size: 14px; }
+.photo-wall { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 18px 14px; padding: 10px 6px 16px; }
+.photo-thumb { padding: 0; border: 0; background: none; cursor: pointer; }
+.photo-thumb .photo-print { padding: 7px 7px 26px; }
+.photo-thumb .photo-print figcaption { font-size: 12px; bottom: 5px; }
+.photo-thumb:nth-child(3n + 1) .photo-print { rotate: -2deg; }
+.photo-thumb:nth-child(3n + 2) .photo-print { rotate: 1.6deg; }
+.photo-thumb:nth-child(3n) .photo-print { rotate: -0.8deg; }
+.photo-thumb:active .photo-print { transform: scale(0.97); }
+.photo-empty { display: grid; justify-items: center; gap: 14px; padding: 24px 12px; text-align: center; }
+/* galleria vuota: l'invito al centro del pannello, non in cima */
+.ui-next .drawer[data-kind="gallery"] .drawer-body:has(> .photo-empty) { display: grid; align-content: center; }
+.photo-empty-icon { width: 84px; height: 84px; background: no-repeat center / contain; opacity: 0.9; filter: drop-shadow(0 8px 12px rgba(0, 0, 0, 0.45)); }
+.ui-next .photo-empty p { margin: 0; max-width: 26em; color: var(--muted); font-size: 15px; line-height: 1.45; }
+.photo-count { font-size: 13px; }
+@media (prefers-reduced-motion: reduce) { .photo-result .photo-print.fresh { animation: none; } }

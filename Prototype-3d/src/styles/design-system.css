@@ -1,0 +1,158 @@
+/* Solo la pagina del design system (design-system.html): l'impaginazione della
+   pagina, i riquadri «telefono» dentro cui i componenti stanno come nel gioco
+   e i campioni. I componenti veri non si toccano qui: arrivano dagli altri
+   fogli di stile. Se un componente nella pagina sembra diverso dal gioco, è
+   un'altra regola di questo file da togliere, non da copiare. */
+
+/* il gioco blocca lo scorrimento della pagina: qui si scorre */
+html, body { height: auto; min-height: 100%; overflow: auto !important; overscroll-behavior: auto; }
+body.ds {
+  margin: 0; color: var(--paper); font-family: var(--pixel);
+  background: radial-gradient(70% 40% at 15% 0%, rgba(84, 70, 112, 0.35), transparent), radial-gradient(60% 40% at 90% 18%, rgba(255, 168, 84, 0.08), transparent), #14111b;
+}
+.ds * { text-shadow: none; }
+.ds-wrap { max-width: 980px; margin: 0 auto; padding: 0 16px 80px; }
+
+/* ── Testata e indice ───────────────────────────────────────────── */
+.ds-top { display: grid; gap: 14px; padding: 36px 0 18px; }
+.ds-top h1 { margin: 0; font: 700 clamp(34px, 6vw, 52px)/1 var(--gothic); color: var(--gold-bright); }
+.ds-top .lead { margin: 0; max-width: 62ch; font-size: 17px; line-height: 1.5; color: var(--paper); }
+.ds-controls { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; color: var(--muted); font-size: 14px; font-weight: 700; }
+.ds-nav { position: sticky; top: 0; z-index: 50; display: flex; gap: 6px; overflow-x: auto; margin: 0 -16px; padding: 10px 16px; background: rgba(20, 17, 27, 0.94); scrollbar-width: none; }
+.ds-nav::-webkit-scrollbar { display: none; }
+.ds-nav a { flex: none; padding: 7px 13px; border-radius: 999px; background: var(--panel-2); color: var(--paper); font-weight: 800; font-size: 13px; text-decoration: none; }
+.ds-nav a:hover { background: var(--primary); color: var(--on-primary); }
+
+/* ── Sezioni ────────────────────────────────────────────────────── */
+.ds-sec { padding-top: 44px; scroll-margin-top: 54px; }
+.ds-sec > h2 { margin: 0 0 4px; font: 700 34px/1.05 var(--gothic); color: var(--gold-bright); }
+.ds-sec > .sub { margin: 0 0 18px; max-width: 70ch; color: var(--muted); font-size: 15px; line-height: 1.5; }
+.ds-sec h3 { margin: 26px 0 8px; font: 700 21px/1.1 var(--gothic); color: var(--gold-bright); }
+.ds-sec p, .ds-sec li { line-height: 1.5; }
+.ds-sec code, .ds-code code, .ds-table code { padding: 1px 6px; border-radius: 6px; background: rgba(0, 0, 0, 0.35); color: #ffd9a0; font: 600 0.88em/1.4 ui-monospace, SFMono-Regular, Menlo, monospace; }
+.ds-rules { display: grid; gap: 10px; margin: 0; padding: 0; list-style: none; counter-reset: r; }
+.ds-rules li { position: relative; padding: 12px 14px 12px 50px; border-radius: var(--r); background: var(--panel); box-shadow: var(--shadow), inset 0 1px 0 var(--line); counter-increment: r; }
+.ds-rules li::before { content: counter(r); position: absolute; left: 12px; top: 11px; width: 28px; height: 28px; border-radius: 9px; display: grid; place-items: center; background: var(--primary); color: var(--on-primary); font-weight: 800; }
+.ds-rules b { color: var(--gold-bright); }
+.ds-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 16px; align-items: start; }
+.ds-grid.wide { grid-template-columns: repeat(auto-fill, minmax(min(100%, 410px), 1fr)); }
+.ds-note { margin: 12px 0 0; padding: 10px 14px; border-radius: var(--r-s); background: rgba(159, 240, 214, 0.08); color: var(--paper); font-size: 14px; box-shadow: inset 0 0 0 1.5px rgba(159, 240, 214, 0.28); }
+.ds-note.warn { background: rgba(255, 154, 134, 0.08); box-shadow: inset 0 0 0 1.5px rgba(255, 154, 134, 0.3); }
+
+/* ── Esempio: il campione vivo e, sotto, il markup ───────────────── */
+.ds-example { display: grid; gap: 8px; min-width: 0; }
+.ds-example > .ds-label { margin: 0; font-size: 13px; font-weight: 800; letter-spacing: 0.04em; text-transform: uppercase; color: var(--muted); }
+.ds-live { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; padding: 18px; border-radius: var(--r); background: rgba(0, 0, 0, 0.22); box-shadow: inset 0 0 0 1px var(--line); min-width: 0; }
+.ds-live.col { display: grid; justify-items: stretch; }
+.ds-live.bare { padding: 0; background: none; box-shadow: none; }
+.ds-live.col > p, .ds-live.col > ul { margin: 0; }
+.ds-live.col > ul { padding-left: 20px; display: grid; gap: 6px; }
+.ds-code { border-radius: var(--r-s); background: rgba(0, 0, 0, 0.35); }
+.ds-code summary { cursor: pointer; padding: 8px 12px; font-size: 13px; font-weight: 800; color: var(--muted); }
+.ds-code pre { margin: 0; padding: 4px 14px 14px; overflow-x: auto; font: 500 12.5px/1.55 ui-monospace, SFMono-Regular, Menlo, monospace; color: #e7dcc4; white-space: pre; }
+
+/* ── Il «telefono»: un riquadro come lo schermo di gioco ──────────── */
+.ds-stage {
+  position: relative; width: 390px; max-width: 100%; margin: 0 auto; overflow: hidden; border-radius: 26px; isolation: isolate;
+  background: radial-gradient(90% 60% at 30% 20%, #3b4d33, transparent 70%), radial-gradient(80% 60% at 80% 90%, #2c3a2b, transparent 70%), linear-gradient(180deg, #243024, #151c18);
+  box-shadow: 0 0 0 7px #0d0b12, 0 0 0 8px rgba(255, 255, 255, 0.1), 0 18px 40px rgba(0, 0, 0, 0.5);
+  --room: 298px;
+}
+.ds-stage.night { background: radial-gradient(90% 60% at 30% 20%, #232c3a, transparent 70%), radial-gradient(70% 50% at 70% 85%, #2b2438, transparent 70%), linear-gradient(180deg, #14131c, #0b0a10); }
+/* dentro il riquadro le misure «a schermo» (vw) diventano quelle del riquadro */
+.ui-next .ds-stage .player-chip { --room: 298px; }
+.ui-next .ds-stage .dialog.modal, .ui-next .ds-stage .dialog { width: calc(100% - 32px); }
+.ui-next .ds-stage .drawer { left: 12px; right: 12px; width: auto; translate: 0 -50%; transform: none; }
+.ui-next .ds-stage .drawer.full, .ui-next .ds-stage .drawer.with-hero { height: calc(100% - 28px); }
+.ui-next .ds-stage .npc-note { left: 10px; right: 10px; top: 14px; }
+.ui-next .ds-stage .edit-banner { top: 14px; left: 10px; right: 10px; }
+.ui-next .ds-stage .toasts { top: 14px; }
+.ui-next .ds-stage .ob-coach, .ui-next .ds-stage .ob-beam, .ui-next .ds-stage .ob-tap { position: absolute; }
+.ui-next .ds-stage .ob-coach { top: 52px; width: calc(100% - 20px); }
+.ui-next .ds-stage .dialog-scrim, .ui-next .ds-stage .scrim { position: absolute; }
+.ds-stage .fab, .ds-stage .bubble { pointer-events: auto; }
+
+/* ── Colori ─────────────────────────────────────────────────────── */
+.ds-swatches { display: grid; grid-template-columns: repeat(auto-fill, minmax(168px, 1fr)); gap: 10px; }
+.ds-sw { display: grid; gap: 8px; padding: 8px 8px 10px; border-radius: var(--r-s); background: rgba(0, 0, 0, 0.25); }
+.ds-sw i { display: block; height: 54px; border-radius: 10px; background: var(--c); box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.14); }
+.ds-sw b { font-size: 13.5px; color: var(--paper); }
+.ds-sw code { display: block; margin-top: 3px; background: none; padding: 0; color: var(--muted); font-size: 12px; }
+.ds-sw small { display: block; margin-top: 2px; color: var(--muted); font-size: 12px; line-height: 1.3; }
+
+/* ── Tabelle ────────────────────────────────────────────────────── */
+.ds-table { width: 100%; border-collapse: separate; border-spacing: 0; overflow: hidden; border-radius: var(--r); background: var(--panel); box-shadow: var(--shadow); font-size: 14px; }
+.ds-table th, .ds-table td { padding: 9px 12px; text-align: left; vertical-align: top; border-top: 1px solid var(--line); }
+.ds-table thead th { border-top: 0; background: rgba(0, 0, 0, 0.25); color: var(--gold-bright); font-size: 13px; letter-spacing: 0.03em; }
+.ds-table td:first-child { white-space: nowrap; font-weight: 800; color: var(--gold-bright); }
+.ds-scroll { overflow-x: auto; }
+
+/* ── Tipografia ─────────────────────────────────────────────────── */
+.ds-type { display: grid; gap: 14px; }
+.ds-type > div { display: grid; grid-template-columns: 130px minmax(0, 1fr); gap: 14px; align-items: baseline; padding: 12px 14px; border-radius: var(--r-s); background: rgba(0, 0, 0, 0.22); }
+.ds-type small { color: var(--muted); font-weight: 700; font-size: 12.5px; line-height: 1.3; }
+.ds-type .t-h1 { font: 700 40px/1 var(--gothic); color: var(--gold-bright); }
+.ds-type .t-h2 { font: 700 30px/1 var(--gothic); color: var(--gold-bright); }
+.ds-type .t-h3 { font: 700 23px/1.05 var(--gothic); color: var(--gold-bright); }
+.ds-type .t-body { font: 600 16px/1.45 var(--pixel); color: var(--paper); }
+.ds-type .t-muted { font: 600 14px/1.45 var(--pixel); color: var(--muted); }
+.ds-type .t-kicker { font: 800 12px var(--pixel); letter-spacing: 0.14em; text-transform: uppercase; color: var(--spectral); }
+.ds-type .t-num { font: 800 22px var(--pixel); color: var(--spectral); font-variant-numeric: tabular-nums; }
+
+/* ── Forme e profondità ─────────────────────────────────────────── */
+.ds-shapes { display: flex; flex-wrap: wrap; gap: 16px; }
+.ds-shape { display: grid; gap: 8px; justify-items: center; font-size: 13px; font-weight: 700; color: var(--muted); text-align: center; }
+.ds-shape i { display: block; width: 110px; height: 76px; background: var(--panel); box-shadow: var(--shadow), inset 0 1px 0 var(--line); }
+.ds-shape.s1 i { border-radius: var(--r); }
+.ds-shape.s2 i { border-radius: var(--r-s); background: var(--panel-2); box-shadow: none; }
+.ds-shape.s3 i { border-radius: 999px; height: 40px; background: var(--primary); box-shadow: 0 3px 0 var(--primary-deep), 0 4px 10px rgba(0, 0, 0, 0.18); }
+.ds-shape.s4 i { border-radius: var(--r); background: var(--nat-bg); box-shadow: var(--nat-shadow); }
+.ds-shape.s5 i { border-radius: var(--r-s); background: var(--input); box-shadow: inset 0 0 0 1.5px var(--edge); }
+
+/* ── Icone ──────────────────────────────────────────────────────── */
+.ds-icons { display: grid; grid-template-columns: repeat(auto-fill, minmax(78px, 1fr)); gap: 8px; }
+.ds-icons figure { display: grid; justify-items: center; gap: 6px; margin: 0; padding: 12px 4px 8px; border-radius: var(--r-s); background: rgba(0, 0, 0, 0.25); }
+.ds-icons figcaption { font-size: 11.5px; font-weight: 700; color: var(--muted); overflow-wrap: anywhere; text-align: center; }
+.ds-icons .pxi { --s: 34px; }
+.ds-icons .mono { color: var(--gold-bright); }
+.ds-badges { display: flex; flex-wrap: wrap; gap: 14px; }
+.ds-badges figure { display: grid; justify-items: center; gap: 4px; margin: 0; font-size: 12px; font-weight: 700; color: var(--muted); }
+.ds-badges img { width: 72px; height: 72px; }
+
+/* ── Decorazioni ────────────────────────────────────────────────── */
+.ds-decor { display: flex; flex-wrap: wrap; gap: 14px; }
+.ds-decor figure { display: grid; gap: 6px; justify-items: center; margin: 0; font-size: 12.5px; font-weight: 700; color: var(--muted); text-align: center; max-width: 150px; }
+.ds-decor .cv { display: flex; flex-wrap: wrap; gap: 4px; justify-content: center; }
+.ds-decor figure > i { display: block; width: 130px; height: 130px; border-radius: var(--r); background: var(--nat-bg) padding-box; box-shadow: var(--shadow); position: relative; overflow: hidden; }
+.ds-decor figure > i::after { content: ''; position: absolute; inset: 0; background: no-repeat 0 0 / 100% 100%; }
+.ds-decor .d-sprig i::after { background-image: var(--sprig); width: 64px; height: 64px; inset: 0 auto auto 0; }
+.ds-decor .d-sprig-round i::after { background-image: var(--sprig-round); width: 64px; height: 64px; inset: 0 auto auto 0; }
+.ds-decor .d-ivy i::after { background-image: var(--ivy); width: 100px; height: 100px; inset: 0 auto auto 0; }
+.ds-decor .d-fern i::after { background-image: var(--fern); background-size: contain; background-position: center bottom; background-repeat: no-repeat; inset: 30px 10px 6px; }
+.ds-decor .d-pattern i { background: var(--pattern-dark), var(--nat-bg); background-size: 130px 130px, 100% 100%; }
+.ds-decor .d-pattern i::after { display: none; }
+.ds-decor .d-vines i { background: var(--vines), var(--nat-bg); background-size: 100% 100%; }
+.ds-decor .d-vines i::after { display: none; }
+.ds-decor .d-zones i { background: var(--zones-small), var(--nat-bg); background-size: 100% 100%; }
+.ds-decor .d-zones i::after { display: none; }
+.ds-decor .d-glow i { background: var(--nat-glow), var(--nat-bg); }
+.ds-decor .d-glow i::after { display: none; }
+
+/* ── Pezzi che servono solo qui ─────────────────────────────────── */
+.ds-wisp { display: inline-flex; gap: 6px; align-items: center; }
+.ds-live .player-chip, .ds-live .clock-block { cursor: default; }
+.ds-z { display: grid; gap: 4px; }
+.ds-z > div { display: grid; grid-template-columns: 56px minmax(0, 1fr); gap: 10px; align-items: center; font-size: 13.5px; }
+.ds-z b { text-align: right; color: var(--gold-bright); font-variant-numeric: tabular-nums; }
+.ds-stage .slots { transform: scaleY(1); opacity: 1; pointer-events: auto; }
+.ds-stage .bubble { left: 12px; bottom: 14px; }
+.ds-stage .ob-coach.static-done .ob-coach-foot { justify-content: flex-start; }
+.ds-photo-sample { width: 190px; }
+
+@media (max-width: 560px) {
+  .ds-type > div { grid-template-columns: 1fr; gap: 4px; }
+  .ds-sec > h2 { font-size: 28px; }
+}
+
+/* i toast e le notifiche in pagina restano fermi (nel gioco spariscono dopo qualche secondo) */
+.ds-live .toast, .ds-stage .toast { animation: none; }

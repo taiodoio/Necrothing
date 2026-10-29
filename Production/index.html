@@ -1,0 +1,144 @@
+<!doctype html>
+<html lang="it" class="ui-next ui-play" data-theme="dark">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no" />
+    <meta name="theme-color" content="#0d1016" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="description" content="Necrothing — un piccolo cimitero per gli oggetti dimenticati." data-i18n-content="page.description" />
+    <title data-i18n="page.title">Necrothing — Cimitero degli oggetti</title>
+    <link rel="preload" as="image" href="./boot/scena.webp" type="image/webp" />
+    <style>
+      /* schermata di caricamento: qui e non nei CSS del gioco, così compare subito.
+         Sfondo e logo sono immagini (public/boot); logo in alto e barra in basso stanno
+         agganciati ai bordi dello schermo, la scena si ritaglia (cover) sui formati diversi. */
+      #boot { position: fixed; inset: 0; z-index: 9999; overflow: hidden; color: #f3ecdf; font-family: "Nunito", system-ui, sans-serif;
+        background: #0b0c1c url(./boot/scena.webp) center 30% / cover no-repeat; /* sugli schermi più corti si taglia più sentiero che cielo */ transition: opacity 0.6s ease; }
+      #boot.done { opacity: 0; pointer-events: none; }
+      /* un velo scuro in alto (il logo si stacca dal cielo), uno in basso (frase e barra si leggono) e i bordi più scuri */
+      #boot::before { content: ''; position: absolute; inset: 0; pointer-events: none;
+        background: linear-gradient(rgba(4, 4, 14, 0.82) 0%, rgba(4, 4, 14, 0.55) 14%, rgba(4, 4, 14, 0.18) 28%, rgba(4, 4, 14, 0) 40%),
+          linear-gradient(0deg, rgba(6, 4, 12, 0.85) 0%, rgba(6, 4, 12, 0.6) 12%, rgba(6, 4, 12, 0) 30%),
+          radial-gradient(ellipse 85% 70% at 50% 52%, rgba(0, 0, 0, 0) 55%, rgba(6, 4, 12, 0.35) 100%); }
+      .boot-logo { position: absolute; left: 50%; top: calc(env(safe-area-inset-top, 0px) + 5vh); width: min(92vw, 560px, 46vh); aspect-ratio: 1200 / 401;
+        transform: translateX(-50%); container-type: inline-size; }
+      .boot-logo img { display: block; width: 100%; height: 100%; }
+      /* il sottotitolo sulla targa (centro della targa: 49,8% della larghezza), scritto nella lingua del gioco */
+      .boot-sub { position: absolute; left: 20.74%; width: 58.06%; top: 75.7%; height: 10.5%; margin: 0; display: flex; align-items: center; justify-content: center;
+        white-space: nowrap; overflow: hidden; font: 700 2.9cqw/1 "Cinzel", Georgia, serif; letter-spacing: 0.06em; text-transform: uppercase;
+        background: linear-gradient(#fff4dc 15%, #f3d6a2 55%, #c99a62); -webkit-background-clip: text; background-clip: text; color: transparent;
+        filter: drop-shadow(0 1px 0 #1a0b08); opacity: 0; transition: opacity 0.3s ease; }
+      .boot-sub.on { opacity: 1; }
+      .boot-load { position: absolute; left: 50%; bottom: calc(env(safe-area-inset-bottom, 0px) + 7vh); width: min(78vw, 420px); transform: translateX(-50%); text-align: center; }
+      .boot-step { min-height: 1.3em; margin: 0 0 14px; color: #efe3d0; font-size: 16px; font-weight: 700; text-shadow: 0 2px 6px rgba(0, 0, 0, 0.85); }
+      .boot-bar { position: relative; height: 12px; border-radius: 99px; overflow: hidden; background: rgba(30, 20, 22, 0.85);
+        box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.6), 0 0 0 1.5px #3a1e18, 0 0 0 2.5px rgba(201, 147, 64, 0.6); }
+      .boot-fill { position: absolute; inset: 0; border-radius: inherit; transform-origin: left; transform: scaleX(0);
+        background: linear-gradient(90deg, #c99340, #f0c46e); box-shadow: 0 0 10px rgba(255, 200, 110, 0.7); transition: transform 0.45s ease-out; }
+      .boot-bar::after { content: ''; position: absolute; top: 0; bottom: 0; left: -40%; width: 40%;
+        background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.35), transparent); animation: bootShine 1.4s linear infinite; }
+      @keyframes bootShine { to { transform: translateX(350%); } }
+      .boot-pct { margin: 10px 0 0; color: #ffe2a8; font-size: 20px; font-weight: 800; font-variant-numeric: tabular-nums; text-shadow: 0 2px 0 rgba(0, 0, 0, 0.6); }
+      @media (prefers-reduced-motion: reduce) { .boot-bar::after { animation: none; } }
+      /* primo ingresso: il pulsante al posto della barra, con un'ombra in basso perché si legga sul sentiero illuminato */
+      #boot.with-cta::after { content: ''; position: absolute; left: 0; right: 0; bottom: 0; height: 42%; pointer-events: none;
+        background: linear-gradient(180deg, rgba(8, 7, 20, 0) 0%, rgba(8, 7, 20, 0.55) 45%, rgba(8, 7, 20, 0.85) 100%); }
+      #boot.with-cta .boot-load { z-index: 1; }
+      /* il pulsante è quello del gioco (.big-btn, oro): qui solo misura ed entrata */
+      .boot-cta { display: block; width: 100%; font-size: 18px; animation: bootCtaIn 0.45s ease-out both; }
+      @keyframes bootCtaIn { from { opacity: 0; transform: translateY(10px); } }
+      @media (prefers-reduced-motion: reduce) { .boot-cta { animation: none; } }
+    </style>
+  </head>
+  <body>
+    <div id="boot" role="status" aria-live="polite" aria-label="Caricamento del cimitero">
+      <h1 class="boot-logo"><img src="./boot/logo.webp" alt="Necrothing" /><span class="boot-sub">il cimitero degli oggetti</span></h1>
+      <div class="boot-load">
+        <p class="boot-step">Si apre il cancello…</p>
+        <div class="boot-bar" aria-hidden="true"><i class="boot-fill"></i></div>
+        <p class="boot-pct">0%</p>
+      </div>
+    </div>
+    <main id="game" aria-label="Cimitero di Necrothing" data-i18n-aria="page.main.aria">
+      <canvas id="world" aria-label="Scena di gioco 3D" data-i18n-aria="page.world.aria"></canvas>
+
+      <header class="hud-top">
+        <button class="player-chip" id="player-chip" aria-label="Profilo del custode" data-i18n-aria="page.player.aria">
+          <span class="chip-avatar" aria-hidden="true"><i data-icon="keeper"></i></span>
+          <span class="chip-body">
+            <strong id="hud-name" data-i18n="page.hud.name">Custode</strong>
+            <small id="hud-rank" data-i18n="page.hud.rank">Rango 1</small>
+            <span class="xp-bar"><i id="hud-xp"></i></span>
+          </span>
+          <span class="wisp-count"><i class="wisp-icon" data-icon="wisp"></i><span id="hud-wisps">0</span></span>
+        </button>
+        <div class="hud-right">
+          <div class="clock-block">
+            <strong id="hud-clock">--:--</strong>
+            <small id="hud-weather" data-i18n="page.hud.weather">Notte</small>
+          </div>
+          <button class="icon-btn" id="settings-btn" aria-label="Impostazioni" data-i18n-aria="menu.settings"><i data-icon="gear"></i></button>
+        </div>
+      </header>
+
+      <div class="edit-banner" id="edit-banner" hidden>
+        <i data-icon="edit"></i><span data-i18n="page.edit.banner">Modifica — tocca un elemento, trascinalo per spostarlo</span>
+        <button class="pill" id="edit-done" data-i18n="page.edit.done">Fine</button>
+      </div>
+
+      <div class="map-tools">
+        <button class="icon-btn" id="staff-toggle" aria-label="Impugna il bastone mistico" data-i18n-aria="hud.staff.take" aria-pressed="false" hidden><i data-icon="staff"></i></button>
+        <button class="icon-btn" id="broom-toggle" aria-label="Sali sulla scopa" data-i18n-aria="hud.broom.mount" aria-pressed="false" hidden><i data-icon="broom"></i></button>
+        <button class="icon-btn" id="bike-toggle" aria-label="Sali in bici" data-i18n-aria="hud.bike.mount" aria-pressed="false" hidden><i data-icon="bike"></i></button>
+        <button class="icon-btn" id="recenter" aria-label="Centra sul custode" data-i18n-aria="page.recenter.aria"><i data-icon="target"></i></button>
+      </div>
+
+      <nav class="bubble" id="bubble" aria-label="Azioni" data-i18n-aria="page.bubble.aria">
+        <button class="fab" id="fab" aria-expanded="false" aria-label="Apri azioni" data-i18n-aria="page.fab.aria"><i data-icon="menu" id="fab-icon"></i></button>
+        <div class="slots" id="slots">
+          <button class="slot" data-act="bury"><i data-icon="bury"></i><small data-i18n="menu.bury">Seppellisci</small></button>
+          <button class="slot" data-act="edit"><i data-icon="edit"></i><small data-i18n="menu.edit">Modifica</small></button>
+          <button class="slot" data-act="inventory"><i data-icon="bag"></i><small data-i18n="menu.inventory">Inventario</small></button>
+          <button class="slot" data-act="shop"><i data-icon="shop"></i><small data-i18n="menu.shop">Bottega</small></button>
+          <button class="slot" data-act="photo"><i data-icon="photo"></i><small data-i18n="menu.photo">Foto</small></button>
+          <button class="slot" data-act="gallery"><i data-icon="gallery"></i><small data-i18n="menu.gallery">Galleria</small></button>
+        </div>
+      </nav>
+
+      <div class="ctx" id="ctx" hidden>
+        <div class="ctx-title" id="ctx-title"></div>
+        <div class="ctx-actions" id="ctx-actions"></div>
+      </div>
+
+      <div class="scrim" id="scrim" hidden></div>
+      <section class="drawer" id="drawer" hidden aria-modal="true" role="dialog">
+        <header class="drawer-head">
+          <h2 id="drawer-title"></h2>
+          <div class="drawer-extra" id="drawer-extra"></div>
+          <button class="icon-btn small" id="drawer-close" aria-label="Chiudi" data-i18n-aria="dialog.close"><i data-icon="close"></i></button>
+        </header>
+        <div class="drawer-body" id="drawer-body"></div>
+        <footer class="drawer-foot" id="drawer-foot" hidden></footer>
+      </section>
+
+      <div class="photo-layer" id="photo-layer" hidden>
+        <div class="photo-shade"></div>
+        <div class="photo-rect" id="photo-rect">
+          <i data-h="nw"></i><i data-h="ne"></i><i data-h="sw"></i><i data-h="se"></i>
+        </div>
+        <p class="photo-tip" id="photo-tip"><i data-icon="photo"></i><span data-i18n="page.photo.hint">Trascina il riquadro o i suoi angoli per scegliere cosa fotografare.</span></p>
+        <div class="photo-bar">
+          <button class="photo-btn" id="photo-cancel" aria-label="Annulla" data-i18n-aria="dialog.cancel"><i data-icon="close"></i></button>
+          <button class="shutter" id="photo-shoot" aria-label="Scatta" data-i18n-aria="page.photo.shoot"><i data-icon="photo"></i></button>
+          <button class="photo-btn" id="photo-gallery" aria-label="Galleria" data-i18n-aria="menu.gallery"><i data-icon="gallery"></i></button>
+        </div>
+      </div>
+
+      <div class="toasts" id="toasts" aria-live="polite"></div>
+      <div class="floaters" id="floaters"></div>
+      <section class="debug" id="debug" hidden></section>
+      <div class="fatal" id="fatal" hidden></div>
+    </main>
+    <script type="module" src="/src/entry.ts"></script>
+  </body>
+</html>

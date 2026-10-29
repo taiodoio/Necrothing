@@ -1,0 +1,272 @@
+// Terreno continuo: la mappa logica (MAP_SIZE) è circondata da FOREST_MARGIN
+// celle di bosco, così a schermo il suolo non "finisce" mai.
+//  • altezze: dentro il recinto colline dolci e ondulazioni (piatte vicino al
+//    recinto), fuori il terreno sale verso il bosco. Sotto ogni oggetto c'è un
+//    "pad" piano (tombe, sentieri ed edifici non galleggiano né affondano);
+//  • superficie sfaccettata (4 triangoli per cella attorno al centro,
+//    vertici leggermente irregolari) con colore per vertice.
+
+import * as THREE from 'three';
+import { FOREST_MARGIN, MAP_SIZE } from '../game/balance.ts';
+import { hash3 } from '../game/rng.ts';
+import type { Rect } from '../game/world.ts';
+
+export const CHUNK = 12; // celle per lato di un chunk
+export const STEP = 0.05; // altezza di un gradino (quantizzazione delle altezze)
+export const WORLD_MIN = -FOREST_MARGIN; // in celle logiche
+export const WORLD_MAX = MAP_SIZE + FOREST_MARGIN;
+
+export type Ground = 'grass' | 'wild' | 'forest' | 'path' | 'dirt' | 'mud' | 'plot' | 'fence';
+
+export interface GroundInput {
+  seed: number;
+  area: Rect;
+  overrides: Map<string, Ground>;
+  /** Altezza piana sotto gli oggetti (cella → altezza mondo). */
+  pads: Map<string, number>;
+}
+
+function groundAt(input: GroundInput, cx: number, cy: number): Ground {
+  const o = input.overrides.get(`${cx},${cy}`);
+  if (o) return o;
+  if (cx < 0 || cy < 0 || cx >= MAP_SIZE || cy >= MAP_SIZE) return 'forest';
+  const a = input.area;
+  if (cx >= a.x && cy >= a.y && cx < a.x + a.w && cy < a.y + a.h) return 'grass';
+  return 'wild';
+}
+
+export function lowNoise(x: number, y: number, seed: number, scale: number): number {
+  const fx = x / scale, fy = y / scale;
+  const ix = Math.floor(fx), iy = Math.floor(fy);
+  const tx = fx - ix, ty = fy - iy;
+  const sx = tx * tx * (3 - 2 * tx), sy = ty * ty * (3 - 2 * ty);
+  const a = hash3(ix, iy, 0, seed), b = hash3(ix + 1, iy, 0, seed);
+  const c = hash3(ix, iy + 1, 0, seed), d = hash3(ix + 1, iy + 1, 0, seed);
+  return a + (b - a) * sx + (c - a) * sy + (a - b - c + d) * sx * sy;
+}
+
+const q = (h: number) => Math.round(h / STEP) * STEP;
+const smooth = (e0: number, e1: number, x: number) => { const t = Math.min(1, Math.max(0, (x - e0) / (e1 - e0))); return t * t * (3 - 2 * t); };
+
+/**
+ * Collinette: una ogni ~9 celle (griglia con jitter, 65% di probabilità),
+ * profilo morbido (1 − d²)². Dipende solo dalle coordinate di mappa, così
+ * allargando il recinto le colline esistenti restano dove sono.
+ */
+function hillField(seed: number, x: number, y: number): number {
+  const G = 9;
+  let h = 0;
+  const gx = Math.floor(x / G), gy = Math.floor(y / G);
+  for (let j = gy - 1; j <= gy + 1; j++) {
+    for (let i = gx - 1; i <= gx + 1; i++) {
+      if (hash3(i, j, 1, seed) < 0.35) continue;
+      const hx = (i + 0.2 + hash3(i, j, 2, seed) * 0.6) * G, hy = (j + 0.2 + hash3(i, j, 3, seed) * 0.6) * G;
+      const rad = 4 + hash3(i, j, 4, seed) * 3.5;
+      const amp = 0.7 + hash3(i, j, 5, seed) * 1.0;
+      const d = Math.hypot(x - hx, y - hy) / rad;
+      if (d < 1) { const k = 1 - d * d; h += amp * k * k; }
+    }
+  }
+  return h;
+}
+
+/** Recinto piatto: niente collinette dentro al cimitero (si legge meglio e le ombre restano pulite); il bosco attorno le tiene. */
+let flatInside = true;
+export function setFlatTerrain(on: boolean) { flatInside = on; }
+
+/** Altezza naturale (senza pad) di una cella, in unità mondo. */
+export function naturalHeight(input: GroundInput, cx: number, cy: number): number {
+  const g = groundAt(input, cx, cy);
+  if (g === 'fence') return 0;
+  if (g === 'mud') return -STEP;
+  if (flatInside) {
+    const a0 = input.area;
+    if (cx >= a0.x - 1 && cy >= a0.y - 1 && cx <= a0.x + a0.w && cy <= a0.y + a0.h) return 0;
+  }
+  const a = input.area;
+  const inside = cx >= a.x && cy >= a.y && cx < a.x + a.w && cy < a.y + a.h;
+  if (inside) {
+    const dIn = Math.min(cx - a.x, a.x + a.w - 1 - cx, cy - a.y, a.y + a.h - 1 - cy);
+    const fade = smooth(0, 3.5, dIn);
+    const h = hillField(input.seed, cx + 0.5, cy + 0.5) + (lowNoise(cx, cy, input.seed + 3, 7) - 0.5) * 0.35;
+    return q(Math.max(-0.1, h * fade));
+  }
+  const dOut = Math.max(a.x - cx, cx - (a.x + a.w - 1), a.y - cy, cy - (a.y + a.h - 1)) - 1;
+  const far = Math.min(1, Math.max(0, dOut) / 6);
+  let h = far * 0.45 + hillField(input.seed + 7, cx + 0.5, cy + 0.5) * far * 1.1 + (lowNoise(cx, cy, input.seed, 5) - 0.5) * 0.2 * far;
+  if (g === 'dirt' || g === 'path') h *= 0.35;
+  return q(h);
+}
+
+/** Altezza di una cella: il pad dell'oggetto che la occupa, o quella naturale. */
+export function cellHeight(input: GroundInput, cx: number, cy: number): number {
+  return input.pads.get(`${cx},${cy}`) ?? naturalHeight(input, cx, cy);
+}
+
+/** Altezza di un vertice d'angolo (gx,gy): media dei pad se ce ne sono, altrimenti delle celle. */
+export function cornerHeight(input: GroundInput, gx: number, gy: number): number {
+  let ps = 0, pn = 0, ns = 0;
+  for (const [cx, cy] of [[gx - 1, gy - 1], [gx, gy - 1], [gx - 1, gy], [gx, gy]]) {
+    const p = input.pads.get(`${cx},${cy}`);
+    if (p !== undefined) { ps += p; pn++; } else ns += naturalHeight(input, cx, cy);
+  }
+  return pn ? ps / pn : ns / 4;
+}
+
+/** Spostamento orizzontale irregolare dei vertici d'angolo del terreno low-poly. */
+function cornerJitter(input: GroundInput, gx: number, gy: number): [number, number] {
+  return [(hash3(gx, gy, 41, input.seed) - 0.5) * 0.16, (hash3(gx, gy, 43, input.seed) - 0.5) * 0.16];
+}
+
+/**
+ * Quota del suolo in un punto del mondo (per personaggi, alberi, fuochi
+ * fatui): segue i triangoli della superficie (ventaglio attorno al centro
+ * della cella).
+ */
+export function surfaceHeight(input: GroundInput, wx: number, wz: number): number {
+  const half = MAP_SIZE / 2;
+  const u = wx + half, v = wz + half;
+  const cx = Math.floor(u), cy = Math.floor(v);
+  const fx = u - cx - 0.5, fy = v - cy - 0.5;
+  const hc = cellHeight(input, cx, cy);
+  let a: [number, number, number], b: [number, number, number];
+  if (Math.abs(fx) >= Math.abs(fy)) {
+    const gx = fx > 0 ? cx + 1 : cx;
+    a = [gx - cx - 0.5, cy - cy - 0.5, cornerHeight(input, gx, cy)];
+    b = [gx - cx - 0.5, 0.5, cornerHeight(input, gx, cy + 1)];
+  } else {
+    const gy = fy > 0 ? cy + 1 : cy;
+    a = [-0.5, gy - cy - 0.5, cornerHeight(input, cx, gy)];
+    b = [0.5, gy - cy - 0.5, cornerHeight(input, cx + 1, gy)];
+  }
+  // interpolazione baricentrica nel triangolo (centro, a, b)
+  const det = a[0] * b[1] - b[0] * a[1];
+  if (Math.abs(det) < 1e-6) return hc;
+  const la = (fx * b[1] - b[0] * fy) / det, lb = (a[0] * fy - fx * a[1]) / det;
+  return hc + la * (a[2] - hc) + lb * (b[2] - hc);
+}
+
+const C = (hex: string) => new THREE.Color(hex);
+// palette "Stylized Gothic Low-Poly"
+const LP = {
+  grassA: C('#354839'), grassB: C('#3f5536'), moss: C('#61745a'), dry: C('#8d805c'), soil: C('#534238'),
+  soilDark: C('#3f3129'), wildA: C('#2f3b2c'), wildB: C('#3c3d2b'), leaf: C('#6a4a2c'), mud: C('#3a2f27'), stone: C('#4a4a49'),
+  // terra battuta dei sentieri: più chiara e calda del prato, si legge anche di notte
+  trail: C('#86643f'), trailDark: C('#6c4f33'),
+};
+
+export interface ChunkMesh {
+  geometry: THREE.BufferGeometry;
+}
+
+/**
+ * Colore di una cella del terreno low-poly. Le variazioni sono a bassa
+ * frequenza (macchie ampie, non triangolo per triangolo): il suolo deve
+ * restare calmo e leggibile, il dettaglio lo danno erba, sassi e oggetti.
+ */
+function lowpolyCellColor(input: GroundInput, cx: number, cy: number, out: THREE.Color): THREE.Color {
+  const g = groundAt(input, cx, cy);
+  const n1 = lowNoise(cx, cy, input.seed + 5, 9);
+  const n2 = lowNoise(cx, cy, input.seed + 11, 13);
+  const patch = lowNoise(cx, cy, input.seed + 21, 6);
+  switch (g) {
+    case 'path': out.copy(LP.soil).lerp(LP.soilDark, 0.35 + n1 * 0.3); break;
+    case 'dirt': out.copy(LP.trail).lerp(LP.trailDark, n1 * 0.7); break;
+    case 'mud': out.copy(LP.mud); break;
+    case 'plot': out.copy(LP.soil); break;
+    case 'fence': out.copy(LP.grassA).lerp(LP.soilDark, 0.35); break;
+    case 'forest':
+    case 'wild':
+      out.copy(LP.wildA).lerp(LP.wildB, n1);
+      if (n2 > 0.55) out.lerp(LP.dry, (n2 - 0.55) * 0.8);
+      if (patch > 0.72) out.lerp(LP.leaf, (patch - 0.72) * 1.2);
+      break;
+    default:
+      out.copy(LP.grassA).lerp(LP.grassB, n1);
+      if (n2 > 0.62) out.lerp(LP.dry, (n2 - 0.62) * 0.8);
+      if (n2 < 0.3) out.lerp(LP.moss, (0.3 - n2) * 0.7);
+      if (patch > 0.8) out.lerp(LP.soil, Math.min(0.5, (patch - 0.8) * 2.5));
+  }
+  return out;
+}
+
+/**
+ * Chunk low-poly: griglia indicizzata (angoli + centri di cella, 4 triangoli
+ * per cella) con normali e colori per vertice: il terreno è morbido e
+ * uniforme, i passaggi erba→terra dei sentieri sfumano su mezza cella.
+ * Le normali sono calcolate dalla funzione di altezza, quindi identiche ai
+ * bordi tra chunk (niente cuciture).
+ */
+function buildLowpolyChunk(input: GroundInput, cx0: number, cy0: number): ChunkMesh {
+  const half = MAP_SIZE / 2;
+  const n = CHUNK;
+  const pos: number[] = [], nor: number[] = [], col: number[] = [], ind: number[] = [];
+  const c = new THREE.Color(), acc = new THREE.Color();
+  const cellCol = new Map<string, THREE.Color>();
+  const colorOf = (cx: number, cy: number) => {
+    const k = `${cx},${cy}`;
+    let v = cellCol.get(k);
+    if (!v) cellCol.set(k, (v = lowpolyCellColor(input, cx, cy, new THREE.Color())));
+    return v;
+  };
+  const normal = (h: (dx: number, dy: number) => number, step: number): [number, number, number] => {
+    const dx = (h(1, 0) - h(-1, 0)) / (2 * step), dz = (h(0, 1) - h(0, -1)) / (2 * step);
+    const l = Math.hypot(dx, 1, dz);
+    return [-dx / l, 1 / l, -dz / l];
+  };
+  // angoli: (n+1)²
+  for (let j = 0; j <= n; j++) {
+    for (let i = 0; i <= n; i++) {
+      const gx = cx0 + i, gy = cy0 + j;
+      const [jx, jz] = cornerJitter(input, gx, gy);
+      pos.push(gx - half + jx, cornerHeight(input, gx, gy), gy - half + jz);
+      nor.push(...normal((dx, dy) => cornerHeight(input, gx + dx, gy + dy), 1));
+      acc.setRGB(0, 0, 0);
+      for (const [x, y] of [[gx - 1, gy - 1], [gx, gy - 1], [gx - 1, gy], [gx, gy]]) acc.add(colorOf(x, y));
+      acc.multiplyScalar(0.25);
+      col.push(acc.r, acc.g, acc.b);
+    }
+  }
+  // centri: n²
+  const base = (n + 1) * (n + 1);
+  for (let j = 0; j < n; j++) {
+    for (let i = 0; i < n; i++) {
+      const cx = cx0 + i, cy = cy0 + j;
+      pos.push(cx + 0.5 - half, cellHeight(input, cx, cy), cy + 0.5 - half);
+      const c00 = cornerHeight(input, cx, cy), c10 = cornerHeight(input, cx + 1, cy), c01 = cornerHeight(input, cx, cy + 1), c11 = cornerHeight(input, cx + 1, cy + 1);
+      const ddx = (c10 + c11 - c00 - c01) / 2, ddz = (c01 + c11 - c00 - c10) / 2, l = Math.hypot(ddx, 1, ddz);
+      nor.push(-ddx / l, 1 / l, -ddz / l);
+      c.copy(colorOf(cx, cy));
+      col.push(c.r, c.g, c.b);
+    }
+  }
+  const k = (i: number, j: number) => j * (n + 1) + i;
+  for (let j = 0; j < n; j++) {
+    for (let i = 0; i < n; i++) {
+      const ce = base + j * n + i;
+      const k00 = k(i, j), k10 = k(i + 1, j), k11 = k(i + 1, j + 1), k01 = k(i, j + 1);
+      ind.push(ce, k10, k00, ce, k11, k10, ce, k01, k11, ce, k00, k01);
+    }
+  }
+  const g = new THREE.BufferGeometry();
+  g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+  g.setAttribute('normal', new THREE.Float32BufferAttribute(nor, 3));
+  g.setAttribute('color', new THREE.Float32BufferAttribute(col, 3));
+  g.setIndex(ind);
+  g.computeBoundingSphere();
+  return { geometry: g };
+}
+
+/** Costruisce il chunk che parte dalla cella (cx0, cy0). */
+export function buildChunk(input: GroundInput, cx0: number, cy0: number): ChunkMesh {
+  return buildLowpolyChunk(input, cx0, cy0);
+}
+
+/** Altezza del suolo (unità mondo) di una cella logica. */
+export function groundHeightAtCell(input: GroundInput, cx: number, cy: number): number {
+  return cellHeight(input, cx, cy);
+}
+
+export function groundType(input: GroundInput, cx: number, cy: number): Ground {
+  return groundAt(input, cx, cy);
+}

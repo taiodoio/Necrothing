@@ -1,0 +1,344 @@
+/* Interfaccia low-poly: pannelli con un unico arrotondamento e un'ombra morbida,
+   niente contorni; Grenze Gotisch per i titoli e Nunito per il
+   testo; icone low-poly (ui/lpIcons.ts); solo tema scuro. */
+
+.ui-next {
+  color-scheme: dark;
+  --r: 16px; /* l'arrotondamento di tutto: pannelli, pulsanti, schede */
+  --r-s: 12px; /* elementi piccoli dentro un pannello (miniature, schede, campi) */
+  --hud: 60px; /* l'altezza di tutto ciò che sta sopra la scena: riquadri e pulsanti */
+  --hud-top: 64px; /* i riquadri in alto: Custode (coi fuochi fatui) e ora/meteo */
+  --panel: #3a4150;
+  --panel-2: #454d5e;
+  --input: #2f3542;
+  --thumb: #2f3542;
+  --track: #262b35;
+  --sheet: #2b303a; /* il foglio che sale dal basso (dettaglio, pulsanti in fondo) */
+  --paper: #f3ecdf;
+  --muted: #bcb5a8;
+  --gold-bright: #ffe2a8; /* titoli e accenti */
+  --gold: #c99340;
+  --primary: #f0c46e;
+  --primary-deep: #c99340;
+  --on-primary: #2f230f;
+  --spectral: #9ff0d6;
+  --danger: #ff9a86;
+  --line: rgba(255, 255, 255, 0.07);
+  --edge: rgba(255, 255, 255, 0.14);
+  --shadow: 0 4px 14px rgba(0, 0, 0, 0.38);
+  --pixel: var(--locale-sans, "Nunito", system-ui, sans-serif);
+  --gothic: var(--locale-serif, "Grenze Gotisch", serif);
+  font-weight: 600;
+}
+.ui-next, .ui-next body { font-family: var(--pixel); }
+.ui-next * { text-shadow: none !important; }
+.ui-next .pxi { image-rendering: auto; }
+.ui-next b, .ui-next strong { font-weight: 800; }
+
+/* ── Pannelli e pulsanti: tinta unita, angoli arrotondati, ombra morbida ── */
+
+.ui-next :where(.player-chip, .clock-block, .icon-btn, .slots, .slot, .ctx-actions button, .drawer, .tab, .card, .chip,
+  .field input, .field textarea, .field select, .qty button, .big-btn, .pill, .ach, .toast, .tutorial, .edit-banner,
+  .seg, .photo-grid button, .photo-view, .fab, .debug, .fatal, .hero img, .kv-box, .dialog, .area-banner) {
+  border: 0; border-radius: var(--r); background: var(--panel); filter: none;
+  box-shadow: var(--shadow), inset 0 1px 0 var(--line);
+}
+/* dentro a un pannello: un tono più chiaro, senza ombra */
+.ui-next :where(.tab, .card, .chip, .qty button, .pill, .big-btn.ghost, .photo-grid button, .seg, .ach, .field input, .field textarea, .field select) {
+  background: var(--panel-2); box-shadow: none; border-radius: var(--r-s);
+}
+.ui-next :is(.field input, .field textarea, .field select) { background: var(--input); box-shadow: inset 0 0 0 1.5px var(--edge); color: var(--paper); font-weight: 600; }
+.ui-next :is(.field input, .field textarea):focus { box-shadow: inset 0 0 0 2px var(--primary); }
+/* azioni principali: oro, con un filo di spessore sotto */
+.ui-next :is(.big-btn:not(.ghost):not(.danger), .pill.primary, .tab.active, .chip.active, .ctx-actions button.primary, .icon-btn.active, .seg button.active) {
+  background: var(--primary); color: var(--on-primary); box-shadow: 0 3px 0 var(--primary-deep), 0 4px 10px rgba(0, 0, 0, 0.18);
+}
+.ui-next .big-btn.danger, .ui-next .pill.danger, .ui-next .ctx-actions button.danger { color: var(--danger); background: var(--panel-2); box-shadow: none; }
+.ui-next .card.selected, .ui-next .ach.got { box-shadow: 0 0 0 2.5px var(--primary); }
+.ui-next .toast.ach { color: var(--gold-bright); box-shadow: var(--shadow), 0 0 0 2px var(--primary); }
+.ui-next :is(button.slot, .icon-btn, .ctx-actions button, .big-btn, .pill, .card, .chip, .tab, .fab):active { transform: translateY(1px); }
+
+/* titoli */
+.ui-next :is(.chip-body strong, .ctx-title, .drawer-head h2, .hero h3, .an h3, .dialog h3, .section-title, .tutorial b, .filter-switch b) {
+  font-family: var(--gothic); font-weight: 700; color: var(--gold-bright); letter-spacing: 0;
+}
+
+/* ── HUD ──────────────────────────────────────────────────────────── */
+.ui-next .hud-top { align-items: stretch; }
+/* riquadro del Custode compatto (64 px): nome; sotto, barra del rango e fuochi fatui; il rango sul ritratto.
+   Il riquadro prende tutto lo spazio libero; se manca, cede prima la barra, poi il nome (coi puntini), mai il saldo */
+/* largo quanto serve al nome: almeno metà dello spazio libero, al più tutto (quello a destra dell'ora resta vuoto) */
+.ui-next .player-chip { --room: calc(100vw - 20px - var(--safe-l) - var(--safe-r) - var(--hud-top) - 8px);
+  position: relative; flex: 0 1 auto; width: auto; min-width: calc(var(--room) * 0.5); max-width: var(--room); padding: 6px 16px 6px 6px; height: var(--hud-top); min-height: 0; gap: 10px; }
+.ui-next .chip-avatar { flex: none; width: 52px; height: 100%; border-radius: var(--r-s); background: var(--thumb); box-shadow: none; overflow: hidden; }
+.ui-next .chip-avatar img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.ui-next .chip-body { flex: 1 1 auto; overflow: hidden; min-width: 0; gap: 6px; }
+.ui-next .chip-body strong { font-size: 19px; line-height: 1; }
+.ui-next #hud-rank { display: none; }
+.ui-next .xp-row { display: flex; align-items: center; gap: 10px; min-width: 0; }
+.ui-next .xp-bar { flex: 1 1 auto; min-width: 28px; height: 7px; border: 0; border-radius: 4px; background: var(--track); box-shadow: none; overflow: hidden; }
+.ui-next .xp-bar i { background: var(--primary); border-radius: 4px; transition: width 0.4s ease; }
+.ui-next .chip-body .wisp-count { flex: none; height: auto; margin: 0; padding: 0; border: 0; background: none !important; box-shadow: none;
+  color: var(--spectral); font-weight: 800; font-size: 16px; line-height: 1; gap: 5px; font-variant-numeric: tabular-nums; white-space: nowrap; text-shadow: none; }
+.ui-next .wisp-icon { --s: 18px; filter: none; animation: none; }
+.ui-next .rank-badge { position: absolute; z-index: 1; left: 44px; bottom: 2px; min-width: 20px; height: 20px; padding: 0 5px; border-radius: 10px;
+  background: var(--primary); color: #2a1d10; font: 800 12px/20px var(--pixel); text-align: center; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.4); pointer-events: none; }
+/* ora e cielo: l'ora grande come il saldo, sotto un'icona sola per fase e meteo; riquadro quadrato come i pulsanti */
+.ui-next .hud-right { align-items: stretch; }
+.ui-next .clock-block { height: var(--hud-top); min-width: var(--hud-top); min-height: 0; padding: 6px 10px; gap: 4px; align-content: center; justify-items: center; }
+.ui-next .clock-block strong { font: 800 16px/1 var(--pixel); letter-spacing: 0; }
+.ui-next .clock-block small { display: grid; place-items: center; max-width: none; }
+.ui-next .clock-block small .pxi { --s: 24px; }
+.ui-next .icon-btn { width: var(--hud); height: var(--hud); }
+.ui-next .icon-btn.small { width: 44px; height: 44px; border-radius: var(--r-s); background: var(--panel-2); box-shadow: none; }
+/* quello che compare in alto al centro sta sotto l'HUD */
+.ui-next :is(.edit-banner, .area-banner, .toasts, .debug) { top: calc(var(--hud-top) + 18px + var(--safe-t)); }
+
+/* ── Menù di gioco verticale ──────────────────────────────────────── */
+.ui-next .fab { width: var(--hud); height: var(--hud); }
+/* Seppellisci sopra il menù; col menù aperto lascia il posto alle voci */
+.ui-next .bury-fab { margin-bottom: 2px; pointer-events: auto; } /* 6 px del menù + 2: lo stesso passo (8 px) dei pulsanti a destra */
+/* il menù di gioco sta sopra a tutto ciò che è sulla scena (menù contestuali degli oggetti, tutorial); sotto i pannelli */
+.ui-next .bubble { z-index: 8; }
+.ui-next .bubble.open .bury-fab { display: none; }
+.ui-next .slots { padding: 6px; gap: 2px; transition: transform 0.16s ease, opacity 0.16s ease; }
+.ui-next .slot { background: none; box-shadow: none; border-radius: var(--r-s); min-width: 170px; height: 46px; padding: 0 18px 0 6px; }
+.ui-next .slot small { font: 700 16px var(--pixel); color: var(--paper); }
+.ui-next .slot.active { background: var(--panel-2); }
+.ui-next .slot.active small { color: var(--gold-bright); }
+
+/* ── Menù contestuale: pulsanti a icona che galleggiano sull'oggetto ── */
+.ui-next .ctx { background: none; box-shadow: none; border: 0; padding: 0; filter: none; }
+.ui-next .ctx::after { display: none; }
+.ui-next .ctx-actions { gap: 8px; }
+.ui-next .ctx-actions button { width: 56px; height: 56px; min-height: 56px; border-radius: var(--r); background: var(--panel); box-shadow: var(--shadow), inset 0 1px 0 var(--line); }
+.ui-next .ctx-actions button.primary { background: var(--primary); box-shadow: 0 3px 0 var(--primary-deep), 0 4px 10px rgba(0, 0, 0, 0.18); }
+.ui-next .ctx-actions button.danger { background: var(--panel); }
+/* elementi che il vecchio stile prende per tag (regola più specifica): arrotondati anche loro */
+.ui-next :is(.photo-grid button, .hero img, .photo-view) { border-radius: var(--r); }
+.ui-next .ctx-actions button em { color: var(--spectral); font-weight: 800; }
+
+/* ── Drawer ───────────────────────────────────────────────────────── */
+.ui-next .drawer { border-radius: var(--r) var(--r) 0 0; animation-timing-function: ease-out; }
+.ui-next .drawer-head { border-bottom: 1px solid var(--line); padding: 10px 12px 8px; }
+.ui-next .drawer-head h2 { font-size: 30px; line-height: 1; }
+.ui-next .drawer-body { padding: 12px 12px 18px; }
+.ui-next .drawer-foot { background: var(--sheet); border-top: 0; border-radius: var(--r) var(--r) 0 0; box-shadow: 0 -6px 18px rgba(0, 0, 0, 0.22); padding: 12px 14px calc(14px + var(--safe-b)); gap: 10px; }
+.ui-next .scrim { background: rgba(8, 10, 14, 0.4); }
+.ui-next .tabs { gap: 6px; padding-bottom: 10px; }
+.ui-next .tab { padding: 4px 12px; min-height: 38px; font-weight: 700; display: inline-flex; align-items: center; gap: 6px; }
+.ui-next .grid { grid-template-columns: repeat(auto-fill, minmax(104px, 1fr)); gap: 8px; }
+.ui-next .card { padding: 8px 6px; gap: 4px; min-height: 0; }
+.ui-next .card img { width: 74px; height: 66px; object-fit: contain; border-radius: var(--r-s); background: var(--thumb); }
+.ui-next .card b { font-size: 13px; font-weight: 800; }
+.ui-next .card .price { color: var(--spectral); font-weight: 800; }
+.ui-next .card .badge { top: 4px; right: 4px; border-radius: 8px; background: var(--primary); color: var(--on-primary); box-shadow: none; font-weight: 800; }
+.ui-next .card .lock { top: 6px; left: 6px; }
+.ui-next .muted { color: var(--muted); }
+.ui-next .field label { letter-spacing: 0.02em; font-weight: 700; }
+.ui-next .steps i { border-radius: 3px; background: var(--track); box-shadow: none; }
+.ui-next .steps i.on { background: var(--primary); }
+.ui-next .hero img { border-radius: var(--r); background: var(--thumb); box-shadow: none; }
+.ui-next .portrait > .pic { border: 0; border-radius: var(--r); padding: 0; background: var(--thumb); box-shadow: var(--shadow); filter: none; }
+.ui-next .swipe-dots i { border-radius: 4px; background: var(--track); box-shadow: none; }
+.ui-next .swipe-dots i.on { background: var(--primary); }
+.ui-next .qty button { width: 46px; height: 46px; border-radius: var(--r-s); }
+.ui-next .field :is(input, textarea, select) { border-radius: var(--r-s); }
+.ui-next .big-btn { min-height: 52px; font-weight: 800; }
+.ui-next .big-btn.ghost { color: var(--paper); }
+.ui-next .setting { border-bottom: 1px solid var(--line); }
+.ui-next .language-setting { display: grid; gap: 8px; align-items: stretch; margin: 16px 0 12px; padding-bottom: 16px; border-bottom: 1px solid var(--line); }
+.ui-next .language-setting .section-title { margin: 0; }
+.ui-next .language-control { position: relative; min-width: 0; }
+.ui-next .language-trigger { width: 100%; min-height: 48px; padding: 0 14px; display: flex; align-items: center; justify-content: space-between; gap: 12px; border: 0; border-radius: var(--r-s); color: var(--paper); background: var(--input); box-shadow: inset 0 0 0 1.5px var(--edge); font: 700 16px var(--pixel); text-align: left; cursor: pointer; }
+.ui-next .language-trigger:focus-visible, .ui-next .language-option:focus-visible { outline: 3px solid var(--primary); outline-offset: 2px; }
+.ui-next .language-chevron { width: 9px; height: 9px; flex: none; margin: 0 2px 0 12px; border-right: 2px solid var(--gold-bright); border-bottom: 2px solid var(--gold-bright); rotate: 45deg; }
+.ui-next .language-options { position: absolute; z-index: 120; left: 0; right: 0; top: calc(100% + 8px); overflow-y: auto; padding: 5px; border-radius: var(--r); background: var(--sheet); box-shadow: var(--shadow), inset 0 1px 0 var(--line); }
+.ui-next .language-options[hidden] { display: none; }
+.ui-next .language-options.opens-up { top: auto; bottom: calc(100% + 8px); }
+.ui-next .language-option { min-height: 48px; padding: 8px 12px; display: flex; align-items: center; justify-content: space-between; gap: 12px; border-radius: var(--r-s); color: var(--paper); font: 700 15px/1.25 var(--pixel); cursor: pointer; }
+.ui-next .language-option:hover { background: var(--panel); }
+.ui-next .language-option.selected { color: var(--gold-bright); box-shadow: inset 0 0 0 2.5px var(--primary); }
+.ui-next .language-check { color: var(--primary); font-size: 18px; }
+.ui-next .info-brand { margin: 2px 0 12px; }
+.ui-next .info-brand-mark { position: relative; width: fit-content; max-width: 100%; margin-inline: auto; }
+.ui-next .info-logo { display: block; width: min(224px, 66vw); max-width: 100%; height: auto; object-fit: contain; }
+.ui-next .beta-badge { position: absolute; right: -9px; bottom: -9px; display: inline-flex; margin: 0; padding: 4px 10px; border: 1px solid rgba(240, 196, 110, 0.24); border-radius: 999px; background: #393143; color: var(--gold-bright); font-size: 11px; font-weight: 900; letter-spacing: .08em; text-transform: uppercase; box-shadow: 0 3px 10px rgba(0, 0, 0, 0.32); }
+.ui-next .info-about-title { margin: 0; color: var(--paper); font: 700 21px/1.2 var(--gothic); }
+.ui-next .info-actions { display: grid; gap: 8px; }
+.ui-next .info-contact { display: grid; gap: 8px; }
+.ui-next .info-contact .big-btn { text-align: center; text-decoration: none; }
+.ui-next .version-label { font-variant-numeric: tabular-nums; }
+.ui-next .info-modal { display: grid; gap: 12px; }
+.ui-next .info-modal h2, .ui-next .info-modal h3 { margin: 0; color: var(--gold-bright); font: 700 24px/1.1 var(--gothic); }
+.ui-next .info-modal p { margin: 0; line-height: 1.5; }
+.ui-next .license-list { display: grid; gap: 8px; max-height: min(48vh, 420px); overflow: auto; }
+.ui-next .license-item { padding: 10px 12px; border-radius: var(--r-s); background: var(--panel); }
+.ui-next .license-item summary { cursor: pointer; font-size: 13px; font-weight: 800; overflow-wrap: anywhere; }
+.ui-next .license-item pre { max-height: 220px; overflow: auto; white-space: pre-wrap; overflow-wrap: anywhere; color: var(--muted); font: 11px/1.45 ui-monospace, monospace; }
+.ui-next .setting input[type="checkbox"] { width: 30px; height: 30px; border-radius: 9px; background: var(--input); box-shadow: inset 0 0 0 1.5px var(--edge); }
+.ui-next .setting input[type="checkbox"]:checked { background: var(--primary) content-box; padding: 7px; box-shadow: inset 0 0 0 1.5px var(--edge), inset 0 0 0 7px var(--input); }
+.ui-next .terrain { border-bottom: 1px solid var(--line); }
+.ui-next .terrain-slider::-webkit-slider-runnable-track { border-radius: 5px; box-shadow: none; background: linear-gradient(to right, var(--primary) 0 var(--open), var(--track) var(--open) 100%); }
+.ui-next .terrain-slider::-moz-range-track { border-radius: 5px; box-shadow: none; background: linear-gradient(to right, var(--primary) 0 var(--open), var(--track) var(--open) 100%); }
+.ui-next .terrain-slider::-webkit-slider-thumb { border-radius: 8px; background: var(--primary); box-shadow: 0 2px 0 var(--primary-deep); }
+.ui-next .terrain-slider::-moz-range-thumb { border-radius: 8px; background: var(--primary); box-shadow: 0 2px 0 var(--primary-deep); }
+.ui-next .terrain-ticks span.current { color: var(--gold-bright); }
+.ui-next .seg { padding: 3px; gap: 3px; display: inline-flex; }
+.ui-next .seg button { border: 0; border-radius: 9px; min-height: 34px; padding: 3px 10px; font-weight: 700; }
+.ui-next .ach .bar { border-radius: 3px; background: var(--track); box-shadow: none; }
+.ui-next .ach .bar i { background: var(--primary); border-radius: 3px; }
+.ui-next .timeline li { color: var(--paper); }
+.ui-next .hero .epitaph { color: var(--paper); }
+.ui-next .photo-rect i { border-color: var(--primary); }
+.ui-next .floater { text-shadow: 0 1px 3px rgba(0, 0, 0, 0.7) !important; }
+.ui-next .look-stage { top: -12px; margin: -12px -12px 8px; background: var(--panel); border-bottom: 1px solid var(--line); box-shadow: none; } /* attaccato al bordo: sopra il Custode non passa niente */
+.ui-next .look-tile { border: 0; border-radius: var(--r-s); background: var(--panel-2); }
+.ui-next .look-tile.active { background: var(--panel-2); color: var(--gold-bright); box-shadow: 0 0 0 2.5px var(--primary); }
+.ui-next .look-thumb { border-radius: 10px; background: var(--thumb); overflow: hidden; }
+.ui-next .swatch { border: 0; border-radius: 10px; box-shadow: inset 0 0 0 1.5px var(--edge); }
+.ui-next .swatch.active { box-shadow: 0 0 0 2.5px var(--primary); }
+.ui-next .dialog-scrim { background: rgba(8, 10, 14, 0.74); } /* scuro: il dialogo si legge bene sopra la scheda */
+.ui-next .postcard-view { border-radius: var(--r-s); box-shadow: var(--shadow); }
+
+/* ── Bottega: l'acquisto in un modale al centro ───────────────────── */
+.ui-next .dialog.modal { position: relative; width: min(92vw, 400px); max-height: calc(100dvh - 32px - var(--safe-b)); overflow-y: auto; padding: 16px; }
+/* sotto il modale la scena e il pannello si leggono appena: l'attenzione resta sull'acquisto */
+.ui-next .dialog-scrim.modal-scrim { background: rgba(6, 7, 10, 0.78); }
+.ui-next .modal-close { position: absolute; z-index: 1; top: 12px; right: 12px; }
+/* titolo del modale accanto alla X */
+.ui-next .dialog.modal .modal-title { display: flex; align-items: center; min-height: 40px; margin: 0 52px 12px 0; font: 700 26px/1.05 var(--gothic); color: var(--gold-bright); }
+.ui-next .postcard-dialog { display: grid; gap: 14px; }
+.ui-next .postcard-dialog .postcard-view { width: 100%; max-width: none; max-height: calc(100dvh - 200px - var(--safe-b)); object-fit: contain; }
+.ui-next .dialog.modal .muted { color: var(--muted); font-size: 14px; }
+.ui-next .dialog.modal :is(.big-btn.ghost, .qty button) { background: var(--input); }
+.ui-next .wisp-pill { background: var(--panel); box-shadow: inset 0 1px 0 var(--line); }
+.ui-next .shop-detail { position: relative; display: grid; gap: 10px; }
+/* nel modale la pastiglia è più scura del fondo, col bordo verde acqua: si vede subito */
+.ui-next .shop-detail > .wisp-pill { position: absolute; top: 0; left: 0; background: rgba(0, 0, 0, 0.32); box-shadow: inset 0 0 0 1.5px color-mix(in srgb, var(--spectral) 45%, transparent); }
+/* le frasi sotto l'immagine centrate come nome e categoria (le righe dei requisiti restano allineate) */
+.ui-next .shop-detail > p { text-align: center; }
+.ui-next .shop-detail-top { display: grid; justify-items: center; gap: 4px; text-align: center; }
+.ui-next .shop-detail-top img { width: 132px; height: 132px; margin-bottom: 6px; object-fit: contain; border-radius: var(--r); background: var(--panel); }
+.ui-next .shop-detail-top h3 { margin: 0; font: 700 26px/1.05 var(--gothic); color: var(--gold-bright); }
+.ui-next .dialog.modal .shop-detail-top .muted { margin: 0; font-size: 13px; }
+.ui-next .dialog.modal .after-buy { margin: -2px 0 0; font-size: 12px; text-align: center; }
+.ui-next .drawer-foot { position: relative; }
+.ui-next .drawer-foot :is(.big-btn.ghost, .qty button) { background: var(--panel); }
+
+/* ── Strumento a traccia ──────────────────────────────────────────── */
+.ui-next .trace-bar b { display: flex; align-items: center; gap: 6px; }
+.ui-next .trace-count { margin-left: auto; font: 800 15px var(--pixel); color: var(--spectral); }
+.ui-next .trace-bar .warn { color: var(--danger); }
+.ui-next .trace-bar > .pill { justify-self: start; display: inline-flex; align-items: center; gap: 5px; color: var(--spectral); }
+.ui-next .trace-bar .row { display: flex; gap: 8px; }
+.ui-next .trace-bar .row .pill { flex: 1; white-space: nowrap; }
+
+/* ── Testata animata della Bottega ────────────────────────────────── */
+.ui-next .drawer.with-hero { overflow: hidden; }
+.ui-next .drawer-hero { position: relative; flex: none; height: 168px; background: #1b1618 linear-gradient(#2a2126, #1b1618); }
+.ui-next .drawer-hero canvas { display: block; width: 100%; height: 100%; }
+/* bordi più scuri e appena sfocati: la luce viene dalle lanterne e dalle candele al centro */
+.ui-next .shop-hero::before, .ui-next .shop-hero::after { content: ''; position: absolute; inset: 0; pointer-events: none; }
+.ui-next .shop-hero::before { -webkit-backdrop-filter: blur(2.5px); backdrop-filter: blur(2.5px);
+  -webkit-mask-image: radial-gradient(ellipse 70% 85% at 55% 55%, transparent 55%, #000 100%); mask-image: radial-gradient(ellipse 70% 85% at 55% 55%, transparent 55%, #000 100%); }
+.ui-next .shop-hero::after { background: radial-gradient(ellipse 75% 90% at 55% 58%, rgba(12, 9, 11, 0) 45%, rgba(12, 9, 11, 0.7) 100%); }
+/* titolo e chiusura sopra l'immagine, con una sfumatura per leggerli */
+.ui-next .drawer.with-hero .drawer-head { position: absolute; z-index: 1; top: 0; left: 0; right: 0; height: 168px; align-items: flex-start; padding: 12px 14px; border: 0;
+  background: linear-gradient(to bottom, rgba(14, 10, 12, 0.88), rgba(14, 10, 12, 0.55) 30%, rgba(14, 10, 12, 0) 62%); pointer-events: none; }
+.ui-next .drawer.with-hero .drawer-head > * { pointer-events: auto; }
+.ui-next .drawer.with-hero .drawer-head h2 { color: #ffe2a8; line-height: 44px; text-shadow: 0 2px 8px rgba(0, 0, 0, 0.5) !important; }
+.ui-next .drawer.with-hero .drawer-extra { margin: 5px 54px 0 auto; }
+.ui-next .drawer.with-hero .drawer-extra .wisp-pill { background: rgba(16, 12, 14, 0.82); box-shadow: inset 0 0 0 1.5px color-mix(in srgb, var(--spectral) 40%, transparent); backdrop-filter: blur(4px); }
+.ui-next .drawer.with-hero #drawer-close { position: absolute; top: 12px; right: 12px; background: rgba(28, 23, 26, 0.6); color: #f3ecdf; backdrop-filter: blur(4px); }
+
+/* ── Banner di Modifica ───────────────────────────────────────────── */
+.ui-next .edit-banner { filter: none; padding: 6px 6px 6px 14px; gap: 10px; font-size: 14px; font-weight: 700; }
+/* banner e barre di piazzamento larghi quanto la fila dell'HUD in alto (e la notifica dei personaggi) */
+.ui-next :is(.edit-banner, .area-banner, .tutorial:not(.welcome)) { left: calc(10px + var(--safe-l)); right: calc(10px + var(--safe-r)); width: auto; max-width: none; transform: none; }
+.ui-next .edit-banner span { flex: 1; }
+.ui-next .edit-banner .pill { min-height: 44px; padding: 4px 18px; font-size: 15px; font-weight: 800; border-radius: var(--r-s); }
+
+/* ── Bottega: carte bloccate, non comprabili, tue ─────────────────── */
+/* Bottega e Registro occupano tutto lo schermo (niente pannello «mezzo aperto» con la scena sopra) */
+.ui-next .drawer.with-hero { top: 0; height: 100%; max-height: none; border-radius: 0; padding-top: 0; }
+.ui-next .drawer.with-hero .drawer-hero { height: calc(168px + var(--safe-t)); }
+.ui-next .drawer.with-hero .drawer-head { height: calc(168px + var(--safe-t)); padding-top: calc(12px + var(--safe-t)); }
+.ui-next .drawer.with-hero #drawer-close { top: calc(12px + var(--safe-t)); }
+.ui-next .card .thumb { position: relative; display: block; }
+.ui-next .card.locked img { filter: grayscale(0.75) brightness(0.6); }
+.ui-next .card.locked b { color: var(--muted); }
+.ui-next .card .lock-over { position: absolute; inset: 0; display: grid; place-items: center; }
+.ui-next .card .lock-over .pxi { filter: drop-shadow(0 2px 3px rgba(0, 0, 0, 0.45)); }
+.ui-next .card .lock-why { font-size: 12px; font-weight: 800; color: var(--muted); }
+.ui-next .card.dim { opacity: 0.45; }
+.ui-next .card.owned { box-shadow: inset 0 0 0 2px color-mix(in srgb, var(--spectral) 55%, transparent); }
+.ui-next .card.owned.selected { box-shadow: 0 0 0 2.5px var(--primary); }
+.ui-next .card .owned-tick { position: absolute; right: -6px; bottom: -6px; width: 24px; height: 24px; border-radius: 8px; display: grid; place-items: center;
+  background: #17231f; box-shadow: 0 0 0 2px var(--spectral), 0 2px 6px rgba(0, 0, 0, 0.3); } /* fondo scuro: la spunta verde si legge */
+.ui-next .card .price.owned { color: var(--spectral); font-weight: 800; }
+
+/* ── Sepoltura: una data per riga (affiancate sul telefono non si leggevano) ── */
+.ui-next .dates { display: grid; grid-template-columns: 1fr; gap: 10px; }
+.ui-next .dates input[type="date"] { display: block; width: 100%; min-height: 48px; -webkit-appearance: none; appearance: none; text-align: left; }
+.ui-next .dates input[type="date"]::-webkit-date-and-time-value { text-align: left; }
+.ui-next .chip.custom { display: inline-flex; align-items: center; gap: 6px; }
+
+/* ── Notifica dei personaggi: sotto l'HUD, col ritratto che esce dal bordo ── */
+.ui-next .npc-note { position: absolute; z-index: 7; left: calc(10px + var(--safe-l)); right: calc(10px + var(--safe-r)); top: calc(var(--hud-top) + 22px + var(--safe-t));
+  display: grid; gap: 1px; padding: 7px 36px 8px 60px; border-radius: var(--r); background-color: var(--panel); box-shadow: var(--shadow), inset 0 1px 0 var(--line);
+  animation: npcIn 0.4s cubic-bezier(0.2, 1.4, 0.4, 1) both; }
+.ui-next .npc-note.out { animation: npcOut 0.22s ease-in both; }
+.ui-next .npc-note img { position: absolute; left: 0; bottom: 0; width: 56px; height: auto; /* larghezza fissa: stesso ingrandimento per tutti; i cappelli alti salgono */ filter: drop-shadow(0 3px 3px rgba(0, 0, 0, 0.35)); pointer-events: none; }
+.ui-next .npc-note-head { display: flex; align-items: baseline; gap: 8px; min-width: 0; }
+.ui-next .npc-note .say { font: 700 16px/1 var(--gothic); color: var(--gold-bright); white-space: nowrap; }
+.ui-next .npc-note .say span { display: inline-block; animation: npcWob 1.1s ease-in-out infinite; }
+.ui-next .npc-note-head small { min-width: 0; font: 700 11px var(--pixel); color: var(--muted); letter-spacing: 0.04em; text-transform: uppercase; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ui-next .npc-note p { margin: 0; font-size: 13px; line-height: 1.3; color: var(--paper); }
+.ui-next .npc-note .gain { flex: none; align-self: center; display: inline-flex; align-items: center; gap: 3px; margin-left: 0; padding: 0 7px 0 4px; border-radius: 999px; background: rgba(0, 0, 0, 0.28);
+  color: var(--spectral); font-weight: 800; font-size: 12px; white-space: nowrap; vertical-align: 1px; }
+.ui-next .npc-note .gain.xp { color: var(--gold-bright); padding-left: 7px; }
+.ui-next .npc-note-x { position: absolute; top: 50%; right: 7px; width: 24px; height: 24px; margin-top: -12px; padding: 0; border: 0; border-radius: 8px; display: grid; place-items: center;
+  background: rgba(0, 0, 0, 0.22); color: var(--paper); }
+.ui-next .npc-note-cta { justify-self: end; margin: 6px -29px 0 0; padding: 4px 12px; border: 0; border-radius: 999px; background: var(--primary); color: #2a1d10;
+  font: 800 12.5px var(--pixel); letter-spacing: 0.01em; } /* a destra, allineato alla X (che sta a 7 px dal bordo) */
+.ui-next .npc-note.with-action .npc-note-x { top: 7px; margin-top: 0; }
+.ui-next .has-note .toasts { top: calc(var(--hud-top) + 22px + var(--note-h, 64px) + 10px + var(--safe-t)); transition: top 0.2s ease; }
+@keyframes npcIn { from { transform: translateY(-18px); opacity: 0; } }
+@keyframes npcOut { to { transform: translateY(-10px); opacity: 0; } }
+@keyframes npcWob { 0%, 100% { transform: translateY(0) rotate(0); } 30% { transform: translateY(-2px) rotate(-6deg); } 60% { transform: translateY(1px) rotate(4deg); } }
+
+/* Inventario: «Vendi» con il guadagno sotto, in piccolo, con l'icona */
+.ui-next .sell-btn { display: grid; justify-items: center; align-content: center; gap: 0; line-height: 1.1; }
+.ui-next .sell-btn .sell-gain { display: inline-flex; align-items: center; gap: 2px; font-size: 12px; font-weight: 800; color: var(--spectral); }
+
+/* ── Pannelli come finestre (modali) sopra la scena ───────────────────
+   Al centro, staccati dai bordi, con tutti gli angoli arrotondati; quelli
+   con la testata animata (Bottega, Registro, Albero, Casa) e gli elenchi
+   lunghi (.full) alti quasi tutto lo schermo, gli altri quanto il contenuto. */
+.ui-next .drawer { left: calc(12px + var(--safe-l)); right: calc(12px + var(--safe-r)); top: 50%; bottom: auto; width: auto; height: auto;
+  max-height: calc(100% - 28px - var(--safe-t) - var(--safe-b)); translate: 0 -50%; transform: none; padding: 0;
+  border-radius: var(--r); overflow: hidden; box-shadow: 0 20px 50px rgba(0, 0, 0, 0.55), inset 0 1px 0 var(--line); animation: modalIn 0.24s cubic-bezier(0.2, 1.25, 0.4, 1) both; }
+@keyframes modalIn { from { opacity: 0; scale: 0.9; transform: translateY(22px); } }
+/* l'apertura dei pannelli: il pannello sale e si allarga, il velo sfuma; in qualità bassa niente */
+.ui-next .drawer { animation-duration: 0.34s; animation-timing-function: cubic-bezier(0.2, 1.2, 0.35, 1); }
+.ui-next .dialog.modal { animation: modalIn 0.3s cubic-bezier(0.2, 1.2, 0.35, 1) both; }
+.ui-next .scrim:not([hidden]) { animation: scrimIn 0.25s ease-out both; }
+@keyframes scrimIn { from { opacity: 0; } }
+.ui-next[data-quality="low"] :is(.drawer, .dialog.modal, .scrim) { animation: none; }
+.ui-next .drawer-foot { border-radius: 0; padding-bottom: 14px; }
+/* i grandi un po' più bassi dello schermo, al centro: restano finestre, non pagine */
+.ui-next .drawer:is(.with-hero, .full) { top: 50%; bottom: auto; height: min(84%, 720px, calc(100% - 28px - var(--safe-t) - var(--safe-b))); max-height: none; border-radius: var(--r); }
+.ui-next .drawer.with-hero .drawer-hero { height: 168px; }
+.ui-next .drawer.with-hero .drawer-head { height: 168px; padding-top: 12px; }
+.ui-next .drawer.with-hero #drawer-close { top: 12px; }
+.ui-next .drawer:is(.with-hero, .full) .drawer-body { flex: 1; }
+.ui-next .scrim { background: rgba(8, 6, 10, 0.55); }
+@media (min-width: 760px) {
+  .ui-next .drawer { left: 50%; right: auto; width: 560px; translate: -50% -50%; }
+}
+@media (prefers-reduced-motion: reduce) { .ui-next :is(.drawer, .dialog.modal, .scrim) { animation: none; } }
+
+/* ── La X per uscire dal tracciato sta in alto a destra, come in pannelli e modali ── */
+.ui-next .trace-bar > b, .ui-next .trace-bar > .muted { padding-right: 52px; }
+.ui-next .trace-bar > .pill.exit { position: absolute; top: 10px; right: 10px; width: 44px; min-height: 40px; justify-content: center; color: inherit; }

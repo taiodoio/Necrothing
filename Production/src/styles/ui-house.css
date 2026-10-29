@@ -1,0 +1,207 @@
+/* Casa del Custode e dintorni:
+   requisiti di sblocco espliciti in Bottega, il registro delle sepolture con
+   la sua testata, la personalizzazione della casa coi vantaggi, il pulsante
+   del pipistrello (morso del vampiro). */
+
+/* ── Requisito di sblocco: una pillola sotto la carta ─────────────── */
+.ui-next .card .need {
+  display: inline-flex; align-items: center; gap: 4px; max-width: 100%;
+  padding: 2px 7px 2px 4px; border-radius: 999px; background: var(--track);
+  font-size: 11.5px; font-weight: 800; line-height: 1.25; color: var(--paper); text-align: left;
+}
+.ui-next .card .need .pxi { flex: none; }
+.ui-next .card .need-wisp { color: var(--spectral); }
+.ui-next .card .need-calendar { color: #f0b46a; }
+.ui-next .card.dim:has(.need) { opacity: 0.72; }
+.ui-next .card.locked .need { color: var(--paper); }
+
+/* ── Nel dettaglio: tutte le condizioni, con quanto manca ─────────── */
+.ui-next .needs { display: grid; gap: 8px; padding: 10px 12px; border-radius: var(--r-s); background: var(--input); }
+.ui-next .needs-title { display: flex; align-items: center; gap: 6px; font-weight: 800; font-size: 13px; color: var(--muted); }
+.ui-next .need-row { display: grid; grid-template-columns: 22px 1fr; gap: 8px; align-items: start; }
+.ui-next .need-row p { margin: 0 0 5px; font-size: 13.5px; line-height: 1.35; }
+
+/* ── Registro delle sepolture ─────────────────────────────────────── */
+.ui-next .registry-hero::after { content: ''; position: absolute; inset: 0; pointer-events: none;
+  background: radial-gradient(ellipse 75% 95% at 50% 55%, rgba(12, 9, 14, 0) 50%, rgba(12, 9, 14, 0.65) 100%); }
+.ui-next .tab .tab-n { margin-left: 6px; padding: 0 6px; border-radius: 999px; background: var(--track); font-size: 11px; font-weight: 800; }
+.ui-next .tab.active .tab-n { background: rgba(0, 0, 0, 0.16); color: inherit; }
+.ui-next .reg-list { display: grid; gap: 8px; }
+.ui-next .reg-row { display: grid; grid-template-columns: 1fr auto; align-items: stretch; border-radius: var(--r-s); background: var(--panel-2); box-shadow: inset 0 1px 0 var(--line); overflow: hidden; }
+.ui-next .reg-open { display: grid; grid-template-columns: 54px 1fr; gap: 10px; align-items: center; padding: 7px 8px; text-align: left; background: none; border: 0; color: inherit; min-width: 0; }
+.ui-next .reg-thumb { width: 54px; height: 54px; border-radius: 10px; background: var(--thumb); display: grid; place-items: center; overflow: hidden; }
+.ui-next .reg-thumb img { width: 58px; height: 58px; object-fit: contain; }
+.ui-next .reg-text { display: grid; gap: 2px; min-width: 0; }
+.ui-next .reg-text b { font-family: var(--gothic); font-size: 19px; font-weight: 700; letter-spacing: 0.01em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ui-next .reg-text small { color: var(--muted); font-size: 12.5px; line-height: 1.3; }
+.ui-next .reg-go { display: grid; place-items: center; gap: 1px; padding: 6px 12px; border: 0; border-left: 1px solid var(--line); background: var(--input); color: var(--paper); font-size: 11px; font-weight: 800; }
+.ui-next .reg-go:active { background: var(--track); }
+.ui-next .reg-empty { text-align: center; padding: 18px 8px; }
+.ui-next.ui-play .reg-list > .reg-row:nth-child(4n + 1) { rotate: -0.4deg; }
+.ui-next.ui-play .reg-list > .reg-row:nth-child(4n + 3) { rotate: 0.35deg; }
+
+/* ── Testate di notte (albero, casa) e cartellini appesi ai rami ── */
+.ui-next .night-hero { background: radial-gradient(120% 90% at 50% 105%, #3b2f4f 0%, #231d30 45%, #15121d 100%); }
+.ui-next .night-hero::after { content: ''; position: absolute; inset: 0; pointer-events: none;
+  background: linear-gradient(90deg, rgba(12, 9, 14, 0.35), rgba(12, 9, 14, 0) 40%), radial-gradient(ellipse 85% 110% at 55% 55%, rgba(12, 9, 14, 0) 60%, rgba(12, 9, 14, 0.4) 100%); }
+.ui-next .mt-intro { margin: 2px 0 6px; }
+.ui-next .mt-row { position: relative; display: grid; grid-template-columns: 1fr 1fr; column-gap: 12px; align-items: start; padding-bottom: 14px; }
+/* i rami partono dal bordo del pannello: escono dalla riga quanto il margine interno (BLEED in memoryTags.ts) */
+.ui-next .mt-branch, .ui-next .mt-knots { position: absolute; left: -12px; top: 0; width: calc(100% + 24px); height: 84px; overflow: visible; pointer-events: none; }
+.ui-next .mt-branch { z-index: 1; filter: drop-shadow(0 3px 3px rgba(0, 0, 0, 0.35)); }
+.ui-next .mt-knots { z-index: 2; }
+.ui-next .mt-tag { position: relative; grid-row: 1; justify-self: center; padding: 20px 10px 12px; border: 0; border-radius: 6px 6px 14px 14px; background: #efe5d2; color: #3a2a22; text-align: center;
+  box-shadow: 0 6px 12px rgba(0, 0, 0, 0.35); transform-origin: 50% calc(-1 * var(--len)); rotate: var(--tilt); animation: mtSway 5s ease-in-out infinite alternate; }
+.ui-next .mt-tag:nth-child(odd) { animation-delay: -2.3s; }
+.ui-next .mt-tag:active { filter: brightness(0.94); }
+@keyframes mtSway { from { rotate: calc(var(--tilt) - 0.8deg); } to { rotate: calc(var(--tilt) + 0.8deg); } }
+@media (prefers-reduced-motion: reduce) { .ui-next .mt-tag { animation: none; } }
+/* lo spago (dal ramo al foro) e il foro con l'occhiello */
+.ui-next .mt-tag::before { content: ''; position: absolute; left: 50%; top: calc(-1 * var(--len)); width: 1.5px; height: calc(var(--len) + 9px); background: #cbb48a; translate: -50% 0; }
+.ui-next .mt-tag::after { content: ''; position: absolute; left: 50%; top: 7px; width: 8px; height: 8px; border-radius: 50%; background: var(--sheet, #2a2633); translate: -50% 0; box-shadow: 0 0 0 2px #c99340; }
+.ui-next .mt-tag img { display: block; width: 64px; height: 64px; margin: -6px auto; object-fit: contain; filter: drop-shadow(0 0 6px rgba(240, 170, 60, 0.65)); }
+.ui-next .mt-tag b { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden; overflow-wrap: anywhere; font: 700 20px/1.05 var(--gothic); color: #3a2a22; }
+.ui-next .mt-tag small { display: block; margin-top: 3px; color: #7a6656; font-size: 11.5px; font-weight: 700; }
+.ui-next .mt-seen { display: inline-flex; align-items: center; gap: 2px; margin-top: 5px; color: #8a5a18; font-size: 11px; font-weight: 800; }
+
+/* ── Il cartellino toccato: si stacca, si avvicina e si gira (memoryFlip.ts) ── */
+.ui-next .mtf-layer { position: absolute; inset: 0; z-index: 6; display: grid; place-items: center; padding: 56px 18px 24px; perspective: 1200px;
+  background: rgba(10, 7, 12, 0); transition: background 0.35s ease; }
+.ui-next .mtf-layer.on { background: rgba(10, 7, 12, 0.66); }
+.ui-next .mtf-card { position: relative; width: min(100%, 330px); height: min(100%, 540px); transform-origin: 50% 50%; will-change: transform; }
+.ui-next .mtf-inner { position: absolute; inset: 0; transform-style: preserve-3d; transition: transform 0.52s cubic-bezier(0.35, 1.25, 0.45, 1); }
+.ui-next .mtf-inner.flipped { transform: rotateY(180deg); }
+.ui-next .mtf-face { position: absolute; inset: 0; backface-visibility: hidden; -webkit-backface-visibility: hidden; border-radius: 8px 8px 22px 22px;
+  background: radial-gradient(120% 90% at 30% 15%, #f6eddb, #efe5d2 55%, #e2d3b4); color: #3a2a22; box-shadow: 0 16px 36px rgba(0, 0, 0, 0.55); display: flex; flex-direction: column; }
+.ui-next .mtf-hole { position: absolute; left: 50%; top: 10px; width: 12px; height: 12px; translate: -50% 0; border-radius: 50%; background: var(--sheet, #2a2633); box-shadow: 0 0 0 2.5px #c99340; z-index: 1; }
+.ui-next .mtf-front { align-items: center; justify-content: center; gap: 8px; padding: 30px 20px; text-align: center; }
+.ui-next .mtf-front .mtf-fruit { width: 128px; height: 128px; object-fit: contain; filter: drop-shadow(0 0 12px rgba(240, 170, 60, 0.7)); }
+.ui-next .mtf-name { font: 700 30px/1.05 var(--gothic); color: #3a2a22; overflow-wrap: anywhere; }
+.ui-next .mtf-front small { color: #7a6656; font-size: 13px; font-weight: 700; }
+.ui-next .mtf-back { transform: rotateY(180deg); padding: 28px 16px 14px; }
+.ui-next .mtf-x { position: absolute; top: 8px; right: 8px; width: 36px; height: 36px; border: 0; border-radius: 10px; display: grid; place-items: center; background: #4a3426; box-shadow: 0 2px 0 #24170f; z-index: 2; }
+.ui-next .mtf-scroll { flex: 1; min-height: 0; overflow-y: auto; display: grid; align-content: start; gap: 10px; padding: 0 2px; }
+.ui-next .mtf-top { display: grid; justify-items: center; gap: 5px; text-align: center; }
+.ui-next .mtf-photo { width: 88px; height: 88px; border-radius: 12px; overflow: hidden; box-shadow: 0 0 0 3px #fff8ea, 0 3px 8px rgba(0, 0, 0, 0.3); rotate: -2deg; }
+.ui-next .mtf-photo img { width: 100%; height: 100%; object-fit: cover; }
+.ui-next .mtf-epitaph { font-size: 14px; color: #6e5843; }
+.ui-next .mtf-back .dc-where, .ui-next .mtf-back .dc-where.tree { background: rgba(201, 147, 64, 0.2); color: #7a4d12; }
+.ui-next .mtf-back .kv { margin: 0; font-size: 13.5px; }
+.ui-next .mtf-back .kv dt { color: #7a6656; }
+.ui-next .mtf-back .kv dd { color: #3a2a22; font-weight: 800; }
+.ui-next .mtf-back .section-title { color: #6e4b20; font-size: 20px; }
+.ui-next .mtf-back .dc-log li { border-bottom: 1px dashed rgba(58, 42, 34, 0.25); color: #3a2a22; font-size: 13px; padding: 5px 0; }
+.ui-next .mtf-back .dc-log time, .ui-next .mtf-back .dc-more { color: #7a6656; }
+.ui-next .mtf-actions { display: grid; gap: 8px; margin-top: 10px; }
+.ui-next .mtf-btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; width: 100%; height: 48px; padding: 0 12px; border: 0; border-radius: 12px; font: 800 15px/1.1 var(--pixel, sans-serif); color: #f6eddb; background: #4a3426; box-shadow: 0 2px 0 #24170f; }
+.ui-next .mtf-back .more-toggle { min-height: 46px; color: #3a2a22; background: rgba(58, 42, 34, 0.1); box-shadow: inset 0 0 0 1.5px rgba(58, 42, 34, 0.18); }
+/* il retro è ruotato, quindi fa da contenitore per i figli «fixed»: il velo del menù copre esattamente il cartellino */
+.ui-next .mtf-back .more-scrim { position: fixed; inset: 0; border-radius: 8px 8px 22px 22px; }
+@media (prefers-reduced-motion: reduce) { .ui-next .mtf-inner, .ui-next .mtf-card { transition: none !important; } }
+
+/* ── Scheda del defunto (tomba, ricordo, Registro) ─────────────────── */
+.ui-next .deceased .hero { gap: 6px; }
+.ui-next .dc-where { display: inline-flex; align-items: center; gap: 5px; padding: 3px 11px 3px 7px; border-radius: 999px; background: var(--track); font-size: 12.5px; font-weight: 800; color: var(--paper); }
+.ui-next .dc-where.tree { background: color-mix(in srgb, #f0b45a 22%, var(--track)); color: #ffd98a; }
+.ui-next .dc-where.legacy { color: var(--muted); }
+.ui-next .kv dd.warn { color: var(--danger); }
+.ui-next .dc-log { list-style: none; margin: 4px 0 0; padding: 0; display: grid; }
+.ui-next .dc-log li { display: grid; grid-template-columns: 26px 1fr auto; gap: 8px; align-items: center; padding: 7px 0; border-bottom: 1px solid var(--line); font-size: 14px; }
+.ui-next .dc-log li:last-child { border-bottom: 0; }
+.ui-next .dc-log time { color: var(--muted); font-size: 12.5px; }
+.ui-next .dc-more { margin: 4px 0 0; font-size: 12.5px; }
+
+/* ── Anniversario: la corona di fiori al posto della foto ──────────── */
+.ui-next .an { display: grid; justify-items: center; gap: 6px; text-align: center; margin-bottom: 4px; }
+.ui-next .an h3 { margin: 0; font-size: 32px; line-height: 1; color: var(--gold-bright); }
+.ui-next .an-ago { font: 700 17px/1.1 var(--gothic); color: #ffd98a; letter-spacing: 0.02em; }
+.ui-next .an-stage { position: relative; width: 100%; display: grid; justify-items: center; overflow: hidden; padding: 4px 0 10px; }
+.ui-next .an-petal { position: absolute; top: -14px; width: 9px; height: 6px; border-radius: 60% 40% 60% 40%; background: var(--c); opacity: 0; pointer-events: none;
+  animation: anFall var(--t) linear var(--d) infinite; }
+@keyframes anFall { 0% { opacity: 0; transform: translate(0, 0) rotate(0); } 8% { opacity: 0.9; } 50% { transform: translate(var(--x), 160px) rotate(260deg); } 92% { opacity: 0.8; } 100% { opacity: 0; transform: translate(0, 330px) rotate(520deg); } }
+.ui-next .an-lumino { position: relative; display: inline-grid; }
+.ui-next .an-lumino::after { content: ''; position: absolute; left: 50%; top: 2%; width: 70%; aspect-ratio: 1; translate: -50% -30%; border-radius: 50%; pointer-events: none;
+  background: radial-gradient(circle, rgba(255, 196, 96, 0.75), rgba(255, 150, 60, 0) 70%); animation: anFlicker 1.6s ease-in-out infinite alternate; }
+@keyframes anFlicker { 0% { opacity: 0.65; transform: scale(0.92); } 35% { opacity: 1; } 60% { opacity: 0.75; transform: scale(1.06); } 100% { opacity: 0.95; transform: scale(0.98); } }
+@media (prefers-reduced-motion: reduce) { .ui-next .an-petal { display: none; } .ui-next .an-lumino::after { animation: none; } }
+.ui-next .an-round { width: 100%; height: 100%; border-radius: 50%; overflow: hidden; background: var(--thumb); box-shadow: 0 0 0 3px #c99340, 0 0 0 6px rgba(255, 233, 184, 0.35), 0 8px 18px rgba(0, 0, 0, 0.45); }
+.ui-next .an-round img { width: 100%; height: 100%; object-fit: contain; }
+.ui-next .an-round img.is-photo { object-fit: cover; }
+/* la notifica con la corona (anniversario): più grande, esce un po' dal bordo in alto come i ritratti dei personaggi */
+.ui-next .npc-note.icon img { left: -3px; bottom: auto; top: -14px; width: 62px; }
+.ui-next .an-wreath .an-stage { background: radial-gradient(closest-side, rgba(240, 180, 90, 0.28), rgba(240, 180, 90, 0) 100%); }
+.ui-next .an-wreath-box { position: relative; width: min(78vw, 300px); aspect-ratio: 1; }
+.ui-next .an-wreath-box .an-round { position: absolute; inset: 22%; width: auto; height: auto; }
+.ui-next .an-wreath-svg { position: absolute; inset: 0; width: 100%; height: 100%; filter: drop-shadow(0 4px 4px rgba(0, 0, 0, 0.4)); }
+.ui-next .an-ribbon-text { font: 700 19px var(--gothic); fill: #ffe9b8; letter-spacing: 0.02em; }
+.ui-next .an-side { position: absolute; bottom: 14px; }
+.ui-next .an-side.l { left: 4%; } .ui-next .an-side.r { right: 4%; }
+
+/* ── Vantaggi della casa ──────────────────────────────────────────── */
+.ui-next .perks { display: grid; gap: 6px; margin: 10px 0 4px; padding: 10px 12px; border-radius: var(--r-s); background: var(--input); }
+.ui-next .perks ul { margin: 0; padding-left: 18px; display: grid; gap: 4px; font-size: 13px; line-height: 1.35; }
+.ui-next .perks b { color: var(--gold-bright); }
+.ui-next .perk-row { display: grid; grid-template-columns: 22px 1fr; gap: 8px; align-items: start; padding: 8px 10px; border-radius: var(--r-s); background: var(--input); }
+.ui-next .perk-row p { margin: 0; font-size: 13.5px; line-height: 1.35; }
+.ui-next .perk-row b { color: var(--spectral); }
+
+/* ── Da pipistrello: il pulsante per tornare Custode, coi secondi ─── */
+.ui-next .bat-btn { position: relative; box-shadow: var(--shadow), 0 0 0 2px #a86ad0; }
+.ui-next .bat-btn .bat-left { position: absolute; right: -6px; bottom: -6px; min-width: 22px; height: 20px; padding: 0 5px; border-radius: 10px;
+  display: grid; place-items: center; background: #a86ad0; color: #fff; font: 800 11px/1 var(--sans, sans-serif); font-style: normal; }
+
+/* ── Pagina del Custode: il Custode che gira in cima, il nome, i dati in quattro tasselli, il cimitero sotto ── */
+.ui-next .player-page .tabs { margin-bottom: 0; }
+.ui-next .pl-stage { position: relative; top: 0; margin: 0 -12px 10px; border-radius: 0; }
+.ui-next .pl-stage .look-preview { height: min(160px, 20vh); }
+.ui-next .pl-name-row { display: grid; grid-template-columns: 1fr auto; gap: 8px; align-items: center; margin-bottom: 10px; }
+.ui-next .pl-name { width: 100%; min-width: 0; height: 44px; padding: 0 14px; border: 0; border-radius: 12px; background: var(--input); color: var(--gold-bright); font: 700 22px/1 var(--gothic); outline: none; }
+.ui-next .pl-pen { width: 44px; height: 44px; }
+.ui-next .pl-look { width: 100%; margin-bottom: 12px; }
+/* i quattro dati in una riga: valore grande, sotto in piccolo cosa è */
+.ui-next .pl-chips { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; margin-bottom: 12px; }
+.ui-next .pl-chip { display: grid; justify-items: center; align-content: start; gap: 2px; padding: 8px 4px; border-radius: 14px; background: var(--panel-2); text-align: center; }
+.ui-next .pl-chip .pxi { margin-bottom: 2px; }
+.ui-next .pl-chip b { color: var(--paper); font-size: 16px; font-weight: 800; line-height: 1.1; }
+.ui-next .pl-chip small { color: var(--muted); font-size: 11.5px; font-weight: 700; line-height: 1.15; overflow-wrap: anywhere; }
+.ui-next .pl-chip .pl-bar { display: block; width: 80%; height: 4px; margin-top: 4px; }
+.ui-next .pl-stats { display: grid; gap: 2px; border-radius: var(--r); background: var(--panel-2); padding: 4px 14px; margin-bottom: 12px; }
+.ui-next .pl-stats:last-child { margin-bottom: 0; }
+.ui-next .pl-stat { display: grid; grid-template-columns: 28px 1fr; gap: 12px; align-items: center; padding: 10px 0; }
+.ui-next .pl-stat + .pl-stat { border-top: 1px solid var(--line); }
+.ui-next .pl-stat-text { display: grid; grid-template-columns: auto 1fr; gap: 2px 12px; align-items: baseline; min-width: 0; }
+.ui-next .pl-stat-text span { color: var(--muted); font-size: 14px; font-weight: 700; }
+.ui-next .pl-stat-text b { color: var(--paper); font-size: 15px; font-weight: 800; text-align: right; overflow-wrap: anywhere; }
+.ui-next .pl-stat.long .pl-stat-text { grid-template-columns: 1fr; }
+.ui-next .pl-stat.long .pl-stat-text b { text-align: left; font-weight: 700; line-height: 1.3; }
+/* il cimitero, compatto: icona in alto accanto all'etichetta, testo stretto */
+.ui-next .pl-stat.long { align-items: start; padding: 8px 0; }
+.ui-next .pl-stat.long .pl-stat-text { gap: 0; }
+.ui-next .pl-stat.long .pl-stat-text span { font-size: 12.5px; }
+.ui-next .pl-stat.long .pl-stat-text b { font-size: 14px; }
+
+/* schede che dividono lo spazio in parti uguali (Impostazioni) */
+.ui-next .tabs.even { display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; overflow: visible; }
+.ui-next .tabs.even .tab { justify-content: center; padding: 4px 6px; gap: 5px; font-size: 13px; }
+
+/* ── Traguardi: carte separate col medaglione grande ── */
+.ui-next .ach-sum { display: grid; gap: 6px; margin: 4px 2px 12px; }
+.ui-next .ach-sum b { color: var(--gold-bright); font: 700 18px/1.1 var(--gothic); }
+.ui-next .ach-sum .xp-bar { display: block; height: 8px; }
+.ui-next .ach-list { display: grid; gap: 10px; }
+.ui-next .ach-card { display: grid; grid-template-columns: 64px 1fr; gap: 12px; align-items: center; padding: 10px 12px 10px 8px; border-radius: var(--r); background: var(--panel-2); }
+.ui-next .ach-card:not(.got) { background: color-mix(in srgb, var(--panel-2) 55%, transparent); }
+.ui-next .ach-card:not(.got) b { color: var(--muted); }
+.ui-next .ach-badge { position: relative; width: 64px; height: 64px; }
+.ui-next .ach-badge img { width: 100%; height: 100%; filter: drop-shadow(0 3px 3px rgba(0, 0, 0, 0.35)); }
+.ui-next .ach-card:not(.got) .ach-badge img { opacity: 0.75; }
+.ui-next .ach-n { position: absolute; right: 0; top: 2px; min-width: 22px; height: 20px; padding: 0 5px; border-radius: 999px; display: grid; place-items: center;
+  background: var(--primary); color: var(--on-primary); font-size: 11.5px; font-weight: 800; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.4); }
+.ui-next .ach-card:not(.got) .ach-n { background: var(--track); color: var(--paper); }
+.ui-next .ach-card b { display: block; color: var(--paper); font-size: 15px; font-weight: 800; }
+.ui-next .ach-card p { margin: 2px 0 4px; color: var(--muted); font-size: 13px; }
+.ui-next .ach-tier { display: inline-block; padding: 1px 8px; border-radius: 999px; font-size: 11px; font-weight: 800; }
+.ui-next .ach-tier.tier-gold { background: rgba(240, 196, 110, 0.2); color: #e7b65a; }
+.ui-next .ach-tier.tier-silver { background: rgba(195, 202, 214, 0.18); color: #c3cad6; }
+.ui-next .ach-tier.tier-bronze { background: rgba(200, 138, 84, 0.2); color: #d39a66; }
+.ui-next .ach-bar { display: block; height: 5px; margin-top: 6px; }

@@ -1,0 +1,300 @@
+/* Interfaccia «viva» (nel gioco e nella pagina di misura, classe .ui-play su
+   <html>, sopra .ui-next): titoli in Grenze Gotisch, tema scuro grigio
+   violastro, pattern tono su tono sui
+   pannelli, carte e voci del menù un po' storte, decorazioni negli angoli
+   dell'HUD, testata della Bottega con il bordo netto. Le immagini arrivano
+   da ui/playDecor.ts come variabili (--deco-*, --pattern-*). */
+
+/* ── Titoli in Grenze Gotisch: gotico ma leggibile, da cimitero ─────── */
+.ui-next.ui-play { --gothic: "Grenze Gotisch", "Nunito", serif; }
+
+/* ── Tema scuro grigio violastro, da cimitero ─────────────────────── */
+.ui-next.ui-play {
+  --panel: #3a3545;
+  --panel-2: #474154;
+  --input: #2e2a38;
+  --thumb: #2c2836;
+  --track: #231f2c;
+  --sheet: #2a2633;
+  --muted: #bdb5c8;
+  --line: rgba(235, 225, 255, 0.07);
+  --edge: rgba(235, 225, 255, 0.14);
+  --shadow: 0 4px 14px rgba(8, 5, 14, 0.45);
+}
+.ui-play { --pattern: var(--pattern-dark); --plate: #3a3545; /* targhette nella scena */ }
+
+/* ── Pattern tono su tono (zucche, foglie, teschi, bare) ──────────── */
+.ui-next.ui-play :is(.drawer, .drawer-foot, .player-chip, .clock-block, .slot, .tutorial, .dialog, .wisp-count, .edit-banner, .npc-note) {
+  background-image: var(--pattern);
+  background-size: 180px 180px;
+}
+.ui-next.ui-play .drawer-foot { background-position: 40px 20px; }
+
+/* ── Decorazioni negli angoli dell'HUD ────────────────────────────── */
+.ui-next.ui-play :is(.player-chip, .clock-block) { position: relative; overflow: visible; }
+.ui-next.ui-play .player-chip::after,
+.ui-next.ui-play .clock-block::before {
+  content: ''; position: absolute; pointer-events: none; background: no-repeat center / contain;
+  filter: drop-shadow(0 2px 2px rgba(0, 0, 0, 0.3));
+}
+.ui-next.ui-play .player-chip::after { right: -14px; bottom: -14px; width: 30px; height: 30px; background-image: var(--deco-pumpkin); rotate: 14deg; }
+.ui-next.ui-play .clock-block::before { left: -8px; top: -9px; width: 22px; height: 22px; background-image: var(--deco-skull); rotate: -16deg; }
+
+/* ── Menù di gioco: ogni voce nel suo riquadro, icone grandi e un po' storte ── */
+.ui-next.ui-play .slots { background: none; box-shadow: none; padding: 0 4px; gap: 9px; }
+.ui-next.ui-play .slot {
+  background-color: var(--panel); box-shadow: var(--shadow), inset 0 1px 0 var(--line); border-radius: var(--r);
+  height: 58px; min-width: 188px; padding: 0 18px 0 8px; gap: 12px;
+}
+.ui-next.ui-play .slot.active { background-color: var(--panel-2); }
+.ui-next.ui-play .slot .pxi { --s: 40px; }
+.ui-next.ui-play .slot small { font-size: 17px; }
+.ui-next.ui-play .slot:nth-child(1) { rotate: -1.4deg; }
+.ui-next.ui-play .slot:nth-child(2) { rotate: 1.1deg; translate: 6px 0; }
+.ui-next.ui-play .slot:nth-child(3) { rotate: -0.6deg; translate: 2px 0; }
+.ui-next.ui-play .slot:nth-child(4) { rotate: 1.6deg; translate: 8px 0; }
+.ui-next.ui-play .slot:nth-child(5) { rotate: -1.8deg; }
+.ui-next.ui-play .slot:nth-child(6) { rotate: 0.8deg; translate: 4px 0; }
+.ui-next.ui-play .slot:nth-child(3n + 1) .pxi { rotate: -9deg; }
+.ui-next.ui-play .slot:nth-child(3n + 2) .pxi { rotate: 7deg; }
+.ui-next.ui-play .slot:nth-child(3n) .pxi { rotate: -3deg; }
+
+
+/* ── Il Custode esce dal suo riquadro: testa e cappello interi, sopra il bordo ── */
+/* riquadro più basso del box, in fondo: il ritratto (più grande) sporge sopra col cappello */
+.ui-next.ui-play .chip-avatar { position: relative; align-self: flex-end; width: 52px; height: 46px; overflow: visible; clip-path: inset(-60px -18px 0 -18px round 0 0 var(--r-s) var(--r-s)); }
+.ui-next.ui-play .chip-avatar img { position: absolute; left: 50%; bottom: 0; width: 84px; height: 84px; max-width: none; translate: -50% 0; object-fit: contain; }
+
+/* ════ Natura e luce: lo sfondo dei pannelli e dell'HUD ════════════════
+   Un gradiente traslucido (la scena sfocata si intuisce dietro), rami
+   d'edera che entrano dai bordi e zone più scure sfumate (natureDecor.ts),
+   un bagliore caldo ai lati. Niente contorni: solo l'ombra. I rametti negli
+   angoli stanno sotto ritratti e testi (z-index -1 dentro un contesto isolato). */
+.ui-next.ui-play {
+  --nat-bg: linear-gradient(165deg, rgba(66, 59, 80, 0.9) 0%, rgba(52, 47, 63, 0.9) 45%, rgba(34, 30, 43, 0.92) 100%);
+  --nat-glow: radial-gradient(30% 42% at 0% 62%, rgba(255, 168, 84, 0.16), rgba(255, 168, 84, 0) 100%), radial-gradient(30% 42% at 100% 30%, rgba(255, 168, 84, 0.13), rgba(255, 168, 84, 0) 100%);
+  --nat-shadow: 0 18px 44px rgba(0, 0, 0, 0.55);
+}
+/* velatura senza sfocatura: una sfocatura sopra la scena 3D va ricalcolata a ogni frame (su iPhone pesa molto) */
+.ui-next.ui-play .scrim, .ui-next.ui-play .dialog-scrim { background: rgba(8, 6, 10, 0.5); }
+.ui-next.ui-play .dialog-scrim.modal-scrim { background: rgba(8, 6, 10, 0.6); }
+.ui-next.ui-play .drawer {
+  /* gli strati: 7 zone scure, 2 bagliori, l'edera, il gradiente (le misure vanno date una per strato) */
+  background-color: transparent; background-image: var(--zones), var(--nat-glow), var(--vines), var(--nat-bg);
+  background-size: 100% 100%, 100% 100%, 100% 100%, 100% 100%, 100% 100%, 100% 100%, 100% 100%, 100% 100%, 100% 100%, 100% auto, 100% 100%; background-repeat: no-repeat; box-shadow: var(--nat-shadow);
+}
+.ui-next.ui-play :is(.dialog, .dialog.modal) {
+  background-color: transparent; background-image: var(--zones-small), var(--nat-glow), var(--vines-dialog), var(--nat-bg);
+  background-size: 100% 100%, 100% 100%, 100% 100%, 100% 100%, 100% 100%, 100% auto, 100% 100%; background-repeat: no-repeat; box-shadow: var(--nat-shadow);
+}
+.ui-next.ui-play .drawer-foot { background: linear-gradient(180deg, rgba(30, 26, 38, 0), rgba(30, 26, 38, 0.6) 35%, rgba(26, 22, 33, 0.92)); box-shadow: none; }
+.ui-next.ui-play .drawer-head { border-bottom: 0; }
+.ui-next.ui-play :is(.player-chip, .clock-block, .npc-note, .toast, .slot, .tutorial:not(.welcome), .edit-banner, .area-banner) {
+  background-color: transparent; background-image: var(--zones-small), var(--vines-hud), var(--nat-bg);
+  background-size: 100% 100%, 100% 100%, 100% 100%, 300px auto, 100% 100%; background-repeat: no-repeat; box-shadow: 0 8px 18px rgba(0, 0, 0, 0.45);
+}
+/* i pulsanti della home: solo il gradiente, con un rametto */
+.ui-next.ui-play :is(.map-tools .icon-btn:not(.active), .fab) { background: var(--nat-bg); box-shadow: 0 8px 18px rgba(0, 0, 0, 0.45); }
+/* bici, scopa, bastone in uso: il pulsante si accende (oro); il pipistrello col suo anello viola */
+.ui-next.ui-play .map-tools .icon-btn.active { box-shadow: 0 3px 0 var(--primary-deep), 0 8px 18px rgba(0, 0, 0, 0.45); }
+.ui-next.ui-play .map-tools .bat-btn { box-shadow: 0 8px 18px rgba(0, 0, 0, 0.45), 0 0 0 2.5px #a86ad0; }
+.ui-next.ui-play .fab:not(.bury-fab) { background: linear-gradient(165deg, #f6d48a, #e0aa52); }
+
+/* rametti: sotto il contenuto, in angoli opposti (gli pseudo-elementi non vanno dentro :is()) */
+.ui-next.ui-play :is(.player-chip, .clock-block, .npc-note, .map-tools .icon-btn, .fab, .dialog) { isolation: isolate; }
+.ui-next.ui-play .map-tools .icon-btn, .ui-next.ui-play .fab, .ui-next.ui-play .dialog { position: relative; }
+.ui-next.ui-play .player-chip::before, .ui-next.ui-play .clock-block::after, .ui-next.ui-play .npc-note::before, .ui-next.ui-play .npc-note::after,
+.ui-next.ui-play .map-tools .icon-btn::before, .ui-next.ui-play .fab::before, .ui-next.ui-play .dialog::before, .ui-next.ui-play .dialog::after {
+  content: ''; position: absolute; z-index: -1; width: 42px; height: 42px; pointer-events: none; background: var(--sprig) no-repeat 0 0 / 100% 100%;
+}
+.ui-next.ui-play .player-chip::before, .ui-next.ui-play .npc-note::before, .ui-next.ui-play .dialog::before { left: 0; top: 0; }
+.ui-next.ui-play .npc-note::after, .ui-next.ui-play .dialog::after { right: 0; bottom: 0; rotate: 180deg; }
+.ui-next.ui-play .clock-block::after { right: 0; bottom: 0; width: 30px; height: 30px; rotate: 180deg; }
+.ui-next.ui-play .map-tools .icon-btn::before, .ui-next.ui-play .fab::before { width: 30px; height: 30px; }
+.ui-next.ui-play .map-tools .icon-btn::before { right: 0; top: 0; scale: -1 1; }
+.ui-next.ui-play .fab::before { left: 0; top: 0; }
+.ui-next.ui-play .dialog::before, .ui-next.ui-play .dialog::after { width: 64px; height: 64px; }
+
+/* edera negli angoli in alto dei pannelli senza testata */
+.ui-next.ui-play .drawer:not(.with-hero)::before, .ui-next.ui-play .drawer:not(.with-hero)::after {
+  content: ''; position: absolute; z-index: 1; top: 0; width: 100px; height: 100px; pointer-events: none; background: var(--ivy) no-repeat 0 0 / 100% 100%; filter: drop-shadow(0 3px 3px rgba(0, 0, 0, 0.35));
+}
+.ui-next.ui-play .drawer:not(.with-hero)::before { left: 0; }
+.ui-next.ui-play .drawer:not(.with-hero)::after { right: 0; scale: -1 1; }
+.ui-next.ui-play .drawer:not(.no-title):not(.with-hero) .drawer-head { position: relative; z-index: 2; }
+.ui-next.ui-play .drawer.no-title .drawer-head { z-index: 2; }
+.ui-next.ui-play .drawer:not(.with-hero) .drawer-head h2 { padding-left: 30px; }
+
+/* ── Testate in una cornice leggera; scorrendo si riducono a una fascia ──
+   Estesa: un gradiente scuro dall'alto tiene leggibili titolo, saldo e X.
+   Ridotta (.hero-small, vedi dom.ts): 64 px, più scura, tutto centrato in
+   verticale; le schede restano agganciate sotto, 12 px più in basso. */
+.ui-next.ui-play .drawer.with-hero { --hero-h: 156px; --hero-dark: 0; }
+.ui-next.ui-play .drawer.with-hero.hero-small { --hero-h: 64px; --hero-dark: 0.62; }
+.ui-next.ui-play .drawer.with-hero .drawer-hero { flex: none; margin: 12px 12px 12px; height: var(--hero-h); border-radius: 18px; overflow: hidden; z-index: 1; box-shadow: 0 0 0 4px rgba(20, 16, 26, 0.6), 0 10px 20px rgba(0, 0, 0, 0.45); transition: height 0.22s ease; }
+.ui-next.ui-play .drawer.with-hero .drawer-hero canvas { position: absolute; left: 0; top: 50%; height: 156px; translate: 0 -50%; }
+.ui-next.ui-play .drawer.with-hero .drawer-hero::before { content: ''; position: absolute; inset: 0; z-index: 1; pointer-events: none; background: linear-gradient(180deg, rgba(12, 8, 18, 0.78) 0%, rgba(12, 8, 18, 0.45) 38%, rgba(12, 8, 18, 0) 70%); transition: opacity 0.22s; }
+.ui-next.ui-play .drawer.with-hero .drawer-hero::after { content: ''; position: absolute; inset: 0; z-index: 2; border-radius: 18px; pointer-events: none; box-shadow: inset 0 0 0 1.5px rgba(255, 226, 168, 0.42), inset 0 0 24px rgba(0, 0, 0, 0.45); background: rgba(14, 10, 20, var(--hero-dark)); transition: background 0.22s; }
+.ui-next.ui-play .drawer.with-hero.hero-small .drawer-hero::before { opacity: 0; }
+.ui-next.ui-play .drawer.with-hero .drawer-head { top: 12px; left: 12px; right: 12px; height: var(--hero-h); padding: 14px 14px 12px 16px; z-index: 3; transition: height 0.22s; }
+.ui-next.ui-play .drawer.with-hero .drawer-head h2 { padding-left: 4px; }
+.ui-next.ui-play .drawer.with-hero #drawer-close { top: 10px; right: 10px; }
+.ui-next.ui-play .drawer.with-hero.hero-small .drawer-head { align-items: center; padding: 0 10px 0 16px; }
+.ui-next.ui-play .drawer.with-hero.hero-small .drawer-head h2 { margin: 0; font-size: 26px; line-height: 1; }
+.ui-next.ui-play .drawer.with-hero.hero-small .drawer-extra { margin: 0 52px 0 auto; align-self: center; }
+.ui-next.ui-play .drawer.with-hero.hero-small #drawer-close { top: 50%; translate: 0 -50%; }
+.ui-next.ui-play .drawer.with-hero .drawer-body { padding-top: 0; }
+/* i rametti sulla cornice, in due angoli opposti */
+.ui-next.ui-play .drawer.with-hero::before, .ui-next.ui-play .drawer.with-hero::after {
+  content: ''; position: absolute; z-index: 4; width: 70px; height: 70px; pointer-events: none; background: var(--sprig) no-repeat 0 0 / 100% 100%;
+  filter: drop-shadow(0 2px 2px rgba(0, 0, 0, 0.5)); transition: top 0.22s, width 0.22s, height 0.22s;
+}
+.ui-next.ui-play .drawer.with-hero::before { left: 2px; top: 2px; }
+.ui-next.ui-play .drawer.with-hero::after { right: 2px; top: calc(12px + var(--hero-h) - 60px); rotate: 180deg; }
+.ui-next.ui-play .drawer.with-hero.hero-small::before, .ui-next.ui-play .drawer.with-hero.hero-small::after { width: 50px; height: 50px; }
+.ui-next.ui-play .drawer.with-hero.hero-small::after { top: calc(12px + var(--hero-h) - 40px); }
+
+/* ── Schede: una barra bassa con icone monocromatiche, agganciata in cima scorrendo ── */
+.ui-next.ui-play .drawer .tabs:not(.look-tabs) {
+  position: sticky; top: -12px; z-index: 4; display: grid; grid-auto-flow: column; grid-auto-columns: minmax(70px, 1fr); gap: 4px; padding: 4px; margin: 0 0 16px;
+  border-radius: 15px; background: rgba(28, 23, 35, 0.95); box-shadow: 0 6px 14px rgba(0, 0, 0, 0.3); overflow-x: auto;
+}
+.ui-next.ui-play .drawer.with-hero .tabs:not(.look-tabs) { top: 0; }
+.ui-next.ui-play .drawer .tabs:not(.look-tabs) .tab {
+  position: relative; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; height: 46px; min-height: 0; padding: 4px 4px 3px;
+  border: 0; border-radius: 11px; background: transparent; box-shadow: none; color: #b3abbf; font-size: 11px; font-weight: 800; line-height: 1.05;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; --hole: #2c2636;
+}
+.ui-next.ui-play .drawer .tabs:not(.look-tabs) .tab .pxi { display: none; }
+.ui-next.ui-play .drawer .tabs:not(.look-tabs) .tab.active { background: linear-gradient(180deg, #f6d48a, #e8b65e); color: #2a1f12; box-shadow: none; --hole: #eec170; }
+.ui-next.ui-play .drawer .tabs:not(.look-tabs) .tab .tab-n { position: absolute; top: 4px; right: 8px; margin: 0; padding: 0 5px; font-size: 10px; line-height: 15px; }
+.ui-next.ui-play .player-page .tabs:not(.look-tabs) { margin-bottom: 4px; }
+
+/* ── Oggetti senza celle: dritti, anteprima grande illuminata, aria tra immagine e testo ── */
+.ui-next.ui-play .drawer .grid { row-gap: 18px; }
+.ui-next.ui-play .drawer .grid .card { background: none; box-shadow: none; padding: 0 2px 4px; gap: 3px; }
+.ui-next.ui-play .drawer .grid .card .thumb { background: none; }
+.ui-next.ui-play .drawer .grid .card img.lit { width: 100%; height: auto; aspect-ratio: 1; margin: -6px 0 6px; object-fit: contain; background: radial-gradient(closest-side, rgba(255, 180, 90, 0.16), rgba(255, 180, 90, 0) 80%); border-radius: 0; }
+/* già tuo: lo dice «Tuo» sotto il nome, niente spunta in più */
+.ui-next.ui-play .card .owned-tick { display: none; }
+.ui-next.ui-play .drawer .grid .card b { font-size: 14.5px; line-height: 1.15; }
+.ui-next.ui-play .drawer .grid .card.selected { background: none; box-shadow: inset 0 0 0 2.5px var(--primary); border-radius: 18px; }
+.ui-next.ui-play .drawer .grid .card.dim img.lit { opacity: 0.55; }
+.ui-next.ui-play .drawer .grid .card .badge { background: var(--primary); color: #2a1f12; }
+/* anteprime illuminate nei dettagli: niente riquadro, un bagliore caldo dietro */
+.ui-next.ui-play img.lit-hero { width: 190px; height: 190px; object-fit: contain; background: radial-gradient(closest-side, rgba(255, 176, 86, 0.26), rgba(255, 176, 86, 0) 85%); box-shadow: none; border-radius: 0; filter: drop-shadow(0 12px 12px rgba(0, 0, 0, 0.5)); }
+
+/* ── Pergamena: descrizioni e dati, con le icone monocromatiche ── */
+.ui-next .parch { position: relative; margin: 6px 2px 10px; padding: 14px 18px; background: var(--parch, #ead8b0) center / 100% 100% no-repeat; filter: drop-shadow(0 8px 12px rgba(8, 5, 14, 0.5)); color: #3a2a22; text-align: left; }
+.ui-next .parch .p-desc { margin: 0 0 6px; font-style: italic; font-weight: 700; font-size: 14.5px; line-height: 1.35; color: #4a3420; text-align: center; }
+.ui-next .parch .p-row { display: grid; grid-template-columns: 22px 92px minmax(0, 1fr); gap: 10px; align-items: center; padding: 6px 0; }
+.ui-next .parch .p-row + .p-row, .ui-next .parch .p-desc + .p-row { border-top: 1px dashed rgba(110, 82, 51, 0.35); }
+.ui-next .parch .mono { color: #7a5a36; --hole: #ead8b0; }
+.ui-next .parch .p-l { color: #7a6656; font-weight: 700; font-size: 13.5px; }
+.ui-next .parch .p-v { color: #3a2a22; font-weight: 800; font-size: 14px; line-height: 1.2; overflow-wrap: anywhere; }
+.ui-next .parch .p-v.warn { color: #a5372a; }
+.ui-next .mono { display: inline-grid; place-items: center; flex: none; width: var(--s); height: var(--s); }
+
+/* ── Cartellini: carta chiara con l'edera in seppia ── */
+.ui-next.ui-play :is(.mt-tag, .mtf-face) {
+  background-color: #efe5d2; background-image: var(--zones-paper), var(--vines-paper), linear-gradient(170deg, #f4ebda, #e6d7bb);
+  background-size: 100% 100%, 100% 100%, 100% 100%, 100% auto, 100% 100%; background-repeat: no-repeat;
+}
+.ui-next .mtf-back .kv dt .mono { margin-right: 7px; vertical-align: -3px; color: #8a6a44; --hole: #efe5d2; }
+
+/* ── Il Custode senza fondo pieno dietro ── */
+.ui-next.ui-play .pl-stage { background: none; border: 0; box-shadow: none; }
+
+/* ── Scheda del defunto ───────────────────────────────────────────────
+   L'immagine con un alone caldo e qualche lucciola; la foto è una stampa
+   appoggiata, con la candela accesa nell'angolo e un ciuffo di foglie; i dati
+   su pergamena, una zucca a dividere, la cronologia «icona · data · cosa» e in
+   fondo la terra con le lapidi e le lanterne, sotto i pulsanti. */
+.ui-next.ui-play .drawer[data-kind="deceased"] { max-height: min(84%, 720px, calc(100% - 28px - var(--safe-t) - var(--safe-b))); }
+.ui-next.ui-play .drawer[data-kind="deceased"] .drawer-foot {
+  position: absolute; left: 0; right: 0; bottom: 0; z-index: 2; padding-top: 44px;
+  background: linear-gradient(180deg, rgba(30, 26, 38, 0), rgba(30, 26, 38, 0.55) 30%, rgba(28, 24, 35, 0.9) 70%, rgba(26, 22, 33, 0.97));
+}
+.ui-next.ui-play .drawer[data-kind="deceased"] .drawer-body { padding-bottom: 0; }
+.ui-next.ui-play .deceased .hero { position: relative; gap: 4px; padding-top: 4px; }
+.ui-next.ui-play .deceased .dc-glow { position: absolute; left: 50%; top: 18px; width: 300px; height: 230px; translate: -50% 0; background: radial-gradient(closest-side, rgba(255, 196, 110, 0.28), rgba(255, 196, 110, 0)); pointer-events: none; }
+.ui-next.ui-play .deceased .dc-fly { position: absolute; z-index: 2; width: 6px; height: 6px; border-radius: 50%; background: #ffd27a; box-shadow: 0 0 8px 3px rgba(255, 200, 100, 0.65); pointer-events: none; animation: dcFly 4.6s ease-in-out infinite alternate; }
+.ui-next.ui-play .deceased .dc-fly.f0 { scale: 0.7; opacity: 0.55; animation-delay: -1.2s; }
+.ui-next.ui-play .deceased .dc-fly.f1 { scale: 0.95; opacity: 0.75; animation-delay: -2.6s; }
+.ui-next.ui-play .deceased .dc-fly.f2 { scale: 1.2; opacity: 0.95; }
+@keyframes dcFly { to { translate: 6px -8px; opacity: 0.35; } }
+@media (prefers-reduced-motion: reduce) { .ui-next.ui-play .deceased .dc-fly { animation: none; } }
+.ui-next.ui-play .deceased .hero > img.dc-stone { position: relative; z-index: 1; width: 240px; height: 200px; object-fit: contain; background: none; box-shadow: none; border-radius: 0; filter: drop-shadow(0 14px 16px rgba(0, 0, 0, 0.45)); }
+.ui-next.ui-play .deceased .hero h3 { font-size: 34px; margin-top: 2px; }
+.ui-next.ui-play :is(.deceased, .photo-pick) .portrait.print { position: relative; z-index: 1; width: 206px; margin: 16px auto 20px; perspective: 800px; }
+.ui-next.ui-play :is(.deceased, .photo-pick) .portrait.print > .pic { aspect-ratio: 1; border-radius: 3px; border: 9px solid #efe6d4; border-bottom-width: 30px; background: #efe6d4; box-sizing: border-box;
+  box-shadow: 0 2px 0 rgba(255, 255, 255, 0.5) inset, 0 22px 30px rgba(0, 0, 0, 0.55), 0 6px 10px rgba(0, 0, 0, 0.4); transform: rotateY(-4deg) rotateX(2deg) rotateZ(-1.5deg); }
+.ui-next.ui-play :is(.deceased, .photo-pick) .portrait.print > img.stone { left: auto; right: -18px; bottom: -14px; width: 46px; height: 46px; rotate: 6deg; z-index: 2; background: none; border-radius: 0; box-shadow: none;
+  filter: drop-shadow(1.5px 0 0 #fff) drop-shadow(-1.5px 0 0 #fff) drop-shadow(0 1.5px 0 #fff) drop-shadow(0 -1.5px 0 #fff) drop-shadow(0 0 10px rgba(255, 190, 90, 0.75)) drop-shadow(0 5px 5px rgba(0, 0, 0, 0.5)); }
+.ui-next.ui-play .deceased .dc-fern { position: absolute; left: -40px; bottom: -16px; z-index: 2; width: 90px; height: 70px; scale: -1 1; background: var(--fern) no-repeat center / contain; pointer-events: none; }
+.ui-next.ui-play .dc-facts { margin-top: 14px; }
+.ui-next.ui-play .dc-facts .kv { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 0 14px; margin: 0; }
+.ui-next.ui-play .dc-facts .kv :is(dt, dd) { padding: 7px 0; border-top: 1px dashed rgba(110, 82, 51, 0.35); }
+.ui-next.ui-play .dc-facts .kv :is(dt, dd):nth-child(-n + 2) { border-top: 0; }
+.ui-next.ui-play .dc-facts .kv dt { display: flex; align-items: center; gap: 10px; color: #7a6656; font-weight: 700; font-size: 13.5px; }
+.ui-next.ui-play .dc-facts .kv dd { color: #3a2a22; font-weight: 800; font-size: 14px; line-height: 1.25; align-self: center; }
+.ui-next.ui-play .dc-facts .kv dd.warn { color: #a5372a; }
+.ui-next.ui-play .dc-divider { display: flex; align-items: center; gap: 12px; margin: 18px 6px 4px; }
+.ui-next.ui-play .dc-divider::before, .ui-next.ui-play .dc-divider::after { content: ''; flex: 1; height: 1.5px; background: linear-gradient(90deg, rgba(201, 147, 64, 0), rgba(201, 147, 64, 0.55), rgba(201, 147, 64, 0)); }
+.ui-next.ui-play .deceased .dc-log li { grid-template-columns: 30px 98px minmax(0, 1fr); gap: 10px; }
+.ui-next.ui-play .deceased .dc-log li > .pxi { order: 0; }
+.ui-next.ui-play .deceased .dc-log li > time { order: 1; text-align: left; }
+.ui-next.ui-play .deceased .dc-log li > span { order: 2; }
+.ui-next.ui-play .deceased .dc-earth {
+  height: 124px; margin: 6px -12px calc(var(--foot-h, 150px) - 40px); background: no-repeat center bottom / 100% auto;
+  -webkit-mask-image: linear-gradient(180deg, #000 50%, rgba(0, 0, 0, 0.35) 80%, transparent); mask-image: linear-gradient(180deg, #000 50%, rgba(0, 0, 0, 0.35) 80%, transparent);
+}
+
+/* sopra le testate animate niente sfocature (andrebbero ricalcolate a ogni frame): fondi pieni */
+.ui-next.ui-play .drawer.with-hero :is(.drawer-extra .wisp-pill, #drawer-close) { backdrop-filter: none; -webkit-backdrop-filter: none; background: rgba(20, 15, 24, 0.86); }
+.ui-next.ui-play .shop-hero::before { backdrop-filter: none; -webkit-backdrop-filter: none; }
+
+/* ── Personaggio: come le altre schede ────────────────────────────────
+   Il Custode senza niente dietro: lui e le schede stanno fuori dalla parte
+   che scorre (customize.ts, .drawer-pinned), le opzioni scorrono solo sotto;
+   le schede nella barra bassa con le icone monocromatiche. */
+.ui-next.ui-play .drawer[data-kind="look"] > .look-stage { position: relative; top: auto; flex: none; margin: 0 0 6px; background: none; border: 0; box-shadow: none; }
+.ui-next.ui-play .drawer[data-kind="look"] .look-tabs {
+  display: grid; grid-auto-flow: column; grid-auto-columns: minmax(70px, 1fr); gap: 4px; padding: 4px; margin: 4px 12px 0; justify-self: stretch;
+  border-radius: 15px; background: rgba(28, 23, 35, 0.95); box-shadow: 0 6px 14px rgba(0, 0, 0, 0.3);
+}
+.ui-next.ui-play .drawer[data-kind="look"] .look-tabs .tab {
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; height: 46px; min-height: 0; padding: 4px 4px 3px;
+  border: 0; border-radius: 11px; background: transparent; box-shadow: none; color: #b3abbf; font-size: 11px; font-weight: 800; line-height: 1.05; --hole: #2c2636;
+}
+.ui-next.ui-play .drawer[data-kind="look"] .look-tabs .tab .pxi { display: none; }
+.ui-next.ui-play .drawer[data-kind="look"] .look-tabs .tab.active { background: linear-gradient(180deg, #f6d48a, #e8b65e); color: #2a1f12; box-shadow: none; --hole: #eec170; }
+
+/* ── Sepoltura: come le altre schede ─────────────────────────────────
+   Titoli dei campi come le sezioni (gotico dorato), campi e scelte senza
+   bordi, la foto come una stampa, le lapidi illuminate senza celle (screens.ts)
+   e il riepilogo come la scheda del defunto. */
+.ui-next.ui-play .drawer[data-kind="burial"] .steps { margin-bottom: 14px; }
+.ui-next.ui-play .drawer[data-kind="burial"] .field { gap: 8px; margin-bottom: 18px; }
+.ui-next.ui-play .drawer[data-kind="burial"] .field > label { font: 700 23px/1.05 var(--gothic); color: var(--gold-bright); text-transform: none; letter-spacing: 0; text-shadow: 0 2px 6px rgba(0, 0, 0, 0.45); }
+.ui-next.ui-play .drawer[data-kind="burial"] .field :is(input, textarea) { min-height: 50px; padding: 12px 14px; border-radius: 14px; background: rgba(20, 16, 26, 0.6); box-shadow: inset 0 0 0 1.5px rgba(255, 226, 168, 0.12); font-size: 16px; font-weight: 700; }
+.ui-next.ui-play .drawer[data-kind="burial"] .field textarea { min-height: 96px; line-height: 1.35; }
+.ui-next.ui-play .drawer[data-kind="burial"] .field :is(input, textarea):focus { box-shadow: inset 0 0 0 2px var(--primary); }
+.ui-next.ui-play .drawer[data-kind="burial"] .chips { gap: 8px; }
+.ui-next.ui-play .drawer[data-kind="burial"] .chip { min-height: 38px; padding: 8px 14px; border-radius: 999px; background: rgba(20, 16, 26, 0.55); box-shadow: inset 0 0 0 1.5px rgba(255, 226, 168, 0.1); color: #e6ddd0; font-weight: 800; font-size: 13.5px; }
+.ui-next.ui-play .drawer[data-kind="burial"] .chip.active { background: var(--primary); box-shadow: none; color: #2a1f12; }
+/* gli epitaffi suggeriti: citazioni in corsivo */
+.ui-next.ui-play .drawer[data-kind="burial"] .field + .chips .chip { font-style: italic; font-weight: 700; border-radius: 14px; text-align: left; }
+.ui-next.ui-play .drawer[data-kind="burial"] > .drawer-body > div > .muted:first-of-type { font-size: 14.5px; }
+/* la foto: una stampa appoggiata; sotto il filtro e i pulsanti */
+.ui-next.ui-play .photo-pick { justify-items: center; gap: 14px; }
+.ui-next.ui-play .photo-pick .portrait.print { width: 230px; margin: 6px auto 8px; }
+.ui-next.ui-play .photo-pick .portrait.print > .pic { width: 100%; height: auto; display: block; object-fit: cover; }
+.ui-next.ui-play .photo-pick .portrait.empty { width: 230px; }
+.ui-next.ui-play .photo-pick > .row { width: 100%; }
+/* le lapidi: niente cella, il rango sotto quelle bloccate */
+.ui-next.ui-play .drawer[data-kind="burial"] .grid .card.locked img.lit { opacity: 0.45; filter: grayscale(0.5); }
+.ui-next.ui-play .drawer[data-kind="burial"] .grid .card:disabled { opacity: 1; }
+.ui-next.ui-play .drawer[data-kind="burial"] .grid .card.locked b { color: var(--muted); }
+/* il riepilogo */
+.ui-next.ui-play .drawer[data-kind="burial"] .burial-next { margin: 14px 4px 0; text-align: center; font-size: 13.5px; }

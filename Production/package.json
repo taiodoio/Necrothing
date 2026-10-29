@@ -1,0 +1,42 @@
+{
+  "name": "necrothing-prototype-3d",
+  "private": true,
+  "version": "0.2.0",
+  "type": "module",
+  "scripts": {
+    "predev": "node scripts/collect-licenses.mjs",
+    "dev": "vite",
+    "prebuild": "node scripts/collect-licenses.mjs",
+    "build": "tsc --noEmit && vite build",
+    "prebuild:beta": "node scripts/collect-licenses.mjs",
+    "build:beta": "tsc --noEmit && VITE_DISTRIBUTION=beta-full vite build",
+    "test": "node --experimental-strip-types --no-warnings --test tests/domain.test.mjs tests/distribution.test.mjs tests/economy.test.mjs tests/onboarding.test.mjs tests/render.test.mjs tests/lowpoly.test.mjs tests/i18n.test.mjs",
+    "typecheck": "tsc --noEmit",
+    "sim:economy": "node --experimental-strip-types --no-warnings scripts/sim-economy.mjs",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "@fontsource-variable/noto-sans-jp": "^5.3.1",
+    "@fontsource-variable/noto-sans-kr": "^5.3.1",
+    "@fontsource-variable/noto-sans-sc": "^5.3.1",
+    "@fontsource-variable/noto-sans-tc": "^5.3.1",
+    "@fontsource-variable/noto-serif-jp": "^5.3.1",
+    "@fontsource-variable/noto-serif-kr": "^5.3.1",
+    "@fontsource-variable/noto-serif-sc": "^5.3.1",
+    "@fontsource-variable/noto-serif-tc": "^5.3.1",
+    "@fontsource/cinzel": "^5.3.0",
+    "@fontsource/grenze-gotisch": "^5.3.0",
+    "@fontsource/nunito": "^5.3.0",
+    "fflate": "^0.8.2",
+    "three": "^0.180.0"
+  },
+  "devDependencies": {
+    "@types/three": "^0.180.0",
+    "playwright": "^1.64.1",
+    "typescript": "^5.5.4",
+    "vite": "^5.4.3"
+  },
+  "engines": {
+    "node": ">=22.6"
+  }
+}

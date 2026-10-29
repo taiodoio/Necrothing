@@ -43,7 +43,7 @@ fasi, valutazione voxel vs low-poly vs GLB) e
 
 ```bash
 npm install
-npm run dev        # http://localhost:5173  (galleria asset: /gallery.html, personaggi: /lab.html)
+npm run dev        # http://localhost:5173  (galleria asset: /gallery.html, personaggi: /lab.html, design system: /design-system.html)
 npm test           # test di dominio, distribuzione e accesso, rendering, generatori low-poly, testi
 npm run build      # typecheck + build di produzione in dist/ (profilo beta-full: accesso Full)
 npm run build:beta # come sopra, col profilo beta-full esplicito (TestFlight, beta Play Store)

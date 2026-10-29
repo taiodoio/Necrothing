@@ -279,6 +279,8 @@ export function lpBadgeUrl(name: string, tier: BadgeTier | 'locked'): string {
   return `data:image/svg+xml,${encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">${body}</svg>`)}`;
 }
 export const hasLpIcon = (name: string) => name in ICONS;
+/** I nomi delle icone colorate (la pagina del design system). */
+export const LP_ICON_NAMES = Object.keys(ICONS);
 
 const fmt = (n: number) => Math.round(n * 100) / 100;
 const urls = new Map<string, string>();

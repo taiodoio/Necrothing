@@ -115,6 +115,14 @@ test('lampione: acceso emette (vetro e luce), spento no', () => {
   assert.equal(off.lights.length, 0);
 });
 
+test('bottega: tutte le luci si spengono con il comando contestuale', () => {
+  const on = resolveLowpoly(placeableKey(vis('shop')))();
+  const off = resolveLowpoly(placeableKey(vis('shop', { lit: false })))();
+  assert.ok(on.lights.length > 0);
+  assert.equal(off.lights.length, 0);
+  assert.equal(off.geometries.glow, undefined);
+});
+
 test('cache: i modelli passano dai generatori e usano i materiali PBR; una chiave senza generatore è un errore', () => {
   const lp = getModel(placeableKey(vis('lamp_post')));
   assert.ok(lp.geometries.solid);

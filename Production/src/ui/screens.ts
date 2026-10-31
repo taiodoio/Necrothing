@@ -115,7 +115,7 @@ export function openBurial(ui: UI, initial?: R.BurialDraft, startStep = 0) {
       body.append(
         // una data per riga: affiancate sul telefono non si leggevano
         h('div', { class: 'dates' },
-          field(t('burial.birthDate.label'), h('input', { type: 'date', value: d.birthDate ?? '', max: d.deathDate ?? undefined, onchange: (e: Event) => { d.birthDate = (e.target as HTMLInputElement).value || null; render(); } }), errors.birthDate),
+          field(t('burial.birthDate.label'), h('input', { type: 'date', value: d.birthDate ?? '', max: d.deathDate ?? undefined, onchange: (e: Event) => { d.birthDate = (e.target as HTMLInputElement).value || null; } }), errors.birthDate),
           field(t('burial.deathDate.label'), h('input', { type: 'date', value: d.deathDate ?? '', max: now.toISOString().slice(0, 10), onchange: (e: Event) => { d.deathDate = (e.target as HTMLInputElement).value || null; render(); } }), errors.deathDate),
         ),
         field(t('burial.cause.label'), h('div', { class: 'chips' }, ...DEATH_CAUSES.map((c) => h('button', {
@@ -506,6 +506,12 @@ function itemFooter(ui: UI, id: string): HTMLElement | null {
     // prima l'incasso pronto, poi ciò che va sistemato, poi la funzione dell'oggetto, poi la luce
     rank: a.act === 'collect' ? -1 : a.act === 'repair' ? 0 : a.act === 'clean' ? 1 : a.cls === 'primary' ? 2 : 3,
   }));
+  if (game.editMode && !game.placement) {
+    const item = game.state.placeables.find((p) => p.id === id);
+    const def = item && CATALOG[item.type];
+    if (def?.rotatable) own.push({ icon: 'variant', label: t('ctx.rotate'), rank: 6, run: () => { closeDrawer(true); game.performEntityAction(id, 'rotate'); } });
+    if (def && !def.permanent) own.push({ icon: 'bag', label: t('ctx.store'), rank: 7, run: () => { closeDrawer(true); game.performEntityAction(id, 'store'); } });
+  }
   const pets: Array<Act & { rank: number }> = pet.filter((a) => !a.disabled).map((a) => ({
     icon: a.icon, label: a.label, rank: a.cls === 'primary' ? 4 : 5,
     run: () => { closeDrawer(true); game.select(null); a.run(); },

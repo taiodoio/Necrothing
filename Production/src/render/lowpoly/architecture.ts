@@ -292,16 +292,16 @@ export function shopLP(v: PVis): LPModel {
   const w = 2.2, d = 1.55, wallH = 1.2, rise = 0.95, z = -0.38;
   const front = d / 2;
   lp.push([0, 0, z]);
-  cottage(lp, { w, d, wallH, rise, plaster: '#8c7c64', timber: '#3f2f25', roof: '#3a4152', lean: 0.015, roundWindow: true, lit: true });
+  cottage(lp, { w, d, wallH, rise, plaster: '#8c7c64', timber: '#3f2f25', roof: '#3a4152', lean: 0.015, roundWindow: true, lit: v.lit });
   lp.push([0, 0.2, 0], 0, 0, 0.015);
   archedDoor(lp, -0.48, front + 0.02, 0.46, 0.9, '#4a3324', LPC.stoneLight);
   // vetrina gotica illuminata con persiane, fioriera e ragnatela
-  gothicWindow(lp, 0.45, 0.28, front + 0.02, 0.58, 0.62, true);
+  gothicWindow(lp, 0.45, 0.28, front + 0.02, 0.58, 0.62, v.lit);
   shutters(lp, 0.45, 0.24, front + 0.02, 0.58, 0.66, '#4d6a5a');
   flowerBox(lp, 0.45, 0.14, front + 0.02, 0.7);
   cobweb(lp, 0.8, 1.0, front + 0.04, 0.22, true);
   // finestrella sul retro e sul lato
-  gothicWindow(lp, 0.4, 0.45, -front - 0.05, 0.34, 0.45, true);
+  gothicWindow(lp, 0.4, 0.45, -front - 0.05, 0.34, 0.45, v.lit);
   // tenda a strisce con bordo smerlato
   lp.push([0.0, wallH - 0.05, front + 0.26], 0, 0.42);
   for (let i = 0; i < 10; i++) lp.box(-0.95 + i * 0.21, 0, 0, 0.21, 0.025, 0.56, i % 2 ? '#d6cdb9' : '#7e2b27', { jitter: 0, vary: 0.04, ao: 0 });
@@ -324,21 +324,21 @@ export function shopLP(v: PVis): LPModel {
   lp.pop();
   // lanterna alla porta
   lp.box(-0.82, 0.92, front + 0.1, 0.03, 0.03, 0.2, LPC.iron, { jitter: 0 });
-  hangingLantern(lp, -0.82, 0.92, front + 0.2, true, 0.9);
+  hangingLantern(lp, -0.82, 0.92, front + 0.2, v.lit, 0.9);
   ivy(lp, -w / 2 + 0.12, 0.0, front + 0.02, 1.15, 0.12);
   lp.pop();
   chimney(lp, w * 0.28, 0.2 + wallH + rise * 0.2, -d * 0.2, rise * 1.05);
   lp.pop();
   // soglia, zucche, merce
   lp.box(-0.48, 0, front + z + 0.18, 0.64, 0.07, 0.26, LPC.stoneLight, { bevel: 0.012 });
-  pumpkin(lp, -0.95, 0, 0.75, 0.13, true, true, 0.3);
-  pumpkin(lp, -0.08, 0, 0.72, 0.1, true, true, -0.4);
+  pumpkin(lp, -0.95, 0, 0.75, 0.13, true, v.lit, 0.3);
+  pumpkin(lp, -0.08, 0, 0.72, 0.1, true, v.lit, -0.4);
   pumpkin(lp, 1.18, 0, 0.62, 0.15, false, false);
   barrel(lp, 1.1, 1.05);
   crate(lp, 0.62, 0, 1.08, 0.28);
   crate(lp, 0.66, 0.28, 1.06, 0.2);
   lp.push([1.3, 0, 0.2], 0, 0.15, -0.25).cyl(0, 0, 0, 0.015, 0.015, 0.95, 4, LPC.wood, { jitter: 0 }).cyl(0, 0, 0, 0.08, 0.05, 0.2, 6, LPC.dry, { jitter: 0.01 }).pop();
-  lp.light(0.45, 0.75, front + z + 0.2, LPC.window, 0.7, 4.5, 0.1, 0.8);
+  if (v.lit) lp.light(0.45, 0.75, front + z + 0.2, LPC.window, 0.7, 4.5, 0.1, 0.8);
   grassTuft(lp, -1.3, 0.9, 1.2); grassTuft(lp, 1.35, -0.8, 1.1); grassTuft(lp, -1.25, -1.1, 1);
   decayLP(lp, v, 2.6, 2.6);
   return lp.build();

@@ -111,12 +111,73 @@ export class Onboarding {
     this.ui = ui;
     active = this;
     window.setInterval(() => this.tipTick(), 4000);
+    document.addEventListener('pointerdown', (e) => this.guardYardInteraction(e), true);
+    document.addEventListener('click', (e) => this.guardYardInteraction(e), true);
+    document.addEventListener('keydown', (e) => this.guardYardInteraction(e), true);
   }
 
   private get game() { return this.ui.game; }
   private get o(): OnboardingState { return this.replaying ?? this.game.state.onboarding; }
   /** In corso (anche il tutorial, che non copre la scena). */
   get running(): boolean { return this.o.stage !== 'done'; }
+
+  /** Durante il cortile solo le azioni del passo attuale possono raggiungere il gioco. */
+  allowsYardScene(hit: { entityId?: string; wispId?: string; roamerId?: string; petId?: string; vampireId?: string; talkerId?: string } | null, gesture: 'tap' | 'drag'): boolean {
+    if (!this.game.inYard || this.o.stage !== 'yard') return true;
+    const step = currentStep(this.o), g = this.game;
+    if (step === 'walk') return gesture === 'drag' || !hit;
+    if (step === 'wisp') return gesture === 'drag' || hit?.wispId === g.state.world.looseWisps[0]?.id;
+    if (step === 'clean' || step === 'flowers' || step === 'sheet') return hit?.entityId === YARD_GRAVE;
+    if (step === 'light') return hit?.entityId === YARD_LANTERN;
+    if (step === 'shop') return !!hit?.entityId && hit.entityId === this.shopId();
+    if (step === 'place') return !!g.placement;
+    if (step === 'edit') {
+      if (!g.editMode) return false;
+      if (g.toolMode === 'pan' && gesture === 'drag') return true;
+      const lamp = [...g.state.placeables].reverse().find((p) => p.type === YARD_GIFT.item);
+      return !!lamp && hit?.entityId === lamp.id;
+    }
+    if (step === 'ghost') return !!this.ghostId && hit?.roamerId === this.ghostId;
+    return false;
+  }
+
+  private guardYardInteraction(event: Event) {
+    if (!this.game.inYard || this.o.stage !== 'yard') return;
+    const target = event.target instanceof Element ? event.target : null;
+    if (target?.closest('[data-yard-skip]')) return;
+    if (event instanceof KeyboardEvent && event.key === 'Tab') return;
+    if (event instanceof KeyboardEvent && ['ArrowDown', 'ArrowUp', 'PageDown', 'PageUp', 'Home', 'End'].includes(event.key) && target?.closest('.drawer-body, .dialog.modal')) { // i18n-ok: tasti e selettori CSS
+      event.stopPropagation(); // Lascia il comportamento nativo di scorrimento, senza muovere il gioco.
+      return;
+    }
+    const button = target?.closest('button, a, input, select, textarea, [role="button"]'); // i18n-ok: selettore CSS
+    if (!button && !(event instanceof KeyboardEvent)) return;
+    const step = currentStep(this.o), g = this.game;
+    const matches = (selector: string) => !!button?.matches(selector);
+    const ctx = (action: string, id: string | null) => g.selection?.id === id && matches(`#ctx [data-ctx="${action}"]`);
+    let allowed = false;
+    if (step === 'clean') allowed = ctx('clean', YARD_GRAVE);
+    else if (step === 'flowers') allowed = ctx('flowers', YARD_GRAVE);
+    else if (step === 'light') allowed = ctx('light', YARD_LANTERN);
+    else if (step === 'sheet') allowed = ctx('detail', YARD_GRAVE);
+    else if (step === 'shop') allowed = ctx('shop', this.shopId()) || matches(`.drawer .card[data-item="${YARD_GIFT.item}"], .dialog .shop-detail .row .big-btn:not(.ghost)`);
+    else if (step === 'place') allowed = g.placement
+      ? matches('.tool-bar [data-tool="pan"], .tool-bar [data-tool="work"], .tool-bar [data-tool="undo"], .tool-bar [data-tool="confirm"], .tool-bar [data-tool="rotate"]')
+      : matches(`.dialog .shop-detail .row .big-btn:not(.ghost), .drawer .card[data-item="${YARD_GIFT.item}"], .drawer .drawer-foot .big-btn:not(.ghost), #fab, #bubble .slot[data-act="inventory"]`);
+    else if (step === 'edit') allowed = g.editMode
+      ? matches('.tool-bar [data-tool="pan"], .tool-bar [data-tool="work"], .tool-bar [data-tool="undo"]') || (this.moved && matches('.tool-bar [data-tool="confirm"]'))
+      : matches('#fab, #bubble .slot[data-act="edit"], #drawer .drawer-foot .big-btn');
+    else if (!step && yardFinished(this.o)) allowed = matches('#drawer-close, .cel-card .big-btn');
+    if (!allowed) {
+      // Un dito può iniziare a scorrere anche sopra un pulsante non disponibile.
+      if (event.type !== 'pointerdown') event.preventDefault();
+      event.stopImmediatePropagation();
+    }
+  }
+
+  private yardSkipButton() {
+    return h('button', { class: 'npc-note-cta', 'data-yard-skip': '', onclick: () => this.leaveYard(true) }, t('onboarding.yard.skip'), ' ›');
+  }
 
   private save() { if (!this.replaying) scheduleSave(this.game.state); }
 
@@ -381,7 +442,7 @@ export class Onboarding {
     this.framed = false;
     this.coachBox(null, t(`onboarding.yard.${step}`),
       t('onboarding.tutorial.progress', { n: this.o.step + 1, total: YARD_STEPS.length }),
-      h('button', { class: 'npc-note-cta', onclick: () => this.leaveYard(true) }, t('onboarding.yard.skip'), ' ›'));
+      this.yardSkipButton());
     this.mark(this.targetsOf(step));
     const look: Partial<Record<YardStep, string>> = { clean: YARD_GRAVE, flowers: YARD_GRAVE, light: YARD_LANTERN, ghost: YARD_GRAVE, sheet: YARD_GRAVE, shop: this.shopId() ?? '' };
     if (look[step]) this.game.focusEntity(look[step]!);
@@ -450,10 +511,10 @@ export class Onboarding {
       case 'edit': return () => {
         // la prima volta Modifica si presenta con una scheda: «Inizia»
         if (!g.editMode) return ['#drawer:not([hidden]) .drawer-foot .big-btn', '#bubble.open .slot[data-act="edit"]', '#fab'];
-        if (this.moved) return ['#edit-done'];
+        if (this.moved) return ['.tool-bar [data-tool="confirm"]'];
         // la lanterna appena posata (o quella del cortile)
         const lamp = [...g.state.placeables].reverse().find((p) => p.type === YARD_GIFT.item);
-        return lamp ? [entity(lamp.id)] : ['#edit-done'];
+        return lamp ? [entity(lamp.id)] : ['.tool-bar [data-tool="confirm"]'];
       };
       case 'ghost': return () => {
         const pos = () => (this.ghostId ? g.roamerPos(this.ghostId) : null);
@@ -493,7 +554,7 @@ export class Onboarding {
     this.clearMarks();
     if (!old.classList.contains('done')) {
       old.classList.add('done');
-      old.querySelector('.ob-coach-foot')?.replaceChildren(h('span', { class: 'ob-done', role: 'status' }, icon('check', 16), t('onboarding.yard.done')));
+      old.querySelector('.ob-coach-foot')?.replaceChildren(h('span', { class: 'ob-done', role: 'status' }, icon('check', 16), t('onboarding.yard.done')), h('span', { class: 'ob-coach-acts' }, this.yardSkipButton()));
     }
     const quick = reducedMotion();
     this.doneTimer = window.setTimeout(() => {
@@ -507,7 +568,7 @@ export class Onboarding {
     this.step = null;
     // la scheda si apre subito dopo il segnale: il consiglio su cosa c'è dentro c'è già, così si apre
     // al suo posto, sotto il consiglio (comparendo dopo la sposterebbe di colpo)
-    this.coachBox(null, t('onboarding.yard.sheetOpen'), t('onboarding.tutorial.progress', { n: YARD_STEPS.length, total: YARD_STEPS.length }));
+    this.coachBox(null, t('onboarding.yard.sheetOpen'), t('onboarding.tutorial.progress', { n: YARD_STEPS.length, total: YARD_STEPS.length }), this.yardSkipButton());
     this.mark(() => ['#drawer:not([hidden]) #drawer-close']);
     const since = performance.now();
     let opened = false;

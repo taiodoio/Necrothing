@@ -56,3 +56,22 @@ test('input: i tocchi accodati durante un cambio scena non diventano azioni nel 
     else globalThis.window = previousWindow;
   }
 });
+
+test('input: il pinch parte dal centro delle due dita senza far saltare la mappa', async () => {
+  const { Input } = await import('../src/app/Input.ts');
+  const previousWindow = globalThis.window;
+  const events = new Map(), moves = [], zooms = [];
+  globalThis.window = { addEventListener() {} };
+  try {
+    const el = { addEventListener: (name, fn) => events.set(name, fn), setPointerCapture() {} };
+    new Input(el, { tap() {}, dragStart: () => false, dragMove: (_x, _y, dx, dy) => moves.push([dx, dy]), dragEnd() {}, zoom: (f) => zooms.push(f), key() {} });
+    events.get('pointerdown')({ pointerId: 1, timeStamp: 1, clientX: 100, clientY: 100 });
+    events.get('pointerdown')({ pointerId: 2, timeStamp: 2, clientX: 200, clientY: 100 });
+    events.get('pointermove')({ pointerId: 1, timeStamp: 3, clientX: 110, clientY: 100 });
+    assert.deepEqual(moves, [[5, 0]]);
+    assert.equal(zooms.length, 1);
+  } finally {
+    if (previousWindow === undefined) delete globalThis.window;
+    else globalThis.window = previousWindow;
+  }
+});

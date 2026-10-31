@@ -12,7 +12,7 @@ import type { GraveVisualState } from '../game/graves.ts';
 import { graveVisualState } from '../game/graves.ts';
 import * as R from '../game/rules.ts';
 import { anniversaryYears, catchUpMessage, liveTick, runCatchUp, type CatchUpReport } from '../game/simulation.ts';
-import { createNewGame, type FpsSetting, type Quality, type QualitySetting, type SaveData, type TimeOverride } from '../game/state.ts';
+import { createNewGame, type FpsSetting, type Placed, type Quality, type QualitySetting, type SaveData, type TimeOverride } from '../game/state.ts';
 import { buildYard } from '../game/yard.ts';
 import { dayPhaseForHour, type DayPhase } from '../game/time.ts';
 import type { CustodeLook } from '../game/look.ts';
@@ -50,7 +50,7 @@ import { nextPaint } from './boot.ts';
 export type Selection = { kind: 'grave' | 'placeable'; id: string } | null;
 
 export type EntityAction =
-  | 'detail' | 'clean' | 'repair' | 'flowers' | 'light' | 'shop' | 'rotate' | 'store' | 'confirm' | 'move' | 'entrust' | 'memories' | 'ring' | 'registry' | 'house' | 'collect';
+  | 'detail' | 'clean' | 'repair' | 'flowers' | 'light' | 'shop' | 'rotate' | 'store' | 'confirm' | 'undoMove' | 'move' | 'entrust' | 'memories' | 'ring' | 'registry' | 'house' | 'collect';
 
 const PET_STATUS: Record<PetMode, string> = { free: t('game.pet.status.free'), follow: t('game.pet.status.follow'), home: t('game.pet.status.home') };
 
@@ -62,8 +62,9 @@ export interface Placement {
   y: number;
   rot: number;
   valid: boolean;
+  history?: Array<{ x: number; y: number; rot: number }>;
   /** Strumento a traccia (interfaccia nuova): i tratti già tirati e quello sotto il dito. */
-  trace?: { segs: R.TraceCell[][]; live: R.TraceCell[] | null; draw?: TraceDraw | null };
+  trace?: { segs: R.TraceCell[][]; history: R.TraceCell[][][]; live: R.TraceCell[] | null; draw?: TraceDraw | null };
 }
 
 
@@ -100,7 +101,9 @@ export class Game {
   placement: Placement | null = null;
   /** Tomba affidata e albero mentre il corteo del rito è in scena: non si spostano né si tolgono. */
   private riteIds: string[] | null = null;
-  private drag: { id: string; x: number; y: number; valid: boolean; grab: THREE.Vector3 } | null = null;
+  private drag: { id: string; x: number; y: number; valid: boolean; grab: THREE.Vector3; origin?: { x: number; y: number; rot: number } } | null = null;
+  toolMode: 'pan' | 'work' = 'work';
+  private readonly moveHistory: Array<{ kind: 'move'; id: string; x: number; y: number; rot: number } | { kind: 'store'; item: Placed }> = [];
   private clock = new THREE.Clock();
   private phase: DayPhase = 'night';
   /** Nebbia in movimento nel bosco attorno al recinto (?mist=0 la spegne, per sviluppo). */
@@ -123,7 +126,6 @@ export class Game {
   private lastRendererDpr = 0;
   private canvas: HTMLCanvasElement;
   private postfx: PostFX;
-  private focusNdc = new THREE.Vector3();
   /** Il cerchio dorato sul punto dove sta andando il Custode. */
   private readonly walkMark = new WalkTarget();
 
@@ -181,7 +183,7 @@ export class Game {
       dragStart: (x, y) => this.onDragStart(x, y),
       dragMove: (x, y, dx, dy, owned) => this.onDragMove(x, y, dx, dy, owned),
       dragEnd: (x, y, owned) => this.onDragEnd(x, y, owned),
-      zoom: (f) => this.rig.zoomBy(f),
+      zoom: (f) => { if (!this.toolControlsActive() || this.toolMode === 'pan') { this.dismissContextForNavigation(); this.rig.zoomBy(f); } },
       key: (k, down) => this.onKey(k, down),
     });
     this.applySettingQuality();
@@ -252,6 +254,7 @@ export class Game {
 
   /** Mette il cerchio dorato sulla meta appena scelta (l'ultimo punto del percorso). */
   private markWalk() {
+    this.ui.closeContext();
     const end = this.actors.avatar.path[this.actors.avatar.path.length - 1];
     if (!end) return;
     this.walkMark.show(new THREE.Vector3(end.x, this.world.heightAt(end.x, end.z), end.z));
@@ -364,7 +367,6 @@ export class Game {
       if (!this.renderer.shadowMap.autoUpdate) this.refreshStaticShadows();
       this.world.updateDecorLod(this.rig.camera);
       this.renderer.info.reset();
-      this.updateFocus();
       this.postfx.render(this.scene, this.rig.camera);
     }
     this.drawnUnderMenu = menu;
@@ -725,6 +727,43 @@ export class Game {
     return null;
   }
 
+  canUndoTool() { return this.placement?.trace ? this.placement.trace.history.length > 0 : this.placement?.kind === 'item' ? !!this.placement.history?.length : this.moveHistory.length > 0; }
+
+  private toolControlsActive() { return this.placement?.kind === 'item' || (this.editMode && !this.placement); }
+
+  setToolMode(mode: 'pan' | 'work') {
+    this.toolMode = mode;
+    this.ui.closeContext();
+    this.ui.refreshPlacementBar();
+  }
+
+  undoTool() {
+    if (this.placement?.trace) { this.undoTrace(); return; }
+    if (this.placement?.kind === 'item') {
+      const previous = this.placement.history?.pop();
+      if (previous) { Object.assign(this.placement, previous); this.refreshPlacement(); }
+      return;
+    }
+    const previous = this.moveHistory.at(-1);
+    if (!previous) return;
+    const id = previous.kind === 'move' ? previous.id : previous.item.id;
+    const restored = previous.kind === 'move'
+      ? this.act((s) => R.moveEntity(s, previous.id, previous.x, previous.y, previous.rot), undefined, true)
+      : this.act((s) => {
+        const item = previous.item;
+        if (R.ownedCount(s, item.type) < 1) throw new Error(t('rules.place.noneOwned'));
+        if (!canPlaceAt(item.x, item.y, rotatedFootprint(item.type, item.rot), buildOccupancy(s), areaForLevel(s.world.expansionLevel))) throw new Error(t('rules.place.busy'));
+        s.inventory[item.type]--;
+        if (!s.inventory[item.type]) delete s.inventory[item.type];
+        s.placeables.push(structuredClone(item));
+      }, undefined, true);
+    if (restored) {
+      this.moveHistory.pop();
+      this.select({ kind: this.kindOf(id), id });
+      this.ui.refreshPlacementBar();
+    }
+  }
+
   select(sel: Selection) {
     this.selection = sel;
     this.world.select(sel?.id ?? null);
@@ -757,16 +796,31 @@ export class Game {
     const grave = this.state.graves.find((g) => g.id === id);
     // durante il rito la tomba affidata e l'albero restano dove sono finché il corteo non ha finito
     if (this.riteIds?.includes(id) && !['detail', 'memories', 'shop', 'registry', 'house'].includes(action)) { toast(t('game.rite.wait')); return; }
-    const instant: EntityAction[] = ['detail', 'shop', 'rotate', 'store', 'confirm', 'move', 'entrust', 'memories', 'registry', 'house', 'collect'];
+    const instant: EntityAction[] = ['detail', 'shop', 'rotate', 'store', 'confirm', 'undoMove', 'move', 'entrust', 'memories', 'registry', 'house', 'collect'];
     const run = () => {
       switch (action) {
         case 'clean': this.actors.work(); if (this.act((s, n) => (grave ? R.cleanGrave(s, id, n) : R.cleanPlaceable(s, id, n)), center, 'rewarded') && grave) signalOnboarding('graveCleaned'); break;
         case 'repair': this.actors.work(1.6); this.act((s, n) => (grave ? R.repairGrave(s, id, n) : R.repairPlaceable(s, id, n)), center, 'rewarded'); break;
         case 'flowers': this.actors.work(0.8); if (this.act((s, n) => R.bringFlowers(s, id, n), center, 'rewarded')) signalOnboarding('flowersBrought'); break;
         case 'light': if (this.act((s) => R.toggleLight(s, id), center)) signalOnboarding('lightToggled'); break;
-        case 'rotate': this.act((s) => R.rotateEntity(s, id)); break;
-        case 'store': this.act((s) => R.storePlaceable(s, id)); this.select(null); break;
+        case 'rotate': {
+          const item = this.state.placeables.find((p) => p.id === id);
+          const before = item && { kind: 'move' as const, id, x: item.x, y: item.y, rot: item.rot };
+          if (this.act((s) => R.rotateEntity(s, id)) && this.editMode && before) this.moveHistory.push(before);
+          this.ui.refreshPlacementBar();
+          break;
+        }
+        case 'store': {
+          const item = this.state.placeables.find((p) => p.id === id);
+          const before = item && structuredClone(item);
+          if (this.act((s) => R.storePlaceable(s, id))) {
+            if (this.editMode && before) this.moveHistory.push({ kind: 'store', item: before });
+            this.select(null); this.ui.refreshPlacementBar();
+          }
+          break;
+        }
         case 'confirm': this.select(null); toast(t('game.place.confirmed')); break;
+        case 'undoMove': this.undoTool(); break;
         case 'detail': this.ui.openDetail(id); break;
         case 'shop': this.ui.openShop(); break;
         case 'move': this.setEditMode(true); this.select(this.selection); break;
@@ -787,11 +841,13 @@ export class Game {
   setEditMode(on: boolean) {
     const was = this.editMode;
     this.editMode = on;
-    if (!on) { this.world.endPreview(); this.select(null); }
+    if (on && !was) { this.moveHistory.length = 0; this.toolMode = 'work'; }
+    if (!on) { this.moveHistory.length = 0; this.world.endPreview(); this.select(null); }
     if (was && !on) signalOnboarding('editDone');
     this.refreshKeeperArea();
     this.ui.refreshEditBanner();
     this.ui.refreshContext();
+    if (this.shrink) this.ui.refreshAreaBanner(R.outsideArea(this.state, this.shrink.level).length);
   }
 
   // ── Posizionamento (sepoltura & inventario) ──────────────────────────
@@ -826,7 +882,8 @@ export class Game {
     const spot = nearestFreeSpot(c.x, c.y, fp, occ, areaForLevel(this.state.world.expansionLevel));
     if (!spot) { toast(t('game.noSpace.item')); return; }
     this.select(null);
-    this.placement = { kind: 'item', type, x: spot.x, y: spot.y, rot: 0, valid: true };
+    this.toolMode = 'work';
+    this.placement = { kind: 'item', type, x: spot.x, y: spot.y, rot: 0, valid: true, history: [] };
     this.rig.follow = null;
     this.rig.jumpTo(cellCenter(spot.x, spot.y, fp));
     this.refreshPlacement();
@@ -835,7 +892,8 @@ export class Game {
   private startTrace(type: string) {
     const c = this.placementOriginCell();
     this.select(null);
-    this.placement = { kind: 'item', type, x: c.x, y: c.y, rot: 0, valid: false, trace: { segs: [], live: null } };
+    this.toolMode = 'work';
+    this.placement = { kind: 'item', type, x: c.x, y: c.y, rot: 0, valid: false, trace: { segs: [], history: [], live: null } };
     this.rig.follow = null;
     this.rig.jumpTo(cellCenter(c.x, c.y, [1, 1])); // si traccia partendo da dove sta il Custode
     this.refreshPlacement();
@@ -864,9 +922,14 @@ export class Game {
 
   undoTrace() {
     const t = this.placement?.trace;
-    if (!t?.segs.length) return;
-    t.segs.pop();
+    const previous = t?.history.pop();
+    if (!t || !previous) return;
+    t.segs = previous;
     this.refreshPlacement();
+  }
+
+  private rememberTrace(t: NonNullable<Placement['trace']>) {
+    t.history.push(t.segs.map((segment) => segment.map((cell) => ({ ...cell }))));
   }
 
   /** Compra in Bottega quelli che mancano per finire il tracciato. */
@@ -919,6 +982,7 @@ export class Game {
   rotatePlacement() {
     const p = this.placement;
     if (!p || p.kind !== 'item' || !CATALOG[p.type!].rotatable) return;
+    p.history?.push({ x: p.x, y: p.y, rot: p.rot });
     p.rot = (p.rot + 1) % 4;
     this.refreshPlacement();
   }
@@ -1022,22 +1086,38 @@ export class Game {
 
   private onTap(x: number, y: number) {
     if (uiBlocking()) return;
+    if (this.inYard && !this.ui.onboarding.allowsYardScene(this.pick(x, y), 'tap')) return;
     this.ui.closeBubble();
     this.ui.closeActorMenu();
     if (this.placement?.trace) {
+      if (this.toolMode === 'pan') {
+        const id = this.pick(x, y)?.entityId;
+        this.select(id ? { kind: this.kindOf(id), id } : null);
+        return;
+      }
       // un tocco posa una cella sola, nel verso dell'ultimo tratto
       const g = this.groundCell(x, y), t = this.placement.trace;
       if (!g) return;
-      t.segs.push([{ x: g.cell.x, y: g.cell.y, rot: t.segs.at(-1)?.at(-1)?.rot ?? 0 }]);
+      const existing = t.segs.findIndex((segment) => segment.some((cell) => cell.x === g.cell.x && cell.y === g.cell.y));
+      const id = this.pick(x, y)?.entityId;
+      if (existing < 0 && id) { this.select({ kind: this.kindOf(id), id }); return; }
+      this.ui.closeContext();
+      this.rememberTrace(t);
+      if (existing >= 0) {
+        t.segs = t.segs.map((segment) => segment.filter((cell) => cell.x !== g.cell.x || cell.y !== g.cell.y)).filter((segment) => segment.length);
+      } else t.segs.push([{ x: g.cell.x, y: g.cell.y, rot: t.segs.at(-1)?.at(-1)?.rot ?? 0 }]);
       this.refreshPlacement();
       return;
     }
     if (this.placement) {
+      if (this.placement.kind === 'item' && this.toolMode === 'pan') return;
       const g = this.groundCell(x, y);
       if (!g) return;
       const fp = this.placementFp();
-      this.placement.x = g.cell.x - Math.floor(fp[0] / 2);
-      this.placement.y = g.cell.y - Math.floor(fp[1] / 2);
+      const nx = g.cell.x - Math.floor(fp[0] / 2), ny = g.cell.y - Math.floor(fp[1] / 2);
+      if (nx !== this.placement.x || ny !== this.placement.y) this.placement.history?.push({ x: this.placement.x, y: this.placement.y, rot: this.placement.rot });
+      this.placement.x = nx;
+      this.placement.y = ny;
       this.refreshPlacement();
       return;
     }
@@ -1509,8 +1589,16 @@ export class Game {
     });
   }
 
+  private dismissContextForNavigation() {
+    // Impedisce anche che un arrivo del Custode riapra un menù già chiuso.
+    this.ctxReady = true;
+    this.ui.closeContext();
+  }
+
   private onDragStart(x: number, y: number): boolean {
+    if (this.inYard && !this.ui.onboarding.allowsYardScene(this.pick(x, y), 'drag')) return false;
     this.ui.closeBubble();
+    if (this.toolControlsActive() && this.toolMode === 'pan') return false;
     const g = this.groundCell(x, y);
     if (!g) return false;
     if (this.placement?.trace) {
@@ -1526,7 +1614,7 @@ export class Game {
       const fp = this.placementFp();
       const p = this.placement;
       const inside = g.cell.x >= p.x - 1 && g.cell.x <= p.x + fp[0] && g.cell.y >= p.y - 1 && g.cell.y <= p.y + fp[1];
-      if (inside) this.drag = { id: '__placement', x: p.x, y: p.y, valid: p.valid, grab: g.p.clone().sub(cellCenter(p.x, p.y, fp)) };
+      if (inside) this.drag = { id: '__placement', x: p.x, y: p.y, valid: p.valid, grab: g.p.clone().sub(cellCenter(p.x, p.y, fp)), origin: { x: p.x, y: p.y, rot: p.rot } };
       return inside;
     }
     if (!this.editMode) return false;
@@ -1536,7 +1624,9 @@ export class Game {
     if (this.riteIds?.includes(id)) { toast(t('game.rite.wait')); return false; }
     if (this.selection?.id !== id) this.select({ kind: this.kindOf(id), id });
     const c = this.entityCells(id)!;
-    this.drag = { id, x: c.x, y: c.y, valid: true, grab: g.p.clone().sub(cellCenter(c.x, c.y, c.fp)) };
+    const placed = this.state.placeables.find((p) => p.id === id);
+    const origin = { x: c.x, y: c.y, rot: placed?.rot ?? 0 };
+    this.drag = { id, x: c.x, y: c.y, valid: true, grab: g.p.clone().sub(cellCenter(c.x, c.y, c.fp)), origin };
     this.ui.closeContext();
     return true;
   }
@@ -1552,7 +1642,13 @@ export class Game {
       this.refreshPlacement();
       return;
     }
-    if (!owned || !this.drag) { this.rig.panPixels(dx, dy); return; }
+    if (!owned || !this.drag) {
+      if ((!this.toolControlsActive() || this.toolMode === 'pan') && (dx || dy)) {
+        this.dismissContextForNavigation();
+        this.rig.panPixels(dx, dy);
+      }
+      return;
+    }
     const g = this.groundCell(x, y);
     if (!g) return;
     const id = this.drag.id;
@@ -1574,7 +1670,7 @@ export class Game {
     const tr = this.placement?.trace;
     if (owned && tr?.live) {
       // alzando il dito il tratto resta (un tratto di una cella sola è il dito che si posa per il pizzico)
-      if (tr.live.length > 1) tr.segs.push(tr.live);
+      if (tr.live.length > 1) { this.rememberTrace(tr); tr.segs.push(tr.live); }
       tr.live = null;
       tr.draw = null;
       this.refreshPlacement();
@@ -1583,13 +1679,23 @@ export class Game {
     const d = this.drag;
     this.drag = null;
     if (!owned || !d) return;
-    if (d.id === '__placement') return;
+    if (d.id === '__placement') {
+      const p = this.placement;
+      if (p?.kind === 'item' && d.origin && (p.x !== d.origin.x || p.y !== d.origin.y)) { p.history?.push(d.origin); this.ui.refreshPlacementBar(); }
+      return;
+    }
     this.world.endPreview();
-    if (d.valid) { if (this.act((s) => R.moveEntity(s, d.id, d.x, d.y))) signalOnboarding('itemMoved'); }
+    if (d.valid) {
+      if (d.origin && (d.origin.x !== d.x || d.origin.y !== d.y) && this.act((s) => R.moveEntity(s, d.id, d.x, d.y))) {
+        this.moveHistory.push({ kind: 'move', id: d.id, ...d.origin });
+        signalOnboarding('itemMoved');
+      }
+    }
     else { toast(t('game.move.busy')); this.world.sync(this.state); }
     this.world.select(d.id);
     this.refreshKeeperArea();
     this.ui.refreshContext();
+    this.ui.refreshPlacementBar();
   }
 
   // ── Tastiera ─────────────────────────────────────────────────────────
@@ -1603,6 +1709,7 @@ export class Game {
   }
 
   private steerFromKeys(dt: number) {
+    if (this.toolControlsActive() && this.toolMode === 'work') return;
     const keys = this.input.keys;
     let fx = 0, fz = 0;
     if (keys.has('w') || keys.has('arrowup')) fz -= 1;
@@ -1610,6 +1717,7 @@ export class Game {
     if (keys.has('a') || keys.has('arrowleft')) fx -= 1;
     if (keys.has('d') || keys.has('arrowright')) fx += 1;
     if (!fx && !fz) return;
+    this.dismissContextForNavigation();
     // direzioni relative alla camera (su = verso il fondo dello schermo)
     const right = new THREE.Vector3(1, 0, 0).applyQuaternion(this.rig.camera.quaternion).setY(0).normalize();
     const fwd = new THREE.Vector3(0, 0, -1).applyQuaternion(this.rig.camera.quaternion).setY(0);
@@ -1917,18 +2025,6 @@ export class Game {
     const shadows = p.shadows === 'off' ? t('game.debug.shadowsOff') : p.shadows === 'still' ? t('game.debug.shadowsStill') : t('game.debug.shadowsLive');
     const extras = `${p.liteMaterials ? t('game.debug.liteMaterials') : ''}${p.lite ? t('game.debug.liteWorld') : ''}`;
     return t('game.debug.quality', { level, dpr: this.renderer.getPixelRatio(), cap: this.currentCap(performance.now()), max: this.frameCap, shadows, lights: p.fakeLights ? t('game.debug.lightsFake') : t('game.debug.lightsReal'), extras });
-  }
-
-  /** La fascia nitida segue il Custode (o la selezione), senza scatti. */
-  private updateFocus() {
-    if (!this.postfx.enabled) return;
-    const sel = this.selection ? this.world.entities.get(this.selection.id) : null;
-    const p = sel ? sel.group.position : this.actors.avatar.pos;
-    this.focusNdc.set(p.x, 0.5, p.z).project(this.rig.camera);
-    const fx = THREE.MathUtils.clamp(this.focusNdc.x * 0.5 + 0.5, 0.3, 0.7);
-    const fy = THREE.MathUtils.clamp(this.focusNdc.y * 0.5 + 0.5, 0.3, 0.7);
-    this.postfx.focus.x += (fx - this.postfx.focus.x) * 0.08;
-    this.postfx.focus.y += (fy - this.postfx.focus.y) * 0.08;
   }
 
   /** La vista può scorrere sul recinto e su una fascia di bosco, mai oltre il terreno. */

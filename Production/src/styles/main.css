@@ -332,7 +332,7 @@ button:disabled { opacity: 0.45; cursor: default; }
 .tutorial.welcome { z-index: 11; }
 /* scegliendo il posto (o inquadrando una foto) il menù e i pulsanti della mappa spariscono:
    la barra sta in fondo, alla loro altezza */
-.tools-off .map-tools { display: none; }
+.tools-off .map-tools, .tools-off .bubble { display: none; }
 .tools-off .tutorial:not(.welcome) { bottom: calc(14px + var(--safe-b)); }
 .tutorial b { display: flex; align-items: center; gap: 6px; color: var(--gold-bright); font: 400 26px/1 var(--gothic); text-shadow: 0 2px 0 #000; }
 

@@ -47,7 +47,7 @@ export default {
 
   // ── Modalità Modifica ──
   'edit.intro.title': 'Modalità Modifica',
-  'edit.intro.text': 'In Modifica tocchi un elemento per selezionarlo e lo trascini per spostarlo. Dal menù puoi ruotarlo o riporlo nell’inventario. Fuori da Modifica, il tocco è solo interazione.',
+  'edit.intro.text': 'In Modifica scegli la mano per spostare la vista o le frecce per trascinare un elemento. Tocca la lente per i dettagli, la freccia circolare per annullare e la spunta per confermare.',
   'edit.intro.dontShow': 'Non mostrare più',
   // breve: pulsante
   'edit.intro.start': 'Inizia',

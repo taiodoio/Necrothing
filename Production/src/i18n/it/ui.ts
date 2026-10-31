@@ -79,6 +79,15 @@ export default {
   'hud.staff.take': 'Impugna il bastone mistico',
   // banner di Modifica, interfaccia nuova (breve: deve stare intero sul telefono)
   'hud.edit.banner': 'Tocca un elemento e trascinalo',
+  'hud.tools.pan': 'Sposta la vista',
+  'hud.tools.move': 'Sposta elemento',
+  'hud.tools.draw': 'Disegna',
+  'hud.tools.undo': 'Annulla ultima modifica',
+  'hud.tools.drawGuide': 'Tocca {hand} per spostarti sulla mappa. Tocca {tool} per disegnare.',
+  'hud.tools.moveGuide': 'Tocca {hand} per spostarti sulla mappa. Tocca {tool} per selezionare e spostare un oggetto.',
+  'hud.tools.panHint': 'Trascina la mappa per spostarti; usa due dita per zoomare. Tocca un elemento per i dettagli.',
+  'hud.tools.moveHint': 'Tocca un elemento per i dettagli o trascinalo per spostarlo.',
+  'hud.tools.drawHint': 'Tocca la mappa per aggiungere o togliere un elemento. Trascina sulla mappa per tracciare: il percorso curva automaticamente.',
 
   // ── Barra di posizionamento ──
   // tracciando sentieri e recinti, prima di cominciare
@@ -115,6 +124,7 @@ export default {
   // breve: pulsante (nell'interfaccia nuova è solo un'icona, il testo va ai lettori di schermo)
   'ctx.detail': 'Dettagli',
   'ctx.done': 'Fatto',
+  'ctx.undoMove': 'Annulla spostamento',
   'ctx.entrust': 'Affida all’albero',
   'ctx.repair': 'Ripara',
   'ctx.clean': 'Pulisci',
@@ -349,7 +359,7 @@ export default {
   'look.ui.beardColor': 'Colore di barba e baffi',
   'look.ui.accentColor': 'Colore dei dettagli (sciarpa, righe, toppe)',
   // interruttori: «hoa-boa-hoa» è un gioco di parole, la pelle che brilla
-  'look.ui.sparkle': 'Pelle hoa-boa-hoa ✨',
+  'look.ui.sparkle': 'Pelle hoa hoa hoa ✨',
   'look.ui.freckles': 'Lentiggini',
   'look.ui.bandaid': 'Cerotto',
   // suggerimento su un cappello bloccato: {label} è l'impresa, poi il progresso
@@ -458,8 +468,8 @@ export default {
   'onboarding.yard.flowers': 'Ora è pulita: portale dei fiori. Una tomba trascurata a lungo si rompe, e ripararla costa.',
   'onboarding.yard.light': 'Le lanterne si accendono e si spengono: tocca questa e accendila.',
   'onboarding.yard.shop': 'Tocca la Bottega e compra una lanterna: si paga in fuochi fatui.',
-  'onboarding.yard.place': 'Fatto! Ora posala dove vuoi. Quello che compri e non posi aspetta nell’Inventario, nel menu: da lì puoi anche rivenderlo.',
-  'onboarding.yard.edit': 'Apri il menu e scegli Modifica, poi trascina la lanterna dove preferisci. Quando hai finito, tocca «Fine».',
+  'onboarding.yard.place': 'Fatto! Sposta la lanterna dove vuoi e tocca la spunta per posarla. Quello che compri e non posi aspetta nell’Inventario, nel menu: da lì puoi anche rivenderlo.',
+  'onboarding.yard.edit': 'Apri il menu e scegli Modifica, poi trascina la lanterna dove preferisci. Quando hai finito, tocca la spunta.',
   'onboarding.yard.ghost': 'Qualcuno è venuto a trovarti. Tocca il fantasma: ti racconta qualcosa e ti lascia un regalo.',
   'onboarding.yard.sheet': 'Ogni tomba ha la sua scheda. Tocca la tomba e aprila con la lente.',
   'onboarding.yard.sheetOpen': 'Qui ci sono la sua storia e i suoi ricordi. In «Altro» puoi riesumarla o affidarla all’albero. Chiudi la scheda quando hai finito.',

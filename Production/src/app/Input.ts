@@ -58,6 +58,8 @@ export class Input {
       this.multi = true;
       if (this.dragging) { this.h.dragEnd(this.last.x, this.last.y, this.owned); this.dragging = false; this.owned = false; }
       this.pinchDist = this.distance();
+      const [a, b] = [...this.pointers.values()];
+      this.last = { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 };
     }
   };
 

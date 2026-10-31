@@ -93,6 +93,7 @@
 .ui-next .icon-btn.small { width: 44px; height: 44px; border-radius: var(--r-s); background: var(--panel-2); box-shadow: none; }
 /* quello che compare in alto al centro sta sotto l'HUD */
 .ui-next :is(.edit-banner, .area-banner, .toasts, .debug) { top: calc(var(--hud-top) + 18px + var(--safe-t)); }
+.ui-next:has(#edit-banner:not([hidden])) .toasts { top: calc(var(--hud-top) + 74px + var(--safe-t)); }
 
 /* ── Menù di gioco verticale ──────────────────────────────────────── */
 .ui-next .fab { width: var(--hud); height: var(--hud); }
@@ -235,11 +236,25 @@
 
 /* ── Strumento a traccia ──────────────────────────────────────────── */
 .ui-next .trace-bar b { display: flex; align-items: center; gap: 6px; }
-.ui-next .trace-count { margin-left: auto; font: 800 15px var(--pixel); color: var(--spectral); }
+.ui-next .trace-count { flex: none; margin-left: auto; font: 800 15px var(--pixel); color: var(--spectral); }
 .ui-next .trace-bar .warn { color: var(--danger); }
 .ui-next .trace-bar > .pill { justify-self: start; display: inline-flex; align-items: center; gap: 5px; color: var(--spectral); }
 .ui-next .trace-bar .row { display: flex; gap: 8px; }
 .ui-next .trace-bar .row .pill { flex: 1; white-space: nowrap; }
+.ui-next .tool-bar { padding: 14px 14px 12px; }
+.ui-next .tool-head { display: flex; align-items: center; min-height: 44px; gap: 8px; margin-bottom: 4px; }
+.ui-next .tool-head b { flex: 1; min-width: 0; margin: 0; }
+.ui-next .tool-head .exit, .ui-next .tool-head .rotate { flex: none; width: 44px; height: 44px; padding: 0; justify-content: center; }
+.ui-next .tool-actions { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
+.ui-next .tool-actions .tool-btn { min-width: 0; min-height: 54px; display: grid; place-items: center; padding: 4px; border-radius: 12px; background: #363240; box-shadow: 0 3px 0 #1a1720; }
+.ui-next .tool-actions .tool-toggle { grid-column: span 2; display: grid; grid-template-columns: 1fr 1fr; gap: 4px; padding: 4px; border-radius: 15px; background: rgba(28, 23, 35, 0.95); box-shadow: 0 6px 14px rgba(0, 0, 0, 0.3); }
+.ui-next .tool-actions .tool-toggle .tool-btn { min-height: 46px; height: 46px; border-radius: 11px; background: transparent; box-shadow: none; }
+.ui-next .tool-actions .tool-toggle .tool-btn.selected { background: linear-gradient(180deg, #f6d48a, #e8b65e); box-shadow: none; }
+.ui-next .tool-actions .tool-toggle .tool-btn.selected .pxi { filter: drop-shadow(0 1px 1px rgba(42, 31, 18, 0.65)); }
+.ui-next .tool-actions .tool-btn.primary { background: #e9ba65; box-shadow: 0 3px 0 #a67431; }
+.ui-next .tool-actions .tool-btn:disabled { opacity: .4; }
+.ui-next .tool-bar > .muted { line-height: 1.35; }
+.ui-next .tool-guide .mono { display: inline-grid; vertical-align: -3px; margin: 0 2px; }
 
 /* ── Testata animata della Bottega ────────────────────────────────── */
 .ui-next .drawer.with-hero { overflow: hidden; }
@@ -348,7 +363,3 @@
   .ui-next .drawer { left: 50%; right: auto; width: 560px; translate: -50% -50%; }
 }
 @media (prefers-reduced-motion: reduce) { .ui-next :is(.drawer, .dialog.modal, .scrim) { animation: none; } }
-
-/* ── La X per uscire dal tracciato sta in alto a destra, come in pannelli e modali ── */
-.ui-next .trace-bar > b, .ui-next .trace-bar > .muted { padding-right: 52px; }
-.ui-next .trace-bar > .pill.exit { position: absolute; top: 10px; right: 10px; width: 44px; min-height: 40px; justify-content: center; color: inherit; }

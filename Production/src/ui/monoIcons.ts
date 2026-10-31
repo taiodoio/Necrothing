@@ -9,6 +9,9 @@ const R = (x: number, y: number, w: number, h: number) => `M${x} ${y}h${w}v${h}h
 type Spec = [string, null?, ('nonzero' | 'evenodd')?, string?, string?];
 
 const ICONS: Record<string, Spec> = {
+  toolHand: ['M8 22 4.3 16.5c-.9-1.3-.4-2.6.6-3 1-.4 1.8.1 2.8 1.1V5.2a1.5 1.5 0 0 1 3 0v6.2h.4V3.6a1.5 1.5 0 1 1 3 0v7.8h.4V4.8a1.5 1.5 0 0 1 3 0v6.9h.4V7.3a1.5 1.5 0 0 1 3 0v8.4c0 2.2-.9 4.5-2.6 6.3z'],
+  toolMove: ['M12 1 7.8 5.2h2.7v5.3H5.2V7.8L1 12l4.2 4.2v-2.7h5.3v5.3H7.8L12 23l4.2-4.2h-2.7v-5.3h5.3v2.7L23 12l-4.2-4.2v2.7h-5.3V5.2h2.7z'],
+  toolPencil: ['M3 17.6 16.7 3.9a2.3 2.3 0 0 1 3.3 0l.1.1a2.3 2.3 0 0 1 0 3.3L6.4 21H3z' + 'M2.2 21.8l.7-4 3.2 3.2z'],
   // schede
   all: [R(3, 3, 8, 8) + R(13, 3, 8, 8) + R(3, 13, 8, 8) + R(13, 13, 8, 8)],
   home: ['M12 2.6 1.8 11.2h2.9V21h5.4v-6.2h3.8V21h5.4v-9.8h2.9z'],

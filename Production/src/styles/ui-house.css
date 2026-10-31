@@ -154,6 +154,8 @@
 .ui-next .player-page .tabs { margin-bottom: 0; }
 .ui-next .pl-stage { position: relative; top: 0; margin: 0 -12px 10px; border-radius: 0; }
 .ui-next .pl-stage .look-preview { height: min(160px, 20vh); }
+.ui-next .player-page:has(.pl-name:focus) .pl-stage { margin-bottom: 2px; }
+.ui-next .player-page:has(.pl-name:focus) .pl-stage .look-preview { height: 56px; transition: none; }
 .ui-next .pl-name-row { display: grid; grid-template-columns: 1fr auto; gap: 8px; align-items: center; margin-bottom: 10px; }
 .ui-next .pl-name { width: 100%; min-width: 0; height: 44px; padding: 0 14px; border: 0; border-radius: 12px; background: var(--input); color: var(--gold-bright); font: 700 22px/1 var(--gothic); outline: none; }
 .ui-next .pl-pen { width: 44px; height: 44px; }

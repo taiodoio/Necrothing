@@ -772,9 +772,12 @@ test('backup ZIP: stato, foto del cimitero e foto delle tombe tornano identici; 
   const zip = packBackup(state, [{ id: 'ph_1', createdAt: '2026-10-01T10:00:00Z', dataUrl: jpeg }], [{ id: 'mp_1', dataUrl: jpeg }]);
   assert.deepEqual([...zip.slice(0, 2)], [0x50, 0x4b], 'è uno ZIP');
   const back = unpackBackup(zip);
+  assert.equal(back.language, undefined, 'i vecchi chiamanti restano compatibili');
   assert.deepEqual(back.state, JSON.parse(JSON.stringify(state)));
   assert.deepEqual(back.photos, [{ id: 'ph_1', createdAt: '2026-10-01T10:00:00Z', dataUrl: jpeg }]);
   assert.deepEqual(back.memorials, [{ id: 'mp_1', dataUrl: jpeg }]);
+  const localized = unpackBackup(packBackup(state, [], [], '2026-10-09T12:00:00.000Z', 'zh-Hant'));
+  assert.equal(localized.language, 'zh-Hant');
   // le immagini stanno nello ZIP come file veri, non in base64
   const { unzipSync } = await import('fflate');
   const files = unzipSync(zip);
@@ -1011,6 +1014,36 @@ test('tempo a gioco chiuso: i rientri frequenti non azzerano le ore accumulate',
   const r = runCatchUp(s, new Date(NOW.getTime() + 27 * 3600e3));
   assert.equal(r.elapsedDays, 1);
   assert.equal(s.world.lastSimulationAt, new Date(NOW.getTime() + 24 * 3600e3).toISOString(), 'avanza solo del giorno consumato');
+});
+
+test('tempo offline: date corrotte, future o implausibili non applicano penalità né premi', () => {
+  const s = createNewGame(NOW, 121);
+  const grave = s.graves.find((g) => g.hasFlowers);
+  assert.ok(grave);
+  grave.flowersAt = 'data-rotta';
+  s.placeables[0].caredAt = 'data-rotta';
+  s.world.lastSimulationAt = 'data-rotta';
+  const xp = s.player.xp, wisps = s.player.wisps;
+  const invalid = runCatchUp(s, NOW);
+  assert.equal(invalid.elapsedDays, 0);
+  assert.equal(grave.hasFlowers, true);
+  assert.equal(grave.flowersAt, NOW.toISOString());
+  assert.equal(s.placeables[0].caredAt, NOW.toISOString());
+  assert.equal(s.world.lastSimulationAt, NOW.toISOString());
+  assert.equal(s.player.xp, xp);
+  assert.equal(s.player.wisps, wisps);
+
+  s.world.lastSimulationAt = new Date(NOW.getTime() + 5 * 86_400_000).toISOString();
+  const future = runCatchUp(s, NOW);
+  assert.equal(future.elapsedDays, 0);
+  assert.equal(s.world.lastSimulationAt, NOW.toISOString());
+
+  s.world.lastSimulationAt = new Date(NOW.getTime() - 11 * 365 * 86_400_000).toISOString();
+  const implausible = runCatchUp(s, NOW);
+  assert.equal(implausible.elapsedDays, 0);
+  assert.equal(implausible.newBroken, 0);
+  assert.equal(implausible.witheredFlowers, 0);
+  assert.equal(s.world.lastSimulationAt, NOW.toISOString());
 });
 
 test('anniversari: quello di oggi premia, quelli persi restano nei ricordi', async () => {

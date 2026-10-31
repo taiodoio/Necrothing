@@ -30,7 +30,7 @@ import { factLabel, parchment } from './parchment.ts';
 import { previewUrl, warmPreviews } from './previews.ts';
 import { HOUSE_PARTS, HOUSE_ROOFS } from '../game/house.ts';
 import { remindersAvailable } from '../app/reminders.ts';
-import { clearLang, currentLang, deviceLang, hasManualLang, NATIVE_LANG_NAMES, setLang, t, tList, type Lang } from '../i18n/index.ts';
+import { clearLang, currentLang, deviceLang, hasManualLang, languagePreference, NATIVE_LANG_NAMES, setLang, t, tList, type Lang } from '../i18n/index.ts';
 
 /**
  * Immagine di un oggetto. Nell'interfaccia «viva» (stile low-poly) è
@@ -96,7 +96,8 @@ export function openBurial(ui: UI, initial?: R.BurialDraft, startStep = 0) {
 
   const render = () => {
     const errors = R.validateDraft(d, now);
-    const body = h('div', {}, h('div', { class: 'steps' }, ...Array.from({ length: total }, (_, i) => h('i', { class: i <= step ? 'on' : '' }))));
+    $('#drawer').dataset.burialStep = String(step);
+    const body = h('div', { class: `burial-step burial-step-${step}` }, h('div', { class: 'steps' }, ...Array.from({ length: total }, (_, i) => h('i', { class: i <= step ? 'on' : '' }))));
     const field = (label: string, input: Node, err?: string) => h('div', { class: 'field' }, h('label', {}, label), input, err ? h('span', { class: 'err' }, err) : null);
     if (step === 0) {
       body.append(
@@ -215,6 +216,7 @@ export function openEditIntro(ui: UI) {
     h('label', { class: 'setting' }, t('edit.intro.dontShow'), h('input', { type: 'checkbox', checked: true, onchange: (e: Event) => { dontShow = (e.target as HTMLInputElement).checked; } })),
   ), {
     footer: h('button', { class: 'big-btn', onclick: () => { if (dontShow) ui.game.state.settings.editIntroSeen = true; closeDrawer(); ui.game.setEditMode(true); ui.game.afterChange(); } }, t('edit.intro.start')),
+    kind: 'edit-intro',
   });
 }
 
@@ -619,7 +621,18 @@ function keeperTab(ui: UI, openLook: () => void): HTMLElement {
   };
   const name = h('input', {
     class: 'pl-name', value: p.name, maxLength: NAME_MAX * 2, 'aria-label': t('player.name'), enterkeyhint: 'done',
-    onfocus: () => penState(true),
+    onfocus: () => {
+      penState(true);
+      // Con la tastiera aperta il Custode resta visibile e il campo viene
+      // portato nell'area utile del pannello, senza far scorrere tutta la pagina.
+      requestAnimationFrame(() => {
+        const body = name.closest<HTMLElement>('.drawer-body');
+        if (!body) return;
+        const field = name.getBoundingClientRect(), viewport = body.getBoundingClientRect();
+        if (field.bottom > viewport.bottom - 12) body.scrollTop += field.bottom - viewport.bottom + 12;
+        else if (field.top < viewport.top + 12) body.scrollTop -= viewport.top + 12 - field.top;
+      });
+    },
     // uscendo dal campo (spunta, Invio o tocco altrove) il nome si salva e la tastiera si chiude
     onblur: (e: Event) => {
       const el = e.target as HTMLInputElement;
@@ -726,6 +739,7 @@ async function importSave(ui: UI, f: File) {
   p.close();
   const name = read.state.player.name;
   const at = read.content.exportedAt;
+  const languageChanged = !!read.content.language && read.content.language !== languagePreference();
   if (!await confirmDialog({
     title: t('settings.backup.confirm.title'),
     message: at ? t('settings.backup.confirm.textDate', { name, date: fmtDate(at) }) : t('settings.backup.confirm.text', { name }),
@@ -741,6 +755,7 @@ async function importSave(ui: UI, f: File) {
   }
   closeDrawer(true);
   await q.done(t('settings.backup.restored'), t('settings.backup.restoredText', { name }), true);
+  if (languageChanged) setTimeout(() => location.reload(), 250);
 }
 
 function languageControl(ui: UI): HTMLElement {

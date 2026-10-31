@@ -313,7 +313,9 @@ export function registryHeader(opts: { settled?: boolean } = {}): RegistryHeader
   if (opts.settled) t = WRITE_AT + LINES * LINE_LEN + 0.2;
 
   const resize = () => {
-    const nw = el.clientWidth, nh = el.clientHeight;
+    // Il canvas resta a dimensione piena anche quando la cornice si comprime;
+    // il contenitore lo ritaglia senza riallocare il buffer a ogni frame.
+    const nw = el.clientWidth, nh = 156;
     if (!nw || !nh || (nw === w && nh === h)) return;
     w = nw; h = nh;
     renderer.setSize(w, h, false);

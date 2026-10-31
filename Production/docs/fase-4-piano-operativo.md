@@ -1,7 +1,5 @@
 # Necrothing — Fase 4: piano operativo per chi prosegue
 
-Risultato dell'implementazione e verifiche: [docs/fase-4-risultato.md](fase-4-risultato.md).
-
 Documento di passaggio. Chi lo legge non ha visto la conversazione: qui ci sono lo stato esatto, le decisioni già prese, i passi da fare in ordine, i file da toccare, i criteri per dire «fatto» e le trappole già incontrate.
 
 - Cartella di lavoro: `/Users/flaviomontagner/Documents/Apps/Necrothing/Production` (i percorsi sotto sono relativi a questa, salvo dove indicato).

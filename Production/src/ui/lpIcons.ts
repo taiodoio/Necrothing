@@ -104,6 +104,28 @@ const stone = (x0: number, y0: number, x1: number, y1: number, t: Tones): Poly[]
 const sunset = (t: Tones): Poly[] => [...halfSun(t), ...bar(3, 15.4, 21, 15.4, 2.2, T.iron), ...bar(6, 19, 18, 19, 2, T.iron)];
 const cloud = (dy = 0): Poly[] => [...disc(8, 11 + dy, 4, T.cloud), ...disc(13, 8.6 + dy, 5, T.cloud), ...disc(17, 11.4 + dy, 3.6, T.cloud), ...rrect(4.4, 10.6 + dy, 20.4, 15.2 + dy, 2.2, T.cloud, [10, 11 + dy])];
 
+/** Martello a T: manico verticale centrato, che sporge appena sopra la testa piena. */
+function hammerIcon(): Poly[] {
+  const shaft: Poly[] = [
+    ...P([[9.5, 2.8], [14.5, 2.8], [15.4, 22], [8.6, 22]], T.wood[1]),
+    ...P([[9.5, 2.8], [12, 2.8], [12, 22], [8.6, 22]], T.wood[0]),
+    ...P([[12, 2.8], [14.5, 2.8], [15.4, 22], [12, 22]], T.wood[2]),
+  ];
+  const head: Poly[] = [
+    ...P([[3.5, 8], [5.5, 6], [18.5, 6], [20.5, 8], [20.5, 14], [3.5, 14]], T.iron[1]),
+    ...P([[3.5, 8], [5.5, 6], [18.5, 6], [20.5, 8], [12, 10]], T.iron[0]),
+    ...P([[3.5, 8], [12, 10], [12, 14], [3.5, 14]], T.iron[1]),
+    ...P([[12, 10], [20.5, 8], [20.5, 14], [12, 14]], T.iron[2]),
+  ];
+  const rotate30 = ({ fill, pts }: Poly): Poly => ({
+    fill,
+    pts: pts.map(([x, y]) => [12 + (x - 12) * Math.cos(Math.PI / 6) - (y - 12) * Math.sin(Math.PI / 6), 12 + (x - 12) * Math.sin(Math.PI / 6) + (y - 12) * Math.cos(Math.PI / 6)]),
+  });
+  // La testa viene disegnata sopra al manico: il legno resta visibile solo
+  // sopra e sotto il parallelepipedo, senza una fascia che sembri spezzata.
+  return [...shaft, ...head].map(rotate30);
+}
+
 const ICONS: Record<string, () => Poly[]> = {
   menu: () => [5, 12, 19].flatMap((y) => bar(4.5, y, 19.5, y, 3.4, T.gold)),
   close: () => [...bar(5.5, 5.5, 18.5, 18.5, 3.6, T.gold), ...bar(18.5, 5.5, 5.5, 18.5, 3.6, T.gold)],
@@ -132,7 +154,7 @@ const ICONS: Record<string, () => Poly[]> = {
   search: () => [...bar(14.8, 14.8, 20.6, 20.6, 3.6, T.wood), ...ring(10, 10, 5, 7.6, T.iron, 12), ...disc(10, 10, 5, ['#f0fffb', '#b6f3e3', '#7fd8c2'], 12)],
   broom: () => [...bar(19.8, 3.2, 12.2, 12.4, 2.2, T.wood), ...fan([[10.2, 10.6], [14.4, 14.2], [11.6, 21.2], [8.4, 21.8], [3.4, 20.6], [2.6, 16.8]], T.straw, [9, 15]), ...bar(10.4, 11.4, 13.6, 14.4, 2, T.red)],
   flower: () => [...bar(12, 12.4, 12, 21.4, 1.8, T.leaf), ...fan([[12, 18.4], [17.8, 14.8], [16, 19.2]], T.leaf), ...Array.from({ length: 5 }, (_, i) => -Math.PI / 2 + (i / 5) * Math.PI * 2).flatMap((a) => disc(12 + Math.cos(a) * 4.2, 8.8 + Math.sin(a) * 4.2, 3, T.pink, 8)), ...disc(12, 8.8, 2.4, T.gold, 8)],
-  hammer: () => [...bar(7, 21, 13.6, 10.6, 2.8, T.wood), ...rrect(5.6, 4.6, 19.4, 10.4, 1.4, T.iron, [10, 6])],
+  hammer: hammerIcon,
   lightOn: () => [...rrect(8.4, 3.6, 15.6, 6.8, 1.2, T.iron, [10, 4.5]), ...rrect(7, 6.4, 17, 19, 1.6, ['#ffc35e', '#f7a13a', '#e0832a'], [10, 9]), ...fan([[12, 8.6], [14.8, 12.8], [13.6, 16.4], [12, 17.2], [10.4, 16.4], [9.2, 12.8]], T.flame, [11.4, 12]), ...rrect(6.4, 18.4, 17.6, 21.4, 1.2, T.iron, [10, 19]), ...ring(12, 2.6, 0.8, 1.9, T.iron, 8)],
   lightOff: () => [...rrect(8.4, 3.6, 15.6, 6.8, 1.2, T.iron, [10, 4.5]), ...rrect(7, 6.4, 17, 19, 1.6, ['#6f7686', '#5a606e', '#4a4f5c'], [10, 9]), ...fan([[12, 10], [13.8, 13.4], [12, 16.4], [10.2, 13.4]], T.iron), ...rrect(6.4, 18.4, 17.6, 21.4, 1.2, T.iron, [10, 19]), ...ring(12, 2.6, 0.8, 1.9, T.iron, 8)],
   target: () => [...ring(12, 12, 6.2, 9, T.gold, 14), ...disc(12, 12, 2.6, T.gold, 8), ...[[12, 1, 12, 4.4], [12, 19.6, 12, 23], [1, 12, 4.4, 12], [19.6, 12, 23, 12]].flatMap(([a, b, c, d]) => bar(a, b, c, d, 1.8, T.gold))],

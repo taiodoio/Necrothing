@@ -22,6 +22,7 @@ export class Input {
   readonly keys = new Set<string>();
   private readonly el: HTMLElement;
   private readonly h: InputHandlers;
+  private ignoreBefore = 0;
 
   constructor(el: HTMLElement, h: InputHandlers) {
     this.el = el;
@@ -36,7 +37,15 @@ export class Input {
     window.addEventListener('blur', () => this.keys.clear());
   }
 
+  /** Ignora anche i tocchi accodati mentre la scena era occupata. */
+  ignorePointerEventsBefore(timestamp: number) {
+    this.ignoreBefore = Math.max(this.ignoreBefore, timestamp);
+    this.pointers.clear();
+    this.dragging = this.owned = this.multi = false;
+  }
+
   private down = (e: PointerEvent) => {
+    if (e.timeStamp < this.ignoreBefore) return;
     this.el.setPointerCapture?.(e.pointerId);
     this.pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
     if (this.pointers.size === 1) {

@@ -1,5 +1,9 @@
 // Testi introdotti nella fase 4, in attesa del prossimo giro di traduzioni CMS.
 export const EN_EXTRA: Record<string, string> = {
+  'game.debug.frameP95': 'frame time p95 {ms} ms',
+  'game.debug.gpuObjects': 'GPU · geometries {geometries} · textures {textures} · shaders {programs}',
+  'backup.photos.writeFailed': 'The backup photos could not be updated.',
+  'backup.photos.aborted': 'The backup photo update was interrupted.',
   'settings.language.auto': 'Device language',
   'settings.language.listLabel': 'Choose language',
   'settings.language.changed': 'Language changed: {name}',
@@ -12,6 +16,7 @@ export const EN_EXTRA: Record<string, string> = {
   'settings.language.block.photo': 'photo mode is open',
   'settings.language.block.intro': 'the introduction or yard tutorial is open',
   'settings.language.block.dialog': 'a dialog is open',
+  'onboarding.yard.preparing': 'Preparing the yard…',
   'info.about.title': 'A quiet place for the things we remember.',
   'info.beta': 'Beta',
   'info.about.text': 'Tend the cemetery, meet its night-time neighbours, and give old objects a gentle farewell.',

@@ -20,6 +20,9 @@
   --safe-b: env(safe-area-inset-bottom, 0px);
   --safe-l: env(safe-area-inset-left, 0px);
   --safe-r: env(safe-area-inset-right, 0px);
+  --visual-viewport-height: 100vh;
+  --visual-viewport-top: 0px;
+  --visual-viewport-center: 50vh;
   font-family: var(--pixel);
   color: var(--paper);
   -webkit-tap-highlight-color: transparent;

@@ -5,11 +5,15 @@ import { IT } from './it/index.ts';
 import { LANGS, LOADERS } from './langs.ts';
 import { EN_EXTRA } from './en-extra.ts';
 import { loadLanguageFonts } from './fonts.ts';
+import { Capacitor } from '@capacitor/core';
+import { Preferences } from '@capacitor/preferences';
 
 export type Lang = keyof typeof LANGS;
+export type LanguagePreference = Lang | 'auto';
 export const LANG_NAMES: Record<Lang, string> = LANGS;
 export const NATIVE_LANG_NAMES: Record<Lang, string> = LANGS;
 const STORE_KEY = 'necro.lang';
+let nativePreference: string | null | undefined;
 const ALIASES: Record<string, Lang> = {
   'zh-TW': 'zh-Hant', 'zh-HK': 'zh-Hant', 'zh-MO': 'zh-Hant', 'zh-Hant': 'zh-Hant',
   'zh-CN': 'zh-Hans', 'zh-SG': 'zh-Hans', 'zh-Hans': 'zh-Hans',
@@ -44,6 +48,7 @@ export function deviceLang(): Lang {
 }
 
 export function preferredLang(): Lang {
+  if (valid(nativePreference ?? null)) return nativePreference as Lang;
   try {
     const saved = globalThis.localStorage?.getItem(STORE_KEY);
     if (valid(saved)) return saved;
@@ -52,7 +57,18 @@ export function preferredLang(): Lang {
 }
 
 export function hasManualLang() {
+  if (valid(nativePreference ?? null)) return true;
   try { return valid(globalThis.localStorage?.getItem(STORE_KEY) ?? null); } catch { return false; }
+}
+
+/** Preferenza esportabile: «auto» mantiene la scelta basata sulla lingua del dispositivo. */
+export function languagePreference(): LanguagePreference {
+  if (!hasManualLang()) return 'auto';
+  return preferredLang();
+}
+
+export function restoreLanguagePreference(value: LanguagePreference) {
+  if (value === 'auto') clearLang(); else setLang(value);
 }
 
 async function load(code: Lang) {
@@ -63,6 +79,23 @@ async function load(code: Lang) {
 
 /** Carica i dizionari prima di importare l'interfaccia. */
 export async function initI18n() {
+  if (Capacitor.isNativePlatform()) {
+    try {
+      const result = await Preferences.get({ key: STORE_KEY });
+      nativePreference = result.value;
+      if (nativePreference === null) {
+        const legacy = globalThis.localStorage?.getItem(STORE_KEY) ?? null;
+        if (valid(legacy)) {
+          nativePreference = legacy;
+          await Preferences.set({ key: STORE_KEY, value: legacy });
+        }
+      } else if (valid(nativePreference)) {
+        globalThis.localStorage?.setItem(STORE_KEY, nativePreference);
+      }
+    } catch {
+      nativePreference = undefined;
+    }
+  }
   lang = preferredLang();
   const [en, selected] = await Promise.all([load('en'), lang === 'en' ? Promise.resolve(null) : load(lang)]);
   english = { ...en, ...EN_EXTRA };
@@ -75,11 +108,15 @@ export async function initI18n() {
 /** Salva la lingua scelta; il chiamante ricarica dopo aver chiuso lo stato corrente. */
 export function setLang(value: Lang) {
   if (!valid(value)) return;
+  nativePreference = value;
   try { globalThis.localStorage?.setItem(STORE_KEY, value); } catch { /* pazienza */ }
+  if (Capacitor.isNativePlatform()) void Preferences.set({ key: STORE_KEY, value }).catch(() => undefined);
 }
 
 export function clearLang() {
+  nativePreference = null;
   try { globalThis.localStorage?.removeItem(STORE_KEY); } catch { /* pazienza */ }
+  if (Capacitor.isNativePlatform()) void Preferences.remove({ key: STORE_KEY }).catch(() => undefined);
 }
 
 type Params = Record<string, string | number>;

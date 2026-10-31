@@ -683,41 +683,42 @@ test('qualità Auto: livello dal dispositivo, risoluzione dentro al livello, sce
   for (const p of Object.values(PROFILES)) for (let i = 1; i < p.dpr.length; i++) assert.ok(p.dpr[i] > p.dpr[i - 1]);
   assert.ok(PROFILES.low.lite && PROFILES.low.fakeLights && PROFILES.medium.fakeLights && !PROFILES.high.fakeLights);
 
-  const run = (g, fps, seconds, target) => { const out = []; for (let t = 0; t < seconds; t += 1 / fps) { const d = g.frame(1 / fps, target); if (d) out.push(d); } return out; };
-  // si parte dalla risoluzione più alta del livello stimato
-  const g = new AutoGovernor(newAutoProfile('high'));
-  assert.equal(g.step, 2);
-  // sotto il ritmo si scende subito (dopo l'assestamento), un gradino alla volta
-  assert.deepEqual(run(g, 20, 5.5, 60), ['step']);
+  const run = (g, fps, seconds, target) => { const out = []; for (let t = 0; t < seconds; t += 1 / fps) { const d = g.frame(1 / fps, typeof target === 'function' ? target(g) : target); if (d) out.push(d); } return out; };
+  // La stima sceglie subito il gradino massimo della fascia; un profilo già ridotto può risalire.
+  assert.equal(newAutoProfile('high').step, PROFILES.high.dpr.length - 1);
+  const g = new AutoGovernor({ ...newAutoProfile('high'), step: 0 });
+  assert.equal(g.step, 0);
+  assert.deepEqual(run(g, 60, 11, 60), ['step']);
   assert.equal(g.step, 1);
-  // con margine si risale solo dopo il periodo di attesa
-  assert.deepEqual(run(g, 60, 20, 60), [], 'subito dopo una discesa non si risale');
-  let up = null;
-  for (let t = 0; t < 30 && !up; t += 1 / 60) up = g.frame(1 / 60, 60);
-  assert.equal(up, 'step');
-  assert.equal(g.step, 2);
-  // la salita fa crollare gli FPS: si torna giù e quel gradino diventa il tetto
-  assert.deepEqual(run(g, 22, 6, 60), ['step']);
-  assert.equal(g.ceiling, 1);
-  run(g, 60, 120, 60);
-  assert.equal(g.step, 1, 'non ritenta il gradino che non reggeva');
-  // in Alta (si punta a 60) 35 FPS sono pochi: si abbassa la risoluzione, ma non si cambia livello
+  // Calo sostenuto: torna subito al gradino minimo e non riprova quello instabile.
+  assert.deepEqual(run(g, 20, 5.5, 60), ['step']);
+  assert.equal(g.step, 0);
+  assert.equal(g.ceiling, 0);
+  run(g, 60, 15, (profile) => PROFILES[profile.tier].fps);
+  assert.equal(g.tier, 'medium', 'dopo il calo resta sulla fascia adatta al ritmo misurato');
+  // Anche se il renderer dichiara una GPU di fascia alta, FPS persistenti sotto
+  // il ritmo alla risoluzione minima fanno scendere di profilo senza attendere a lungo.
   const a35 = new AutoGovernor(newAutoProfile('high'));
-  assert.deepEqual(run(a35, 35, 5.5, 60), ['step']);
+  assert.deepEqual(run(a35, 35, 10, 60), ['step', 'step', 'tier']);
+  assert.equal(a35.tier, 'medium');
   const b35 = new AutoGovernor({ tier: 'high', step: 0, ceiling: 2, top: 'high' });
-  assert.deepEqual(run(b35, 35, 30, 60), []);
-  assert.equal(b35.tier, 'high');
-  // a 30 FPS pieni (Media, Bassa) va tutto bene: niente discese
+  const adapt35 = [];
+  for (let t = 0; t < 30; t += 1 / 35) { const d = b35.frame(1 / 35, PROFILES[b35.tier].fps); if (d) adapt35.push(d); }
+  assert.deepEqual(adapt35.slice(0, 1), ['tier']);
+  assert.equal(b35.tier, 'medium');
+  // Media regge 30 FPS e può aumentare la risoluzione se resta stabile.
   const m = new AutoGovernor(newAutoProfile('medium'));
-  assert.deepEqual(run(m, 30, 60, 30), []);
-  // pause lunghe (app in background) non contano
+  assert.deepEqual(run(m, 30, 60, 30), ['step']);
+  // Pause molto lunghe (app in background) non contano; gli scatti sotto 2 s sì.
   const p = new AutoGovernor(newAutoProfile('low'));
-  assert.deepEqual(run(p, 2, 20, 30), []);
-  // alla risoluzione più bassa e ancora lento: si scende di livello (si riparte dalla risoluzione più alta)
+  assert.deepEqual(run(p, 0.2, 20, 30), []);
+  const stalled = new AutoGovernor(newAutoProfile('high'));
+  assert.ok(run(stalled, 1 / 0.3, 12, 60).includes('tier'), 'i frame visibilmente bloccati riducono Auto');
+  // Alla risoluzione minima e ancora sotto il ritmo, si scende di fascia.
   const f = new AutoGovernor({ tier: 'medium', step: 0, ceiling: 1, top: 'medium' });
   assert.ok(run(f, 12, 12, 30).includes('tier'));
   assert.equal(f.tier, 'low');
-  assert.equal(f.step, PROFILES.low.dpr.length - 1);
+  assert.equal(f.step, 0);
   // poi, se Bassa va bene a lungo, si riprova Media (il livello stimato) …
   let r = [];
   for (let t = 0; t < 200 && !r.includes('tier'); t += 1 / 30) { const d = f.frame(1 / 30, 30); if (d) r.push(d); }
@@ -736,7 +737,8 @@ test('qualità Auto: livello dal dispositivo, risoluzione dentro al livello, sce
   const h = new AutoGovernor(newAutoProfile('high'));
   run(h, 60, 4, 60);
   for (let i = 0; i < 100; i++) h.hold();
-  assert.deepEqual(run(h, 60, 10, 60), []);
+  assert.deepEqual(run(h, 60, 6, 60), []);
+  assert.deepEqual(run(h, 60, 6, 60), ['step']);
 });
 
 test('qualità Auto: le luci in più escono proprio dalla scena (lo shader non le calcola), e tornano per i livelli manuali', async () => {

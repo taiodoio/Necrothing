@@ -14,6 +14,7 @@
 // momento giusto (game/tips.ts).
 
 import type * as THREE from 'three';
+import { Capacitor } from '@capacitor/core';
 import { scheduleSave } from '../app/persistence.ts';
 import { checkName, NAME_MAX } from '../game/playerName.ts';
 import { currentStep, yardFinished, yardSignal, YARD_STEPS, type OnboardingStage, type OnboardingState, type YardSignal, type YardStep } from '../game/onboarding.ts';
@@ -42,10 +43,20 @@ export const signalOnboarding = (s: OnboardingSignal) => active?.signal(s);
 const TIP_GAP_MS = 60_000;
 /** Il passaggio dal cortile al cimitero vero dura almeno tanto (lo sfondo con «Il cimitero si sveglia…»). */
 const WAKE_MS = 900;
+const YARD_LOADING_MIN_MS = 450, INPUT_GUARD_MS = 600;
 /** Passo fatto: quanto si vede il «Fatto!» e quanto ci mette il consiglio a svanire. */
 const DONE_MS = 750, COACH_OUT_MS = 240;
 
 const reducedMotion = () => typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches;
+const loadingContent = (key: string, determinate = false) => {
+  const text = h('p', { class: 'ob-wake-text', role: 'status', 'aria-live': 'polite' }, t(key));
+  const track = h('div', {
+    class: `ob-load-track${determinate ? ' determinate' : ''}`,
+    ...(determinate ? { role: 'progressbar', 'aria-label': t(key), 'aria-valuemin': '0', 'aria-valuemax': '100', 'aria-valuenow': '0' } : { 'aria-hidden': 'true' }),
+  }, h('i'));
+  if (!determinate) return [text, track];
+  return [text, h('div', { class: 'ob-load-meter' }, track, h('p', { class: 'ob-load-pct' }, t('boot.percent', { n: 0 })))];
+};
 
 /** Le fasi a schermo pieno, sullo sfondo del percorso (passando dall'una all'altra lo sfondo resta; il cortile si prepara sotto). */
 const SOLID: readonly OnboardingStage[] = ['welcome', 'name', 'intro', 'yard'];
@@ -287,10 +298,21 @@ export class Onboarding {
     const s = this.game.state;
     const fallback = t('state.player.defaultName');
     const input = h('input', { value: s.player.name === fallback ? '' : s.player.name, maxLength: NAME_MAX * 2, placeholder: fallback, autocomplete: 'off', autocapitalize: 'words', enterkeyhint: 'done', 'aria-label': t('onboarding.name.label') }) as HTMLInputElement;
+    const viewport = window.visualViewport;
+    let fullViewportHeight = viewport?.height ?? window.innerHeight;
+    input.addEventListener('focus', () => { fullViewportHeight = Math.max(fullViewportHeight, viewport?.height ?? window.innerHeight); });
     const err = h('p', { class: 'ob-error', role: 'alert' });
-    const confirm = () => {
+    let submitting = false;
+    const confirm = async () => {
+      if (submitting) return;
       const r = checkName(input.value);
       if (!r.ok) { err.textContent = t(`onboarding.name.error.${r.error}`, { n: NAME_MAX }); input.focus(); return; }
+      submitting = true;
+      input.blur();
+      // Aspettiamo che la viewport recuperi la misura senza tastiera prima di
+      // sostituire la schermata sottostante.
+      if (Capacitor.isNativePlatform() && Capacitor.getPlatform() === 'android') await new Promise((resolve) => setTimeout(resolve, 260));
+      await waitForViewportRestore(viewport, fullViewportHeight);
       s.player.name = r.name;
       scheduleSave(s);
       this.ui.refreshHud();
@@ -337,9 +359,12 @@ export class Onboarding {
    * poi lo sfondo sfuma. Rivedendolo dalle Impostazioni la partita non si tocca.
    */
   private startYard() {
-    if (!this.layer) this.openLayer('ob-solid');
-    afterPaint(() => {
-      if (!this.game.inYard) this.game.enterYard(buildYard(this.game.state, this.game.now(), this.o));
+    this.openLayer('ob-solid ob-loading', ...loadingContent('onboarding.yard.preparing'));
+    const from = performance.now();
+    afterPaint(async () => {
+      if (!this.game.inYard) await this.game.enterYard(buildYard(this.game.state, this.game.now(), this.o));
+      this.game.input.ignorePointerEventsBefore(performance.now() + INPUT_GUARD_MS);
+      await new Promise<void>((resolve) => window.setTimeout(resolve, Math.max(0, YARD_LOADING_MIN_MS - (performance.now() - from))));
       this.cleanup();
       this.showStep();
     });
@@ -519,14 +544,29 @@ export class Onboarding {
     closeDrawer(true);
     if (this.game.placement) this.game.cancelPlacement();
     const replay = !!this.replaying;
-    this.openLayer('ob-solid ob-wake', h('p', { class: 'ob-wake-text' }, t('onboarding.yard.loading')));
+    const content = this.openLayer('ob-solid ob-wake ob-loading', ...loadingContent('onboarding.yard.loading', true));
+    const track = content.querySelector<HTMLElement>('.ob-load-track');
+    const fill = track?.querySelector<HTMLElement>('i');
+    const percent = content.querySelector<HTMLElement>('.ob-load-pct');
+    let shown = -1;
+    const setProgress = (fraction: number) => {
+      const value = Math.max(0, Math.min(100, Math.round(fraction * 100)));
+      if (value === shown) return;
+      shown = value;
+      if (fill) fill.style.transform = `scaleX(${value / 100})`;
+      if (percent) percent.textContent = t('boot.percent', { n: value });
+      track?.setAttribute('aria-valuenow', String(value));
+    };
+    setProgress(0);
     const from = performance.now();
-    afterPaint(() => {
-      this.game.leaveYard();
+    afterPaint(async () => {
+      await this.game.leaveYard((fraction) => setProgress(fraction * 0.94));
+      this.game.input.ignorePointerEventsBefore(performance.now() + INPUT_GUARD_MS);
       if (!replay) {
         applyYardGift(this.game.state);
         this.game.afterChange();
       }
+      setProgress(1);
       // lo sfondo resta almeno un attimo: è un passaggio, non un lampo
       window.setTimeout(() => {
         this.go('done');
@@ -661,6 +701,26 @@ export class Onboarding {
 /** Dopo che lo sfondo è stato disegnato: il cambio di scena (pesante) non lo fa saltare. */
 function afterPaint(fn: () => void) {
   requestAnimationFrame(() => requestAnimationFrame(() => window.setTimeout(fn, 0)));
+}
+
+/** Aspetta che la viewport torni alla misura senza tastiera prima di cambiare scheda. */
+function waitForViewportRestore(viewport: VisualViewport | null, fullHeight: number): Promise<void> {
+  if (!viewport) return new Promise((resolve) => window.setTimeout(resolve, 140));
+  if (viewport.height >= fullHeight - 48) return new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve())));
+  return new Promise((resolve) => {
+    let finished = false;
+    const finish = () => {
+      if (finished) return;
+      finished = true;
+      window.clearTimeout(timer);
+      viewport.removeEventListener('resize', check);
+      resolve();
+    };
+    const check = () => { if (viewport.height >= fullHeight - 48) finish(); };
+    const timer = window.setTimeout(finish, 700);
+    viewport.addEventListener('resize', check);
+    check();
+  });
 }
 
 /** Il contenitore che scorre attorno a un elemento (pannello, modale), se c'è. */

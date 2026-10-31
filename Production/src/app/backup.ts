@@ -6,16 +6,20 @@
 
 import { strFromU8, strToU8, unzipSync, zipSync, type Zippable } from 'fflate';
 import { t } from '../i18n/index.ts';
+import type { LanguagePreference } from '../i18n/index.ts';
 
 export const BACKUP_FORMAT = 'necrothing-3d';
-export const BACKUP_VERSION = 2;
+export const BACKUP_VERSION = 3;
 
 /** Foto scattata nel cimitero (galleria). */
 export interface PhotoRecord { id: string; createdAt: string; dataUrl: string }
 /** Foto dell'oggetto sepolto (la tomba la indica con `photoId`). */
 export interface MemorialPhoto { id: string; dataUrl: string }
 
-export interface BackupContent { state: unknown; photos: PhotoRecord[]; memorials: MemorialPhoto[]; exportedAt?: string }
+export interface BackupContent { state: unknown; photos: PhotoRecord[]; memorials: MemorialPhoto[]; exportedAt?: string; language?: LanguagePreference }
+
+const isLanguagePreference = (value: unknown): value is LanguagePreference => value === 'auto'
+  || typeof value === 'string' && ['it', 'en', 'de', 'fr', 'es', 'pt', 'zh-Hans', 'zh-Hant', 'ja', 'ko'].includes(value);
 
 const EXT: Record<string, string> = { 'image/jpeg': 'jpg', 'image/png': 'png', 'image/webp': 'webp' };
 const MIME: Record<string, string> = { jpg: 'image/jpeg', png: 'image/png', webp: 'image/webp' };
@@ -38,7 +42,7 @@ export function bytesToDataUrl(bytes: Uint8Array, mime: string): string {
 /** Nome di file sicuro per un id (gli id sono già semplici, ma non si sa mai). */
 const safe = (id: string) => id.replace(/[^A-Za-z0-9_-]/g, '_');
 
-export function packBackup(state: unknown, photos: PhotoRecord[], memorials: MemorialPhoto[], exportedAt = new Date().toISOString()): Uint8Array {
+export function packBackup(state: unknown, photos: PhotoRecord[], memorials: MemorialPhoto[], exportedAt = new Date().toISOString(), language?: LanguagePreference): Uint8Array {
   const files: Zippable = {};
   const put = (dir: string, id: string, dataUrl: string) => {
     const { bytes, mime } = dataUrlToBytes(dataUrl);
@@ -47,7 +51,7 @@ export function packBackup(state: unknown, photos: PhotoRecord[], memorials: Mem
     return name;
   };
   const index = {
-    format: BACKUP_FORMAT, version: BACKUP_VERSION, exportedAt, state,
+    format: BACKUP_FORMAT, version: BACKUP_VERSION, exportedAt, state, ...(language ? { language } : {}),
     photos: photos.map((p) => ({ id: p.id, createdAt: p.createdAt, file: put('photos', p.id, p.dataUrl) })),
     memorials: memorials.map((m) => ({ id: m.id, file: put('graves', m.id, m.dataUrl) })),
   };
@@ -62,10 +66,10 @@ const isJunk = (name: string) => name.startsWith('__MACOSX/') || /(^|\/)\._/.tes
 export function unpackBackup(bytes: Uint8Array, depth = 0): BackupContent {
   if (!isZip(bytes)) {
     // vecchio formato: tutto in un JSON, foto in base64
-    let parsed: { format?: string; state?: unknown; photos?: PhotoRecord[] } | null = null;
+    let parsed: { format?: string; state?: unknown; photos?: PhotoRecord[]; language?: unknown } | null = null;
     try { parsed = JSON.parse(strFromU8(bytes)); } catch { /* sotto: file non riconosciuto */ }
     if (parsed?.format !== BACKUP_FORMAT) throw new Error(t('backup.unknownFile'));
-    return { state: parsed.state, photos: parsed.photos ?? [], memorials: [] };
+    return { state: parsed.state, photos: parsed.photos ?? [], memorials: [], ...(isLanguagePreference(parsed.language) ? { language: parsed.language } : {}) };
   }
   let files: Record<string, Uint8Array>;
   try { files = unzipSync(bytes, { filter: (f) => !isJunk(f.name) }); } catch { throw new Error(t('backup.corrupt')); }
@@ -83,7 +87,7 @@ export function unpackBackup(bytes: Uint8Array, depth = 0): BackupContent {
     throw new Error(t('backup.unknownFile'));
   }
   const dir = index.slice(0, -'save.json'.length);
-  let parsed: { format?: string; exportedAt?: string; state?: unknown; photos?: Array<{ id: string; createdAt: string; file: string }>; memorials?: Array<{ id: string; file: string }> };
+  let parsed: { format?: string; exportedAt?: string; state?: unknown; language?: unknown; photos?: Array<{ id: string; createdAt: string; file: string }>; memorials?: Array<{ id: string; file: string }> };
   try { parsed = JSON.parse(strFromU8(files[index])); } catch { throw new Error(t('backup.corrupt')); }
   if (parsed.format !== BACKUP_FORMAT) throw new Error(t('backup.unknownFile'));
   const image = (file: string) => {
@@ -94,5 +98,5 @@ export function unpackBackup(bytes: Uint8Array, depth = 0): BackupContent {
   for (const p of parsed.photos ?? []) { const dataUrl = image(p.file); if (dataUrl) photos.push({ id: p.id, createdAt: p.createdAt, dataUrl }); }
   const memorials: MemorialPhoto[] = [];
   for (const m of parsed.memorials ?? []) { const dataUrl = image(m.file); if (dataUrl) memorials.push({ id: m.id, dataUrl }); }
-  return { state: parsed.state, photos, memorials, exportedAt: parsed.exportedAt };
+  return { state: parsed.state, photos, memorials, exportedAt: parsed.exportedAt, ...(isLanguagePreference(parsed.language) ? { language: parsed.language } : {}) };
 }

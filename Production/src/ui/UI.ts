@@ -342,7 +342,7 @@ export class UI {
     $('#ctx-actions').replaceChildren(...actions.map((a) => icons
       // solo l'icona (il nome resta per i lettori di schermo); il costo in un angolino
       ? h('button', { class: a.cls ?? '', 'data-ctx': a.act, 'aria-label': a.cost ? t('ctx.costAria', { label: a.label, cost: a.cost }) : a.label, title: a.label, onclick: () => this.game.performEntityAction(sel.id, a.act) },
-        icon(a.icon, 28), a.cost ? h('em', {}, String(a.cost)) : null)
+        icon(a.icon, 28), a.cost ? h('em', {}, icon('wisp', 11), String(a.cost)) : null)
       : h('button', {
         class: a.cls ?? '',
         'data-ctx': a.act,

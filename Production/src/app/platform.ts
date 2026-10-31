@@ -1,70 +1,100 @@
-// Il ciclo di vita dell'app, uguale nel browser (per il debug) e nell'app
-// Capacitor: quando l'app va in background (o la scheda si nasconde) il
-// gioco si ferma del tutto; quando perde il focus ma resta visibile (centro
-// notifiche, chiamata in arrivo, split view, un'altra finestra davanti) va
-// al minimo. Nell'app arrivano anche gli eventi di Capacitor: `pause` e
-// `resume` sul documento, e `appStateChange` del plugin App se c'è.
-// Nessuna dipendenza: i plugin nativi si leggono da window.Capacitor.
+// Ciclo di vita condiviso tra browser di sviluppo e app Capacitor.
+// Gli eventi DOM e nativi possono descrivere la stessa pausa: LifecycleGate li deduplica.
+
+import { Capacitor, type PluginListenerHandle } from '@capacitor/core';
+import { App } from '@capacitor/app';
+import { LocalNotifications } from '@capacitor/local-notifications';
 
 export interface LifecycleHandlers {
-  /** L'app va in background (o si chiude): salvare, fermare il loop, pianificare le notifiche. */
   pause: () => void;
-  /** L'app torna in primo piano. */
   resume: () => void;
-  /** Visibile ma senza focus: rallentare al minimo. */
   blur: () => void;
   focus: () => void;
+  /** Ritorna true se il tasto Indietro è stato consumato dall'interfaccia. */
+  backButton?: () => boolean;
 }
 
-interface CapacitorPlugins {
-  App?: { addListener: (e: 'appStateChange', cb: (s: { isActive: boolean }) => void) => unknown };
-  LocalNotifications?: {
-    checkPermissions: () => Promise<{ display: string }>;
-    requestPermissions: () => Promise<{ display: string }>;
-    schedule: (o: { notifications: Array<{ id: number; title: string; body: string; schedule: { at: Date; allowWhileIdle?: boolean } }> }) => Promise<unknown>;
-    getPending: () => Promise<{ notifications: Array<{ id: number }> }>;
-    cancel: (o: { notifications: Array<{ id: number }> }) => Promise<unknown>;
-  };
+/** Riduce più notifiche equivalenti a una sola transizione di stato. */
+export class LifecycleGate {
+  private paused: boolean;
+  private focused: boolean;
+  private readonly handlers: LifecycleHandlers;
+
+  constructor(handlers: LifecycleHandlers, paused: boolean, focused: boolean) {
+    this.handlers = handlers;
+    this.paused = paused;
+    this.focused = focused;
+  }
+
+  pause() {
+    if (this.paused) return;
+    this.paused = true;
+    this.handlers.pause();
+  }
+
+  resume() {
+    if (!this.paused) return;
+    this.paused = false;
+    this.handlers.resume();
+    // Alcuni WebView non mandano focus dopo il rientro in primo piano.
+    this.focus();
+  }
+
+  blur() {
+    if (!this.focused) return;
+    this.focused = false;
+    this.handlers.blur();
+  }
+
+  focus() {
+    if (this.focused) return;
+    this.focused = true;
+    this.handlers.focus();
+  }
 }
 
-/** I plugin nativi di Capacitor, se il gioco gira dentro l'app (nel browser: nessuno). */
-export function nativePlugins(): CapacitorPlugins | null {
-  const cap = (window as unknown as { Capacitor?: { isNativePlatform?: () => boolean; Plugins?: CapacitorPlugins } }).Capacitor;
-  return cap?.isNativePlatform?.() ? cap.Plugins ?? null : null;
+/** I plugin nativi si usano solo dentro Capacitor; nel browser le API restano assenti. */
+export function nativePlugins() {
+  return Capacitor.isNativePlatform() ? { App, LocalNotifications } : null;
 }
 
-/** Ascolta il ciclo di vita; ogni stato arriva una volta sola anche se più eventi lo annunciano. Ritorna chi smette di ascoltare. */
+/** Ascolta gli eventi di pagina e Capacitor; ritorna una funzione di cleanup. */
 export function watchLifecycle(h: LifecycleHandlers): () => void {
-  let paused = document.hidden, focused = document.hasFocus();
-  const pause = () => { if (paused) return; paused = true; h.pause(); };
-  const resume = () => {
-    if (!paused) return;
-    paused = false;
-    h.resume();
-    // tornando in primo piano si ha anche il focus (alcuni WebView non mandano `focus`)
-    if (!focused) { focused = true; h.focus(); }
-  };
-  const onVisibility = () => (document.hidden ? pause() : resume());
-  const onShow = () => { if (!document.hidden) resume(); };
-  const onBlur = () => { if (!focused) return; focused = false; h.blur(); };
-  const onFocus = () => { if (focused) return; focused = true; h.focus(); };
+  const gate = new LifecycleGate(h, document.hidden, document.hasFocus());
+  const onVisibility = () => (document.hidden ? gate.pause() : gate.resume());
+  const onShow = () => { if (!document.hidden) gate.resume(); };
+  const onBlur = () => gate.blur();
+  const onFocus = () => gate.focus();
   document.addEventListener('visibilitychange', onVisibility);
-  window.addEventListener('pagehide', pause);
+  window.addEventListener('pagehide', onPageHide);
   window.addEventListener('pageshow', onShow);
-  // Capacitor (Android e iOS) li manda sul documento
-  document.addEventListener('pause', pause);
-  document.addEventListener('resume', resume);
-  const app = nativePlugins()?.App?.addListener('appStateChange', (s) => (s.isActive ? resume() : pause())) as { remove?: () => void } | Promise<{ remove?: () => void }> | undefined;
+  document.addEventListener('pause', onPause);
+  document.addEventListener('resume', onResume);
   window.addEventListener('blur', onBlur);
   window.addEventListener('focus', onFocus);
+
+  const nativeHandles: Promise<PluginListenerHandle>[] = [];
+  if (Capacitor.isNativePlatform()) {
+    nativeHandles.push(App.addListener('appStateChange', (state) => (state.isActive ? gate.resume() : gate.pause())));
+    if (h.backButton) nativeHandles.push(App.addListener('backButton', ({ canGoBack }) => {
+      if (h.backButton?.()) return;
+      if (canGoBack) window.history.back();
+      else void App.exitApp();
+    }));
+  }
+
   return () => {
     document.removeEventListener('visibilitychange', onVisibility);
-    window.removeEventListener('pagehide', pause);
+    window.removeEventListener('pagehide', onPageHide);
     window.removeEventListener('pageshow', onShow);
-    document.removeEventListener('pause', pause);
-    document.removeEventListener('resume', resume);
+    document.removeEventListener('pause', onPause);
+    document.removeEventListener('resume', onResume);
     window.removeEventListener('blur', onBlur);
     window.removeEventListener('focus', onFocus);
-    void Promise.resolve(app).then((l) => l?.remove?.());
+    void Promise.all(nativeHandles).then((handles) => Promise.all(handles.map((handle) => handle.remove())));
   };
+
+  function onPageHide() { gate.pause(); }
+  function onPause() { gate.pause(); }
+  function onResume() { gate.resume(); }
 }

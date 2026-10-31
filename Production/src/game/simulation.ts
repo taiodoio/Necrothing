@@ -33,6 +33,10 @@ export interface CatchUpReport {
   xpGained: number;
 }
 
+/** Un salto di oltre dieci anni è trattato come orologio non affidabile, per non iterare migliaia di anniversari. */
+const MAX_REASONABLE_CATCHUP_DAYS = 3650;
+const validInstant = (value: string | null | undefined) => !!value && Number.isFinite(Date.parse(value));
+
 const WEATHERS: Weather[] = ['clear', 'clear', 'fog', 'rain', 'storm'];
 
 function addMemory(s: SaveData, graveId: string, type: SaveData['memories'][number]['type'], now: Date) {
@@ -113,10 +117,20 @@ export function keeperProtected(s: Pick<SaveData, 'placeables'>, p: SaveData['pl
 }
 
 export function runCatchUp(s: SaveData, now: Date): CatchUpReport {
-  const last = new Date(s.world.lastSimulationAt);
-  const elapsedDays = Math.max(0, daysBetween(last, now));
   const rng = createRng(`${s.seed}:${now.toISOString().slice(0, 13)}`);
   const iso = now.toISOString();
+  const parsedLast = new Date(s.world.lastSimulationAt);
+  const rawElapsed = Number.isFinite(parsedLast.getTime()) ? daysBetween(parsedLast, now) : NaN;
+  // Un timestamp invalido, futuro o distante più di dieci anni non può imporre penalità né ricompense.
+  const clockAnomaly = !Number.isFinite(rawElapsed) || rawElapsed < 0 || rawElapsed > MAX_REASONABLE_CATCHUP_DAYS;
+  const last = clockAnomaly ? now : parsedLast;
+  const elapsedDays = clockAnomaly ? 0 : Math.max(0, rawElapsed);
+  // Timestamp di cura corrotti vengono riancorati a ora, così non rompono né appassiscono subito.
+  for (const g of s.graves) {
+    if (g.flowersAt && !validInstant(g.flowersAt)) g.flowersAt = iso;
+    if (g.dirtySince && !validInstant(g.dirtySince)) g.dirtySince = iso;
+  }
+  for (const p of s.placeables) if (!validInstant(p.caredAt)) p.caredAt = iso;
   // il degrado conta al massimo DECAY.maxAbsenceDays di assenza: oltre, gli orologi
   // dell'incuria (sporca da, fiori del, ultima cura) vanno avanti dello stesso tanto,
   // come se si fosse stati via solo quei giorni (anniversari e meteo restano veri)
@@ -224,8 +238,8 @@ export function runCatchUp(s: SaveData, now: Date): CatchUpReport {
   // il conto avanza solo dei giorni interi già consumati: chi rientra più volte al giorno
   // non azzera ogni volta le ore accumulate (altrimenti erbacce, sporco e fuochi fatui
   // maturati da chiuso non arriverebbero mai)
-  if (elapsedDays > 0) s.world.lastSimulationAt = new Date(last.getTime() + elapsedDays * DAY_MS).toISOString();
-  else if (!(last.getTime() <= now.getTime())) s.world.lastSimulationAt = iso; // orologio spostato indietro o data rovinata
+  if (clockAnomaly) s.world.lastSimulationAt = iso;
+  else if (elapsedDays > 0) s.world.lastSimulationAt = new Date(last.getTime() + elapsedDays * DAY_MS).toISOString();
   return r;
 }
 

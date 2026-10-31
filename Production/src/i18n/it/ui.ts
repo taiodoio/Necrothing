@@ -475,6 +475,7 @@ export default {
   'onboarding.yard.end.back': 'Torna al cimitero',
   // il cambio di scena, sullo sfondo del percorso
   'onboarding.yard.loading': 'Il cimitero si sveglia…',
+  'onboarding.yard.preparing': 'Prepariamo il cortile…',
   // saltando il cortile il dono arriva lo stesso; {n}: i fuochi fatui
   'onboarding.yard.giftToast': 'Un dono di benvenuto: una lanterna, nell’Inventario, e {n} fuochi fatui.',
   // il primo obiettivo, nel cimitero vero

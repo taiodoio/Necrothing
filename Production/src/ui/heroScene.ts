@@ -272,7 +272,9 @@ export function nightHero(cls: string, clear: [number, number, number], build: (
   };
 
   const resize = (force = false) => {
-    const nw = el.clientWidth, nh = el.clientHeight;
+    // La testata viene ritagliata mentre si comprime; mantenere fisso il buffer
+    // evita continue riallocazioni WebGL durante l'animazione di altezza.
+    const nw = el.clientWidth, nh = 156;
     if (!nw || !nh || (!force && nw === w && nh === h)) return;
     w = nw; h = nh;
     renderer.setSize(w, h, false);

@@ -12,11 +12,12 @@ import type { GraveVisualState } from '../game/graves.ts';
 import { graveVisualState } from '../game/graves.ts';
 import * as R from '../game/rules.ts';
 import { anniversaryYears, catchUpMessage, liveTick, runCatchUp, type CatchUpReport } from '../game/simulation.ts';
-import { createNewGame, type FpsSetting, type Quality, type QualitySetting, type SaveData, type TimeOverride } from '../game/state.ts';
+import { createNewGame, type FpsSetting, type Placed, type Quality, type QualitySetting, type SaveData, type TimeOverride } from '../game/state.ts';
+import { buildYard } from '../game/yard.ts';
 import { dayPhaseForHour, type DayPhase } from '../game/time.ts';
 import type { CustodeLook } from '../game/look.ts';
 import { areaForLevel, buildOccupancy, canPlaceAt, gateCells, nearestFreeSpot } from '../game/world.ts';
-import { cacheStats, getModel, instantiate, LOWPOLY_MATERIALS, LOWPOLY_TERRAIN, setLiteMaterials } from '../render/modelCache.ts';
+import { cacheStats, getModel, instantiate, liteMaterialsOn, LOWPOLY_MATERIALS, LOWPOLY_TERRAIN, setLiteMaterials, setLiteMaterialsStaged } from '../render/modelCache.ts';
 import '../render/lowpoly/index.ts';
 import { placeableKey, placeableSeed, seedCount } from '../render/keys.ts';
 import type { PVis } from '../render/types.ts';
@@ -41,14 +42,15 @@ import { cellCenter, HALF, worldToCell, WorldView } from '../view/WorldView.ts';
 import { WalkTarget } from '../view/walkTarget.ts';
 import { AutoGovernor, detectTier, newAutoProfile, PROFILES, QUALITY_LABELS, type AutoProfile, type QualityProfile } from './AutoQuality.ts';
 import { Input } from './Input.ts';
-import { loadSave, persistenceOn, saveNow, scheduleSave, setSaveInstead } from './persistence.ts';
+import { flushPersistence, loadSave, persistenceOn, saveNow, scheduleSave, setSaveInstead } from './persistence.ts';
 import { closedCoffinLP } from '../render/lowpoly/memoryTree.ts';
 import { currentLang, t, tList } from '../i18n/index.ts';
+import { nextPaint } from './boot.ts';
 
 export type Selection = { kind: 'grave' | 'placeable'; id: string } | null;
 
 export type EntityAction =
-  | 'detail' | 'clean' | 'repair' | 'flowers' | 'light' | 'shop' | 'rotate' | 'store' | 'confirm' | 'move' | 'entrust' | 'memories' | 'ring' | 'registry' | 'house' | 'collect';
+  | 'detail' | 'clean' | 'repair' | 'flowers' | 'light' | 'shop' | 'rotate' | 'store' | 'confirm' | 'undoMove' | 'move' | 'entrust' | 'memories' | 'ring' | 'registry' | 'house' | 'collect';
 
 const PET_STATUS: Record<PetMode, string> = { free: t('game.pet.status.free'), follow: t('game.pet.status.follow'), home: t('game.pet.status.home') };
 
@@ -60,8 +62,9 @@ export interface Placement {
   y: number;
   rot: number;
   valid: boolean;
+  history?: Array<{ x: number; y: number; rot: number }>;
   /** Strumento a traccia (interfaccia nuova): i tratti già tirati e quello sotto il dito. */
-  trace?: { segs: R.TraceCell[][]; live: R.TraceCell[] | null; draw?: TraceDraw | null };
+  trace?: { segs: R.TraceCell[][]; history: R.TraceCell[][][]; live: R.TraceCell[] | null; draw?: TraceDraw | null };
 }
 
 
@@ -70,13 +73,22 @@ const DUST = '#a08a6c', DUST_GLOW = '#3a2e22';
 /** Nel cortile la camera sta vicina: tutto entra nell'inquadratura. */
 const YARD_VIEW = 16;
 
+function isTextEntry(target: EventTarget | null): boolean {
+  if (target instanceof HTMLTextAreaElement || target instanceof HTMLSelectElement) return true;
+  if (!(target instanceof HTMLInputElement)) return false;
+  return !['button', 'checkbox', 'color', 'file', 'hidden', 'image', 'radio', 'range', 'reset', 'submit'].includes(target.type);
+}
+
 export class Game {
   state: SaveData;
   readonly renderer: THREE.WebGLRenderer;
   readonly scene = new THREE.Scene();
   readonly rig = new CameraRig();
   readonly atmosphere: Atmosphere;
-  readonly world: WorldView;
+  private readonly realWorld: WorldView;
+  private tutorialWorld: WorldView | null = null;
+  private yardActive = false;
+  get world(): WorldView { return this.yardActive && this.tutorialWorld ? this.tutorialWorld : this.realWorld; }
   readonly actors: Actors;
   readonly effects: Effects;
   readonly ui: UI;
@@ -89,7 +101,9 @@ export class Game {
   placement: Placement | null = null;
   /** Tomba affidata e albero mentre il corteo del rito è in scena: non si spostano né si tolgono. */
   private riteIds: string[] | null = null;
-  private drag: { id: string; x: number; y: number; valid: boolean; grab: THREE.Vector3 } | null = null;
+  private drag: { id: string; x: number; y: number; valid: boolean; grab: THREE.Vector3; origin?: { x: number; y: number; rot: number } } | null = null;
+  toolMode: 'pan' | 'work' = 'work';
+  private readonly moveHistory: Array<{ kind: 'move'; id: string; x: number; y: number; rot: number } | { kind: 'store'; item: Placed }> = [];
   private clock = new THREE.Clock();
   private phase: DayPhase = 'night';
   /** Nebbia in movimento nel bosco attorno al recinto (?mist=0 la spegne, per sviluppo). */
@@ -100,10 +114,18 @@ export class Game {
   private hudTimer = 0;
   /** FPS disegnati e quante volte al secondo il browser chiama il loop (per le statistiche). */
   private fps = { frames: 0, time: 0, value: 0, calls: 0, callsValue: 0 };
+  private frameSamples: number[] = [];
   private disposed = false;
+  private sceneReady = false;
+  private startupTasksScheduled = false;
+  private qualitySceneRevision = 0;
+  private qualitySceneRunning = false;
+  private qualityNeedsRebuild = false;
+  private lastRendererWidth = 0;
+  private lastRendererHeight = 0;
+  private lastRendererDpr = 0;
   private canvas: HTMLCanvasElement;
   private postfx: PostFX;
-  private focusNdc = new THREE.Vector3();
   /** Il cerchio dorato sul punto dove sta andando il Custode. */
   private readonly walkMark = new WalkTarget();
 
@@ -111,7 +133,7 @@ export class Game {
    * `state`: parte da questo stato invece che dal salvataggio; `prewarm: false` non genera modelli in anticipo;
    * `antialias: false` toglie l'antialiasing dello schermo (pagina delle misure: lì lo decide la sfocatura).
    */
-  constructor(canvas: HTMLCanvasElement, opts: { state?: SaveData; prewarm?: boolean; antialias?: boolean } = {}) {
+  constructor(canvas: HTMLCanvasElement, opts: { state?: SaveData; prewarm?: boolean; antialias?: boolean; deferInitialScene?: boolean } = {}) {
     this.canvas = canvas;
     for (const ev of ['pointerdown', 'pointermove', 'wheel', 'keydown', 'touchstart'] as const) window.addEventListener(ev, this.markActive, { passive: true });
     const now = new Date();
@@ -132,7 +154,7 @@ export class Game {
 
     this.atmosphere = new Atmosphere(this.scene, q);
     this.effects = new Effects(this.scene, q);
-    this.world = new WorldView(this.scene, this.atmosphere);
+    this.realWorld = new WorldView(this.scene, this.atmosphere);
     this.world.staticShadows = this.profile().shadows === 'still';
     this.world.quality = q;
     if (params.get('mist') !== '0') this.mist = new ForestMist(this.scene, q);
@@ -140,11 +162,11 @@ export class Game {
     R.ensureKeeperHouse(this.state, now);
     const report = runCatchUp(this.state, now);
     R.afterAction(this.state, now);
-    this.world.sync(this.state);
+    if (!opts.deferInitialScene) { this.world.sync(this.state); this.sceneReady = true; }
     const start = this.homeSpot(this.state);
     this.actors = new Actors(this.scene, this.atmosphere, start, this.state.player.look);
     this.scene.add(this.walkMark.group);
-    this.refreshWalkable();
+    if (this.sceneReady) this.refreshWalkable();
     this.actors.setNight(this.isNight());
     this.actors.syncPresences(this.state, now);
     this.actors.zombieStep = (r, cell) => this.zombieStep(r, cell);
@@ -161,15 +183,21 @@ export class Game {
       dragStart: (x, y) => this.onDragStart(x, y),
       dragMove: (x, y, dx, dy, owned) => this.onDragMove(x, y, dx, dy, owned),
       dragEnd: (x, y, owned) => this.onDragEnd(x, y, owned),
-      zoom: (f) => this.rig.zoomBy(f),
+      zoom: (f) => { if (!this.toolControlsActive() || this.toolMode === 'pan') { this.dismissContextForNavigation(); this.rig.zoomBy(f); } },
       key: (k, down) => this.onKey(k, down),
     });
     this.applySettingQuality();
     this.updatePhase(true);
     window.addEventListener('resize', this.resize);
+    document.addEventListener('focusin', this.onTextFocusIn, true);
+    document.addEventListener('focusout', this.onTextFocusOut, true);
+    window.visualViewport?.addEventListener('resize', this.syncVisualViewport);
+    window.visualViewport?.addEventListener('scroll', this.syncVisualViewport);
+    this.syncVisualViewport();
     this.stopLifecycle = watchLifecycle({
       pause: this.onPause,
       resume: this.onResume,
+      backButton: this.onBackButton,
       // visibile ma senza focus (centro notifiche, chiamata, split view): al minimo
       blur: () => { this.unfocused = true; },
       focus: () => { this.unfocused = false; this.markActive(); },
@@ -181,13 +209,35 @@ export class Game {
     const msg = catchUpMessage(this.announceAnniversaries(report, 1200));
     if (msg) setTimeout(() => toast(msg), 900);
     this.ui.refreshHud();
-    // un'area sbloccata mentre il gioco era chiuso: lo si dice appena aperto
-    setTimeout(() => this.offerExpansion(), 2500);
-    if (opts.prewarm !== false) setTimeout(() => this.prewarmModels(), 4000);
+    if (this.sceneReady) this.scheduleStartupTasks(opts.prewarm !== false);
   }
 
   start() {
     this.renderer.setAnimationLoop(this.loop);
+  }
+
+  /** Costruisce il cimitero iniziale mentre lo splash mostra l'avanzamento. */
+  async prepareInitialScene(progress: (fraction: number) => void = () => undefined) {
+    if (this.sceneReady) { progress(1); return; }
+    await this.realWorld.syncStaged(this.state, progress);
+    this.sceneReady = true;
+    this.updateCameraWorld();
+    this.refreshWalkable();
+  }
+
+  /** Precompila gli shader con la scena pronta, ancora sotto lo splash. */
+  prepareLoadingShaders() { this.prepareShaders(); }
+
+  /** Avvia warm-up differibili solo quando le scene necessarie sono pronte. */
+  finishLoading() {
+    this.scheduleStartupTasks(true);
+  }
+
+  private scheduleStartupTasks(prewarm: boolean) {
+    if (this.startupTasksScheduled) return;
+    this.startupTasksScheduled = true;
+    setTimeout(() => this.offerExpansion(), 2500);
+    if (prewarm) setTimeout(() => this.prewarmModels(), 4000);
   }
 
   /** Il loop dei frame (la pagina di misura ci mette attorno il suo cronometro). */
@@ -204,6 +254,7 @@ export class Game {
 
   /** Mette il cerchio dorato sulla meta appena scelta (l'ultimo punto del percorso). */
   private markWalk() {
+    this.ui.closeContext();
     const end = this.actors.avatar.path[this.actors.avatar.path.length - 1];
     if (!end) return;
     this.walkMark.show(new THREE.Vector3(end.x, this.world.heightAt(end.x, end.z), end.z));
@@ -255,8 +306,8 @@ export class Game {
   private currentCap(now: number): number {
     // visibile ma senza focus: quasi fermo (vale anche nella pagina di misura)
     if (this.unfocused) return Math.min(this.frameCap, UNFOCUSED_FPS);
-    if (!this.idleSaver) return this.frameCap;
     if (drawerOpen() || uiBlocking()) return Math.min(this.frameCap, MENU_FPS);
+    if (!this.idleSaver) return this.frameCap;
     const still = now - this.lastActiveAt > IDLE_MS && !this.actors.avatarMoving && !this.placement && !this.drag;
     return still ? Math.min(this.frameCap, IDLE_FPS) : this.frameCap;
   }
@@ -276,41 +327,46 @@ export class Game {
     this.framesDrawn++;
     const raw = this.clock.getDelta();
     const dt = Math.min(0.05, raw);
+    this.frameSamples.push(raw * 1000);
+    if (this.frameSamples.length > 120) this.frameSamples.shift();
     const t = this.clock.elapsedTime;
     // Auto giudica solo i frame al ritmo pieno (da fermo o sotto un menù il gioco rallenta apposta)
     if (this.auto) { if (cap === this.frameCap) this.autoFrame(raw); else this.auto.hold(); }
 
-    this.steerFromKeys(dt);
-    // le posizioni delle tombe cambiano solo quando cambia la scena: niente array nuovi a ogni frame
-    if (this.spotsVersion !== this.world.version) { this.spots = graveSpots(this.state); this.spotsVersion = this.world.version; }
-    this.actors.update(dt, t, this.spots, (p) => this.groundAt(p));
-    if (this.batUntil) this.stepBat(now);
-    this.collectNearbyWisps();
-    this.stepWalkMark(dt, t);
-    this.world.watch(this.actors.avatar.pos);
-    this.world.update(dt, t);
-    this.mist?.update(dt, (this.scene.fog as THREE.Fog).color);
-    this.rig.update(dt);
-    const radius = this.rig.groundRadius();
-    this.atmosphere.focus(this.rig.target, radius, this.rig.distance);
-    this.atmosphere.update(dt, t, this.rig.camera);
-    this.effects.focus(this.rig.target, radius);
-    this.effects.update(dt, t);
+    const menu = drawerOpen() || uiBlocking();
+    if (!menu) {
+      this.steerFromKeys(dt);
+      // le posizioni delle tombe cambiano solo quando cambia la scena: niente array nuovi a ogni frame
+      if (this.spotsVersion !== this.world.version) { this.spots = graveSpots(this.state); this.spotsVersion = this.world.version; }
+      this.actors.update(dt, t, this.spots, (p) => this.groundAt(p));
+      if (this.batUntil) this.stepBat(now);
+      this.collectNearbyWisps();
+      this.stepWalkMark(dt, t);
+      this.world.watch(this.actors.avatar.pos);
+      this.world.update(dt, t);
+      this.mist?.update(dt, (this.scene.fog as THREE.Fog).color);
+      this.rig.update(dt);
+      const radius = this.rig.groundRadius();
+      this.atmosphere.focus(this.rig.target, radius, this.rig.distance);
+      this.atmosphere.update(dt, t, this.rig.camera);
+      this.effects.focus(this.rig.target, radius);
+      this.effects.update(dt, t);
+    }
 
-    this.liveTimer -= dt;
-    if (this.liveTimer <= 0) { this.liveTimer = LIVE_TICK_MS / 1000; this.onLiveTick(); }
-    this.phaseTimer -= dt;
-    if (this.phaseTimer <= 0) { this.phaseTimer = 5; this.updatePhase(false); }
-    this.hudTimer -= dt;
-    if (this.hudTimer <= 0) { this.hudTimer = 1; this.ui.refreshClock(); this.refreshBusinesses(); }
+    if (!menu) {
+      this.liveTimer -= dt;
+      if (this.liveTimer <= 0) { this.liveTimer = LIVE_TICK_MS / 1000; this.onLiveTick(); }
+      this.phaseTimer -= dt;
+      if (this.phaseTimer <= 0) { this.phaseTimer = 5; this.updatePhase(false); }
+      this.hudTimer -= dt;
+      if (this.hudTimer <= 0) { this.hudTimer = 1; this.ui.refreshClock(); this.refreshBusinesses(); }
+    }
 
     // sotto un pannello si disegna un fotogramma e poi più nulla (la pagina di misura disegna sempre)
-    const menu = (drawerOpen() || uiBlocking()) && this.idleSaver;
     if (!menu || !this.drawnUnderMenu) {
       if (!this.renderer.shadowMap.autoUpdate) this.refreshStaticShadows();
       this.world.updateDecorLod(this.rig.camera);
       this.renderer.info.reset();
-      this.updateFocus();
       this.postfx.render(this.scene, this.rig.camera);
     }
     this.drawnUnderMenu = menu;
@@ -366,16 +422,62 @@ export class Game {
   }
 
   private readonly resize = () => {
+    this.syncVisualViewport();
+    // La tastiera Android può emettere molti resize intermedi. Ridimensionare
+    // canvas, camera e render target a ogni passaggio lascia una fascia vuota
+    // nel WebView; durante l'editing manteniamo la scena e la riallineiamo una volta chiusa.
+    if (this.textInputFocused) return;
     const w = window.innerWidth, h = window.innerHeight;
+    const dpr = this.renderer.getPixelRatio();
+    if (w === this.lastRendererWidth && h === this.lastRendererHeight && dpr === this.lastRendererDpr) return;
+    this.viewportBeforeKeyboard = window.visualViewport?.height ?? h;
     this.renderer.setSize(w, h, false);
     this.rig.resize(w, h);
     this.postfx?.setSize();
+    this.lastRendererWidth = w;
+    this.lastRendererHeight = h;
+    this.lastRendererDpr = dpr;
     this.rig.minView = 6;
     this.updateCameraWorld();
     if (!this.resized) { this.rig.setView(w < 700 ? 24 : 22); this.resized = true; }
     this.drawnUnderMenu = false; // la tela ridimensionata va ridisegnata anche sotto un pannello
   };
   private resized = false;
+  private textInputFocused = false;
+  private viewportBeforeKeyboard = window.visualViewport?.height ?? window.innerHeight;
+  private syncVisualViewport = () => {
+    const viewport = window.visualViewport;
+    const height = viewport?.height ?? window.innerHeight;
+    const offsetTop = viewport?.offsetTop ?? 0;
+    const root = document.documentElement;
+    root.style.setProperty('--visual-viewport-height', `${height}px`);
+    root.style.setProperty('--visual-viewport-top', `${offsetTop}px`);
+    root.style.setProperty('--visual-viewport-center', `${offsetTop + height / 2}px`);
+  };
+  private readonly onTextFocusIn = (event: FocusEvent) => {
+    if (!isTextEntry(event.target)) return;
+    this.textInputFocused = true;
+    this.viewportBeforeKeyboard = Math.max(this.viewportBeforeKeyboard, window.visualViewport?.height ?? window.innerHeight);
+  };
+  private readonly onTextFocusOut = (event: FocusEvent) => {
+    if (!isTextEntry(event.target)) return;
+    const started = performance.now();
+    const viewport = window.visualViewport;
+    const restore = () => {
+      if (isTextEntry(document.activeElement)) return;
+      this.syncVisualViewport();
+      const height = viewport?.height ?? window.innerHeight;
+      // Lascia che il WebView finisca di chiudere la tastiera, poi aggiorna
+      // una sola volta il canvas. Nel frattempo i pannelli seguono la viewport.
+      if (height >= this.viewportBeforeKeyboard - 48 || performance.now() - started >= 450) {
+        this.textInputFocused = false;
+        this.resize();
+        return;
+      }
+      requestAnimationFrame(restore);
+    };
+    requestAnimationFrame(restore);
+  };
 
   /** In background (app in pausa, scheda nascosta): si salva e si ferma il loop, niente frame né timer. */
   private paused = false;
@@ -385,6 +487,7 @@ export class Game {
   private readonly onPause = () => {
     this.paused = true;
     saveNow(this.state);
+    void flushPersistence();
     this.renderer.setAnimationLoop(null);
     // i promemoria si ripianificano adesso: da qui in poi il gioco non gira
     void syncReminders(this.realState ?? this.state, this.now());
@@ -393,6 +496,25 @@ export class Game {
 
   /** Chi vuole sapere quando l'app va in pausa. */
   onPaused: (() => void) | null = null;
+
+  /** Tasto Indietro Android: chiude prima gli strati dell'interfaccia, poi lascia uscire l'app. */
+  private readonly onBackButton = (): boolean => {
+    if (document.querySelector('.dialog-scrim')) {
+      document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+      return true;
+    }
+    if (drawerOpen()) { this.ui.escape(); return true; }
+    const context = document.querySelector<HTMLElement>('#ctx');
+    if (context && !context.hidden) {
+      this.ui.closeContext();
+      this.select(null);
+      return true;
+    }
+    if (this.placement) { this.cancelPlacement(); return true; }
+    if (this.selection) { this.select(null); return true; }
+    if (this.editMode) { this.setEditMode(false); return true; }
+    return false;
+  };
 
   /**
    * Dopo la prima sepoltura (nell'app): «vuoi un promemoria?». Il permesso
@@ -605,6 +727,43 @@ export class Game {
     return null;
   }
 
+  canUndoTool() { return this.placement?.trace ? this.placement.trace.history.length > 0 : this.placement?.kind === 'item' ? !!this.placement.history?.length : this.moveHistory.length > 0; }
+
+  private toolControlsActive() { return this.placement?.kind === 'item' || (this.editMode && !this.placement); }
+
+  setToolMode(mode: 'pan' | 'work') {
+    this.toolMode = mode;
+    this.ui.closeContext();
+    this.ui.refreshPlacementBar();
+  }
+
+  undoTool() {
+    if (this.placement?.trace) { this.undoTrace(); return; }
+    if (this.placement?.kind === 'item') {
+      const previous = this.placement.history?.pop();
+      if (previous) { Object.assign(this.placement, previous); this.refreshPlacement(); }
+      return;
+    }
+    const previous = this.moveHistory.at(-1);
+    if (!previous) return;
+    const id = previous.kind === 'move' ? previous.id : previous.item.id;
+    const restored = previous.kind === 'move'
+      ? this.act((s) => R.moveEntity(s, previous.id, previous.x, previous.y, previous.rot), undefined, true)
+      : this.act((s) => {
+        const item = previous.item;
+        if (R.ownedCount(s, item.type) < 1) throw new Error(t('rules.place.noneOwned'));
+        if (!canPlaceAt(item.x, item.y, rotatedFootprint(item.type, item.rot), buildOccupancy(s), areaForLevel(s.world.expansionLevel))) throw new Error(t('rules.place.busy'));
+        s.inventory[item.type]--;
+        if (!s.inventory[item.type]) delete s.inventory[item.type];
+        s.placeables.push(structuredClone(item));
+      }, undefined, true);
+    if (restored) {
+      this.moveHistory.pop();
+      this.select({ kind: this.kindOf(id), id });
+      this.ui.refreshPlacementBar();
+    }
+  }
+
   select(sel: Selection) {
     this.selection = sel;
     this.world.select(sel?.id ?? null);
@@ -637,16 +796,31 @@ export class Game {
     const grave = this.state.graves.find((g) => g.id === id);
     // durante il rito la tomba affidata e l'albero restano dove sono finché il corteo non ha finito
     if (this.riteIds?.includes(id) && !['detail', 'memories', 'shop', 'registry', 'house'].includes(action)) { toast(t('game.rite.wait')); return; }
-    const instant: EntityAction[] = ['detail', 'shop', 'rotate', 'store', 'confirm', 'move', 'entrust', 'memories', 'registry', 'house', 'collect'];
+    const instant: EntityAction[] = ['detail', 'shop', 'rotate', 'store', 'confirm', 'undoMove', 'move', 'entrust', 'memories', 'registry', 'house', 'collect'];
     const run = () => {
       switch (action) {
         case 'clean': this.actors.work(); if (this.act((s, n) => (grave ? R.cleanGrave(s, id, n) : R.cleanPlaceable(s, id, n)), center, 'rewarded') && grave) signalOnboarding('graveCleaned'); break;
         case 'repair': this.actors.work(1.6); this.act((s, n) => (grave ? R.repairGrave(s, id, n) : R.repairPlaceable(s, id, n)), center, 'rewarded'); break;
         case 'flowers': this.actors.work(0.8); if (this.act((s, n) => R.bringFlowers(s, id, n), center, 'rewarded')) signalOnboarding('flowersBrought'); break;
         case 'light': if (this.act((s) => R.toggleLight(s, id), center)) signalOnboarding('lightToggled'); break;
-        case 'rotate': this.act((s) => R.rotateEntity(s, id)); break;
-        case 'store': this.act((s) => R.storePlaceable(s, id)); this.select(null); break;
+        case 'rotate': {
+          const item = this.state.placeables.find((p) => p.id === id);
+          const before = item && { kind: 'move' as const, id, x: item.x, y: item.y, rot: item.rot };
+          if (this.act((s) => R.rotateEntity(s, id)) && this.editMode && before) this.moveHistory.push(before);
+          this.ui.refreshPlacementBar();
+          break;
+        }
+        case 'store': {
+          const item = this.state.placeables.find((p) => p.id === id);
+          const before = item && structuredClone(item);
+          if (this.act((s) => R.storePlaceable(s, id))) {
+            if (this.editMode && before) this.moveHistory.push({ kind: 'store', item: before });
+            this.select(null); this.ui.refreshPlacementBar();
+          }
+          break;
+        }
         case 'confirm': this.select(null); toast(t('game.place.confirmed')); break;
+        case 'undoMove': this.undoTool(); break;
         case 'detail': this.ui.openDetail(id); break;
         case 'shop': this.ui.openShop(); break;
         case 'move': this.setEditMode(true); this.select(this.selection); break;
@@ -667,11 +841,13 @@ export class Game {
   setEditMode(on: boolean) {
     const was = this.editMode;
     this.editMode = on;
-    if (!on) { this.world.endPreview(); this.select(null); }
+    if (on && !was) { this.moveHistory.length = 0; this.toolMode = 'work'; }
+    if (!on) { this.moveHistory.length = 0; this.world.endPreview(); this.select(null); }
     if (was && !on) signalOnboarding('editDone');
     this.refreshKeeperArea();
     this.ui.refreshEditBanner();
     this.ui.refreshContext();
+    if (this.shrink) this.ui.refreshAreaBanner(R.outsideArea(this.state, this.shrink.level).length);
   }
 
   // ── Posizionamento (sepoltura & inventario) ──────────────────────────
@@ -706,7 +882,8 @@ export class Game {
     const spot = nearestFreeSpot(c.x, c.y, fp, occ, areaForLevel(this.state.world.expansionLevel));
     if (!spot) { toast(t('game.noSpace.item')); return; }
     this.select(null);
-    this.placement = { kind: 'item', type, x: spot.x, y: spot.y, rot: 0, valid: true };
+    this.toolMode = 'work';
+    this.placement = { kind: 'item', type, x: spot.x, y: spot.y, rot: 0, valid: true, history: [] };
     this.rig.follow = null;
     this.rig.jumpTo(cellCenter(spot.x, spot.y, fp));
     this.refreshPlacement();
@@ -715,7 +892,8 @@ export class Game {
   private startTrace(type: string) {
     const c = this.placementOriginCell();
     this.select(null);
-    this.placement = { kind: 'item', type, x: c.x, y: c.y, rot: 0, valid: false, trace: { segs: [], live: null } };
+    this.toolMode = 'work';
+    this.placement = { kind: 'item', type, x: c.x, y: c.y, rot: 0, valid: false, trace: { segs: [], history: [], live: null } };
     this.rig.follow = null;
     this.rig.jumpTo(cellCenter(c.x, c.y, [1, 1])); // si traccia partendo da dove sta il Custode
     this.refreshPlacement();
@@ -744,9 +922,14 @@ export class Game {
 
   undoTrace() {
     const t = this.placement?.trace;
-    if (!t?.segs.length) return;
-    t.segs.pop();
+    const previous = t?.history.pop();
+    if (!t || !previous) return;
+    t.segs = previous;
     this.refreshPlacement();
+  }
+
+  private rememberTrace(t: NonNullable<Placement['trace']>) {
+    t.history.push(t.segs.map((segment) => segment.map((cell) => ({ ...cell }))));
   }
 
   /** Compra in Bottega quelli che mancano per finire il tracciato. */
@@ -799,6 +982,7 @@ export class Game {
   rotatePlacement() {
     const p = this.placement;
     if (!p || p.kind !== 'item' || !CATALOG[p.type!].rotatable) return;
+    p.history?.push({ x: p.x, y: p.y, rot: p.rot });
     p.rot = (p.rot + 1) % 4;
     this.refreshPlacement();
   }
@@ -901,22 +1085,39 @@ export class Game {
   }
 
   private onTap(x: number, y: number) {
+    if (uiBlocking()) return;
+    if (this.inYard && !this.ui.onboarding.allowsYardScene(this.pick(x, y), 'tap')) return;
     this.ui.closeBubble();
     this.ui.closeActorMenu();
     if (this.placement?.trace) {
+      if (this.toolMode === 'pan') {
+        const id = this.pick(x, y)?.entityId;
+        this.select(id ? { kind: this.kindOf(id), id } : null);
+        return;
+      }
       // un tocco posa una cella sola, nel verso dell'ultimo tratto
       const g = this.groundCell(x, y), t = this.placement.trace;
       if (!g) return;
-      t.segs.push([{ x: g.cell.x, y: g.cell.y, rot: t.segs.at(-1)?.at(-1)?.rot ?? 0 }]);
+      const existing = t.segs.findIndex((segment) => segment.some((cell) => cell.x === g.cell.x && cell.y === g.cell.y));
+      const id = this.pick(x, y)?.entityId;
+      if (existing < 0 && id) { this.select({ kind: this.kindOf(id), id }); return; }
+      this.ui.closeContext();
+      this.rememberTrace(t);
+      if (existing >= 0) {
+        t.segs = t.segs.map((segment) => segment.filter((cell) => cell.x !== g.cell.x || cell.y !== g.cell.y)).filter((segment) => segment.length);
+      } else t.segs.push([{ x: g.cell.x, y: g.cell.y, rot: t.segs.at(-1)?.at(-1)?.rot ?? 0 }]);
       this.refreshPlacement();
       return;
     }
     if (this.placement) {
+      if (this.placement.kind === 'item' && this.toolMode === 'pan') return;
       const g = this.groundCell(x, y);
       if (!g) return;
       const fp = this.placementFp();
-      this.placement.x = g.cell.x - Math.floor(fp[0] / 2);
-      this.placement.y = g.cell.y - Math.floor(fp[1] / 2);
+      const nx = g.cell.x - Math.floor(fp[0] / 2), ny = g.cell.y - Math.floor(fp[1] / 2);
+      if (nx !== this.placement.x || ny !== this.placement.y) this.placement.history?.push({ x: this.placement.x, y: this.placement.y, rot: this.placement.rot });
+      this.placement.x = nx;
+      this.placement.y = ny;
       this.refreshPlacement();
       return;
     }
@@ -1388,8 +1589,16 @@ export class Game {
     });
   }
 
+  private dismissContextForNavigation() {
+    // Impedisce anche che un arrivo del Custode riapra un menù già chiuso.
+    this.ctxReady = true;
+    this.ui.closeContext();
+  }
+
   private onDragStart(x: number, y: number): boolean {
+    if (this.inYard && !this.ui.onboarding.allowsYardScene(this.pick(x, y), 'drag')) return false;
     this.ui.closeBubble();
+    if (this.toolControlsActive() && this.toolMode === 'pan') return false;
     const g = this.groundCell(x, y);
     if (!g) return false;
     if (this.placement?.trace) {
@@ -1405,7 +1614,7 @@ export class Game {
       const fp = this.placementFp();
       const p = this.placement;
       const inside = g.cell.x >= p.x - 1 && g.cell.x <= p.x + fp[0] && g.cell.y >= p.y - 1 && g.cell.y <= p.y + fp[1];
-      if (inside) this.drag = { id: '__placement', x: p.x, y: p.y, valid: p.valid, grab: g.p.clone().sub(cellCenter(p.x, p.y, fp)) };
+      if (inside) this.drag = { id: '__placement', x: p.x, y: p.y, valid: p.valid, grab: g.p.clone().sub(cellCenter(p.x, p.y, fp)), origin: { x: p.x, y: p.y, rot: p.rot } };
       return inside;
     }
     if (!this.editMode) return false;
@@ -1415,7 +1624,9 @@ export class Game {
     if (this.riteIds?.includes(id)) { toast(t('game.rite.wait')); return false; }
     if (this.selection?.id !== id) this.select({ kind: this.kindOf(id), id });
     const c = this.entityCells(id)!;
-    this.drag = { id, x: c.x, y: c.y, valid: true, grab: g.p.clone().sub(cellCenter(c.x, c.y, c.fp)) };
+    const placed = this.state.placeables.find((p) => p.id === id);
+    const origin = { x: c.x, y: c.y, rot: placed?.rot ?? 0 };
+    this.drag = { id, x: c.x, y: c.y, valid: true, grab: g.p.clone().sub(cellCenter(c.x, c.y, c.fp)), origin };
     this.ui.closeContext();
     return true;
   }
@@ -1431,7 +1642,13 @@ export class Game {
       this.refreshPlacement();
       return;
     }
-    if (!owned || !this.drag) { this.rig.panPixels(dx, dy); return; }
+    if (!owned || !this.drag) {
+      if ((!this.toolControlsActive() || this.toolMode === 'pan') && (dx || dy)) {
+        this.dismissContextForNavigation();
+        this.rig.panPixels(dx, dy);
+      }
+      return;
+    }
     const g = this.groundCell(x, y);
     if (!g) return;
     const id = this.drag.id;
@@ -1453,7 +1670,7 @@ export class Game {
     const tr = this.placement?.trace;
     if (owned && tr?.live) {
       // alzando il dito il tratto resta (un tratto di una cella sola è il dito che si posa per il pizzico)
-      if (tr.live.length > 1) tr.segs.push(tr.live);
+      if (tr.live.length > 1) { this.rememberTrace(tr); tr.segs.push(tr.live); }
       tr.live = null;
       tr.draw = null;
       this.refreshPlacement();
@@ -1462,13 +1679,23 @@ export class Game {
     const d = this.drag;
     this.drag = null;
     if (!owned || !d) return;
-    if (d.id === '__placement') return;
+    if (d.id === '__placement') {
+      const p = this.placement;
+      if (p?.kind === 'item' && d.origin && (p.x !== d.origin.x || p.y !== d.origin.y)) { p.history?.push(d.origin); this.ui.refreshPlacementBar(); }
+      return;
+    }
     this.world.endPreview();
-    if (d.valid) { if (this.act((s) => R.moveEntity(s, d.id, d.x, d.y))) signalOnboarding('itemMoved'); }
+    if (d.valid) {
+      if (d.origin && (d.origin.x !== d.x || d.origin.y !== d.y) && this.act((s) => R.moveEntity(s, d.id, d.x, d.y))) {
+        this.moveHistory.push({ kind: 'move', id: d.id, ...d.origin });
+        signalOnboarding('itemMoved');
+      }
+    }
     else { toast(t('game.move.busy')); this.world.sync(this.state); }
     this.world.select(d.id);
     this.refreshKeeperArea();
     this.ui.refreshContext();
+    this.ui.refreshPlacementBar();
   }
 
   // ── Tastiera ─────────────────────────────────────────────────────────
@@ -1482,6 +1709,7 @@ export class Game {
   }
 
   private steerFromKeys(dt: number) {
+    if (this.toolControlsActive() && this.toolMode === 'work') return;
     const keys = this.input.keys;
     let fx = 0, fz = 0;
     if (keys.has('w') || keys.has('arrowup')) fz -= 1;
@@ -1489,6 +1717,7 @@ export class Game {
     if (keys.has('a') || keys.has('arrowleft')) fx -= 1;
     if (keys.has('d') || keys.has('arrowright')) fx += 1;
     if (!fx && !fz) return;
+    this.dismissContextForNavigation();
     // direzioni relative alla camera (su = verso il fondo dello schermo)
     const right = new THREE.Vector3(1, 0, 0).applyQuaternion(this.rig.camera.quaternion).setY(0).normalize();
     const fwd = new THREE.Vector3(0, 0, -1).applyQuaternion(this.rig.camera.quaternion).setY(0);
@@ -1517,6 +1746,13 @@ export class Game {
    * il gioco. Uno per volta: se si sta giocando, aspetta.
    */
   private prewarmModels() {
+    // La prima visita e i pannelli usano già CPU/GPU per scena e interfaccia:
+    // rimandare la generazione dei modelli opzionali finché non si torna al gioco.
+    if (this.disposed) return;
+    if (this.inYard || this.state.onboarding.stage !== 'done' || drawerOpen() || uiBlocking()) {
+      window.setTimeout(() => this.prewarmModels(), 1500);
+      return;
+    }
     // prima quello che hai in inventario, poi quello che puoi comprare, poi il resto
     const now = this.now();
     const buyable = CATALOG_LIST.filter((d) => ['ok', 'funds'].includes(R.shopAvailability(this.state, d.id, now))).map((d) => d.id);
@@ -1529,8 +1765,13 @@ export class Game {
     const idle = (cb: () => void) => ('requestIdleCallback' in window ? window.requestIdleCallback(cb, { timeout: 300 }) : setTimeout(cb, 60));
     const step = () => {
       if (this.disposed) return;
-      // mentre il Custode cammina o si sta posando qualcosa si lascia lavorare il gioco
-      if (this.actors.avatarMoving || this.placement || this.drag) { setTimeout(() => idle(step), 600); return; }
+      // Non concorrere con tutorial, pannelli o interazioni; una singola generazione
+      // può essere sincrona e superare il budget di un frame sui telefoni.
+      if (this.inYard || this.state.onboarding.stage !== 'done' || drawerOpen() || uiBlocking()
+        || this.actors.avatarMoving || this.placement || this.drag || performance.now() - this.lastActiveAt < 3000) {
+        setTimeout(() => idle(step), 600);
+        return;
+      }
       const v = queue.shift();
       if (!v) return;
       getModel(placeableKey(v));
@@ -1681,29 +1922,63 @@ export class Game {
     document.documentElement.dataset.quality = this.level();
     // ombre ferme: ciò che si muove non proietta ombra (ce l'ha a disco), le altre si ridisegnano solo se cambia la vista
     const still = p.shadows === 'still';
-    if (this.world.staticShadows !== still) {
-      this.world.staticShadows = still;
-      this.world.rebuild(this.state); // ricrea ciò che si muove senza ombra
-    }
+    const shadowPolicyChanged = this.world.staticShadows !== still;
+    const sceneChanged = shadowPolicyChanged || this.world.lite !== p.lite || this.world.quality !== p.bake || liteMaterialsOn() !== p.liteMaterials;
+    this.world.staticShadows = still;
     this.actors.setBlobShadows(p.shadows !== 'live');
     this.renderer.shadowMap.enabled = p.shadows !== 'off';
     this.renderer.shadowMap.autoUpdate = p.shadows === 'live';
     this.renderer.shadowMap.needsUpdate = true;
-    this.world.setLite(p.lite, this.state); // rifà prato e bosco se cambia
+    this.world.lite = p.lite;
     this.world.setMergeStatic(true); // oggetti fermi fusi per zona: stesso aspetto, meno draw call
     this.atmosphere.setFakeLights(p.fakeLights);
     if (!p.fakeLights) this.atmosphere.setLightBudget(null);
     this.actors.setPresenceTier(p.presences);
     this.actors.syncPresences(this.state, this.now());
-    this.applyQuality(p.bake);
+    this.applyQuality(p.bake, false);
     // dopo ogni ricostruzione: il materiale semplice vale anche per ciò che è appena nato
-    setLiteMaterials(p.liteMaterials, this.scene);
+    if (!this.sceneReady) setLiteMaterials(p.liteMaterials, this.scene);
     this.postfx.setSamples(p.msaa);
     this.postfx.configure(this.state.settings.edgeBlur, p.blurRadius);
     this.applyResolution();
     this.applyFrameCap();
     if (this.auto) saveAutoProfile(this.auto.profile());
-    this.prepareShaders();
+    if (sceneChanged && this.sceneReady) this.scheduleQualityScene(shadowPolicyChanged);
+  }
+
+  /** Serializza i cambi di resa: un solo catch-up alla volta, con pause per disegnare tra le fasi. */
+  private scheduleQualityScene(rebuild = false) {
+    this.qualitySceneRevision++;
+    this.qualityNeedsRebuild ||= rebuild;
+    if (this.qualitySceneRunning || this.disposed) return;
+    this.qualitySceneRunning = true;
+    requestAnimationFrame(() => window.setTimeout(() => { void this.rebuildQualityScene(); }, 0));
+  }
+
+  private async rebuildQualityScene() {
+    try {
+      let done = -1;
+      while (!this.disposed && this.sceneReady && done !== this.qualitySceneRevision) {
+        done = this.qualitySceneRevision;
+        const rebuild = this.qualityNeedsRebuild;
+        this.qualityNeedsRebuild = false;
+        const profile = this.profile();
+        if (liteMaterialsOn() !== profile.liteMaterials) await setLiteMaterialsStaged(profile.liteMaterials, this.scene);
+        if (done !== this.qualitySceneRevision) continue;
+        if (rebuild) await this.world.rebuildStaged(this.state);
+        else await this.world.syncStaged(this.state);
+        if (done !== this.qualitySceneRevision) continue;
+        this.refreshWalkable();
+        this.actors.syncPresences(this.state, this.now());
+        this.world.updateDecorLod(this.rig.camera);
+        // Evita una compilazione shader sincrona che può bloccare il thread UI per secondi.
+        if (this.renderer.extensions.has('KHR_parallel_shader_compile')) {
+          try { await this.renderer.compileAsync(this.scene, this.rig.camera); } catch { /* il renderer compila al primo disegno */ }
+        }
+      }
+    } finally {
+      this.qualitySceneRunning = false;
+    }
   }
 
   /** Risoluzione: il gradino di Auto, o la più alta del livello scelto. */
@@ -1752,18 +2027,6 @@ export class Game {
     return t('game.debug.quality', { level, dpr: this.renderer.getPixelRatio(), cap: this.currentCap(performance.now()), max: this.frameCap, shadows, lights: p.fakeLights ? t('game.debug.lightsFake') : t('game.debug.lightsReal'), extras });
   }
 
-  /** La fascia nitida segue il Custode (o la selezione), senza scatti. */
-  private updateFocus() {
-    if (!this.postfx.enabled) return;
-    const sel = this.selection ? this.world.entities.get(this.selection.id) : null;
-    const p = sel ? sel.group.position : this.actors.avatar.pos;
-    this.focusNdc.set(p.x, 0.5, p.z).project(this.rig.camera);
-    const fx = THREE.MathUtils.clamp(this.focusNdc.x * 0.5 + 0.5, 0.3, 0.7);
-    const fy = THREE.MathUtils.clamp(this.focusNdc.y * 0.5 + 0.5, 0.3, 0.7);
-    this.postfx.focus.x += (fx - this.postfx.focus.x) * 0.08;
-    this.postfx.focus.y += (fy - this.postfx.focus.y) * 0.08;
-  }
-
   /** La vista può scorrere sul recinto e su una fascia di bosco, mai oltre il terreno. */
   private updateCameraWorld() {
     const a = this.world.area;
@@ -1774,16 +2037,13 @@ export class Game {
     this.mist?.setWorld(a, HALF, HALF + FOREST_MARGIN, (x, z) => this.world.heightAt(x, z));
   }
 
-  private applyQuality(q: Quality) {
-    const cap = q === 'low' ? 1 : q === 'medium' ? 1.5 : 2;
-    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, cap));
+  private applyQuality(q: Quality, syncScene = true) {
     this.renderer.shadowMap.type = q === 'low' ? THREE.PCFShadowMap : THREE.PCFSoftShadowMap;
     this.atmosphere.setQuality(q);
     this.effects.setQuality(q);
     this.mist?.setQuality(q);
     this.world.quality = q;
-    this.world.sync(this.state);
-    this.resize();
+    if (syncScene) this.world.sync(this.state);
     this.postfx.configure(q !== 'low' && this.state.settings.edgeBlur, q === 'high' ? 5 : 3.5);
     // ricompilare tutto costa secondi sui telefoni: solo se cambiano le ombre (accese/spente o tipo)
     const sig = `${this.renderer.shadowMap.enabled}|${this.renderer.shadowMap.type}`;
@@ -1866,6 +2126,23 @@ export class Game {
   private realState: SaveData | null = null;
   get inYard() { return !!this.realState; }
 
+  /** Costruisce il cortile durante la schermata iniziale, prima che il tutorial accetti tocchi. */
+  async prepareTutorialWorld(yard = buildYard(this.state, this.now()), progress: (fraction: number) => void = () => undefined) {
+    if (this.tutorialWorld) { await this.tutorialWorld.syncStaged(yard, progress); return; }
+    const world = new WorldView(this.scene, this.atmosphere);
+    const profile = this.profile();
+    world.quality = profile.bake;
+    world.staticShadows = profile.shadows === 'still';
+    world.lite = profile.lite;
+    world.compact = true;
+    world.forestScale = 0.55;
+    world.setMergeStatic(true);
+    world.setVisible(false);
+    this.tutorialWorld = world;
+    await world.syncStaged(yard, progress);
+    world.setVisible(false);
+  }
+
   /** Lavori temporanei che una ricarica della pagina interromperebbe. */
   languageChangeBlockers(): string[] {
     const blockers: string[] = [];
@@ -1879,29 +2156,89 @@ export class Game {
   }
 
   /** Al posto della partita, il cortile (la partita vera resta da parte, intatta). */
-  enterYard(yard: SaveData) {
+  async enterYard(yard: SaveData) {
     if (!this.realState) this.realState = this.state;
     setSaveInstead(this.realState);
     if (this.editMode) this.setEditMode(false);
     this.clearRoamers();
-    this.replaceState(yard);
+    this.realWorld.setVisible(false);
+    if (!this.tutorialWorld) await this.prepareTutorialWorld(yard);
+    this.yardActive = true;
+    this.state = yard;
+    this.shownRank = rankForXp(yard.player.xp).level;
+    this.select(null);
+    this.placement = null;
+    const profile = this.profile();
+    this.tutorialWorld!.quality = profile.bake;
+    this.tutorialWorld!.staticShadows = profile.shadows === 'still';
+    this.tutorialWorld!.lite = profile.lite;
+    this.tutorialWorld!.compact = true;
+    this.tutorialWorld!.forestScale = 0.55;
+    this.tutorialWorld!.sync(yard);
+    this.tutorialWorld!.setVisible(true);
+    this.actors.rebuild();
+    this.actors.setAvatarLook(yard.player.look);
+    R.ensureKeeperHouse(yard, this.now());
+    this.actors.teleport(this.homeSpot(yard));
+    this.rig.setMode(yard.settings.camera);
+    this.updatePhase(true);
+    this.afterChange();
+    saveNow(yard);
     this.rig.setView(YARD_VIEW);
     this.snapToKeeper();
   }
 
   /** Via il cortile: torna la partita vera (il tempo passato intanto si recupera). */
-  leaveYard() {
+  async leaveYard(progress: (fraction: number) => void = () => undefined) {
     const real = this.realState;
     if (!real) return;
+    progress(0.04);
+    await nextPaint();
     this.realState = null;
     setSaveInstead(null);
     this.clearRoamers();
     if (this.editMode) this.setEditMode(false);
-    this.replaceState(real);
-    runCatchUp(this.state, this.now());
-    this.afterChange();
+    this.tutorialWorld?.setVisible(false);
+    this.tutorialWorld?.dispose();
+    this.tutorialWorld = null;
+    this.yardActive = false;
+    this.state = real;
+    progress(0.12);
+    await nextPaint();
+    // enterYard nasconde la partita reale; riattivala prima del catch-up e
+    // della sync che aggiorna la scena alle modifiche maturate nel frattempo.
+    this.realWorld.setVisible(true);
+    this.shownRank = rankForXp(real.player.xp).level;
+    this.select(null);
+    this.placement = null;
+    runCatchUp(real, this.now());
+    progress(0.2);
+    await nextPaint();
+    this.actors.rebuild();
+    this.actors.setAvatarLook(real.player.look);
+    this.actors.teleport(this.homeSpot(real));
+    this.rig.setMode(real.settings.camera);
+    this.updatePhase(true);
+    const now = this.now();
+    const { achievements } = R.afterAction(real, now);
+    const rank = rankForXp(real.player.xp).level;
+    for (let r = this.shownRank + 1; r <= rank; r++) celebrateRank(r);
+    for (const a of achievements) celebrateAchievement(a);
+    this.shownRank = Math.max(this.shownRank, rank);
+    scheduleSave(real);
+    const area = this.realWorld.area;
+    await this.realWorld.syncStaged(real, (p) => progress(0.2 + p * 0.7));
+    if (area.w !== this.realWorld.area.w) this.updateCameraWorld();
+    this.refreshWalkable();
+    this.actors.syncPresences(real, now);
+    this.actors.setPace(R.keeperPace(real));
+    this.ui.refreshHud();
+    this.ui.refreshContext();
+    this.refreshShrink();
+    this.offerExpansion();
     this.rig.setView(window.innerWidth < 700 ? 24 : 22);
     this.snapToKeeper();
+    progress(1);
   }
 
   /** La camera subito sul Custode (cambiando partita restava dov'era: magari lontano). */
@@ -1941,11 +2278,16 @@ export class Game {
 
   debugInfo() {
     const info = this.renderer.info.render;
+    const memory = this.renderer.info.memory;
     const cs = cacheStats();
+    const sortedFrames = [...this.frameSamples].sort((a, b) => a - b);
+    const p95 = sortedFrames.length ? Math.round(sortedFrames[Math.ceil(sortedFrames.length * 0.95) - 1]) : 0;
     return [
       t('game.debug.fps', { fps: this.fps.value, calls: this.fps.callsValue }),
+      t('game.debug.frameP95', { ms: p95 }),
       this.qualityInfo(),
       t('game.debug.draw', { calls: info.calls, tris: info.triangles.toLocaleString(currentLang()) }),
+      t('game.debug.gpuObjects', { geometries: memory.geometries, textures: memory.textures, programs: this.renderer.info.programs?.length ?? 0 }),
       t('game.debug.seed', { seed: this.state.seed, phase: this.phase, weather: this.state.world.weather }),
       t('game.debug.counts', { graves: this.state.graves.length, items: this.state.placeables.length }),
       t('game.debug.presences', { roamers: this.actors.stats().roamers, presences: this.actors.stats().presences, models: cs.models }),
@@ -1994,6 +2336,11 @@ export class Game {
   dispose() {
     this.disposed = true;
     this.stopLifecycle();
+    document.removeEventListener('focusin', this.onTextFocusIn, true);
+    document.removeEventListener('focusout', this.onTextFocusOut, true);
+    window.visualViewport?.removeEventListener('resize', this.syncVisualViewport);
+    window.visualViewport?.removeEventListener('scroll', this.syncVisualViewport);
+    window.removeEventListener('resize', this.resize);
     saveNow(this.state);
     this.renderer.setAnimationLoop(null);
     this.renderer.dispose();
@@ -2003,8 +2350,8 @@ export class Game {
 // ── Profilo della qualità Auto (per dispositivo: resta nel browser, non nel salvataggio) ──
 
 const AUTO_KEY = 'necro3d:auto-quality';
-/** Cresce quando cambia la stima del dispositivo: i profili ricordati prima si rifanno (v2: iPhone in Alta). */
-const AUTO_VERSION = 2;
+/** Cresce quando cambia la stima del dispositivo: i profili ricordati prima si rifanno (v3: risoluzione massima della fascia stimata). */
+const AUTO_VERSION = 3;
 /** Dopo quanto senza tocchi il gioco rallenta, e a quanti frame al secondo (sotto i menù ancora meno). */
 const IDLE_MS = 4000, IDLE_FPS = 15, MENU_FPS = 10, UNFOCUSED_FPS = 5;
 let gpuName: string | null = null;

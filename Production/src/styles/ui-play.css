@@ -131,12 +131,12 @@
    verticale; le schede restano agganciate sotto, 12 px più in basso. */
 .ui-next.ui-play .drawer.with-hero { --hero-h: 156px; --hero-dark: 0; }
 .ui-next.ui-play .drawer.with-hero.hero-small { --hero-h: 64px; --hero-dark: 0.62; }
-.ui-next.ui-play .drawer.with-hero .drawer-hero { flex: none; margin: 12px 12px 12px; height: var(--hero-h); border-radius: 18px; overflow: hidden; z-index: 1; box-shadow: 0 0 0 4px rgba(20, 16, 26, 0.6), 0 10px 20px rgba(0, 0, 0, 0.45); transition: height 0.22s ease; }
+.ui-next.ui-play .drawer.with-hero .drawer-hero { flex: none; margin: 12px 12px 12px; height: var(--hero-h); border-radius: 18px; overflow: hidden; z-index: 1; box-shadow: 0 0 0 4px rgba(20, 16, 26, 0.6), 0 10px 20px rgba(0, 0, 0, 0.45); transition: height 0.18s ease-out; }
 .ui-next.ui-play .drawer.with-hero .drawer-hero canvas { position: absolute; left: 0; top: 50%; height: 156px; translate: 0 -50%; }
 .ui-next.ui-play .drawer.with-hero .drawer-hero::before { content: ''; position: absolute; inset: 0; z-index: 1; pointer-events: none; background: linear-gradient(180deg, rgba(12, 8, 18, 0.78) 0%, rgba(12, 8, 18, 0.45) 38%, rgba(12, 8, 18, 0) 70%); transition: opacity 0.22s; }
 .ui-next.ui-play .drawer.with-hero .drawer-hero::after { content: ''; position: absolute; inset: 0; z-index: 2; border-radius: 18px; pointer-events: none; box-shadow: inset 0 0 0 1.5px rgba(255, 226, 168, 0.42), inset 0 0 24px rgba(0, 0, 0, 0.45); background: rgba(14, 10, 20, var(--hero-dark)); transition: background 0.22s; }
 .ui-next.ui-play .drawer.with-hero.hero-small .drawer-hero::before { opacity: 0; }
-.ui-next.ui-play .drawer.with-hero .drawer-head { top: 12px; left: 12px; right: 12px; height: var(--hero-h); padding: 14px 14px 12px 16px; z-index: 3; transition: height 0.22s; }
+.ui-next.ui-play .drawer.with-hero .drawer-head { top: 12px; left: 12px; right: 12px; height: var(--hero-h); padding: 14px 14px 12px 16px; z-index: 3; border-radius: 18px; overflow: hidden; background: none; }
 .ui-next.ui-play .drawer.with-hero .drawer-head h2 { padding-left: 4px; }
 .ui-next.ui-play .drawer.with-hero #drawer-close { top: 10px; right: 10px; }
 .ui-next.ui-play .drawer.with-hero.hero-small .drawer-head { align-items: center; padding: 0 10px 0 16px; }
@@ -147,11 +147,13 @@
 /* i rametti sulla cornice, in due angoli opposti */
 .ui-next.ui-play .drawer.with-hero::before, .ui-next.ui-play .drawer.with-hero::after {
   content: ''; position: absolute; z-index: 4; width: 70px; height: 70px; pointer-events: none; background: var(--sprig) no-repeat 0 0 / 100% 100%;
-  filter: drop-shadow(0 2px 2px rgba(0, 0, 0, 0.5)); transition: top 0.22s, width 0.22s, height 0.22s;
+  filter: drop-shadow(0 2px 2px rgba(0, 0, 0, 0.5)); transition: top 0.18s ease-out, scale 0.18s ease-out;
 }
 .ui-next.ui-play .drawer.with-hero::before { left: 2px; top: 2px; }
 .ui-next.ui-play .drawer.with-hero::after { right: 2px; top: calc(12px + var(--hero-h) - 60px); rotate: 180deg; }
-.ui-next.ui-play .drawer.with-hero.hero-small::before, .ui-next.ui-play .drawer.with-hero.hero-small::after { width: 50px; height: 50px; }
+.ui-next.ui-play .drawer.with-hero::before { transform-origin: top left; }
+.ui-next.ui-play .drawer.with-hero::after { transform-origin: top right; }
+.ui-next.ui-play .drawer.with-hero.hero-small::before, .ui-next.ui-play .drawer.with-hero.hero-small::after { scale: 0.714; }
 .ui-next.ui-play .drawer.with-hero.hero-small::after { top: calc(12px + var(--hero-h) - 40px); }
 
 /* ── Schede: una barra bassa con icone monocromatiche, agganciata in cima scorrendo ── */

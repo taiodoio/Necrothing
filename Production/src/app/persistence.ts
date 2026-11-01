@@ -4,7 +4,9 @@
 
 import { normalizeSave, SAVE_VERSION, type SaveData } from '../game/state.ts';
 import { packBackup, unpackBackup, type BackupContent, type MemorialPhoto, type PhotoRecord } from './backup.ts';
-import { t } from '../i18n/index.ts';
+import { t, languagePreference, restoreLanguagePreference } from '../i18n/index.ts';
+import { Capacitor } from '@capacitor/core';
+import { Preferences } from '@capacitor/preferences';
 
 export type { MemorialPhoto, PhotoRecord };
 
@@ -24,6 +26,42 @@ export const persistenceOn = () => persistence;
 const COPY = { pre: (v: number) => `${KEY}.pre-v${v}`, newer: `${KEY}.newer`, unreadable: `${KEY}.unreadable` };
 
 let recovered = false;
+let nativeRaw: string | null | undefined;
+let nativeWrite = Promise.resolve();
+
+/** Legge la copia nativa prima dell'avvio; migra senza cancellare la vecchia copia WebView. */
+export async function initPersistence() {
+  if (!Capacitor.isNativePlatform()) return;
+  try {
+    const stored = await Preferences.get({ key: KEY });
+    nativeRaw = stored.value;
+    if (nativeRaw === null) {
+      try {
+        const legacy = localStorage.getItem(KEY);
+        if (legacy !== null) {
+          nativeRaw = legacy;
+          await Preferences.set({ key: KEY, value: legacy });
+        }
+      } catch { /* Preferences resta utilizzabile se localStorage è pieno o vietato. */ }
+    }
+  } catch (e) {
+    nativeRaw = undefined;
+    console.warn('Lettura del salvataggio nativo non riuscita; uso la copia WebView', e);
+  }
+}
+
+function persistNative(raw: string | null) {
+  if (!Capacitor.isNativePlatform()) return;
+  nativeRaw = raw;
+  nativeWrite = nativeWrite.catch(() => undefined).then(async () => {
+    if (raw === null) await Preferences.remove({ key: KEY });
+    else await Preferences.set({ key: KEY, value: raw });
+  }).catch((e) => { console.warn('Copia nativa del salvataggio non riuscita', e); });
+}
+
+/** Attende le scritture native accodate (pausa app, export/import). */
+export async function flushPersistence() { await nativeWrite; }
+
 /** All'avvio il salvataggio non si leggeva (ne è rimasta una copia): lo si dice una volta. */
 export function takeRecoveredNotice(): boolean { const r = recovered; recovered = false; return r; }
 
@@ -33,21 +71,24 @@ function keepCopy(key: string, raw: string, overwrite = true) {
 
 export function loadSave(): SaveData | null {
   if (!persistence) return null;
-  let raw: string | null = null;
-  try { raw = localStorage.getItem(KEY); } catch { return null; }
-  if (!raw) return null;
-  try {
-    const parsed = JSON.parse(raw) as { version?: unknown };
-    const v = typeof parsed?.version === 'number' ? parsed.version : null;
-    if (v !== null && v < SAVE_VERSION) keepCopy(COPY.pre(SAVE_VERSION), raw, false);
-    if (v !== null && v > SAVE_VERSION) keepCopy(COPY.newer, raw);
-    const state = normalizeSave(parsed);
-    if (state) return state;
-  } catch (e) {
-    console.warn('Salvataggio illeggibile', e);
+  let webRaw: string | null = null;
+  try { webRaw = localStorage.getItem(KEY); } catch { /* si prova la copia nativa */ }
+  const candidates = [...new Set([nativeRaw, webRaw].filter((raw): raw is string => typeof raw === 'string' && raw.length > 0))];
+  if (!candidates.length) return null;
+  for (const raw of candidates) {
+    try {
+      const parsed = JSON.parse(raw) as { version?: unknown };
+      const v = typeof parsed?.version === 'number' ? parsed.version : null;
+      if (v !== null && v < SAVE_VERSION) keepCopy(COPY.pre(SAVE_VERSION), raw, false);
+      if (v !== null && v > SAVE_VERSION) keepCopy(COPY.newer, raw);
+      const state = normalizeSave(parsed);
+      if (state) return state;
+    } catch (e) {
+      console.warn('Salvataggio illeggibile', e);
+    }
+    keepCopy(COPY.unreadable, raw);
   }
-  // non si legge: lo si tiene da parte (la partita nuova lo sovrascriverà)
-  keepCopy(COPY.unreadable, raw);
+  // Nessuna copia si legge: entrambe restano da parte prima di creare una nuova partita.
   recovered = true;
   return null;
 }
@@ -63,11 +104,14 @@ export function setSaveInstead(real: SaveData | null) { saveInstead = real; }
 let pending = 0;
 export function saveNow(state: SaveData) {
   if (!persistence) return;
+  window.clearTimeout(pending);
+  const raw = JSON.stringify(saveInstead ?? state);
   try {
-    localStorage.setItem(KEY, JSON.stringify(saveInstead ?? state));
+    localStorage.setItem(KEY, raw);
   } catch (e) {
     console.warn('Salvataggio non riuscito', e);
   }
+  persistNative(raw);
 }
 
 /** Salvataggio con debounce (le azioni ravvicinate scrivono una volta sola). */
@@ -78,7 +122,8 @@ export function scheduleSave(state: SaveData) {
 }
 
 export function clearSave() {
-  localStorage.removeItem(KEY);
+  try { localStorage.removeItem(KEY); } catch { /* la copia nativa può comunque essere rimossa */ }
+  persistNative(null);
 }
 
 // ── Foto (IndexedDB) ───────────────────────────────────────────────────
@@ -159,7 +204,7 @@ export async function exportBackup(state: SaveData): Promise<Blob> {
   const photos = await gallery.list().catch(() => [] as PhotoRecord[]);
   const used = new Set(state.graves.map((g) => g.photoId).filter(Boolean));
   const graves = (await memorials.list().catch(() => [] as MemorialPhoto[])).filter((m) => used.has(m.id));
-  return new Blob([packBackup(state, photos, graves) as BlobPart], { type: 'application/zip' });
+  return new Blob([packBackup(state, photos, graves, new Date().toISOString(), languagePreference()) as BlobPart], { type: 'application/zip' });
 }
 
 /** Un backup letto e controllato, non ancora applicato (si chiede prima conferma). */
@@ -178,10 +223,21 @@ export function readBackup(data: ArrayBuffer): ReadBackup {
 
 /** Sostituisce stato e foto con quelli del backup letto. */
 export async function applyBackup({ state, content }: ReadBackup): Promise<SaveData> {
-  await gallery.clear().catch(() => undefined);
-  for (const p of content.photos) await gallery.add(p);
-  await memorials.clear().catch(() => undefined);
-  for (const m of content.memorials) await memorials.put(m);
+  const d = await db();
+  await new Promise<void>((resolve, reject) => {
+    const transaction = d.transaction(['photos', 'memorials'], 'readwrite');
+    const photos = transaction.objectStore('photos');
+    const graves = transaction.objectStore('memorials');
+    photos.clear();
+    graves.clear();
+    for (const p of content.photos) photos.put(p);
+    for (const m of content.memorials) graves.put(m);
+    transaction.oncomplete = () => resolve();
+    transaction.onerror = () => reject(transaction.error ?? new Error(t('backup.photos.writeFailed')));
+    transaction.onabort = () => reject(transaction.error ?? new Error(t('backup.photos.aborted')));
+  });
   saveNow(state);
+  if (content.language) restoreLanguagePreference(content.language);
+  await flushPersistence();
   return state;
 }

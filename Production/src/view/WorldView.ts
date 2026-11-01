@@ -26,12 +26,14 @@ import { canvasSans, canvasSerif } from '../i18n/fonts.ts';
 import type { Atmosphere, AnchorHandle } from './Atmosphere.ts';
 import { buildChunk, CHUNK, groundType, lowNoise, naturalHeight, surfaceHeight, WORLD_MAX, WORLD_MIN, type Ground, type GroundInput } from './terrain.ts';
 import { ChunkBaker, chunkOf } from './baker.ts';
+import { cacheVegetation, restoreVegetation } from './vegetationCache.ts';
 
 /** Colore della luce di un fuoco fatuo. */
 const WISP_LIGHT = '#8fe0c8';
 
 
 export const HALF = MAP_SIZE / 2;
+const yieldToPaint = () => new Promise<void>((resolve) => requestAnimationFrame(() => setTimeout(resolve, 0)));
 
 /**
  * Sottobosco oltre il bordo del terreno: una cornice piatta e scura, una
@@ -177,6 +179,8 @@ export class WorldView {
   groundInput: GroundInput | null = null;
   area: Rect = areaForLevel(0);
   quality: 'low' | 'medium' | 'high' = 'medium';
+  /** Scena del tutorial: costruisce solo il terreno e il bosco che la camera può mostrare. */
+  compact = false;
 
   constructor(scene: THREE.Scene, atmosphere: Atmosphere) {
     this.atmosphere = atmosphere;
@@ -190,6 +194,43 @@ export class WorldView {
     this.ghostFrame.visible = false;
     this.root.add(this.selectionFrame, this.ghostFrame);
     scene.add(this.root);
+  }
+
+  /** Nasconde una scena preparata mantenendola in memoria per uno scambio istantaneo. */
+  setVisible(on: boolean) {
+    this.root.visible = on;
+    for (const anchor of this.sceneryAnchors) this.atmosphere.setAnchorOn(anchor, on);
+    for (const entity of this.entities.values()) for (const anchor of entity.anchors) this.atmosphere.setAnchorOn(anchor, on && !this.hidden.has(entity.id));
+    for (const wisp of this.wisps.values()) this.atmosphere.setAnchorOn(wisp.anchor, on);
+  }
+
+  /** Rilascia una scena temporanea senza liberare geometrie condivise della cache modelli. */
+  dispose() {
+    for (const anchor of this.sceneryAnchors) this.atmosphere.removeAnchor(anchor);
+    this.sceneryAnchors = [];
+    for (const id of [...this.entities.keys()]) this.removeEntity(id);
+    for (const [id, wisp] of this.wisps) {
+      this.atmosphere.removeAnchor(wisp.anchor);
+      wisp.hitbox.geometry.dispose();
+      this.root.remove(wisp.group);
+      this.wisps.delete(id);
+    }
+    for (const { mesh } of this.terrainChunks.values()) mesh.geometry.dispose();
+    this.terrainChunks.clear();
+    for (const group of [this.scenery, this.decorLayer, this.decorLight]) {
+      group.traverse((o) => { const m = o as THREE.Mesh; if (m.isMesh && m.userData.baked) m.geometry.dispose(); });
+    }
+    for (const mesh of this.mergedLayer.children) {
+      const m = mesh as THREE.Mesh;
+      if (m.isMesh) m.geometry.dispose();
+    }
+    for (const texture of this.signTextures.values()) texture.dispose();
+    this.signTextures.clear();
+    this.selectionFrame.geometry.dispose();
+    (this.selectionFrame.material as THREE.Material).dispose();
+    this.ghostFrame.geometry.dispose();
+    (this.ghostFrame.material as THREE.Material).dispose();
+    this.root.parent?.remove(this.root);
   }
 
   /**
@@ -228,6 +269,16 @@ export class WorldView {
     this.sync(state);
   }
 
+  /** Rebuild completo distribuito tra frame per cambi che alterano le ombre. */
+  async rebuildStaged(state: SaveData) {
+    for (const e of [...this.entities.values()]) this.removeEntity(e.id);
+    this.syncWisps({ ...state, world: { ...state.world, looseWisps: [] } });
+    this.scenerySig = this.decorSig = '';
+    for (const c of this.terrainChunks.values()) { this.terrain.remove(c.mesh); c.mesh.geometry.dispose(); }
+    this.terrainChunks.clear();
+    await this.syncStaged(state);
+  }
+
   // ── Sincronizzazione ─────────────────────────────────────────────────
 
   sync(state: SaveData) {
@@ -249,6 +300,45 @@ export class WorldView {
     this.syncWisps(state);
     this.refreshSelection();
     this.flushZones();
+  }
+
+  /** Prima costruzione a fasi: consente allo splash di avanzare tra i lavori costosi. */
+  async syncStaged(state: SaveData, progress: (fraction: number) => void = () => undefined) {
+    this.version++;
+    this.area = areaForLevel(state.world.expansionLevel);
+    this.treeMemories = Math.min(30, state.entrusted.length);
+    this.houseLook = houseVariant(state.house);
+    await yieldToPaint();
+    this.syncTerrain(state);
+    progress(0.24);
+    await yieldToPaint();
+    this.syncScenery(state);
+    progress(0.52);
+    await yieldToPaint();
+    this.syncDecor(state);
+    progress(0.76);
+    await yieldToPaint();
+    const alive = new Set<string>();
+    const total = Math.max(1, state.graves.length + state.placeables.length);
+    let done = 0;
+    for (const g of state.graves) {
+      alive.add(g.id);
+      this.syncGrave(g);
+      if (++done % 6 === 0) { progress(0.76 + 0.2 * done / total); await yieldToPaint(); }
+    }
+    const corners = fenceCorners(state.placeables);
+    for (const p of state.placeables) {
+      alive.add(p.id);
+      this.syncPlaceable(p, corners?.get(p.id));
+      if (++done % 6 === 0) { progress(0.76 + 0.2 * done / total); await yieldToPaint(); }
+    }
+    for (const id of [...this.entities.keys()]) if (!alive.has(id)) this.removeEntity(id);
+    for (const id of [...this.hidden]) if (!alive.has(id)) this.hidden.delete(id);
+    for (const id of [...this.marked]) if (!alive.has(id)) this.marked.delete(id); else if (id !== this.selectedId) this.setHighlight(id, null);
+    this.syncWisps(state);
+    this.refreshSelection();
+    this.flushZones();
+    progress(1);
   }
 
   private groundOverrides(state: SaveData): Map<string, Ground> {
@@ -298,7 +388,11 @@ export class WorldView {
 
   private chunkKeys(): Array<[number, number]> {
     const out: Array<[number, number]> = [];
-    for (let cy = WORLD_MIN; cy < WORLD_MAX; cy += CHUNK) for (let cx = WORLD_MIN; cx < WORLD_MAX; cx += CHUNK) out.push([cx, cy]);
+    const min = this.compact ? Math.floor((this.area.x - 24) / CHUNK) * CHUNK : WORLD_MIN;
+    const maxX = this.compact ? Math.ceil((this.area.x + this.area.w + 24) / CHUNK) * CHUNK : WORLD_MAX;
+    const maxY = this.compact ? Math.ceil((this.area.y + this.area.h + 24) / CHUNK) * CHUNK : WORLD_MAX;
+    const minY = this.compact ? Math.floor((this.area.y - 24) / CHUNK) * CHUNK : WORLD_MIN;
+    for (let cy = minY; cy < maxY; cy += CHUNK) for (let cx = min; cx < maxX; cx += CHUNK) out.push([cx, cy]);
     return out;
   }
 
@@ -339,7 +433,7 @@ export class WorldView {
 
   /** Recinto + cancello (instancing) e bosco (cotto per chunk). */
   private syncScenery(state: SaveData) {
-    const sig = `${state.world.expansionLevel}|${this.quality}|${this.forestScale}|${this.lite}`;
+    const sig = `${state.world.expansionLevel}|${this.quality}|${this.forestScale}|${this.lite}|${this.compact}`;
     if (sig === this.scenerySig) return;
     this.scenerySig = sig;
     for (const h of this.sceneryAnchors) this.atmosphere.removeAnchor(h);
@@ -374,14 +468,23 @@ export class WorldView {
     // Bosco: celle selvatiche e oltre la mappa. Vicino al recinto, alberi sfaccettati
     // (dettaglio pieno), lontano un LOD leggero: la sfocatura ai bordi e la
     // nebbia ne nascondono la semplificazione.
-    const rng = createRng(state.seed + 77);
     const input = this.groundInput!;
     const density = (this.quality === 'low' ? 0.22 : this.quality === 'medium' ? 0.32 : 0.42) * this.forestScale * (this.lite ? 0.5 : 1);
+    const groundSig = `${[...input.overrides].sort(([a], [b]) => a.localeCompare(b)).map(([k, v]) => `${k}:${v}`).join(';')}|${[...input.pads].sort(([a], [b]) => a.localeCompare(b)).map(([k, v]) => `${k}:${v.toFixed(3)}`).join(';')}`;
+    const forestKey = `forest:${state.seed}:${this.area.x},${this.area.y},${this.area.w},${this.area.h}:${this.quality}:${this.forestScale}:${this.lite}:${this.compact}:${hashString(groundSig)}`;
+    const cachedForest = restoreVegetation(forestKey);
+    if (cachedForest) {
+      for (const mesh of cachedForest) this.scenery.add(mesh);
+      return;
+    }
+    const rng = createRng(state.seed + 77);
     const baker = new ChunkBaker();
     const farRes = this.lite ? 0.6 : this.quality === 'high' ? 1.0 : 0.7;
     const nearRes = this.lite ? farRes : this.quality === 'high' ? 1.6 : 1.0; // leggera: alberi semplici anche vicino al recinto
-    for (let y = WORLD_MIN; y < WORLD_MAX; y += 2) {
-      for (let x = WORLD_MIN; x < WORLD_MAX; x += 2) {
+    const minX = this.compact ? a.x - 28 : WORLD_MIN, maxX = this.compact ? a.x + a.w + 28 : WORLD_MAX;
+    const minY = this.compact ? a.y - 28 : WORLD_MIN, maxY = this.compact ? a.y + a.h + 28 : WORLD_MAX;
+    for (let y = minY; y < maxY; y += 2) {
+      for (let x = minX; x < maxX; x += 2) {
         const gt = groundType(input, x, y);
         if (gt !== 'wild' && gt !== 'forest') continue;
         if (x >= a.x - 3 && x < a.x + a.w + 2 && y >= a.y - 3 && y < a.y + a.h + 2) continue;
@@ -405,7 +508,9 @@ export class WorldView {
         baker.add(model, new THREE.Matrix4().compose(pos, new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), rng.range(0, Math.PI * 2)), new THREE.Vector3(s, s * (0.9 + rng.next() * 0.35), s)), 1, x, y);
       }
     }
-    for (const mesh of baker.build(this.quality === 'high')) this.scenery.add(mesh);
+    const forestMeshes = baker.build(this.quality === 'high');
+    for (const mesh of forestMeshes) this.scenery.add(mesh);
+    cacheVegetation(forestKey, forestMeshes);
   }
 
   /**
@@ -423,6 +528,8 @@ export class WorldView {
     const cells = new Map<string, string>();
     const typeOf = new Map(state.placeables.map((p) => [p.id, p.type] as const));
     for (const [k, id] of occ.owner) cells.set(k, typeOf.get(id) ?? 'g');
+    const groundSig = `${[...this.groundInput!.overrides].sort(([a], [b]) => a.localeCompare(b)).map(([k, v]) => `${k}:${v}`).join(';')}|${[...this.groundInput!.pads].sort(([a], [b]) => a.localeCompare(b)).map(([k, v]) => `${k}:${v.toFixed(3)}`).join(';')}`;
+    const decorKey = `meadow:${state.seed}:${this.area.x},${this.area.y},${this.area.w},${this.area.h}:${this.quality}:${this.decorLod?.join('/') ?? ''}:${this.lite}:${hashString(groundSig)}:${hashString([...cells].sort(([a], [b]) => a.localeCompare(b)).map(([k, v]) => `${k}:${v}`).join(';'))}`;
     let only: Set<string> | null = null;
     if (base === this.decorSig) {
       // stessa resa e stesso recinto: si rifanno solo i blocchi (12×12) delle celle cambiate e dei loro vicini
@@ -434,6 +541,16 @@ export class WorldView {
     }
     this.decorSig = base;
     this.decorCells = cells;
+    if (!only) {
+      const cachedMain = restoreVegetation(`${decorKey}:main`);
+      const cachedLight = this.decorLod ? restoreVegetation(`${decorKey}:light`) : null;
+      if (cachedMain && (!this.decorLod || cachedLight)) {
+        for (const mesh of cachedMain) this.decorLayer.add(mesh);
+        for (const mesh of cachedLight ?? []) this.decorLight.add(mesh);
+        this.lodSig = '';
+        return;
+      }
+    }
     for (const g of [this.decorLayer, this.decorLight]) for (const c of [...g.children]) {
       if (only && !only.has(String(c.userData.chunk))) continue;
       g.remove(c); (c as THREE.Mesh).geometry.dispose();
@@ -445,6 +562,8 @@ export class WorldView {
       this.bakeDecor(state, occ, per(this.decorLod[1]), this.decorLight, only);
       this.lodSig = '';
     } else this.bakeDecor(state, occ, per(this.quality), this.decorLayer, only);
+    cacheVegetation(`${decorKey}:main`, this.decorLayer.children.filter((o): o is THREE.Mesh => (o as THREE.Mesh).isMesh) as THREE.Mesh[]);
+    if (this.decorLod) cacheVegetation(`${decorKey}:light`, this.decorLight.children.filter((o): o is THREE.Mesh => (o as THREE.Mesh).isMesh) as THREE.Mesh[]);
   }
 
   private bakeDecor(state: SaveData, occ: ReturnType<typeof buildOccupancy>, per: number, target: THREE.Group, only: ReadonlySet<string> | null = null) {
@@ -842,6 +961,14 @@ export class WorldView {
     for (const h of e.anchors) this.atmosphere.removeAnchor(h);
     this.root.remove(e.group);
     e.hitbox.geometry.dispose();
+    e.group.traverse((o) => {
+      const m = o as THREE.Mesh;
+      if (m.isMesh && m.geometry.type === 'PlaneGeometry') {
+        m.geometry.dispose();
+        if (Array.isArray(m.material)) for (const material of m.material) material.dispose();
+        else m.material.dispose();
+      }
+    });
     const i = this.hitboxes.indexOf(e.hitbox);
     if (i >= 0) this.hitboxes.splice(i, 1);
     if (e.earn) { const j = this.hitboxes.indexOf(e.earn.hit); if (j >= 0) this.hitboxes.splice(j, 1); e.earn.hit.geometry.dispose(); }
@@ -1173,8 +1300,24 @@ function pvisFor(p: Placed, treeMemories: number, houseLook: number): PVis {
  * stesse chiavi del mondo): la schermata di caricamento li costruisce a
  * pezzi, mostrando l'avanzamento, prima di aprire il cimitero.
  */
-export function modelJobs(state: SaveData): Array<() => void> {
+export function modelJobs(state: SaveData, includeAmbient = true): Array<() => void> {
   const jobs = new Map<string, () => void>();
+  // Modelli condivisi dal terreno circostante: se restano freddi, il primo
+  // sync del mondo li genera in mezzo alla costruzione della scena.
+  if (includeAmbient) for (const key of [
+    'fseg:1', 'fpil:1', 'gate:lit',
+    ...Array.from({ length: 4 }, (_, i) => `wpine:${i}`),
+    ...Array.from({ length: 4 }, (_, i) => `wdead:${i}`),
+    ...Array.from({ length: 3 }, (_, i) => `wrock:${i}`),
+    ...Array.from({ length: 6 }, (_, i) => `tuft:${i}`),
+    ...Array.from({ length: 4 }, (_, i) => `flowers:${i}`),
+    ...Array.from({ length: 3 }, (_, i) => `pebbles:${i}`),
+    ...Array.from({ length: 3 }, (_, i) => `leaves:${i}`),
+    ...Array.from({ length: 3 }, (_, i) => `shroom:${i}`),
+    ...Array.from({ length: 4 }, (_, i) => `wgrass:${i}`),
+    ...Array.from({ length: 4 }, (_, i) => `fern:${i}`),
+    ...Array.from({ length: 4 }, (_, i) => `bush:${i}`),
+  ]) jobs.set(key, () => { getModel(key); });
   for (const g of state.graves) {
     const key = graveKeyOf(g);
     jobs.set(key, () => { getModel(key); });

@@ -147,7 +147,11 @@ export default {
   // ── Statistiche tecniche (Impostazioni → Statistiche tecniche) ──
   // {fps}: frame disegnati al secondo; {calls}: quante volte il browser chiama il disegno
   'game.debug.fps': 'FPS {fps} · il browser ne offre {calls}/s',
+  'game.debug.frameP95': 'tempo frame p95 {ms} ms',
   'game.debug.draw': 'draw calls {calls} · tri {tris}',
+  'game.debug.gpuObjects': 'GPU · geometrie {geometries} · texture {textures} · shader {programs}',
+  'backup.photos.writeFailed': 'Non è stato possibile aggiornare le foto del backup.',
+  'backup.photos.aborted': 'Aggiornamento delle foto del backup interrotto.',
   'game.debug.seed': 'seed {seed} · fase {phase} · meteo {weather}',
   'game.debug.counts': 'tombe {graves} · oggetti {items}',
   'game.debug.presences': 'presenze {roamers}+{presences} · modelli {models}',

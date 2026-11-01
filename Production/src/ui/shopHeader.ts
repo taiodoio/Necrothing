@@ -297,7 +297,10 @@ export function shopHeader(): ShopHeader {
   let last = 0, t = 0, raf = 0, stopped = false, w = 0, h = 0;
 
   const resize = () => {
-    const nw = el.clientWidth, nh = el.clientHeight;
+    // L'altezza visibile della testata si anima da 156 a 64 px. Il canvas
+    // resta invece alla sua risoluzione piena e viene solo ritagliato: ridimensionare
+    // il buffer WebGL durante ogni frame della transizione causa scatti evidenti.
+    const nw = el.clientWidth, nh = 156;
     if (!nw || !nh || (nw === w && nh === h)) return;
     w = nw; h = nh;
     renderer.setSize(w, h, false);

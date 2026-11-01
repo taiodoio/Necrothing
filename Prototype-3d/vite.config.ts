@@ -33,7 +33,6 @@ export default defineConfig(({ command }) => ({
         gallery: 'gallery.html',
         lab: 'lab.html',
         bench: 'bench.html',
-        'design-system': 'design-system.html',
       },
       output: { manualChunks: { three: ['three'] } },
     },

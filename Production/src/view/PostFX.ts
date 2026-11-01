@@ -1,9 +1,9 @@
 // Sfocatura "tilt-shift" ai bordi: effetto diorama/miniatura. La fascia
-// centrale (dove c'è il Custode) resta nitida, il resto si sfoca
-// progressivamente verso l'alto e il basso (e un po' ai lati).
+// centrale della vista resta nitida, mentre una fascia superiore e una
+// inferiore si sfocano progressivamente, indipendentemente dalla camera.
 // Due passate separabili a raggio variabile su render target lineari; la
 // seconda applica anche tone mapping e conversione sRGB (come OutputPass).
-// Su qualità bassa è spenta e si renderizza direttamente a schermo.
+// Se disattivata nelle impostazioni, la scena viene disegnata direttamente.
 
 import * as THREE from 'three';
 
@@ -17,17 +17,13 @@ uniform sampler2D tDiffuse;
 uniform vec2 uTexel;     // 1/risoluzione
 uniform vec2 uDir;       // (1,0) orizzontale, (0,1) verticale
 uniform float uMaxBlur;  // raggio massimo in pixel
-uniform vec2 uFocus;     // centro nitido (uv)
-uniform vec2 uBand;      // semi-ampiezze nitide (x,y) in uv
 uniform float uOutput;   // 1 = ultima passata (tone mapping + sRGB)
-uniform float uRound;    // 1 = i due assi si uniscono morbidi (angoli tondi), 0 = max (come prima)
 varying vec2 vUv;
 
 float blurAmount(vec2 uv) {
-  vec2 d = abs(uv - uFocus);
-  float vy = smoothstep(uBand.y, uBand.y + 0.32, d.y);
-  float vx = smoothstep(uBand.x, uBand.x + 0.25, d.x) * 0.55;
-  return clamp(mix(max(vy, vx), 1.0 - (1.0 - vy) * (1.0 - vx), uRound), 0.0, 1.0);
+  float topBlur = smoothstep(0.82, 1.0, uv.y);
+  float bottomBlur = 1.0 - smoothstep(0.0, 0.10, uv.y);
+  return max(topBlur, bottomBlur);
 }
 
 void main() {
@@ -60,20 +56,17 @@ void main() {
  * Mezza risoluzione (quella del gioco, in Media e Alta): la sfocatura si calcola su un quarto
  * dei pixel e quest'ultima passata la mescola con la scena nitida a piena
  * risoluzione, con la stessa maschera (morbida): al centro tutto nitido, ai
- * bordi tutto sfocato, nel mezzo una sfumatura senza anelli.
+ * fasce superiore e inferiore sfocate, nel mezzo una sfumatura senza anelli.
  */
 const COMPOSITE = /* glsl, i18n-ok */ `
 uniform sampler2D tSharp;
 uniform sampler2D tBlur;
-uniform vec2 uFocus;
-uniform vec2 uBand;
 varying vec2 vUv;
 
 float blurAmount(vec2 uv) {
-  vec2 d = abs(uv - uFocus);
-  float vy = smoothstep(uBand.y, uBand.y + 0.32, d.y);
-  float vx = smoothstep(uBand.x, uBand.x + 0.25, d.x) * 0.55;
-  return clamp(1.0 - (1.0 - vy) * (1.0 - vx), 0.0, 1.0);
+  float topBlur = smoothstep(0.82, 1.0, uv.y);
+  float bottomBlur = 1.0 - smoothstep(0.0, 0.10, uv.y);
+  return max(topBlur, bottomBlur);
 }
 
 void main() {
@@ -101,9 +94,6 @@ export class PostFX {
   private passHHalf: THREE.ShaderMaterial;
   private passVHalf: THREE.ShaderMaterial;
   private composite: THREE.ShaderMaterial;
-  /** Dove sta il soggetto (uv dello schermo). */
-  readonly focus = new THREE.Vector2(0.5, 0.5);
-
   constructor(private renderer: THREE.WebGLRenderer) {
     const opts = { type: THREE.HalfFloatType, depthBuffer: true, samples: 4 } as const;
     this.rtScene = new THREE.WebGLRenderTarget(1, 1, opts);
@@ -116,10 +106,7 @@ export class PostFX {
         uTexel: { value: new THREE.Vector2(1, 1) },
         uDir: { value: new THREE.Vector2(...dir) },
         uMaxBlur: { value: 4 },
-        uFocus: { value: this.focus },
-        uBand: { value: new THREE.Vector2(0.3, 0.17) },
         uOutput: { value: output ? 1 : 0 },
-        uRound: { value: 0 },
       },
       depthTest: false,
       depthWrite: false,
@@ -130,13 +117,12 @@ export class PostFX {
     // a mezza risoluzione le due passate restano lineari (la tonalità la fa la composizione)
     this.passHHalf = make([1, 0], false);
     this.passVHalf = make([0, 1], false);
-    for (const m of [this.passHHalf, this.passVHalf]) m.uniforms.uRound.value = 1;
     const half = { type: THREE.HalfFloatType, depthBuffer: false } as const;
     this.rtHalfA = new THREE.WebGLRenderTarget(1, 1, half);
     this.rtHalfB = new THREE.WebGLRenderTarget(1, 1, half);
     this.composite = new THREE.ShaderMaterial({
       vertexShader: VERT, fragmentShader: COMPOSITE,
-      uniforms: { tSharp: { value: null }, tBlur: { value: null }, uFocus: { value: this.focus }, uBand: { value: new THREE.Vector2(0.3, 0.17) } },
+      uniforms: { tSharp: { value: null }, tBlur: { value: null } },
       depthTest: false, depthWrite: false, toneMapped: true,
     });
     this.quad = new THREE.Mesh(new THREE.PlaneGeometry(2, 2), this.passH);
@@ -177,16 +163,12 @@ export class PostFX {
     for (const m of [this.passH, this.passV]) {
       m.uniforms.uTexel.value.set(1 / w, 1 / h);
       m.uniforms.uMaxBlur.value = this.maxBlur * pr;
-      // su schermi stretti (telefono in verticale) la fascia nitida è più alta
-      m.uniforms.uBand.value.set(0.32, w < h ? 0.16 : 0.2);
     }
     // a mezza risoluzione un pixel vale due: stesso raggio sullo schermo
     for (const m of [this.passHHalf, this.passVHalf]) {
       m.uniforms.uTexel.value.set(1 / hw, 1 / hh);
       m.uniforms.uMaxBlur.value = (this.maxBlur * pr) / 2;
-      m.uniforms.uBand.value.set(0.32, w < h ? 0.16 : 0.2);
     }
-    this.composite.uniforms.uBand.value.set(0.32, w < h ? 0.16 : 0.2);
   }
 
   render(scene: THREE.Scene, camera: THREE.Camera) {

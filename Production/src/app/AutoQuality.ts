@@ -96,6 +96,8 @@ export interface AutoProfile {
 
 export function newAutoProfile(tier: Quality): AutoProfile {
   const max = PROFILES[tier].dpr.length - 1;
+  // La stima del dispositivo sceglie subito la risoluzione più alta della
+  // fascia. Il regolatore interviene solo se il carico reale non la sostiene.
   return { tier, step: max, ceiling: max, top: tier };
 }
 
@@ -112,7 +114,7 @@ export class AutoGovernor {
   private winTime = 0;
   private history: number[] = [];
   /** Secondi da attendere prima di giudicare (dopo un cambio la scena si assesta). */
-  private settle = 3;
+  private settle = 1;
   /** Secondi prima di poter risalire. */
   private cooldown = 0;
   /** Da quanto si è saliti di gradino e di livello (per capire se la salita ha fatto crollare gli FPS). */
@@ -131,8 +133,6 @@ export class AutoGovernor {
 
   /** Sotto quanti FPS si scende di risoluzione: 45 se si punta a 60, 24 se si punta a 30. */
   static low(target: number) { return target >= 60 ? 45 : 24; }
-  /** Sotto quanti FPS, già alla risoluzione più bassa, si scende di livello: solo se si fatica davvero. */
-  static veryLow(target: number) { return target >= 60 ? 28 : 21; }
   /** Sopra quanti FPS c'è margine per salire. */
   static high(target: number) { return target * 0.83; }
 
@@ -146,7 +146,7 @@ export class AutoGovernor {
 
   /** Un frame disegnato, col ritmo atteso; ritorna la decisione quando c'è da cambiare qualcosa. */
   frame(dt: number, target: number): AutoDecision {
-    if (dt <= 0 || dt > 0.25) return null; // pause, schede in background, caricamenti
+    if (dt <= 0 || dt > 2) return null; // pausa lunga; i blocchi visibili sotto i 2 s contano come frame lenti
     this.sinceUp += dt;
     this.sinceTierUp += dt;
     if (this.cooldown > 0) this.cooldown -= dt;
@@ -161,7 +161,7 @@ export class AutoGovernor {
     if (this.history.length > 30) this.history.shift();
     const last = (n: number) => this.history.length >= n && this.history.slice(-n);
     const low = AutoGovernor.low(target), high = AutoGovernor.high(target);
-    // sotto il ritmo per due secondi di fila: si scende subito
+    // Sotto il ritmo per due finestre consecutive si riduce subito la risoluzione.
     const slow = last(2);
     if (slow && slow.every((f) => f < low)) {
       if (this.step > 0) {
@@ -170,14 +170,17 @@ export class AutoGovernor {
         this.change(this.step - 1, 30);
         return 'step';
       }
-      const slower = last(5);
+      // Se anche alla risoluzione minima restiamo sotto il ritmo per tre
+      // finestre, si riducono ombre, luci e densità della scena.
+      const slower = last(3);
       const i = ORDER.indexOf(this.tier);
-      if (slower && slower.every((f) => f < AutoGovernor.veryLow(target)) && i > 0) {
+      if (slower && slower.every((f) => f < low) && i > 0) {
         // il livello raggiunto da poco non regge: non ci si torna più
         if (this.sinceTierUp < 40) this.top = ORDER[i - 1];
         this.tier = ORDER[i - 1];
-        this.ceiling = this.step = PROFILES[this.tier].dpr.length - 1;
-        this.change(this.step, 40);
+        this.step = 0;
+        this.ceiling = PROFILES[this.tier].dpr.length - 1;
+        this.change(this.step, 0);
         return 'tier';
       }
       return null;
@@ -209,7 +212,7 @@ export class AutoGovernor {
     this.history = [];
     this.winFrames = 0;
     this.winTime = 0;
-    this.settle = 3;
+    this.settle = 1;
     this.cooldown = cooldown;
   }
 }

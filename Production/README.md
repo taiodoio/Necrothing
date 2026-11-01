@@ -17,6 +17,12 @@ npm run typecheck
 
 `npm run dev` avvia il profilo di sviluppo. Le build normali e beta usano il profilo Full della beta; i profili e le regole d'accesso sono descritti in [docs/distribuzione-e-accesso.md](docs/distribuzione-e-accesso.md).
 
+## Aggiornamenti Android e salvataggi
+
+L’application ID Android è `com.taiodoio.necrothing` e deve restare stabile. La versione corrente è `0.2.1` (`versionCode 4`); aumenta il `versionCode` per ogni aggiornamento distribuito. `android:allowBackup` è attivo e il salvataggio nativo usa Capacitor Preferences, con recupero della vecchia copia WebView. Build e `cap sync` aggiornano le risorse dell’app senza cancellare Preferences, localStorage o IndexedDB.
+
+Per conservare i dati durante l’aggiornamento, installa sopra l’app esistente usando la stessa chiave di firma. Se la firma non coincide, Android rifiuta l’installazione lasciando intatti i dati. Non disinstallare l’app per risolvere un errore di firma: la disinstallazione elimina i dati locali.
+
 ## Struttura
 
 - `src/app/`: avvio, ciclo di gioco, input, salvataggio e piattaforma.

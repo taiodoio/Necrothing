@@ -200,7 +200,7 @@ export function closeDrawer(force = false) {
   $('#drawer').hidden = true;
   $('#scrim').hidden = true;
   document.body.classList.remove('drawer-open');
-  $('#bubble').classList.remove('hidden');
+  if (!$('#game').classList.contains('tools-off')) $('#bubble').classList.remove('hidden');
   const cb = onCloseCb;
   onCloseCb = null;
   cb?.();

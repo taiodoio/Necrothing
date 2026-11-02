@@ -75,8 +75,24 @@ export const SIM = {
 } as const;
 
 /** Decadimento & riparazione. */
-/** Cappelli del Custode che si sbloccano con un traguardo. */
-export const HAT_FEATS = { witch: { counter: 'potionsSold', goal: 30, label: t('feat.potionsSold') } } as const;
+/**
+ * Pezzi d'aspetto del Custode che si sbloccano (e fino ad allora non si vedono):
+ * cappello da strega, da giardiniere e testa da vampiro quando si ha quel personaggio;
+ * orecchie e becchi (sorpresa) dopo tante coccole e giochi con quell'animale.
+ */
+export const PET_SPECIES = ['dog', 'cat', 'rabbit', 'duck', 'crow'] as const;
+export type PetSpecies = typeof PET_SPECIES[number];
+export const PET_BOND_GOAL = 25;
+export const LOOK_UNLOCKS: ReadonlyArray<{ key: string; npc?: string; pet?: PetSpecies }> = [
+  { key: 'hat:witch', npc: 'witch_corner' },
+  { key: 'hat:straw', npc: 'gardener_corner' },
+  { key: 'head:vampire', npc: 'vampire_crypt' },
+  { key: 'hat:catEars', pet: 'cat' },
+  { key: 'hat:dogEars', pet: 'dog' },
+  { key: 'hat:bunnyEars', pet: 'rabbit' },
+  { key: 'extra:crowBeak', pet: 'crow' },
+  { key: 'extra:duckBeak', pet: 'duck' },
+];
 
 export const DECAY = {
   /** Tomba: giorni dal primo segno d'incuria (erbacce o sporco) a rotta. */

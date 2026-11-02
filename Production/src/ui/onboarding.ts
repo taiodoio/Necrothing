@@ -659,6 +659,32 @@ export class Onboarding {
     this.mark(() => ['#bury-fab']);
   }
 
+  /** Il consiglio della prima scelta del posto per una tomba è in vista. */
+  private graveCoach = false;
+
+  /**
+   * La prima volta che si sceglie dove seppellire: il Custode spiega l'interruttore
+   * (con «Mappa» si sposta solo la vista) e l'occhio di bue va su «Seppellisci qui».
+   * Una volta sola (come i consigli); sparisce con «Ho capito» o finita la scelta.
+   */
+  gravePlacement() {
+    const s = this.game.state;
+    if (this.game.inYard || this.replaying || this.coach || s.onboarding.tips.includes('gravePlace')) return;
+    markTip(s, 'gravePlace');
+    this.save();
+    this.graveCoach = true;
+    this.coachBox(t('onboarding.grave.title'), t('onboarding.grave.text'), '',
+      h('button', { class: 'npc-note-cta', onclick: () => this.endGravePlacement() }, t('onboarding.grave.ok')));
+    this.mark(() => ['.place-ui [data-tool="confirm"]']);
+  }
+
+  /** Finita la scelta del posto (sepolta, o annullata): via il consiglio, se c'è. */
+  endGravePlacement() {
+    if (!this.graveCoach) return;
+    this.graveCoach = false;
+    this.dropCoach();
+  }
+
   /** La prima sepoltura è fatta (Game): via il primo obiettivo, se è ancora in vista. */
   goalReached() {
     window.clearTimeout(this.goalTimer);

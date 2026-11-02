@@ -87,11 +87,15 @@ export class Den {
   private blink = 2 + Math.random() * 2;
   sleeping = false;
 
-  constructor(color: string) {
+  /** `at`: dove stanno gli occhietti rispetto al centro della casetta (ogni specie ha la sua apertura). */
+  private readonly at: readonly [number, number, number];
+
+  constructor(color: string, at: readonly [number, number, number] = [0, 0.26, 0.335]) {
+    this.at = at;
     const mat = new THREE.MeshBasicMaterial({ color, toneMapped: false });
     for (const s of [-1, 1]) {
       const e = new THREE.Mesh(new THREE.SphereGeometry(1, 10, 6).scale(0.055, 0.042, 0.012), mat);
-      e.position.set(s * 0.08, 0.26, 0.335); // davanti alla lastra scura dell'arco (z 0,31–0,33)
+      e.position.set(at[0] + s * 0.08, at[1], at[2]); // davanti alla lastra scura dell'apertura
       e.raycast = () => undefined;
       this.group.add(e);
       this.eyes.push(e);
@@ -114,7 +118,7 @@ export class Den {
     if (this.zTimer <= 0) {
       this.zTimer = 1.1;
       const p = this.group.position;
-      glyphs.spawn('z', new THREE.Vector3(p.x + 0.12, p.y + 0.62, p.z + 0.36), { size: 0.26, life: 2.2, vel: new THREE.Vector3(0.16, 0.38, 0.02) });
+      glyphs.spawn('z', new THREE.Vector3(p.x + this.at[0] + 0.12, p.y + this.at[1] + 0.36, p.z + this.at[2] + 0.03), { size: 0.26, life: 2.2, vel: new THREE.Vector3(0.16, 0.38, 0.02) });
     }
   }
 }

@@ -696,8 +696,9 @@ export function catShelterLP(): LPModel {
   const C = new THREE.Shape(); C.moveTo(-0.22, -0.55); C.lineTo(0.22, -0.55); C.lineTo(0.32, 0.15); C.lineTo(0.22, 0.55); C.lineTo(-0.22, 0.55); C.lineTo(-0.32, 0.15); C.closePath();
   lp.push([0, 0, 0], Math.PI / 2, -Math.PI / 2).plate(C, 0.3, '#5a4030', { vary: 0.08 }).pop();
   lp.push([0, 0.2, 0], Math.PI / 2, -Math.PI / 2, 0, [0.85, 0.9, 1]).plate(C, 0.12, '#2a201a', { ao: 0 }).pop();
-  lp.blob(0, 0.24, 0.05, 0.22, 0.05, 0.38, '#8e3a3a', { jitter: 0.01 });
-  for (let i = 0; i < 4; i++) lp.box(-0.1 + (i % 2) * 0.2, 0.29, -0.2 + Math.floor(i / 2) * 0.35, 0.18, 0.004, 0.16, '#c9b79c', { jitter: 0 });
+  // cuscino sopra il bordo della bara (prima stava sotto e il gatto che dorme spariva nel legno scuro)
+  lp.blob(0, 0.34, 0.02, 0.24, 0.06, 0.4, '#c0505a', { jitter: 0.01 });
+  for (let i = 0; i < 4; i++) lp.box(-0.1 + (i % 2) * 0.2, 0.395, -0.2 + Math.floor(i / 2) * 0.35, 0.17, 0.004, 0.15, '#e6d6b8', { jitter: 0 });
   lp.pop();
   // tiragraffi: croce di legno avvolta nella corda, con il pallino appeso
   lp.push([0.55, 0, -0.55]);

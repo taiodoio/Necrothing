@@ -54,6 +54,18 @@ export default {
   'celebrate.rank.and': ' e ',
   // breve: chiude la celebrazione
   'celebrate.ok': 'Evviva!',
+  'celebrate.look.kicker': 'Nuovo aspetto',
+  'celebrate.look.npc.witch_corner': 'La strega ti ha regalato un cappello come il suo: dice che porta fortuna ai custodi.',
+  'celebrate.look.npc.gardener_corner': 'Il giardiniere ti ha regalato un cappello di paglia come il suo, per le giornate di sole (rare).',
+  'celebrate.look.npc.vampire_crypt': 'Il vampiro ti ha svelato il segreto del suo pallore: ora anche tu puoi avere la faccia da vampiro.',
+  'celebrate.look.pet.cat': 'Tante coccole e tanti giochi: il gatto ti ha adottato.',
+  'celebrate.look.pet.dog': 'Tante coccole e tanti giochi: il cane ti considera del suo branco.',
+  'celebrate.look.pet.rabbit': 'Tante coccole e tanti giochi: il coniglietto si fida di te.',
+  'celebrate.look.pet.crow': 'Tante coccole e tanti giochi: il corvo ti ha accolto nel suo stormo.',
+  'celebrate.look.pet.duck': 'Tante coccole e tanti giochi: la papera ti segue ovunque.',
+  'celebrate.look.where': 'Lo trovi tra le scelte del tuo personaggio.',
+  'celebrate.look.try': 'Provalo',
+  'celebrate.look.later': 'Più tardi',
   'game.locate.missing': 'Non si trova più sulla mappa.',
   'game.interact.none': 'Avvicinati a una tomba o a un oggetto.',
 
@@ -101,6 +113,12 @@ export default {
   'game.pet.free': 'Lascialo girare',
   // breve: voce del menù dell’animale
   'game.pet.home': 'A cuccia',
+  // breve: voce del menù dell’animale e suo stato, per specie (dove va a casa)
+  'game.pet.home.dog': 'A cuccia',
+  'game.pet.home.cat': 'A cuccia',
+  'game.pet.home.rabbit': 'In conigliera',
+  'game.pet.home.duck': 'Alla casetta',
+  'game.pet.home.crow': 'Al trespolo',
   // breve: voce del menù dell’animale
   'game.pet.pet': 'Accarezza',
   // breve: voce del menù dell’animale
@@ -115,7 +133,7 @@ export default {
   // breve: stato dell’animale sotto il nome
   'game.pet.status.broken': 'Casetta rotta: riparala per farlo uscire',
   // breve: stato dell’animale sotto il nome
-  'game.pet.status.homeSleeping': 'A cuccia, dorme',
+  'game.pet.status.homeSleeping': '{home}, dorme',
   // breve: stato dell’animale sotto il nome
   'game.pet.status.denSleeping': 'Dorme in tana',
 
@@ -298,7 +316,7 @@ export default {
   'pet.rabbit.label': 'Coniglio',
   'pet.rabbit.broken': 'La casetta è rotta: riparala e il coniglio tornerà fuori.',
   'pet.rabbit.call': 'Il coniglio ti raggiunge e ti segue.',
-  'pet.rabbit.home': 'Il coniglio va a cuccia.',
+  'pet.rabbit.home': 'Il coniglio torna in conigliera.',
   'pet.rabbit.wake': 'Il coniglio esce a fare un giro.',
   'pet.rabbit.free': 'Il coniglio va a zonzo per il cimitero.',
   'pet.rabbit.gift#one': 'Il coniglio è al settimo cielo! Ti porta un fuoco fatuo.',
@@ -307,7 +325,7 @@ export default {
   'pet.duck.label': 'Papera',
   'pet.duck.broken': 'La casetta è rotta: riparala e la papera tornerà fuori.',
   'pet.duck.call': 'La papera ti raggiunge e ti segue.',
-  'pet.duck.home': 'La papera va a cuccia.',
+  'pet.duck.home': 'La papera torna alla sua casetta.',
   'pet.duck.wake': 'La papera esce a fare un giro.',
   'pet.duck.free': 'La papera va a zonzo per il cimitero.',
   'pet.duck.gift#one': 'La papera è felicissima! Ti porta un fuoco fatuo.',
@@ -316,7 +334,7 @@ export default {
   'pet.crow.label': 'Corvo',
   'pet.crow.broken': 'La casetta è rotta: riparala e il corvo tornerà fuori.',
   'pet.crow.call': 'Il corvo ti raggiunge e ti segue.',
-  'pet.crow.home': 'Il corvo va a cuccia.',
+  'pet.crow.home': 'Il corvo vola sul suo trespolo.',
   'pet.crow.wake': 'Il corvo esce a fare un giro.',
   'pet.crow.free': 'Il corvo va a zonzo per il cimitero.',
   'pet.crow.gift#one': 'Il corvo è tutto contento! Ti porta un fuoco fatuo luccicante.',

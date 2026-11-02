@@ -3,7 +3,7 @@
 // vengono dalle regole (game/balance.ts), così il testo non può sbagliarsi.
 // La descrizione resta la frase ironica; l'effetto sta qui.
 
-import { BAT, CUSTODE_SPEED, HAT_FEATS, KEEPER_LAMP, MAUSOLEUM_PRESTIGE, SOUL_BELL, SPAWN_MODIFIERS } from '../game/balance.ts';
+import { BAT, CUSTODE_SPEED, KEEPER_LAMP, MAUSOLEUM_PRESTIGE, SOUL_BELL, SPAWN_MODIFIERS } from '../game/balance.ts';
 import { CATALOG } from '../game/catalog.ts';
 import { currentLang, t } from '../i18n/index.ts';
 
@@ -20,7 +20,7 @@ const EFFECTS: Record<string, () => string> = {
   open_coffin: () => t('item.effect.zombies'),
   zombie_bar: () => t('item.effect.zombieBar'),
   brain_farm: () => t('item.effect.brainFarm'),
-  witch_corner: () => t('item.effect.witchCorner', { goal: HAT_FEATS.witch.goal }),
+  witch_corner: () => t('item.effect.witchCorner'),
   keeper_lamp: () => t('item.effect.keeperLamp', { r: KEEPER_LAMP.radius }),
   soul_bell: () => t('item.effect.soulBell', { n: SOUL_BELL.ghosts }),
   memory_tree: () => t('item.effect.memoryTree'),

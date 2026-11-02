@@ -382,7 +382,8 @@ export class UI {
     const top = this.ctxAnchor ? this.ctxAnchor() : this.game.world.entityTop(this.ctxId!);
     const p = top ? this.game.project(top) : null;
     const el = $('#ctx');
-    if (!p || p.x < 0 || p.x > window.innerWidth || p.y < 0 || p.y > window.innerHeight) { el.style.visibility = 'hidden'; return; }
+    // appena sopra il bordo in alto (zoom molto vicino, edificio alto) il menù resta, agganciato sotto la barra; sparisce solo se l'oggetto è davvero fuori
+    if (!p || p.x < 0 || p.x > window.innerWidth || p.y < -window.innerHeight * 0.3 || p.y > window.innerHeight) { el.style.visibility = 'hidden'; return; }
     el.style.visibility = 'visible';
     const w = el.offsetWidth || 200;
     const x = Math.max(w / 2 + 8, Math.min(window.innerWidth - w / 2 - 8, p.x));
@@ -397,10 +398,10 @@ export class UI {
    * Le istruzioni dello strumento scelto (una sola frase): in Modifica e nei posizionamenti
    * dice cosa fa la mano o cosa fa lo strumento di lavoro (sposta, disegna).
    */
-  private toolHint(kind: 'edit' | 'item' | 'trace'): HTMLElement {
+  private toolHint(kind: 'edit' | 'item' | 'trace' | 'grave'): HTMLElement {
     const pan = this.game.toolMode === 'pan';
     const key = pan ? (kind === 'edit' ? 'hud.tools.panHint' : 'hud.tools.panHintPlace')
-      : kind === 'edit' ? 'hud.tools.moveHint' : kind === 'trace' ? 'hud.tools.drawHint' : 'hud.place.hint';
+      : kind === 'edit' ? 'hud.tools.moveHint' : kind === 'trace' ? 'hud.tools.drawHint' : kind === 'grave' ? 'hud.place.graveHint' : 'hud.place.hint';
     return h('p', { class: 'muted tool-hint' }, t(key));
   }
 
@@ -445,7 +446,7 @@ export class UI {
     if (this.ctxPlacing && !(p?.kind === 'item' && !p.trace)) this.closeContext();
     // mentre si sceglie il posto spariscono il menù e i pulsanti della mappa: i pulsanti degli strumenti prendono il loro posto
     $('#game').classList.toggle('tools-off', !!p || editing);
-    if (!p && !editing) { this.placementBar?.remove(); this.placementBar = null; if (!this.game.shrink) $('#bubble').classList.remove('hidden'); return; }
+    if (!p && !editing) { this.placementBar?.remove(); this.placementBar = null; if (!this.game.shrink) $('#bubble').classList.remove('hidden'); this.onboarding.endGravePlacement(); return; }
     $('#bubble').classList.add('hidden');
     const busy = (blockers: string[]) => blockers.length ? t('hud.place.busyBy', { what: blockers.slice(0, 3).join(', ') }) : t('hud.place.busy');
     if (editing) {
@@ -503,7 +504,7 @@ export class UI {
     this.mountPlacement(
       h('div', { class: 'tutorial tool-bar' },
         h('div', { class: 'tool-head' }, h('b', {}, icon('bury', 18), t('hud.place.graveTitle', { name: p.draft!.name })), this.exitButton(() => this.game.cancelPlacement())),
-        p.valid ? this.toolHint('item') : h('p', { class: 'muted warn' }, busy(this.game.placementBlockers()))),
+        p.valid ? this.toolHint('grave') : h('p', { class: 'muted warn' }, busy(this.game.placementBlockers()))),
       this.toolHud({ work: 'move', main: { icon: 'bury', label: t('hud.place.bury'), tool: 'confirm', disabled: !p.valid, run: () => this.game.confirmPlacement() } }));
   }
 

@@ -41,6 +41,7 @@
 .ui-next .cel-card p { margin: 0; font-size: 16px; line-height: 1.45; color: var(--paper); }
 .ui-next .cel-card p.cel-extra { font-size: 14px; color: var(--muted); }
 .cel-card .big-btn { margin-top: 8px; }
+.ui-next .cel-card .cel-actions { width: 100%; }
 .ui-next[data-quality="low"] :is(.cel-rays, .cel-glow) { animation: celFade 0.3s ease-out both; }
 @media (prefers-reduced-motion: reduce) {
   .ui-next :is(.cel-scrim, .cel-card, .cel-badge img, .cel-badge .ach-n, .cel-rays, .cel-glow) { animation: none !important; }

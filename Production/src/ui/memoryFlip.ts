@@ -1,6 +1,6 @@
 // Albero dei ricordi: toccando un cartellino, quello si stacca dal ramo, si
 // avvicina al centro del pannello e si gira; sul retro la storia del ricordo
-// (dove riposa, epitaffio, dati, cronologia) con Cartolina e Libera. Si
+// (dove riposa, epitaffio, dati, cronologia) con Cartolina e, in «Altro», Libera. Si
 // chiude con la X, toccando fuori o con la X del pannello: si rigira e torna
 // al suo posto sul ramo.
 
@@ -9,7 +9,7 @@ import { t } from '../i18n/index.ts';
 import { $, fmtDate, h } from './dom.ts';
 import { deceasedParts } from './deceased.ts';
 import { icon } from './icons.ts';
-import { confirmExhume, moreActions } from './screens.ts';
+import { actionRow, confirmExhume, moreActions } from './screens.ts';
 import type { UI } from './UI.ts';
 
 /** Il cartellino girato adesso (uno alla volta). */
@@ -49,10 +49,10 @@ export function flipMemoryTag(ui: UI, id: string, from: HTMLElement, fruit: stri
         g.epitaph ? h('i', { class: 'mtf-epitaph' }, t('detail.epitaph.quoted', { text: g.epitaph })) : null,
         parts.where),
       parts.facts, parts.timeline),
-    // come nelle altre schede: «Altro» (con Libera ricordo) sopra, l'azione principale sotto
-    h('div', { class: 'mtf-actions' },
-      moreActions([{ icon: 'shovel', label: t('tree.memory.free'), danger: true, run: () => { done(true); confirmExhume(ui, id, g.name, 'memory'); } }]),
-      h('button', { class: 'mtf-btn', onclick: () => void parts.postcard() }, icon('postcard', 20), t('detail.grave.postcard'))));
+    // come nelle altre schede: l'azione principale larga e, accanto, «Altro» quadrato coi tre puntini (Libera ricordo)
+    h('div', { class: 'mtf-actions' }, actionRow(
+      h('button', { class: 'big-btn', onclick: () => void parts.postcard() }, icon('postcard', 22), t('detail.grave.postcard')),
+      moreActions([{ icon: 'shovel', label: t('tree.memory.free'), danger: true, run: () => { done(true); confirmExhume(ui, id, g.name, 'memory'); } }], { compact: true }))));
   const inner = h('div', { class: 'mtf-inner' }, front, back);
   const card = h('div', { class: 'mtf-card' }, inner);
   const layer = h('div', { class: 'mtf-layer drawer-overlay', onclick: (ev: Event) => { if (ev.target === layer) done(); } }, card);

@@ -75,7 +75,7 @@ Con la scheda aperta il consiglio spiega «Altro» (riesumare, affidare all'albe
 
 **Posare.** Quel che si posa (oggetti e tombe, anche fuori dal cortile) parte da due celle a destra del Custode, non sopra di lui.
 
-**Modifica.** In Modifica (e nei posizionamenti) il pannello in basso ha solo il titolo, la X e l'istruzione dello strumento scelto (mano o sposta); sotto, senza riquadro come i pulsanti della mappa, ci sono l'interruttore mano / sposta, «annulla» e la spunta in oro. Il consiglio dice «Quando hai finito, tocca la spunta». La prima volta Modifica si presenta con la sua scheda: il segno va su «Inizia», poi sulla lanterna, e quando la si è spostata sulla spunta (`.place-ui [data-tool="confirm"]`). Nel tracciato (sentieri, staccionate, muretti), se mancano pezzi la spunta diventa «Compra» col costo; comprati, torna la spunta.
+**Modifica.** In Modifica (e nei posizionamenti) il pannello in basso ha solo il titolo, la X e l'istruzione dello strumento scelto (mano o sposta); sotto, senza riquadro come i pulsanti della mappa, ci sono l'interruttore mano / sposta, «annulla» e la spunta in oro. Il consiglio dice «Quando hai finito, tocca la spunta». La prima volta Modifica si presenta con la sua scheda: il segno va su «Inizia», poi sulla lanterna, e quando la si è spostata sulla spunta (`.place-ui [data-tool="confirm"]`). Nel tracciato (sentieri, staccionate, muretti), se mancano pezzi la spunta diventa «Compra» col costo; comprati, torna la spunta. Le azioni sull'oggetto (Ruota, Riponi) stanno nel menu sopra l'oggetto, anche mentre lo si posa: al passo «posiziona» si può ruotare da lì (`#ctx [data-ctx="rotate"]`), «Riponi» resta bloccato per non uscire dal passo.
 
 **I pannelli sotto il consiglio.** Bottega, Inventario, scheda della tomba e dialoghi si aprono sotto il consiglio, che resta sopra, così non si coprono a vicenda. Messaggi e notifiche ricevuti intanto stanno sopra il buio dell'occhio di bue. Aprendo la scheda della tomba il consiglio nuovo c'è già, così la scheda si apre al suo posto (comparendo dopo la spostava di colpo); se il consiglio cambia altezza, pannelli e dialoghi scivolano piano.
 
@@ -84,6 +84,7 @@ Con la scheda aperta il consiglio spiega «Altro» (riesumare, affidare all'albe
 ## Dopo il cortile
 
 - **Il primo obiettivo.** «Il tuo primo addio», nello stile del consiglio, con l'occhio di bue sul pulsante della sepoltura. «Seppellisci ›» la apre, «Più tardi» la rimanda alla prossima apertura del gioco. Si chiude per sempre alla prima sepoltura (`onboarding.goal`).
+- **La prima scelta del posto per una tomba.** La prima volta che si sceglie dove seppellire, il consiglio «Dove riposerà?» spiega l'interruttore (con «Mappa» si sposta solo la vista) e l'occhio di bue va su «Seppellisci qui» (`.place-ui [data-tool="confirm"]`). Una volta sola (`onboarding.tips`: `gravePlace`); sparisce con «Ho capito» o finita la scelta. Anche l'istruzione del pannello della tomba dice «poi tocca «Seppellisci qui»».
 - **I consigli al momento giusto** (`game/tips.ts`). Una notifica del Custode, una volta sola ciascuno, con «Mostrami» quando parla di qualcosa nella scena:
   - una tomba rotta;
   - un oggetto rovinato;

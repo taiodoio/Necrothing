@@ -1247,3 +1247,89 @@ test('salvataggi: chi aveva già 30 pozioni vendute tiene il cappello da strega;
   assert.deepEqual(back.player.lookUnlocks.sort(), ['extra:crowBeak', 'hat:witch']);
   assert.deepEqual(back.player.petBond, { crow: 7 });
 });
+
+test('posta: si spedisce solo con l’ufficio, una lettera torna nella buca ogni 3–7 giorni, si chiude o si rispedisce', async () => {
+  const { POST } = await import('../src/game/balance.ts');
+  const s = richAt(2600);
+  assert.throws(() => R.sendLetter(s, 'Ciao', NOW), /ufficio postale/);
+  const office = placeBusiness(s, 'post_office');
+  assert.throws(() => R.sendLetter(s, '   ', NOW), /bianco/);
+  R.sendLetter(s, 'x'.repeat(POST.maxLength + 50), NOW);
+  assert.equal(s.post.letters[0].text.length, POST.maxLength, 'tagliata alla lunghezza massima');
+  for (let i = 0; i < POST.maxLetters + 5; i++) R.sendLetter(s, `lettera ${i}`, NOW);
+  assert.equal(s.post.letters.length, POST.maxLetters, 'al massimo 30 in giro');
+  // non prima di 3 giorni, sì entro 7
+  const days = (new Date(s.post.nextAt).getTime() - NOW.getTime()) / 86_400_000;
+  assert.ok(days >= POST.returnDays[0] && days <= POST.returnDays[1], `${days}`);
+  assert.equal(R.checkMail(s, later(POST.returnDays[0] - 0.5)), false);
+  assert.equal(R.checkMail(s, later(POST.returnDays[1])), true);
+  const back = s.post.inbox;
+  assert.ok(back && s.post.letters.length === POST.maxLetters - 1);
+  // una alla volta
+  assert.equal(R.checkMail(s, later(30)), false);
+  // rispedita: torna nel mucchio
+  R.resendLetter(s, later(8));
+  assert.equal(s.post.inbox, null);
+  assert.ok(s.post.letters.some((l) => l.id === back.id));
+  // chiusa: non torna più, e la prossima si fa attendere da adesso
+  s.post.nextAt = later(8).toISOString();
+  assert.equal(R.checkMail(s, later(9)), true);
+  const gone = s.post.inbox.id;
+  R.closeLetter(s, later(9));
+  assert.ok(!s.post.letters.some((l) => l.id === gone));
+  assert.ok(new Date(s.post.nextAt).getTime() >= later(9 + POST.returnDays[0]).getTime());
+  // con l'ufficio rotto non arriva niente
+  office.broken = true;
+  assert.equal(R.checkMail(s, later(60)), false);
+  // salvataggi vecchi senza posta
+  const old = JSON.parse(JSON.stringify(s)); delete old.post;
+  assert.deepEqual(normalizeSave(old).post, { letters: [], inbox: null, nextAt: null });
+});
+
+test('attività nuove: food truck e carretto incassano ogni giorno; il fioraio a volte aggiunge un fuoco fatuo', async () => {
+  const { BUSINESS, FLORIST, WISPS: W } = await import('../src/game/balance.ts');
+  const s = richAt(2600);
+  for (const type of ['food_truck', 'ice_cream_cart']) {
+    const p = placeBusiness(s, type);
+    const n = R.businessPending(s, p.id, later(1));
+    assert.ok(n >= BUSINESS[type].perDay[0] && n <= BUSINESS[type].perDay[1], `${type}: ${n}`);
+    assert.equal(R.businessPending(s, p.id, later(30)), BUSINESS[type].cap);
+  }
+  // senza chiosco mai il rametto; col chiosco circa 1 volta su 4 (deterministico)
+  const at = spot(s);
+  const { grave } = R.bury(s, draft(), at.x, at.y, NOW);
+  const bonus = () => Array.from({ length: 400 }, (_, i) => R.floristBonus(s, grave.id, new Date(NOW.getTime() + i * 86_400_000)));
+  assert.ok(bonus().every((b) => b === 0));
+  placeBusiness(s, 'flower_kiosk');
+  const hits = bonus().filter((b) => b === FLORIST.bonus).length;
+  assert.ok(hits > 400 / FLORIST.oneIn * 0.6 && hits < 400 / FLORIST.oneIn * 1.4, `${hits}`);
+  // un mazzo nel giorno del rametto vale un fuoco fatuo in più
+  const day = Array.from({ length: 60 }, (_, i) => later(i + 1)).find((d) => R.floristBonus(s, grave.id, d));
+  const before = s.player.wisps;
+  R.bringFlowers(s, grave.id, day);
+  assert.equal(s.player.wisps - before, W.flowers + FLORIST.bonus);
+});
+
+test('comparse: food truck chiama gli zombie, carretto i fantasmi, i cacciatori +10% a entrambi', async () => {
+  const { SPAWN_MODIFIERS: M, SPAWN_CHANCE: C } = await import('../src/game/balance.ts');
+  const s = richAt(2600);
+  const at = spot(s);
+  R.bury(s, draft(), at.x, at.y, NOW);
+  for (const g of s.graves) g.hasFlowers = false; // i fiori alzano tutto un po'
+  const edge = (p) => ({ next: () => p, int: () => 0, range: (a) => a, chance: (q) => p < q, pick: (xs) => xs[0] });
+  // di giorno: le zucche della casa di partenza chiamano i fantasmi solo di notte
+  const kinds = (st, p) => computeSpawns(st, false, edge(p), NOW).map((r) => r.kind);
+  assert.ok(!kinds(s, 0.0001).includes('zombie'));
+  placeBusiness(s, 'food_truck');
+  assert.equal(countBuildings(s).foodTruck, 1);
+  assert.ok(kinds(s, M.zombieFoodTruck * 0.99).includes('zombie') && !kinds(s, M.zombieFoodTruck * 1.01).includes('zombie'));
+  const ghost = C.ghostGenericDay;
+  assert.ok(!kinds(s, ghost * 1.01).includes('ghost'));
+  placeBusiness(s, 'ice_cream_cart');
+  assert.ok(kinds(s, (ghost + M.iceCreamGhostBonus) * 0.99).includes('ghost'));
+  placeBusiness(s, 'ghost_hunters');
+  const g = (ghost + M.iceCreamGhostBonus) * (1 + M.huntersBonus);
+  assert.ok(kinds(s, g * 0.99).includes('ghost') && !kinds(s, g * 1.01).includes('ghost'));
+  const z = M.zombieFoodTruck * (1 + M.huntersBonus);
+  assert.ok(kinds(s, z * 0.99).includes('zombie') && !kinds(s, z * 1.01).includes('zombie'));
+});

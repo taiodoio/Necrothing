@@ -15,6 +15,8 @@ import { DAY_PHASE_LABELS } from '../game/time.ts';
 import { currentLang, t } from '../i18n/index.ts';
 import { $, applyPageTexts, closeDrawer, drawerOpen, h, joinDot } from './dom.ts';
 import { Onboarding } from './onboarding.ts';
+import { celebrate } from './celebrate.ts';
+import { lpBadgeUrl } from './lpIcons.ts';
 import { hydrateIcons, icon, iconUrl } from './icons.ts';
 import { monoIcon } from './monoIcons.ts';
 import { openDeceased } from './deceased.ts';
@@ -293,8 +295,11 @@ export class UI {
     if (pending > 0) actions.push({ act: 'collect', label: t('ctx.collect', { n: pending }), icon: 'wisp', cls: 'primary' });
     if (p.type === 'shop') actions.push({ act: 'shop', label: t('ctx.shop'), icon: 'shop', cls: 'primary' });
     // casa del Custode: il registro e la personalizzazione; l'orto pronto si riscuote toccando
+    // la posta tornata nella buca: prima di tutto
+    if (p.type === 'keeper_house' && s.post.inbox) actions.push({ act: 'readMail', label: t('ctx.readMail'), icon: 'letter', cls: 'primary' });
+    if (p.type === 'post_office' && !p.broken) actions.push({ act: 'sendLetter', label: t('ctx.sendLetter'), icon: 'letterSend', cls: 'primary' });
     if (p.type === 'keeper_house') {
-      actions.push({ act: 'registry', label: t('ctx.registry'), icon: 'book', cls: 'primary' }, { act: 'house', label: t('ctx.house'), icon: 'house' });
+      actions.push({ act: 'registry', label: t('ctx.registry'), icon: 'book', cls: s.post.inbox ? undefined : 'primary' }, { act: 'house', label: t('ctx.house'), icon: 'house' });
       sub = t('ctx.registry.sub', { n: s.graves.length + s.entrusted.length });
     }
     if (p.type === 'memory_tree') { actions.push({ act: 'memories', label: t('ctx.memories'), icon: 'tree', cls: 'primary' }); sub = t('ctx.tree.sub', { n: s.entrusted.length }); }
@@ -310,6 +315,11 @@ export class UI {
     // la casetta porta anche il menù del suo animale (utile quando dorme in tana)
     if (isPetHouse(p.type)) { pet = this.game.petMenu(p.id); sub = t('hud.join', { a: sub, b: this.game.petStatus(p.id) }); }
     return { actions, pet, sub };
+  }
+
+  /** La lettera è partita: il modale «Spedita!», con la busta. */
+  letterSent() {
+    celebrate({ kicker: t('post.sent.kicker'), title: t('post.sent.title'), text: t('post.sent.text'), badge: lpBadgeUrl('letter', 'gold'), ok: t('post.sent.ok') });
   }
 
   refreshContext() {

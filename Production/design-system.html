@@ -195,6 +195,7 @@
           <figure><img data-badge="trophy:locked" alt="" />locked</figure>
           <figure><img data-badge="rank:gold" alt="" />rango</figure>
           <figure><img data-badge="wisp:gold" alt="" />fuoco fatuo</figure>
+          <figure><img data-badge="letter:gold" alt="" />lettera spedita</figure>
         </div>
       </section>
 
@@ -727,6 +728,8 @@
           </div>
         </div>
         <p class="ds-note">La pergamena si disegna alla sua misura (<code>parchment()</code> in <code>ui/parchment.ts</code>): non si costruisce a mano in HTML, qui è fatta come nel gioco. Le etichette di una voce hanno la loro icona monocromatica (<code>FACT_ICONS</code>).</p>
+        <h3>La lettera dell'Ufficio postale</h3>
+        <p class="sub">Scrivere e leggere una lettera usa la stessa pergamena piegata in quattro dell'intro (<code>ui/letter.ts</code>), sopra il gioco scurito e in pausa (<code>.mail-layer</code>, <code>setUiBlocking</code>). Si scrive direttamente sulle righe del foglio (<code>.mail-text</code>, corsivo 18 px, al massimo 280 caratteri col contatore <code>.mail-count</code>); i pulsanti stanno sotto il foglio, affiancati: quello secondario a sinistra, l'azione a destra. «Spedisci» richiude il foglio con l'animazione d'apertura al contrario (<code>.ob-stage.close</code>) e poi arriva il momento «Spedita!»; in lettura «Chiudi» sfuma e basta, «Rispedisci» la richiude come all'invio. Un'azione spenta resta piena (desaturata e scura), mai trasparente: sotto ci sarebbe l'HUD.</p>
       </section>
 
       <!-- ═════════════════════ Momenti ═════════════════════ -->
@@ -775,6 +778,7 @@
               <tr><td>Apertura di pannelli e modali</td><td>sale e si allarga</td><td>idem</td><td>nessuna animazione</td></tr>
               <tr><td>Occhio di bue</td><td>pulsa piano</td><td>idem</td><td>fermo</td></tr>
               <tr><td>Lettera piegata in 3D</td><td>sì</td><td>sì</td><td>sale e appare</td></tr>
+              <tr><td>Lettera della posta che si richiude</td><td>si ripiega al contrario e scende</td><td>idem</td><td>scende e sfuma</td></tr>
             </tbody>
           </table>
         </div>

@@ -2,7 +2,7 @@
 // rispetto a three/DOM. Ogni azione muta lo SaveData passato e ritorna un
 // esito (messaggio + ricompense) oppure lancia GameError.
 
-import { BUSINESS, DECAY, ECONOMY, HOUSE_PERKS, LOOK_UNLOCKS, PET_BOND_GOAL, type PetSpecies, EXPANSION, GRAVE_FOOTPRINT, GRAVEDIGGER, WISP_SPAWN, WISPS, XP, ZOMBIE_MUD } from './balance.ts';
+import { BUSINESS, DECAY, FLORIST, ECONOMY, HOUSE_PERKS, LOOK_UNLOCKS, PET_BOND_GOAL, POST, type PetSpecies, EXPANSION, GRAVE_FOOTPRINT, GRAVEDIGGER, WISP_SPAWN, WISPS, XP, ZOMBIE_MUD } from './balance.ts';
 import { CATALOG, isSeasonallyAvailable, placeableDef, repairCost, rotatedFootprint, type PlaceableDef } from './catalog.ts';
 import { CATEGORIES, CUSTOM_CAUSE_MAX, DEATH_CAUSES, GRAVE_TYPE_ACCESS, GRAVE_TYPE_MIN_RANK, GRAVE_TYPES, type CauseChoice, type Category, type DeathCause, type GraveType } from './graves.ts';
 import { evaluateAchievements, rankForXp, type AchievementDef } from './progression.ts';
@@ -221,9 +221,18 @@ export function bringFlowers(s: SaveData, graveId: string, now: Date): ActionRes
   memory(s, g.id, 'flower', now);
   s.player.counters.flowersBrought++;
   // le fioriere della casa del Custode: un fuoco fatuo in più per ogni mazzo
-  const wisps = housePerk(s, 'flowerbox') ? HOUSE_PERKS.flowerboxWisps : WISPS.flowers;
+  let wisps = housePerk(s, 'flowerbox') ? HOUSE_PERKS.flowerboxWisps : WISPS.flowers;
+  // il chiosco del fioraio: ogni tanto lo scheletro ci aggiunge un rametto che vale un fuoco fatuo
+  const florist = floristBonus(s, g.id, now);
+  wisps += florist;
   reward(s, XP.flowers, wisps);
-  return ok(t('rules.flowers.done'), XP.flowers, wisps);
+  return ok(t(florist ? 'rules.flowers.florist' : 'rules.flowers.done'), XP.flowers, wisps);
+}
+
+/** Il rametto in più del fioraio: 1 volta su FLORIST.oneIn, solo con un chiosco in piedi (deterministico). */
+export function floristBonus(s: SaveData, graveId: string, now: Date): number {
+  if (!s.placeables.some((p) => p.type === 'flower_kiosk' && !p.broken)) return 0;
+  return hashString(`${graveId}:${now.toISOString()}:fioraio`) % FLORIST.oneIn === 0 ? FLORIST.bonus : 0;
 }
 
 export function cleanGrave(s: SaveData, graveId: string, now: Date): ActionResult {
@@ -712,6 +721,8 @@ export function collectBusiness(s: SaveData, id: string, now: Date): ActionResul
     s.player.counters.potionsSold += n;
     return ok(t('rules.collect.witch', { n }), 0, n);
   }
+  if (p.type === 'food_truck') return ok(t('rules.collect.foodTruck', { n }), 0, n);
+  if (p.type === 'ice_cream_cart') return ok(t('rules.collect.iceCream', { n }), 0, n);
   return ok(t('rules.collect.done', { n }), 0, n);
 }
 
@@ -823,6 +834,8 @@ export function interactRoamer(
       reward(s, xp, w);
       return ok(near.length ? t('rules.gravedigger.cleaned', { n: near.length }) : t('rules.gravedigger.idle'), xp, w);
     }
+    // il postino e i fratelli fanno il loro giro: parlano (vedi Game.tapRoamer), non si «incontrano»
+    case 'postman': case 'hunterA': case 'hunterB': return ok('');
   }
 }
 
@@ -917,4 +930,60 @@ export function toggleHousePart(s: SaveData, id: string, now?: Date): boolean {
   const home = s.placeables.find((p) => p.type === 'keeper_house');
   if (id === 'veggie' && i >= 0 && home && now) home.collectedAt = now.toISOString();
   return i >= 0;
+}
+
+// ── Posta (ufficio postale) ────────────────────────────────────────────
+
+/** C'è l'ufficio postale (posato e non rotto)? */
+export const postOfficeOpen = (s: SaveData) => s.placeables.some((p) => p.type === 'post_office' && !p.broken);
+
+/** Fra quanto torna la prossima lettera: tra POST.returnDays giorni, a caso ma ripetibile. */
+function nextMailAt(s: SaveData, now: Date): string {
+  const [lo, hi] = POST.returnDays;
+  const k = hashString(`${s.seed}:${now.toISOString()}:posta`) % 1000 / 1000;
+  return new Date(now.getTime() + (lo + k * (hi - lo)) * 86_400_000).toISOString();
+}
+
+/** Spedisce una lettera: entra nel mucchio di quelle che possono tornare. */
+export function sendLetter(s: SaveData, text: string, now: Date): ActionResult {
+  if (!postOfficeOpen(s)) throw new GameError(t('rules.post.closed'));
+  const clean = text.trim().slice(0, POST.maxLength);
+  if (!clean) throw new GameError(t('rules.post.empty'));
+  s.post.letters.push({ id: newId('l'), text: clean, sentAt: now.toISOString() });
+  if (s.post.letters.length > POST.maxLetters) s.post.letters.splice(0, s.post.letters.length - POST.maxLetters);
+  if (!s.post.nextAt) s.post.nextAt = nextMailAt(s, now);
+  return ok(t('rules.post.sent'));
+}
+
+/**
+ * Se è il momento torna una delle lettere spedite (a caso) nella buca della
+ * casa del Custode; una alla volta. Vero se ne è appena arrivata una.
+ */
+export function checkMail(s: SaveData, now: Date): boolean {
+  const p = s.post;
+  if (p.inbox || !p.letters.length || !postOfficeOpen(s)) return false;
+  if (!p.nextAt) { p.nextAt = nextMailAt(s, now); return false; }
+  if (new Date(p.nextAt).getTime() > now.getTime()) return false;
+  const i = hashString(`${s.seed}:${p.nextAt}`) % p.letters.length;
+  p.inbox = p.letters.splice(i, 1)[0];
+  p.nextAt = nextMailAt(s, now);
+  return true;
+}
+
+/** Letta e chiusa: quella lettera non torna più (la prossima si fa attendere da adesso). */
+export function closeLetter(s: SaveData, now: Date): ActionResult {
+  s.post.inbox = null;
+  s.post.nextAt = nextMailAt(s, now);
+  return ok('');
+}
+
+/** Rispedita: torna nel mucchio, e un giorno potrà tornare di nuovo. */
+export function resendLetter(s: SaveData, now: Date): ActionResult {
+  const l = s.post.inbox;
+  if (!l) return ok('');
+  s.post.inbox = null;
+  s.post.letters.push({ ...l, sentAt: now.toISOString() });
+  if (s.post.letters.length > POST.maxLetters) s.post.letters.splice(0, s.post.letters.length - POST.maxLetters);
+  s.post.nextAt = nextMailAt(s, now);
+  return ok(t('rules.post.resent'));
 }

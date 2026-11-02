@@ -124,19 +124,30 @@ export function celebrateRank(level: number) {
 }
 
 /**
- * Un pezzo d'aspetto sbloccato («hat:witch»…): il Custode che già lo indossa
- * nel medaglione, chi gliel'ha dato, e «Provalo» che apre l'Aspetto.
+ * Pezzi d'aspetto sbloccati («hat:witch»…): il Custode che già li indossa nel
+ * medaglione, chi glieli ha dati, e «Provalo» che apre l'Aspetto. I pezzi che
+ * vengono dallo stesso personaggio (i fratelli: camicia e berretto) fanno una
+ * celebrazione sola.
  */
-export function celebrateLook(key: string, look: CustodeLook, tryIt: () => void) {
-  const [part, value] = key.split(':') as [keyof CustodeLook, string];
-  const u = LOOK_UNLOCKS.find((x) => x.key === key);
-  if (!u) return;
-  const style = (LOOK_STYLES as Record<string, Array<[string, string]>>)[part]?.find(([v]) => v === value);
-  celebrate({
-    kicker: t('celebrate.look.kicker'), title: style?.[1] ?? value,
-    text: t(u.npc ? `celebrate.look.npc.${u.npc}` : `celebrate.look.pet.${u.pet}`),
-    extra: t('celebrate.look.where'),
-    badge: custodePortrait({ ...look, [part]: value }, true),
-    ok: t('celebrate.look.try'), later: t('celebrate.look.later'), onOk: tryIt,
-  });
+export function celebrateLooks(keys: string[], look: CustodeLook, tryIt: () => void) {
+  const groups = new Map<string, Array<{ part: keyof CustodeLook; value: string; name: string }>>();
+  for (const key of keys) {
+    const u = LOOK_UNLOCKS.find((x) => x.key === key);
+    if (!u) continue;
+    const [part, value] = key.split(':') as [keyof CustodeLook, string];
+    const style = (LOOK_STYLES as Record<string, Array<[string, string]>>)[part]?.find(([v]) => v === value);
+    const who = u.npc ? `celebrate.look.npc.${u.npc}` : `celebrate.look.pet.${u.pet}`;
+    groups.set(who, [...(groups.get(who) ?? []), { part, value, name: style?.[1] ?? value }]);
+  }
+  for (const [who, parts] of groups) {
+    const worn = { ...look };
+    for (const p of parts) (worn as Record<string, unknown>)[p.part] = p.value;
+    celebrate({
+      kicker: t('celebrate.look.kicker'), title: parts.map((p) => p.name).join(' · '),
+      text: t(who),
+      extra: t('celebrate.look.where'),
+      badge: custodePortrait(worn, true),
+      ok: t('celebrate.look.try'), later: t('celebrate.look.later'), onOk: tryIt,
+    });
+  }
 }

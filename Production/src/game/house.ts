@@ -72,16 +72,26 @@ export function housePerk(s: { house?: HouseState; placeables: ReadonlyArray<{ t
  * Variante del modello: i due bit bassi sono il tetto, gli altri le aggiunte
  * in vista (un bit per aggiunta, nell'ordine di HOUSE_PARTS).
  */
-export function houseVariant(h: HouseState): number {
+export function houseVariant(h: HouseState, post: { mailbox?: boolean; mail?: boolean } = {}): number {
   const roof = Math.max(0, HOUSE_ROOFS.findIndex((r) => r.id === h.roof));
   let mask = 0;
   HOUSE_PARTS.forEach((p, i) => { if (h.owned.includes(p.id) && !h.hidden.includes(p.id)) mask |= 1 << i; });
+  // la buca delle lettere (arriva con l'ufficio postale) e la sua bandierina alzata quando c'è posta
+  if (post.mailbox) mask |= 1 << HOUSE_PARTS.length;
+  if (post.mailbox && post.mail) mask |= 1 << (HOUSE_PARTS.length + 1);
   return roof | (mask << 2);
+}
+
+/** La variante della casa nella partita: aggiunte, e la buca se c'è l'ufficio postale. */
+export function houseLookOf(s: { house: HouseState; placeables: ReadonlyArray<{ type: string }>; post?: { inbox: unknown } }): number {
+  return houseVariant(s.house, { mailbox: s.placeables.some((p) => p.type === 'post_office'), mail: !!s.post?.inbox });
 }
 
 /** Dalla variante al tetto e alle aggiunte (per il modello). */
 export function decodeHouseVariant(variant: number): { roof: string; parts: Set<string> } {
   const roof = HOUSE_ROOFS[variant & 3]?.id ?? 'slate';
   const parts = new Set(HOUSE_PARTS.filter((_, i) => variant & (1 << (i + 2))).map((p) => p.id));
+  if (variant & (1 << (HOUSE_PARTS.length + 2))) parts.add('mailbox');
+  if (variant & (1 << (HOUSE_PARTS.length + 3))) parts.add('mailFlag');
   return { roof, parts };
 }

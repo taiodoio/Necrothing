@@ -11,10 +11,10 @@ export type HairStyle = 'tufts' | 'bob' | 'long' | 'curly' | 'longcurly' | 'bun'
 /** Testa: umana, zucca intagliata, teschio, zombie, vampiro (si sblocca col vampiro). */
 export type HeadStyle = 'human' | 'pumpkin' | 'skull' | 'zombie' | 'vampire';
 /** Cappelli; strega, paglia e orecchie si sbloccano (vedi lookUnlocks in rules.ts). */
-export type HatStyle = 'wide' | 'top' | 'beanie' | 'witch' | 'straw' | 'catEars' | 'dogEars' | 'bunnyEars' | 'none';
+export type HatStyle = 'wide' | 'top' | 'beanie' | 'witch' | 'straw' | 'cap' | 'catEars' | 'dogEars' | 'bunnyEars' | 'none';
 /** Extra sul viso (solo sbloccati): becco da corvo, becco da papera. */
 export type LookExtra = 'none' | 'crowBeak' | 'duckBeak';
-export type Outfit = 'coat' | 'cloak' | 'overalls' | 'sweater';
+export type Outfit = 'coat' | 'cloak' | 'overalls' | 'sweater' | 'flannel';
 export type Glasses = 'none' | 'round' | 'square' | 'monocle';
 export type Beard = 'none' | 'short' | 'full' | 'braid';
 export type Mustache = 'none' | 'thin' | 'handlebar' | 'bushy';
@@ -62,11 +62,11 @@ export const LOOK_STYLES = {
     ['wavyLong', t('look.hair.wavyLong')], ['curly', t('look.hair.curly')], ['longcurly', t('look.hair.longcurly')], ['bun', t('look.hair.bun')], ['none', t('look.hair.none')],
   ] as Array<[HairStyle, string]>,
   hat: [
-    ['wide', t('look.hat.wide')], ['top', t('look.hat.top')], ['beanie', t('look.hat.beanie')], ['witch', t('look.hat.witch')], ['straw', t('look.hat.straw')],
+    ['wide', t('look.hat.wide')], ['top', t('look.hat.top')], ['beanie', t('look.hat.beanie')], ['witch', t('look.hat.witch')], ['straw', t('look.hat.straw')], ['cap', t('look.hat.cap')],
     ['catEars', t('look.hat.catEars')], ['dogEars', t('look.hat.dogEars')], ['bunnyEars', t('look.hat.bunnyEars')], ['none', t('look.hat.none')],
   ] as Array<[HatStyle, string]>,
   extra: [['none', t('look.extra.none')], ['crowBeak', t('look.extra.crowBeak')], ['duckBeak', t('look.extra.duckBeak')]] as Array<[LookExtra, string]>,
-  outfit: [['coat', t('look.outfit.coat')], ['cloak', t('look.outfit.cloak')], ['overalls', t('look.outfit.overalls')], ['sweater', t('look.outfit.sweater')]] as Array<[Outfit, string]>,
+  outfit: [['coat', t('look.outfit.coat')], ['cloak', t('look.outfit.cloak')], ['overalls', t('look.outfit.overalls')], ['sweater', t('look.outfit.sweater')], ['flannel', t('look.outfit.flannel')]] as Array<[Outfit, string]>,
   glasses: [['none', t('look.glasses.none')], ['round', t('look.glasses.round')], ['square', t('look.glasses.square')], ['monocle', t('look.glasses.monocle')]] as Array<[Glasses, string]>,
   beard: [['none', t('look.beard.none')], ['short', t('look.beard.short')], ['full', t('look.beard.full')], ['braid', t('look.beard.braid')]] as Array<[Beard, string]>,
   mustache: [['none', t('look.mustache.none')], ['thin', t('look.mustache.thin')], ['handlebar', t('look.mustache.handlebar')], ['bushy', t('look.mustache.bushy')]] as Array<[Mustache, string]>,

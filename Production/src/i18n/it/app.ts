@@ -57,6 +57,7 @@ export default {
   'celebrate.look.kicker': 'Nuovo aspetto',
   'celebrate.look.npc.witch_corner': 'La strega ti ha regalato un cappello come il suo: dice che porta fortuna ai custodi.',
   'celebrate.look.npc.gardener_corner': 'Il giardiniere ti ha regalato un cappello di paglia come il suo, per le giornate di sole (rare).',
+  'celebrate.look.npc.ghost_hunters': 'I due fratelli ti hanno prestato la loro divisa da caccia: camicia a quadri, jeans e un berretto un po’ consumato.',
   'celebrate.look.npc.vampire_crypt': 'Il vampiro ti ha svelato il segreto del suo pallore: ora anche tu puoi avere la faccia da vampiro.',
   'celebrate.look.pet.cat': 'Tante coccole e tanti giochi: il gatto ti ha adottato.',
   'celebrate.look.pet.dog': 'Tante coccole e tanti giochi: il cane ti considera del suo branco.',
@@ -291,6 +292,48 @@ export default {
   'say.brainFarm.say': 'Gnam!',
   'say.brainFarm.text#one': 'Gli zombie hanno raccolto cervelli per {n} fuoco fatuo.',
   'say.brainFarm.text#other': 'Gli zombie hanno raccolto cervelli per {n} fuochi fatui.',
+  // breve: nome nella notifica
+  'say.foodTruck.name': 'Food truck',
+  // breve: battuta (lo zombie al bancone)
+  'say.foodTruck.say': 'Un altro taco!',
+  'say.foodTruck.text#one': 'Tacos di cervelli finiti in un lampo: {n} fuoco fatuo di incasso.',
+  'say.foodTruck.text#other': 'Tacos di cervelli finiti in un lampo: {n} fuochi fatui di incasso.',
+  // breve: nome nella notifica
+  'say.iceCream.name': 'Carretto dei gelati',
+  // breve: battuta (il fantasma gelataio)
+  'say.iceCream.say': 'Brr… che buono!',
+  'say.iceCream.text#one': 'Coni al gelo per tutti i fantasmi: {n} fuoco fatuo di incasso.',
+  'say.iceCream.text#other': 'Coni al gelo per tutti i fantasmi: {n} fuochi fatui di incasso.',
+
+  // ── Chi fa il giro o sta accanto al suo oggetto (frasi separate da |) ──
+  'say.postman.lines': 'Sto consegnando una cosa. Forse. Chi lo sa.|Pioggia, nebbia, notte fonda: la posta arriva. Prima o poi. Più poi.|Cerco il destinatario. L’indirizzo dice «là, da qualche parte».|Niente per te, oggi. O forse sì: non ho ancora guardato in fondo alla borsa.|Le ossa scricchiolano, ma la borsa è leggera. Strano.',
+  'say.hunters.lines': 'Abbiamo seguito il freddo fin qui. Era la tua minestra, lasciata fuori.|Torcia, sale, panino. Non si esce mai senza panino.|Qui i fantasmi salutano. Da noi di solito non succede.|Lui la chiama missione. Io la chiamo passeggiata con la torcia.|Se uno zombie ti chiede un autografo, digli che firmiamo solo il martedì.|La macchina? Non toccarla. È di famiglia, e un po’ brontola.',
+  'say.florist.lines': 'Un rametto in più non ha mai fatto male a nessuno. Neanche a chi riposa.|Crisantemi, gigli e qualche ortica per chi se la merita.|I fiori freschi li porto io. Le spine, quelle sono mie.',
+
+  // ── Ufficio postale: la lettera da scrivere, quella che torna, la notifica ──
+  // breve: titolo sulla pergamena
+  'post.write.title': 'Una lettera',
+  'post.write.placeholder': 'Scrivi a chi vuoi. Partirà di sicuro…',
+  // breve: pulsante
+  'post.write.send': 'Spedisci',
+  // breve: titolo sulla pergamena
+  'post.read.title': 'È tornata una lettera',
+  'post.read.sent': 'Spedita il {date}',
+  'post.read.sign': '— timbro dell’Ufficio postale: «destinatario sconosciuto»',
+  // breve: pulsante
+  'post.read.resend': 'Rispedisci',
+  // breve: occhiello del riquadro
+  'post.sent.kicker': 'Ufficio postale',
+  // breve: titolo del riquadro
+  'post.sent.title': 'Spedita!',
+  'post.sent.text': 'La lettera è partita. A chi arrivi, è un altro discorso.',
+  // breve: pulsante
+  'post.sent.ok': 'Bene',
+  // breve: battuta del postino nella notifica
+  'post.note.say': 'Posta!',
+  'post.note.text': 'C’è una lettera nella buca della casa del Custode. Una delle tue, tornata indietro.',
+  // breve: pulsante nella notifica
+  'post.note.read': 'Leggi',
 
   // ── Animali di casa (nome e frasi, una per animale) ──
   // breve: nome dell’animale (sopra il suo menù e nella notifica)

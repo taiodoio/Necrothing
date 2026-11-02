@@ -676,8 +676,29 @@ function fruitTree(lp: LP, x: number, zz: number, fruit: string, s: number) {
 }
 
 /** Le aggiunte del cortile (coordinate dell'ingombro 4×4, centro 0,0; la casetta sta sul retro). */
+/** Dove sta la buca delle lettere della casa del Custode (nel cortile, accanto al sentiero), e l'altezza della sua icona. */
+export const MAILBOX_AT: [number, number, number] = [0.62, 1.25, 1.62];
+
+/** Buca delle lettere su un paletto, con la bandierina: alzata quando c'è posta. */
+function mailboxLP(lp: LP, flag: boolean) {
+  const [x, , z] = MAILBOX_AT;
+  lp.push([x, 0, z], -0.35);
+  lp.cyl(0, 0, 0, 0.035, 0.03, 0.62, 5, LPC.woodDark, { vary: 0.1 });
+  lp.box(0, 0.62, 0, 0.2, 0.18, 0.3, '#b8463a', { bevel: 0.03, vary: 0.05 });
+  lp.push([0, 0.8, 0], 0, 0, Math.PI / 2).cyl(0, -0.1, 0, 0.09, 0.09, 0.2, 10, '#b8463a', { jitter: 0 }).pop(); // tetto tondo
+  lp.box(0, 0.68, 0.155, 0.14, 0.02, 0.01, '#1e1a1c', { jitter: 0 }); // fessura
+  lp.blob(0, 0.74, 0.16, 0.03, 0.022, 0.008, LPC.bone, { jitter: 0 }); // teschietto sul davanti
+  // bandierina sul fianco: dritta se c'è una lettera, giù se no
+  lp.push([0.105, 0.72, -0.05], 0, 0, flag ? 0 : -Math.PI / 2);
+  lp.box(0, 0, 0, 0.015, 0.22, 0.015, LPC.iron, { jitter: 0 });
+  lp.box(0, 0.16, 0.05, 0.012, 0.07, 0.1, flag ? '#f2c75a' : '#8a7a3a', flag ? { jitter: 0, bucket: 'glow' } : { jitter: 0 });
+  lp.pop();
+  lp.pop();
+}
+
 function housePartsLP(lp: LP, parts: Set<string>) {
   const r = lp.rng;
+  if (parts.has('mailbox')) mailboxLP(lp, parts.has('mailFlag'));
   if (parts.has('pumpkins')) { pumpkin(lp, -0.95, 0, 0.02, 0.14, true, true, 0.3); pumpkin(lp, -1.15, 0, 0.2, 0.1, true, false, -0.5); pumpkin(lp, 0.1, 0, -0.05, 0.09, false, false); }
   if (parts.has('toolbench')) {
     // banco da lavoro accanto alla casa, con la rastrelliera degli attrezzi appesi

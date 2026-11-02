@@ -392,6 +392,34 @@ export function toggleLight(s: SaveData, id: string): ActionResult {
   return ok(t(p.lit ? 'rules.light.on' : 'rules.light.off'));
 }
 
+/**
+ * Modifica di una tomba: si riscrive quello che si è scritto alla sepoltura
+ * (nome, date, causa, epitaffio, foto, lapide). La categoria no: da lei
+ * dipendono i punti e i fuochi fatui già dati (e il limite delle cose astratte).
+ * Posto, cure, fiori e stato restano quelli.
+ */
+export function editGrave(s: SaveData, id: string, d: BurialDraft, now: Date): ActionResult {
+  const g = graveById(s, id);
+  const draft: BurialDraft = { ...d, category: g.category };
+  const first = Object.values(validateDraft(draft, now))[0];
+  if (first) throw new GameError(first);
+  if (draft.graveType !== g.graveType) {
+    const av = graveTypeAvailability(s, draft.graveType!);
+    if (av === 'full') throw new GameError(t('rules.access.full'));
+    if (av === 'rank') throw new GameError(t('rules.bury.rankTooLow'));
+  }
+  g.name = draft.name.trim();
+  g.birthDate = draft.birthDate;
+  g.deathDate = draft.deathDate!;
+  g.deathCause = draft.deathCause!;
+  if (draft.deathCause === 'custom') g.deathCauseText = draft.deathCauseText.trim();
+  else delete g.deathCauseText;
+  g.epitaph = draft.epitaph.trim() || null;
+  g.photoId = draft.photoId;
+  g.graveType = draft.graveType!;
+  return ok(t('rules.grave.edited'));
+}
+
 export function setText(s: SaveData, id: string, text: string): ActionResult {
   const p = placedById(s, id);
   if (!CATALOG[p.type]?.editableText) throw new GameError(t('rules.text.notEditable'));

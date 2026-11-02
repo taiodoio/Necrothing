@@ -20,6 +20,7 @@ import { t } from '../i18n/index.ts';
 import { closeDrawer, confirmDialog, h, openDrawer, toast } from './dom.ts';
 import type { UI } from './UI.ts';
 import { monoIcon } from './monoIcons.ts';
+import { icon } from './icons.ts';
 
 let groundModel: CachedModel | null = null;
 
@@ -156,6 +157,8 @@ export function openCustomize(ui: UI) {
   const options = <K extends 'head' | 'hair' | 'hat' | 'outfit' | 'glasses' | 'beard' | 'mustache'>(key: K) => {
     const box = h('div', { class: 'look-tiles', role: 'group' });
     const disabled = off(key);
+    // sotto la griglia, per ogni scelta bloccata: il lucchetto e che cosa la sblocca (sul telefono il «title» non si vede)
+    const notes: HTMLElement[] = [];
     for (const [v, label] of LOOK_STYLES[key] as Array<[CustodeLook[K], string]>) {
       const img = h('img', { alt: '', width: 72, height: 72, draggable: false }) as HTMLImageElement;
       // le regole dicono se si può indossare (accesso, poi il traguardo: il cappello da strega con le pozioni);
@@ -163,15 +166,18 @@ export function openCustomize(ui: UI) {
       const av = R.lookOptionAvailability(game.state, key, v);
       const locked = av !== 'ok' && look[key] !== v;
       const feat = locked && av === 'feat' ? HAT_FEATS[v as keyof typeof HAT_FEATS] : null;
-      const why = !locked ? undefined : feat ? t('look.ui.hatLocked', { label: feat.label, have: Math.min(feat.goal, game.state.player.counters[feat.counter]), goal: feat.goal }) : t('shop.need.full.long');
-      const b = h('button', { class: `look-tile${look[key] === v ? ' active' : ''}${locked ? ' locked' : ''}`, 'aria-pressed': String(look[key] === v), disabled: disabled || locked, title: why, onclick: () => {
+      const why = !locked ? undefined : feat ? t(`look.ui.unlock.${feat.counter}`, { have: Math.min(feat.goal, game.state.player.counters[feat.counter]), goal: feat.goal }) : t('shop.need.full.long');
+      // bloccata: si tocca lo stesso, e il messaggio dice cosa serve
+      const b = h('button', { class: `look-tile${look[key] === v ? ' active' : ''}${locked ? ' locked' : ''}`, 'aria-pressed': String(look[key] === v), 'aria-disabled': locked ? 'true' : null, disabled: disabled, title: why, onclick: () => {
+        if (locked) { toast(t('look.ui.lockedNote', { name: label, why: why! })); return; }
         for (const x of Array.from(box.children)) { x.classList.toggle('active', x === b); x.setAttribute('aria-pressed', String(x === b)); }
         apply({ [key]: v } as Partial<CustodeLook>);
-      } }, h('span', { class: 'look-thumb' }, img), h('span', { class: 'look-tile-label' }, label));
+      } }, h('span', { class: 'look-thumb' }, img, locked ? h('span', { class: 'look-lock', 'aria-hidden': 'true' }, icon('lock', 24)) : null), h('span', { class: 'look-tile-label' }, label));
+      if (locked && !disabled) notes.push(h('p', { class: 'look-lock-note' }, icon('lock', 16), h('span', {}, t('look.ui.lockedNote', { name: label, why: why! }))));
       void lookThumb(key, v).then((url) => { if (url) { img.src = url; img.classList.add('ready'); } });
       box.append(b);
     }
-    return box;
+    return notes.length ? h('div', {}, box, ...notes) : box;
   };
 
   /** Tasselli di colore con nome (accessibili via aria-label). */

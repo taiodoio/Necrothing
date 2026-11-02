@@ -364,6 +364,8 @@ export default {
   'look.ui.bandaid': 'Cerotto',
   // suggerimento su un cappello bloccato: {label} è l'impresa, poi il progresso
   'look.ui.hatLocked': '{label} ({have}/{goal})',
+  'look.ui.unlock.potionsSold': 'si sblocca quando la strega del suo angolo avrà venduto {goal} pozioni ({have}/{goal}).',
+  'look.ui.lockedNote': '{name}: {why}',
   'look.ui.bald.pumpkin': 'Con la testa a zucca capelli, barba, baffi, pelle e occhi non si usano: tornano scegliendo un’altra testa.',
   'look.ui.bald.skull': 'Con la testa a teschio capelli, barba, baffi, pelle e occhi non si usano: tornano scegliendo un’altra testa.',
   'look.ui.unsaved.title': 'Modifiche non salvate',

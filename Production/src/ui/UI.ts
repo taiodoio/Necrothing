@@ -328,6 +328,11 @@ export class UI {
       if (this.game.editMode || this.game.placement?.trace) {
         // anche in Modifica si vedono i dettagli (sentieri, aiuole & co. si toccano solo qui)
         if (icons) actions.push({ act: 'detail', label: t('ctx.detail'), icon: 'search' });
+        // in Modifica, sull'oggetto: ruotarlo (se si può) e riporlo nell'inventario (non la Bottega né la Casa)
+        if (this.game.editMode && !this.game.placement) {
+          if (def.rotatable) actions.push({ act: 'rotate', label: t('ctx.rotate'), icon: 'rotate' });
+          if (!def.permanent) actions.push({ act: 'store', label: t('ctx.store'), icon: 'store' });
+        }
       } else {
         const own = this.placeableActions(p.id, sub);
         actions.push(...own.actions);

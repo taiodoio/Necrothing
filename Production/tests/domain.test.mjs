@@ -1171,3 +1171,47 @@ test('tracciato: segue il dito e piega da solo quando il dito gira', () => {
   // ogni casella una volta sola, con il verso del suo tratto
   assert.ok(traceDrawCells(d).every((c) => c.rot === 0));
 });
+
+test('modifica della tomba: si riscrive quanto scritto alla sepoltura, la categoria e il resto no', () => {
+  const s = createNewGame(NOW, 3);
+  const a = spot(s);
+  const { grave } = R.bury(s, draft({ epitaph: 'Ciao' }), a.x, a.y, NOW);
+  grave.hasFlowers = true;
+  const xp = s.player.xp, wisps = s.player.wisps;
+  R.editGrave(s, grave.id, { ...draft(), name: '  Caricatore rapido ', category: 'abstract', deathCause: 'custom', deathCauseText: ' Morso dal criceto ', epitaph: '', birthDate: '2020-01-01' }, NOW);
+  const g = s.graves.find((x) => x.id === grave.id);
+  assert.equal(g.name, 'Caricatore rapido');
+  assert.equal(g.category, 'electronics', 'la categoria non cambia (da lei dipendono i punti)');
+  assert.equal(g.deathCause, 'custom');
+  assert.equal(g.deathCauseText, 'Morso dal criceto');
+  assert.equal(g.epitaph, null);
+  assert.equal(g.birthDate, '2020-01-01');
+  assert.deepEqual([g.x, g.y, g.hasFlowers, s.player.xp, s.player.wisps], [a.x, a.y, true, xp, wisps], 'posto, cure e ricompense restano');
+  // tornando a una causa della lista il testo a mano sparisce
+  R.editGrave(s, grave.id, { ...draft(), deathCause: 'broken_cable' }, NOW);
+  assert.equal(s.graves.find((x) => x.id === grave.id).deathCauseText, undefined);
+  // regole della sepoltura: nome vuoto e data futura no
+  assert.throws(() => R.editGrave(s, grave.id, draft({ name: ' ' }), NOW), R.GameError);
+  assert.throws(() => R.editGrave(s, grave.id, draft({ deathDate: '2099-01-01' }), NOW), R.GameError);
+});
+
+test('effetti: solo oggetti veri, e le varianti prendono quello della famiglia', async () => {
+  const { itemEffect, EFFECT_TYPES } = await import('../src/ui/effects.ts');
+  const ids = new Set(CATALOG_LIST.map((d) => d.id));
+  for (const id of EFFECT_TYPES) assert.ok(ids.has(id), id);
+  assert.ok(itemEffect('mausoleum').includes('10'));
+  assert.equal(itemEffect('pet_house_cat'), itemEffect('pet_house'));
+  assert.equal(itemEffect('lantern'), null);
+});
+
+test('traguardi di rango: uno per ogni rango oltre il primo', async () => {
+  const { ACHIEVEMENTS } = await import('../src/game/progression.ts');
+  const { ACH_ICONS, RANK_ICONS } = await import('../src/ui/icons.ts');
+  const { RANKS } = await import('../src/game/balance.ts');
+  for (const r of RANKS.filter((x) => x.level > 1)) {
+    const a = ACHIEVEMENTS.find((x) => x.id === `rank_${r.level}`);
+    assert.ok(a, `rango ${r.level}`);
+    assert.equal(ACH_ICONS[a.id], RANK_ICONS[r.level]);
+  }
+  for (const a of ACHIEVEMENTS) assert.ok(ACH_ICONS[a.id], `icona per ${a.id}`);
+});

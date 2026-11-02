@@ -166,6 +166,7 @@ export const gallery = {
 export const memorials = {
   get: (id: string) => tx<MemorialPhoto | undefined>('memorials', 'readonly', (s) => s.get(id) as IDBRequest<MemorialPhoto | undefined>),
   put: (m: MemorialPhoto) => tx('memorials', 'readwrite', (s) => s.put(m)),
+  remove: (id: string) => tx('memorials', 'readwrite', (s) => s.delete(id)),
   list: () => tx<MemorialPhoto[]>('memorials', 'readonly', (s) => s.getAll() as IDBRequest<MemorialPhoto[]>),
   clear: () => tx('memorials', 'readwrite', (s) => s.clear()),
 };

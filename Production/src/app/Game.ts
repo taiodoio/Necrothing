@@ -22,7 +22,7 @@ import '../render/lowpoly/index.ts';
 import { placeableKey, placeableSeed, seedCount } from '../render/keys.ts';
 import type { PVis } from '../render/types.ts';
 import { UI } from '../ui/UI.ts';
-import { confirmDialog, drawerOpen, floater, toast, uiBlocking } from '../ui/dom.ts';
+import { confirmDialog, drawerOpen, floater, keepFieldVisible, toast, uiBlocking } from '../ui/dom.ts';
 import { celebrateAchievement, celebrateRank } from '../ui/celebrate.ts';
 import { rankForXp } from '../game/progression.ts';
 import { npcNote, type NpcNote } from '../ui/npcNote.ts';
@@ -453,11 +453,17 @@ export class Game {
     root.style.setProperty('--visual-viewport-height', `${height}px`);
     root.style.setProperty('--visual-viewport-top', `${offsetTop}px`);
     root.style.setProperty('--visual-viewport-center', `${offsetTop + height / 2}px`);
+    // la tastiera ha cambiato la parte visibile: il campo in uso torna in vista (dopo che il pannello si è adattato)
+    if (isTextEntry(document.activeElement)) requestAnimationFrame(() => keepFieldVisible(document.activeElement));
   };
   private readonly onTextFocusIn = (event: FocusEvent) => {
     if (!isTextEntry(event.target)) return;
     this.textInputFocused = true;
     this.viewportBeforeKeyboard = Math.max(this.viewportBeforeKeyboard, window.visualViewport?.height ?? window.innerHeight);
+    // subito, e di nuovo a tastiera aperta (la sua animazione dura circa un terzo di secondo)
+    const field = event.target as Element;
+    requestAnimationFrame(() => keepFieldVisible(field));
+    setTimeout(() => { if (document.activeElement === field) keepFieldVisible(field); }, 380);
   };
   private readonly onTextFocusOut = (event: FocusEvent) => {
     if (!isTextEntry(event.target)) return;
@@ -1775,6 +1781,7 @@ export class Game {
       const v = queue.shift();
       if (!v) return;
       getModel(placeableKey(v));
+      this.auto?.hold(); // generare un modello può prendersi un frame intero: non è il telefono che non regge
       idle(step);
     };
     idle(step);
@@ -1908,6 +1915,9 @@ export class Game {
   }
 
   private profile(): QualityProfile { return PROFILES[this.level()]; }
+
+  /** La qualità che si sta usando adesso (con Auto, il livello a cui è arrivata), per le impostazioni. */
+  qualityInUse(): Quality { return this.level(); }
 
   /** Il livello grafico in uso, per l'interfaccia (es. le animazioni del primo ingresso). */
   uiQuality(): Quality { return this.level(); }
@@ -2351,7 +2361,7 @@ export class Game {
 
 const AUTO_KEY = 'necro3d:auto-quality';
 /** Cresce quando cambia la stima del dispositivo: i profili ricordati prima si rifanno (v3: risoluzione massima della fascia stimata). */
-const AUTO_VERSION = 3;
+const AUTO_VERSION = 4; // v4: i profili rimasti in Media per gli scatti dell'avvio si rifanno
 /** Dopo quanto senza tocchi il gioco rallenta, e a quanti frame al secondo (sotto i menù ancora meno). */
 const IDLE_MS = 4000, IDLE_FPS = 15, MENU_FPS = 10, UNFOCUSED_FPS = 5;
 let gpuName: string | null = null;
@@ -2376,7 +2386,9 @@ function loadAutoProfile(): AutoProfile {
   const info = deviceInfo();
   try {
     const saved = JSON.parse(localStorage.getItem(AUTO_KEY) ?? 'null') as (AutoProfile & { gpu: string; v?: number }) | null;
-    if (saved && saved.v === AUTO_VERSION && saved.gpu === info.gpu && saved.tier in PROFILES && saved.top in PROFILES) return saved;
+    // il livello in uso si ricorda, ma il tetto torna quello stimato: un livello che una volta non ha retto
+    // (magari per un momento pesante) si può ritentare a ogni apertura, non resta escluso per sempre
+    if (saved && saved.v === AUTO_VERSION && saved.gpu === info.gpu && saved.tier in PROFILES) return { tier: saved.tier, step: saved.step, ceiling: saved.ceiling, top: detectTier(info) };
   } catch { /* profilo illeggibile: si riparte */ }
   return newAutoProfile(detectTier(info));
 }

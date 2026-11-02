@@ -10,7 +10,7 @@ import { svgToPng } from './natureDecor.ts';
 /** L'icona di ogni voce dei dati (le etichette sono le chiavi dei testi). */
 export const FACT_ICONS = {
   category: 'tag', lived: 'calendar', cause: 'skull', buried: 'shovel', stone: 'tomb', state: 'flower', ghosts: 'ghost',
-  condition: 'hammer', light: 'bulb', business: 'wisp', available: 'all', owned: 'home',
+  condition: 'hammer', light: 'bulb', business: 'wisp', available: 'all', owned: 'home', effect: 'effect',
 } as const;
 export type FactKind = keyof typeof FACT_ICONS;
 

@@ -26,6 +26,8 @@ import { checkName, NAME_MAX } from '../game/playerName.ts';
 import { distribution } from '../config/distribution.ts';
 import { CONTACT, PRIVACY_URL } from '../config/contact.ts';
 import { monoIcon } from './monoIcons.ts';
+import { QUALITY_LABELS } from '../app/AutoQuality.ts';
+import { itemEffect } from './effects.ts';
 import { factLabel, parchment } from './parchment.ts';
 import { previewUrl, warmPreviews } from './previews.ts';
 import { HOUSE_PARTS, HOUSE_ROOFS } from '../game/house.ts';
@@ -81,34 +83,74 @@ export async function postcardData(g: { name: string; birthDate: string | null; 
   };
 }
 
-export function openBurial(ui: UI, initial?: R.BurialDraft, startStep = 0) {
+/** Modifica di una tomba: la schermata della sepoltura con quanto si era scritto (categoria esclusa). */
+export function openGraveEdit(ui: UI, id: string) {
+  const g = ui.game.state.graves.find((x) => x.id === id);
+  if (!g) return;
+  const d: R.BurialDraft = {
+    name: g.name, category: g.category, birthDate: g.birthDate, deathDate: g.deathDate, deathCause: g.deathCause,
+    deathCauseText: g.deathCauseText ?? '', epitaph: g.epitaph ?? '', graveType: g.graveType, photoId: g.photoId ?? null,
+  };
+  openBurial(ui, d, 0, id);
+}
+
+/** I campi che una modifica può cambiare (per capire se è cambiato qualcosa). */
+const editable = (d: R.BurialDraft) => JSON.stringify([d.name.trim(), d.birthDate, d.deathDate, d.deathCause, d.deathCause === 'custom' ? d.deathCauseText.trim() : '', d.epitaph.trim(), d.graveType]);
+
+export function openBurial(ui: UI, initial?: R.BurialDraft, startStep = 0, editId?: string) {
   const game = ui.game;
+  const edit = editId ? game.state.graves.find((x) => x.id === editId) ?? null : null;
   // nel cortile si prova soltanto: la prima sepoltura si fa nel cimitero vero (dove resta)
-  if (game.inYard) { toast(t('onboarding.yard.noBury')); return; }
+  if (game.inYard && !edit) { toast(t('onboarding.yard.noBury')); return; }
   // con i limiti della Demo (mai nella beta) oltre le tombe concesse non se ne comincia un'altra
   if (!initial && !R.canStartBurial(game.state)) { toast(t('rules.bury.demoLimit', { n: personalGraveLimit() ?? 0 })); return; }
   const now = game.now();
   const d: R.BurialDraft = initial ? { ...initial } : R.emptyDraft(now);
-  if (!initial) burialPhoto = new BurialPhoto();
+  if (!initial || edit) burialPhoto = new BurialPhoto();
   const photo = burialPhoto;
   let step = startStep;
   const total = 6;
+  // in modifica: com'era all'apertura (testi e foto), per accendere «Salva» solo se qualcosa cambia
+  const before = editable(d);
+  let photoBefore = photo.rev;
+  const changed = () => editable(d) !== before || photo.rev !== photoBefore;
+  if (edit?.photoId) {
+    void memorials.get(edit.photoId).then(async (m) => {
+      if (!m || photo.has) return;
+      await photo.loadUrl(m.dataUrl);
+      photoBefore = photo.rev;
+      if (step === 1) render();
+    }).catch(() => undefined);
+  }
+  let saveBtn: HTMLButtonElement | null = null;
+  const editValid = () => Object.keys(R.validateDraft(d, now)).length === 0;
+  const syncSave = () => { if (saveBtn) saveBtn.disabled = !(changed() && editValid()); };
 
   const render = () => {
     const errors = R.validateDraft(d, now);
     $('#drawer').dataset.burialStep = String(step);
-    const body = h('div', { class: `burial-step burial-step-${step}` }, h('div', { class: 'steps' }, ...Array.from({ length: total }, (_, i) => h('i', { class: i <= step ? 'on' : '' }))));
+    // in modifica, al posto dei puntini, le parti da toccare direttamente (il riepilogo non serve)
+    const EDIT_TABS: Array<[number, string]> = [[0, t('burial.edit.tab.name')], [1, t('burial.edit.tab.photo')], [2, t('burial.edit.tab.dates')], [3, t('burial.edit.tab.epitaph')], [4, t('burial.edit.tab.stone')]];
+    const progress = edit
+      ? h('div', { class: 'chips edit-tabs', role: 'tablist' }, ...EDIT_TABS.map(([n, label]) => h('button', { class: `chip ${n === step ? 'active' : ''}`, role: 'tab', 'aria-selected': String(n === step), onclick: () => { step = n; render(); } }, label)))
+      : h('div', { class: 'steps' }, ...Array.from({ length: total }, (_, i) => h('i', { class: i <= step ? 'on' : '' })));
+    const body = h('div', { class: `burial-step burial-step-${step}` }, progress);
+    // i campi di testo cambiano senza ridisegnare il passo: «Salva» si aggiorna a ogni tasto
+    if (edit) { body.addEventListener('input', () => queueMicrotask(syncSave)); body.addEventListener('change', () => queueMicrotask(syncSave)); }
     const field = (label: string, input: Node, err?: string) => h('div', { class: 'field' }, h('label', {}, label), input, err ? h('span', { class: 'err' }, err) : null);
     if (step === 0) {
-      body.append(
-        h('p', { class: 'muted' }, t('burial.intro')),
+      body.append(...[
+        edit ? null : h('p', { class: 'muted' }, t('burial.intro')),
         field(t('burial.name.label'), h('input', { value: d.name, maxLength: 40, placeholder: t('burial.name.placeholder'), oninput: (e: Event) => { d.name = (e.target as HTMLInputElement).value; } })),
+        // in modifica la categoria si vede ma non si cambia: da lei dipendono i punti già guadagnati
         field(t('burial.category.label'), h('div', { class: 'chips' }, ...CATEGORIES.map((c) => h('button', {
           class: `chip ${d.category === c ? 'active' : ''}`,
-          onclick: () => { d.category = c; render(); },
+          disabled: !!edit && d.category !== c,
+          onclick: () => { if (edit) return; d.category = c; render(); },
         }, CATEGORY_LABELS[c])))),
-      );
-      if (d.category === 'abstract' && !R.canBuryAbstractToday(game.state, now)) body.append(h('p', { class: 'err muted' }, t('burial.abstractLimit')));
+        edit ? h('p', { class: 'muted edit-note' }, icon('lock', 14), t('burial.edit.categoryLocked')) : null,
+      ].filter((x) => x !== null) as HTMLElement[]);
+      if (!edit && d.category === 'abstract' && !R.canBuryAbstractToday(game.state, now)) body.append(h('p', { class: 'err muted' }, t('burial.abstractLimit')));
     } else if (step === 1) {
       body.append(photoStep(photo, render));
     } else if (step === 2) {
@@ -143,7 +185,8 @@ export function openBurial(ui: UI, initial?: R.BurialDraft, startStep = 0) {
       body.append(h('div', { class: 'grid' }, ...GRAVE_TYPES.map((gt) => {
           // prima l'accesso commerciale, poi il rango (le regole: graveTypeAvailability)
           const av = R.graveTypeAvailability(game.state, gt);
-          const locked = av !== 'ok';
+          // la lapide che la tomba ha già resta sempre sceglibile
+          const locked = av !== 'ok' && gt !== edit?.graveType;
           const why = av === 'full' ? t('shop.lock.full') : t('shop.need.rank.short', { n: GRAVE_TYPE_MIN_RANK[gt] });
           const url = lit ? previewUrl(`grave-${gt}`) : null;
           if (url) {
@@ -182,6 +225,24 @@ export function openBurial(ui: UI, initial?: R.BurialDraft, startStep = 0) {
     }
     setDrawerBody(body);
 
+    if (edit) {
+      // un solo pulsante: si accende quando qualcosa è cambiato (e tutto è in regola)
+      saveBtn = h('button', { class: 'big-btn', onclick: async () => {
+        const err = Object.values(R.validateDraft(d, now))[0];
+        if (err) { toast(err); return; }
+        const old = edit.photoId ?? null;
+        const photoId = photo.rev !== photoBefore && photo.has ? await photo.store() ?? old : old;
+        if (game.act((s, n) => R.editGrave(s, edit.id, { ...d, photoId }, n))) {
+          if (old && photoId !== old) void memorials.remove(old).catch(() => undefined);
+          closeDrawer(true);
+          ui.openDetail(edit.id);
+        }
+      } }, t('burial.edit.save')) as HTMLButtonElement;
+      syncSave();
+      setDrawerFooter(saveBtn);
+      return;
+    }
+
     // la validità si guarda al tocco, non al disegno: i campi di testo cambiano senza ridisegnare il passo
     const stepValid = () => {
       const errors = R.validateDraft(d, now);
@@ -203,7 +264,11 @@ export function openBurial(ui: UI, initial?: R.BurialDraft, startStep = 0) {
         h('button', { class: 'big-btn', disabled: !stepValid(), onclick: async () => { d.photoId = await photo.store(); closeDrawer(); game.startGravePlacement(d); } }, t('burial.choosePlace'))));
     }
   };
-  openDrawer(t('burial.title'), h('div'), { full: true, kind: 'burial' });
+  openDrawer(edit ? t('burial.edit.title') : t('burial.title'), h('div'), {
+    full: true, kind: 'burial',
+    // chiudendo con modifiche non salvate si chiede prima
+    beforeClose: edit ? () => (changed() ? confirmDialog({ title: t('burial.edit.leave.title'), message: t('burial.edit.leave.text'), ok: t('burial.edit.leave.ok'), cancel: t('burial.edit.leave.cancel'), danger: true }) : true) : undefined,
+  });
   render();
 }
 
@@ -361,6 +426,7 @@ export function openShop(ui: UI, cat: PlaceableCategory | 'house' = 'light', sel
       h('div', { class: 'shop-detail-top' }, itemImg(d.id, 'lit-hero'), h('h3', {}, d.label)),
       // interfaccia «viva»: descrizione e dati su pergamena, con le icone
       parchment('dc-facts', h('p', { class: 'p-desc' }, d.description), h('dl', { class: 'kv' },
+        ...effectRow(d.id),
         h('dt', {}, ...factLabel('category', t('detail.item.category'))), h('dd', {}, PLACEABLE_CATEGORY_LABELS[d.category]),
         h('dt', {}, ...factLabel('available', t('shop.detail.available'))), h('dd', {}, d.unique ? t('shop.detail.unique') : t('shop.detail.availableValue', { max: R.maxBuyable(s, d.id) })),
         (s.inventory[d.id] ?? 0) > 0 ? h('dt', {}, ...factLabel('owned', t('shop.detail.owned'))) : null, (s.inventory[d.id] ?? 0) > 0 ? h('dd', {}, String(s.inventory[d.id])) : null)),
@@ -472,6 +538,7 @@ export function openDetail(ui: UI, id: string) {
   if (!p) return;
   const d = CATALOG[p.type];
   const facts = h('dl', { class: 'kv' },
+    ...effectRow(p.type),
     h('dt', {}, ...factLabel('category', t('detail.item.category'))), h('dd', {}, PLACEABLE_CATEGORY_LABELS[d.category]),
     d.decays ? h('dt', {}, ...factLabel('condition', t('detail.item.condition'))) : null, d.decays ? h('dd', { class: p.broken ? 'warn' : '' }, p.broken ? t('detail.item.broken', { n: R.placeableRepairPrice(s, p.type) }) : p.dirty ? t('detail.item.dirty') : t('detail.item.ok')) : null,
     d.light ? h('dt', {}, ...factLabel('light', t('detail.item.light'))) : null, d.light ? h('dd', {}, p.broken ? t('detail.item.lightBroken') : p.lit ? t('detail.item.lightOn') : t('detail.item.lightOff')) : null,
@@ -506,12 +573,8 @@ function itemFooter(ui: UI, id: string): HTMLElement | null {
     // prima l'incasso pronto, poi ciò che va sistemato, poi la funzione dell'oggetto, poi la luce
     rank: a.act === 'collect' ? -1 : a.act === 'repair' ? 0 : a.act === 'clean' ? 1 : a.cls === 'primary' ? 2 : 3,
   }));
-  if (game.editMode && !game.placement) {
-    const item = game.state.placeables.find((p) => p.id === id);
-    const def = item && CATALOG[item.type];
-    if (def?.rotatable) own.push({ icon: 'variant', label: t('ctx.rotate'), rank: 6, run: () => { closeDrawer(true); game.performEntityAction(id, 'rotate'); } });
-    if (def && !def.permanent) own.push({ icon: 'bag', label: t('ctx.store'), rank: 7, run: () => { closeDrawer(true); game.performEntityAction(id, 'store'); } });
-  }
+  // in Modifica la scheda si guarda soltanto: ruota e riponi stanno nel menù sull'oggetto
+  if (game.editMode && !game.placement) return closeOnlyFooter();
   const pets: Array<Act & { rank: number }> = pet.filter((a) => !a.disabled).map((a) => ({
     icon: a.icon, label: a.label, rank: a.cls === 'primary' ? 4 : 5,
     run: () => { closeDrawer(true); game.select(null); a.run(); },
@@ -519,9 +582,23 @@ function itemFooter(ui: UI, id: string): HTMLElement | null {
   const all = [...own, ...pets].sort((a, b) => a.rank - b.rank);
   if (!all.length) return null;
   const [main, ...rest] = all;
-  return h('div', { style: 'display:grid;gap:6px' },
-    rest.length ? moreActions(rest) : null,
-    h('button', { class: 'big-btn', onclick: main.run }, icon(main.icon, 22), main.label));
+  return actionRow(h('button', { class: 'big-btn', onclick: main.run }, icon(main.icon, 22), main.label), rest.length ? moreActions(rest, { compact: true }) : null);
+}
+
+/** La riga «Effetto» (per primo: è quello che conta) se l'oggetto fa qualcosa nel gioco. */
+function effectRow(type: string): HTMLElement[] {
+  const fx = itemEffect(type);
+  return fx ? [h('dt', {}, ...factLabel('effect', t('detail.item.effect'))), h('dd', { class: 'effect' }, fx)] : [];
+}
+
+/** In fondo a una scheda: l'azione principale larga e, accanto, «Altro» quadrato (solo i tre puntini). */
+export function actionRow(main: HTMLElement, more: HTMLElement | null): HTMLElement {
+  return h('div', { class: 'act-row' }, main, more);
+}
+
+/** In Modifica le schede di oggetti e tombe hanno solo «Chiudi». */
+export function closeOnlyFooter(): HTMLElement {
+  return h('button', { class: 'big-btn ghost', onclick: () => closeDrawer() }, t('dialog.close'));
 }
 
 /** Conferma della riesumazione (o del «Libera ricordo»), poi arriva il becchino con la carriola. */
@@ -541,14 +618,14 @@ export async function confirmExhume(ui: UI, id: string, name: string, kind: 'gra
 }
 
 /**
- * «Altro»: pulsante secondario sopra l'azione principale, con l'icona a sinistra
- * come lei; il menù delle azioni secondarie si apre sopra di lui, in sovrimpressione.
+ * «Altro»: pulsante secondario (nelle schede, quadrato accanto all'azione
+ * principale: `compact`); il menù delle azioni secondarie si apre sopra di lui, in sovrimpressione.
  * Ogni voce ha la sua icona, quelle distruttive in rosso. Dietro, la scheda si
  * scurisce perché il menù si legga bene. Si chiude scegliendo una voce,
  * toccando di nuovo «Altro» o toccando fuori.
  */
-export function moreActions(items: Array<{ icon: string; label: string; danger?: boolean; run: () => void } | null>): HTMLElement {
-  const wrap = h('div', { class: 'more' });
+export function moreActions(items: Array<{ icon: string; label: string; danger?: boolean; run: () => void } | null>, opts: { compact?: boolean } = {}): HTMLElement {
+  const wrap = h('div', { class: opts.compact ? 'more compact' : 'more' });
   const setOpen = (open: boolean) => {
     list.hidden = !open;
     scrim.hidden = !open;
@@ -560,8 +637,9 @@ export function moreActions(items: Array<{ icon: string; label: string; danger?:
   const scrim = h('div', { class: 'more-scrim' });
   const list = h('div', { class: 'more-list', role: 'menu' }, ...items.filter((x) => x !== null).map((it) =>
     h('button', { class: `more-item${it.danger ? ' danger' : ''}`, role: 'menuitem', onclick: () => { setOpen(false); it.run(); } }, icon(it.icon, 22), h('span', {}, it.label))));
-  const toggle = h('button', { class: 'big-btn ghost more-toggle', 'aria-expanded': 'false', 'aria-haspopup': 'menu', onclick: () => setOpen(list.hidden) },
-    icon('more', 22), t('detail.more'));
+  // compatto (accanto all'azione principale): solo i tre puntini, il nome resta per i lettori di schermo
+  const toggle = h('button', { class: 'big-btn ghost more-toggle', 'aria-expanded': 'false', 'aria-haspopup': 'menu', 'aria-label': t('detail.more'), title: t('detail.more'), onclick: () => setOpen(list.hidden) },
+    icon('more', 22), opts.compact ? null : t('detail.more'));
   list.hidden = true;
   scrim.hidden = true;
   wrap.append(scrim, list, toggle);
@@ -629,15 +707,7 @@ function keeperTab(ui: UI, openLook: () => void): HTMLElement {
     class: 'pl-name', value: p.name, maxLength: NAME_MAX * 2, 'aria-label': t('player.name'), enterkeyhint: 'done',
     onfocus: () => {
       penState(true);
-      // Con la tastiera aperta il Custode resta visibile e il campo viene
-      // portato nell'area utile del pannello, senza far scorrere tutta la pagina.
-      requestAnimationFrame(() => {
-        const body = name.closest<HTMLElement>('.drawer-body');
-        if (!body) return;
-        const field = name.getBoundingClientRect(), viewport = body.getBoundingClientRect();
-        if (field.bottom > viewport.bottom - 12) body.scrollTop += field.bottom - viewport.bottom + 12;
-        else if (field.top < viewport.top + 12) body.scrollTop -= viewport.top + 12 - field.top;
-      });
+      // con la tastiera aperta il campo resta nell'area utile del pannello (keepFieldVisible, chiamato dal gioco)
     },
     // uscendo dal campo (spunta, Invio o tocco altrove) il nome si salva e la tastiera si chiude
     onblur: (e: Event) => {
@@ -968,6 +1038,8 @@ export function openSettings(ui: UI) {
     graphics: [
       h('div', { class: 'setting' }, t('settings.quality'), seg(s.quality, [['auto', t('settings.quality.auto')], ['low', t('settings.quality.low')], ['medium', t('settings.quality.medium')], ['high', t('settings.quality.high')]], (v) => game.setQuality(v))),
       s.quality === 'auto' ? h('p', { class: 'muted', style: 'margin:-2px 0 4px;font-size:12px' }, t('settings.quality.autoHint')) : null,
+      // con Auto: il livello a cui è arrivata adesso (alta, media o bassa)
+      s.quality === 'auto' ? h('p', { class: 'quality-now' }, monoIcon('sparkle', 16), h('span', {}, t('settings.quality.now', { level: QUALITY_LABELS[game.qualityInUse()] }))) : null,
       h('div', { class: 'setting' }, t('settings.fps'), seg<FpsSetting>(s.fps, [['auto', t('settings.fps.auto')], ['30', t('settings.fps.30')], ['60', t('settings.fps.60')]], (v) => game.setFps(v))),
       h('p', { class: 'muted', style: 'margin:-2px 0 4px;font-size:12px' }, s.fps === 'auto' ? t('settings.fps.autoHint') : s.fps === '30' ? t('settings.fps.30Hint') : t('settings.fps.60Hint')),
       h('div', { class: 'setting' }, t('settings.time'), seg<TimeOverride>(s.timeOverride, [['auto', t('settings.time.auto')], ['day', t('settings.time.day')], ['dusk', t('settings.time.dusk')], ['night', t('settings.time.night')]], (v) => game.setTimeOverride(v))),

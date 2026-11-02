@@ -67,7 +67,9 @@ export const ACHIEVEMENTS: AchievementDef[] = [
   { id: 'district_tech', name: t('ach.districtTech.name'), description: t('ach.districtTech.desc'), icon: '🔌', tier: 'silver', value: has((s) => themes(s).has('tech')), goal: 1 },
   { id: 'master_planner', name: t('ach.masterPlanner.name'), description: t('ach.masterPlanner.desc'), icon: '🗺️', tier: 'gold', value: (s) => themes(s).size, goal: 3 },
   { id: 'expansion', name: t('ach.expansion.name'), description: t('ach.expansion.desc'), icon: '🧱', tier: 'silver', value: (s) => s.world.expansionLevel, goal: 1 },
+  { id: 'rank_2', name: t('ach.rank2.name'), description: t('ach.rank2.desc'), icon: '🔧', tier: 'bronze', value: (s) => rankForXp(s.player.xp).level, goal: 2 },
   { id: 'rank_3', name: t('ach.rank3.name'), description: t('ach.rank3.desc'), icon: '⛏️', tier: 'silver', value: (s) => rankForXp(s.player.xp).level, goal: 3 },
+  { id: 'rank_4', name: t('ach.rank4.name'), description: t('ach.rank4.desc'), icon: '🌾', tier: 'gold', value: (s) => rankForXp(s.player.xp).level, goal: 4 },
   { id: 'rank_5', name: t('ach.rank5.name'), description: t('ach.rank5.desc'), icon: '👑', tier: 'gold', value: (s) => rankForXp(s.player.xp).level, goal: 5 },
 ];
 

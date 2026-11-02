@@ -69,6 +69,7 @@ export default {
   'rules.light.off': 'Spento.',
   'rules.text.notEditable': 'Qui non si scrive.',
   'rules.text.done': 'Scritta aggiornata.',
+  'rules.grave.edited': 'Tomba aggiornata.',
 
   // ── Regole: Bottega e inventario ──
   'rules.buy.season': 'Non è la stagione giusta.',
@@ -194,9 +195,13 @@ export default {
   'ach.expansion.name': 'Terra Consacrata',
   'ach.expansion.desc': 'Allarga il recinto per la prima volta.',
   // stesso nome del rango 3
+  'ach.rank2.name': 'Rottamatore Novizio',
+  'ach.rank2.desc': 'Raggiungi il rango 2.',
   'ach.rank3.name': 'Becchino del Silicio',
   'ach.rank3.desc': 'Raggiungi il rango 3.',
   // stesso nome del rango 5 (in inglese anche nell'originale)
+  'ach.rank4.name': 'Tristo Mietitore Quotidiano',
+  'ach.rank4.desc': 'Raggiungi il rango 4.',
   'ach.rank5.name': 'Lord of Decay',
   'ach.rank5.desc': 'Raggiungi il rango massimo.',
 

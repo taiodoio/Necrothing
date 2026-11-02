@@ -300,3 +300,9 @@
 .ui-next.ui-play .drawer[data-kind="burial"] .grid .card.locked b { color: var(--muted); }
 /* il riepilogo */
 .ui-next.ui-play .drawer[data-kind="burial"] .burial-next { margin: 14px 4px 0; text-align: center; font-size: 13.5px; }
+
+/* Modifica di una tomba: le parti da toccare al posto dei puntini, e la nota sulla categoria bloccata */
+.ui-next.ui-play .drawer[data-kind="burial"] .edit-tabs { flex-wrap: nowrap; overflow-x: auto; margin: 0 0 12px; padding-bottom: 2px; scrollbar-width: none; }
+.ui-next.ui-play .drawer[data-kind="burial"] .edit-tabs::-webkit-scrollbar { display: none; }
+.ui-next.ui-play .drawer[data-kind="burial"] .edit-tabs .chip { flex: 1 0 auto; justify-content: center; padding-left: 9px; padding-right: 9px; font-size: 13px; }
+.ui-next.ui-play .drawer[data-kind="burial"] .edit-note { display: flex; align-items: center; gap: 6px; margin: 6px 0 0; font-size: 13px; }

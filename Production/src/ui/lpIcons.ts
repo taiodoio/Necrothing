@@ -272,6 +272,23 @@ const ICONS: Record<string, () => Poly[]> = {
   // mausoleo: timpano, tre colonne, gradino
   mausoleum: () => [...fan([[2.4, 9], [12, 2.6], [21.6, 9]], T.stone, [10, 6]), ...rrect(3.4, 8.6, 20.6, 10.6, 0.4, T.stone, [8, 9]), ...[6.2, 12, 17.8].flatMap((x) => rrect(x - 1.5, 10.6, x + 1.5, 18.6, 0.4, T.stone, [x - 0.6, 12])),
     ...rrect(9.8, 12.4, 14.2, 18.6, 0.4, T.ink, [11, 14]), ...rrect(2, 18.4, 22, 21.4, 0.6, T.stone, [8, 19])],
+  // ── Modifica: ruota (il blocco con la freccia che gli gira attorno) e riponi (la borsa con la freccia che entra) ──
+  rotate: () => [...rrect(8.4, 8.4, 15.6, 15.6, 1.2, T.stone, [10.5, 10.5]),
+    ...line(arc(12, 12, 8, -Math.PI * 0.62, Math.PI * 1.02, 12), 2.4, T.gold),
+    ...fan([[12 + Math.cos(-Math.PI * 0.62) * 8 - 3.4, 12 + Math.sin(-Math.PI * 0.62) * 8 + 0.6], [12 + Math.cos(-Math.PI * 0.62) * 8 + 2.8, 12 + Math.sin(-Math.PI * 0.62) * 8 - 2.8], [12 + Math.cos(-Math.PI * 0.62) * 8 + 2.2, 12 + Math.sin(-Math.PI * 0.62) * 8 + 3.6]], T.gold)],
+  store: () => [...tf(ICONS.bag(), 0.8, 2.4, 5.4), ...bar(12, 0.9, 12, 6.2, 2.4, T.spectral), ...fan([[7.8, 5.4], [16.2, 5.4], [12, 10.2]], T.spectral, [11, 6.4])],
+  // ── i ranghi del Custode (medaglie dei traguardi di rango e festa del nuovo rango) ──
+  // 2 · Rottamatore Novizio: la chiave inglese
+  rankScrapper: () => [...bar(5.4, 18.6, 13.4, 10.6, 3.2, T.iron), ...ring(16, 8, 2, 4.8, T.iron, 10).filter((_, k) => k !== 8 && k !== 9), ...disc(5.4, 18.6, 1, T.ink, 6)],
+  // 3 · Becchino del Silicio: il chip con i piedini
+  rankSilicon: () => [...[7.6, 10.5, 13.5, 16.4].flatMap((v) => [...bar(v, 2.6, v, 5.4, 1.4, T.gold), ...bar(v, 18.6, v, 21.4, 1.4, T.gold), ...bar(2.6, v, 5.4, v, 1.4, T.gold), ...bar(18.6, v, 21.4, v, 1.4, T.gold)]),
+    ...rrect(5, 5, 19, 19, 1.6, T.iron, [9, 9]), ...rrect(8.6, 8.6, 15.4, 15.4, 0.8, T.spectral, [10.5, 10.5]), ...disc(7, 7, 0.7, T.ink, 6)],
+  // 4 · Tristo Mietitore Quotidiano: la falce
+  rankReaper: () => [...bar(7.4, 21.6, 14.2, 3.4, 2.2, T.wood), ...bar(9.6, 15.2, 12.6, 16.4, 1.8, T.woodDark),
+    ...fan([[14.6, 2.6], [10.4, 1.6], [5.6, 2.6], [2, 5.6], [1.4, 8.4], [4.4, 6.2], [8.6, 5], [13.4, 5.8]], T.iron, [8, 3.6])],
+  // 5 · Lord of Decay: il teschio con la corona
+  rankLord: () => [...tf(ICONS.skull(), 0.82, 2.2, 4.6), ...fan([[5.6, 7.4], [7.2, 2.6], [9.8, 5.4], [12, 0.8], [14.2, 5.4], [16.8, 2.6], [18.4, 7.4]], T.gold, [10, 4.6]),
+    ...disc(12, 1.2, 1.1, T.crimson, 6)],
   angled: () => [...P([[12, 3], [20.4, 7.6], [12, 12.2], [3.6, 7.6]], T.stone[0]), ...P([[3.6, 7.6], [12, 12.2], [12, 21.4], [3.6, 16.8]], T.stone[1]), ...P([[12, 12.2], [20.4, 7.6], [20.4, 16.8], [12, 21.4]], T.stone[2])],
 };
 

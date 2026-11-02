@@ -53,6 +53,10 @@
 .ui-next :is(.big-btn:not(.ghost):not(.danger), .pill.primary, .tab.active, .chip.active, .ctx-actions button.primary, .icon-btn.active, .seg button.active) {
   background: var(--primary); color: var(--on-primary); box-shadow: 0 3px 0 var(--primary-deep), 0 4px 10px rgba(0, 0, 0, 0.18);
 }
+/* le icone colorate sull'oro: molti loro toni sono vicini all'oro e sparirebbero; un contorno bianco le stacca */
+.ui-next :is(.big-btn:not(.ghost):not(.danger), .pill.primary, .tab.active, .chip.active, .ctx-actions button.primary, .icon-btn.active, .seg button.active) .pxi {
+  filter: drop-shadow(1.2px 0 0 #fff) drop-shadow(-1.2px 0 0 #fff) drop-shadow(0 1.2px 0 #fff) drop-shadow(0 -1.2px 0 #fff);
+}
 .ui-next .big-btn.danger, .ui-next .pill.danger, .ui-next .ctx-actions button.danger { color: var(--danger); background: var(--panel-2); box-shadow: none; }
 .ui-next .card.selected, .ui-next .ach.got { box-shadow: 0 0 0 2.5px var(--primary); }
 .ui-next .toast.ach { color: var(--gold-bright); box-shadow: var(--shadow), 0 0 0 2px var(--primary); }
@@ -363,3 +367,18 @@
   .ui-next .drawer { left: 50%; right: auto; width: 560px; translate: -50% -50%; }
 }
 @media (prefers-reduced-motion: reduce) { .ui-next :is(.drawer, .dialog.modal, .scrim) { animation: none; } }
+
+/* Impostazioni › Grafica, con Auto: la qualità a cui è arrivata adesso */
+.ui-next .quality-now { display: flex; align-items: center; gap: 8px; margin: 0 0 6px; padding: 8px 12px; border-radius: var(--r-s); font-size: 14px;
+  background: rgba(159, 240, 214, 0.1); box-shadow: inset 0 0 0 1.5px rgba(159, 240, 214, 0.3); color: var(--paper); }
+
+/* Personaggio: una scelta bloccata (cappello da strega) col lucchetto, e sotto la riga che dice cosa la sblocca */
+.ui-next .look-tile.locked .look-thumb { position: relative; }
+.ui-next .look-tile.locked .look-thumb img { opacity: 0.35; }
+.ui-next .look-tile.locked .look-tile-label { opacity: 0.6; }
+.ui-next .look-lock { position: absolute; inset: 0; display: grid; place-items: center; }
+.ui-next .look-lock .pxi { filter: drop-shadow(0 2px 3px rgba(0, 0, 0, 0.5)); }
+.ui-next .look-lock-note { display: flex; gap: 8px; align-items: flex-start; margin: 2px 0 8px; padding: 8px 10px; border-radius: var(--r-s);
+  background: rgba(0, 0, 0, 0.22); color: var(--muted); font-size: 13px; line-height: 1.35; }
+.ui-next .look-lock-note b { color: var(--paper); }
+.ui-next .look-lock-note .pxi { flex: none; margin-top: 1px; }

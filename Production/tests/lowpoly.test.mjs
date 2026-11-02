@@ -673,7 +673,7 @@ test('presenze erranti: a frame regolari camminano davvero (prima restavano a gi
 });
 
 test('qualità Auto: livello dal dispositivo, risoluzione dentro al livello, scende presto e sale piano, non ritenta ciò che non regge', async () => {
-  const { detectTier, AutoGovernor, PROFILES, newAutoProfile } = await import('../src/app/AutoQuality.ts');
+  const { detectTier, AutoGovernor, PROFILES, newAutoProfile, START_SETTLE } = await import('../src/app/AutoQuality.ts');
   assert.equal(detectTier({ gpu: 'Apple GPU', cores: 6, mobile: true }), 'high');
   assert.equal(detectTier({ gpu: 'Apple GPU', cores: 2, mobile: true }), 'high', 'Safari su iPhone dichiara 2 core: non conta');
   assert.equal(detectTier({ gpu: 'Adreno (TM) 509', mobile: true }), 'low');
@@ -696,7 +696,8 @@ test('qualità Auto: livello dal dispositivo, risoluzione dentro al livello, sce
   assert.equal(newAutoProfile('high').step, PROFILES.high.dpr.length - 1);
   const g = new AutoGovernor({ ...newAutoProfile('high'), step: 0 });
   assert.equal(g.step, 0);
-  assert.deepEqual(run(g, 60, 11, 60), ['step']);
+  // all'avvio i primi secondi non si giudicano (START_SETTLE), poi otto secondi pieni fanno salire di un gradino
+  assert.deepEqual(run(g, 60, START_SETTLE + 10, 60), ['step']);
   assert.equal(g.step, 1);
   // Calo sostenuto: torna subito al gradino minimo e non riprova quello instabile.
   assert.deepEqual(run(g, 20, 5.5, 60), ['step']);
@@ -707,7 +708,7 @@ test('qualità Auto: livello dal dispositivo, risoluzione dentro al livello, sce
   // Anche se il renderer dichiara una GPU di fascia alta, FPS persistenti sotto
   // il ritmo alla risoluzione minima fanno scendere di profilo senza attendere a lungo.
   const a35 = new AutoGovernor(newAutoProfile('high'));
-  assert.deepEqual(run(a35, 35, 10, 60), ['step', 'step', 'tier']);
+  assert.deepEqual(run(a35, 35, START_SETTLE + 10, 60), ['step', 'step', 'tier']);
   assert.equal(a35.tier, 'medium');
   const b35 = new AutoGovernor({ tier: 'high', step: 0, ceiling: 2, top: 'high' });
   const adapt35 = [];
@@ -715,13 +716,26 @@ test('qualità Auto: livello dal dispositivo, risoluzione dentro al livello, sce
   assert.deepEqual(adapt35.slice(0, 1), ['tier']);
   assert.equal(b35.tier, 'medium');
   // Media regge 30 FPS e può aumentare la risoluzione se resta stabile.
-  const m = new AutoGovernor(newAutoProfile('medium'));
+  const m = new AutoGovernor({ ...newAutoProfile('medium'), step: 0 });
   assert.deepEqual(run(m, 30, 60, 30), ['step']);
+  // la stima parte già dalla risoluzione più alta della fascia: lì non c'è altro da salire
+  assert.deepEqual(run(new AutoGovernor(newAutoProfile('medium')), 30, 60, 30), []);
   // Pause molto lunghe (app in background) non contano; gli scatti sotto 2 s sì.
   const p = new AutoGovernor(newAutoProfile('low'));
   assert.deepEqual(run(p, 0.2, 20, 30), []);
   const stalled = new AutoGovernor(newAutoProfile('high'));
-  assert.ok(run(stalled, 1 / 0.3, 12, 60).includes('tier'), 'i frame visibilmente bloccati riducono Auto');
+  assert.ok(run(stalled, 1 / 0.3, START_SETTLE + 14, 60).includes('tier'), 'i frame visibilmente bloccati riducono Auto');
+  // l'avvio lento (scena e shader che si preparano) non conta: un telefono forte resta in Alta
+  const boot = new AutoGovernor(newAutoProfile('high'));
+  assert.deepEqual(run(boot, 10, START_SETTLE - 0.2, 60), []);
+  assert.deepEqual(run(boot, 60, 30, 60), []);
+  assert.equal(boot.tier, 'high');
+  // uno scatto isolato ogni due secondi (un modello generato, un salvataggio) non fa scendere
+  const hic = new AutoGovernor(newAutoProfile('high'));
+  const hics = [];
+  for (let t = 0; t < 40; t += 1 / 60) { const d = hic.frame(Math.floor(t * 60) % 120 === 0 ? 0.4 : 1 / 60, 60); if (d) hics.push(d); }
+  assert.deepEqual(hics, []);
+  assert.equal(hic.tier, 'high');
   // Alla risoluzione minima e ancora sotto il ritmo, si scende di fascia.
   const f = new AutoGovernor({ tier: 'medium', step: 0, ceiling: 1, top: 'medium' });
   assert.ok(run(f, 12, 12, 30).includes('tier'));
@@ -742,8 +756,8 @@ test('qualità Auto: livello dal dispositivo, risoluzione dentro al livello, sce
   run(l, 30, 300, 30);
   assert.equal(l.tier, 'low');
   // fermo o sotto un menù il gioco rallenta apposta: hold() azzera il giudizio
-  const h = new AutoGovernor(newAutoProfile('high'));
-  run(h, 60, 4, 60);
+  const h = new AutoGovernor({ ...newAutoProfile('high'), step: 0 });
+  run(h, 60, START_SETTLE + 4, 60);
   for (let i = 0; i < 100; i++) h.hold();
   assert.deepEqual(run(h, 60, 6, 60), []);
   assert.deepEqual(run(h, 60, 6, 60), ['step']);

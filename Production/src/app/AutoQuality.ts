@@ -9,7 +9,8 @@
 //   dentro al livello regola solo la risoluzione, e se anche la risoluzione
 //   più bassa non regge scende di livello (cambiarlo ricostruisce parte
 //   della scena: mezzo secondo di blocco). Può risalire fino al livello
-//   stimato; un livello che appena raggiunto non ha retto non si ritenta.
+//   stimato; un livello che appena raggiunto non ha retto non si ritenta
+//   (per la sessione: alla prossima apertura si riparte dal livello stimato).
 // - il regolatore giudica rispetto al ritmo atteso (30 o 60 FPS): scende
 //   subito se resta sotto per qualche secondo, risale solo dopo un lungo
 //   periodo pieno; un gradino che ha appena fatto crollare gli FPS non viene
@@ -104,6 +105,17 @@ export function newAutoProfile(tier: Quality): AutoProfile {
 /** Il livello cambia (si ricostruisce la scena) o solo la risoluzione. */
 export type AutoDecision = 'step' | 'tier' | null;
 
+/**
+ * Secondi senza giudizio all'avvio: la scena finisce di comporsi, gli shader si
+ * compilano, le anteprime si scaldano. Erano i frame lenti di questi secondi a
+ * far scendere anche i telefoni forti (un iPhone recente finiva sempre in Media).
+ */
+export const START_SETTLE = 5;
+/** Dopo un cambio di livello: la scena si ricostruisce e gli shader nuovi si compilano (un blocco che non dice nulla sul telefono). */
+export const TIER_SETTLE = 4;
+/** Un frame singolo più lungo di così, in mezzo a frame veloci, è uno scatto isolato (un modello generato, un salvataggio): non conta. */
+export const HITCH = 0.25;
+
 /** Regolatore a finestre di un secondo, con isteresi e tetti per ciò che non regge. */
 export class AutoGovernor {
   tier: Quality;
@@ -113,8 +125,10 @@ export class AutoGovernor {
   private winFrames = 0;
   private winTime = 0;
   private history: number[] = [];
-  /** Secondi da attendere prima di giudicare (dopo un cambio la scena si assesta). */
-  private settle = 1;
+  /** Secondi da attendere prima di giudicare (all'avvio e dopo un cambio la scena si assesta). */
+  private settle = START_SETTLE;
+  /** Durata del frame prima (per riconoscere gli scatti isolati). */
+  private lastDt = 0;
   /** Secondi prima di poter risalire. */
   private cooldown = 0;
   /** Da quanto si è saliti di gradino e di livello (per capire se la salita ha fatto crollare gli FPS). */
@@ -147,6 +161,10 @@ export class AutoGovernor {
   /** Un frame disegnato, col ritmo atteso; ritorna la decisione quando c'è da cambiare qualcosa. */
   frame(dt: number, target: number): AutoDecision {
     if (dt <= 0 || dt > 2) return null; // pausa lunga; i blocchi visibili sotto i 2 s contano come frame lenti
+    // uno scatto isolato in mezzo a frame veloci non dice che il telefono non regge; una serie di frame lenti sì
+    const isolated = dt > HITCH && this.lastDt < 0.1;
+    this.lastDt = dt;
+    if (isolated) return null;
     this.sinceUp += dt;
     this.sinceTierUp += dt;
     if (this.cooldown > 0) this.cooldown -= dt;
@@ -180,7 +198,7 @@ export class AutoGovernor {
         this.tier = ORDER[i - 1];
         this.step = 0;
         this.ceiling = PROFILES[this.tier].dpr.length - 1;
-        this.change(this.step, 0);
+        this.change(this.step, 0, TIER_SETTLE);
         return 'tier';
       }
       return null;
@@ -200,19 +218,19 @@ export class AutoGovernor {
       this.tier = ORDER[i + 1];
       this.step = 0;
       this.ceiling = PROFILES[this.tier].dpr.length - 1;
-      this.change(0, 30);
+      this.change(0, 30, TIER_SETTLE);
       this.sinceTierUp = 0;
       return 'tier';
     }
     return null;
   }
 
-  private change(step: number, cooldown: number) {
+  private change(step: number, cooldown: number, settle = 1) {
     this.step = step;
     this.history = [];
     this.winFrames = 0;
     this.winTime = 0;
-    this.settle = 1;
+    this.settle = settle;
     this.cooldown = cooldown;
   }
 }

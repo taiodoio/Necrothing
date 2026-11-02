@@ -46,6 +46,17 @@ export class BurialPhoto {
     this.version++;
   }
 
+  /** Parte da una foto già salvata (modifica di una tomba): diventa l'originale da cui si rifanno i filtri. */
+  async loadUrl(src: string) {
+    this.base = squareCrop(await loadImage(src));
+    this.filter = 'none';
+    this.cache.clear();
+    this.version++;
+  }
+
+  /** Cambia quando cambia la foto o il filtro (per sapere se una modifica tocca la foto). */
+  get rev(): string { return this.base ? `${this.version}:${this.filter}` : ''; }
+
   step(dir: number) { this.filter = FILTERS[Math.max(0, Math.min(FILTERS.length - 1, FILTERS.indexOf(this.filter) + dir))]; }
 
   /** Salva la foto filtrata tra le foto delle tombe e ne restituisce l'id (null se non c'è o non si può salvare). */

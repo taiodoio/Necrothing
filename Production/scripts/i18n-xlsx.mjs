@@ -1,6 +1,11 @@
 // Sincronizza le traduzioni col workbook Excel mantenendo intatto l'originale.
 // Uso: node scripts/i18n-xlsx.mjs sync [input.xlsx] [output.xlsx]
 //      node scripts/i18n-xlsx.mjs check [input.xlsx]
+//      node scripts/i18n-xlsx.mjs apply testi.json [workbook.xlsx]
+// «apply» scrive nel workbook (quello del CMS, sul posto) le traduzioni di un file
+// { chiave: { en, de, fr, es, pt, zh-Hans, zh-Hant, ja, ko } }: l'italiano lo prende
+// dal codice (src/i18n/it). Aggiorna le righe che ci sono e aggiunge quelle nuove
+// (sezione e gruppo come la chiave più simile). Dopo, «sync» rigenera i dizionari.
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -265,7 +270,76 @@ function findTextSheet(zip) {
   return target.replace(/^\//, '').replace(/^xl\//, 'xl/');
 }
 
+/** Scrive (o crea) la cella `col` (0 = A) della riga `n` nel foglio, in ordine di colonna. */
+function setCell(xml, n, col, text) {
+  const ref = `${colName(col + 1)}${n}`;
+  const html = text === '' ? '' : `<c r="${ref}" t="inlineStr"><is><t xml:space="preserve">${encode(text)}</t></is></c>`;
+  const rowRe = new RegExp(`(<row\\b(?=[^>]*\\br="${n}")[^>]*>)([\\s\\S]*?)(<\\/row>)`);
+  const m = rowRe.exec(xml);
+  if (!m) return xml.replace('</sheetData>', `<row r="${n}">${html}</row></sheetData>`);
+  const cells = [...m[2].matchAll(/<c\b[^>]*\br="([A-Z]+)\d+"[^>]*?(?:\/>|>[\s\S]*?<\/c>)/g)].map((c) => ({ col: [...c[1]].reduce((a, ch) => a * 26 + ch.charCodeAt(0) - 64, 0) - 1, xml: c[0] }));
+  const others = cells.filter((c) => c.col !== col);
+  if (html) others.push({ col, xml: html });
+  others.sort((a, b) => a.col - b.col);
+  return xml.replace(rowRe, `${m[1]}${others.map((c) => c.xml).join('')}${m[3]}`);
+}
+
+function applyTranslations(zip, sheetPath, xml, rows, italian, file) {
+  const data = JSON.parse(fs.readFileSync(file, 'utf8'));
+  const rowNums = new Map(Array.from(rows.slice(1), (r, i) => [String(r?.[0] ?? '').trim(), i + 2]).filter(([key]) => key));
+  let last = Math.max(...[...xml.matchAll(/<row\b[^>]*\br="(\d+)"/g)].map((m) => Number(m[1])));
+  let updated = 0, added = 0;
+  // la riga esistente più simile (stesso prefisso più lungo) per sezione e gruppo
+  const like = (key) => {
+    const parts = key.split('.');
+    for (let k = parts.length - 1; k > 0; k--) {
+      const pre = parts.slice(0, k).join('.') + '.';
+      const r = rows.slice(1).find((row) => String(row?.[0] ?? '').startsWith(pre));
+      if (r) return r;
+    }
+    return null;
+  };
+  for (const [key, byLang] of Object.entries(data)) {
+    const it = italian.get(key);
+    if (!it) throw new Error(`«${key}» non c'è nei testi italiani (src/i18n/it)`);
+    let n = rowNums.get(key);
+    if (!n) {
+      n = ++last;
+      const near = like(key);
+      xml = setCell(xml, n, 0, key);
+      xml = setCell(xml, n, 1, String(near?.[1] ?? 'Schermate'));
+      xml = setCell(xml, n, 2, String(near?.[2] ?? ''));
+      rowNums.set(key, n);
+      added++;
+    } else updated++;
+    xml = setCell(xml, n, 4, String(it.length));
+    xml = setCell(xml, n, 5, it);
+    for (const [code] of LANGS.slice(1)) {
+      const v = byLang[code];
+      if (v === undefined) continue;
+      xml = setCell(xml, n, LANGS.findIndex(([c]) => c === code) + 5, v);
+    }
+  }
+  xml = xml.replace(/<dimension ref="A1:([A-Z]+)\d+"\/>/, `<dimension ref="A1:$1${last}"/>`);
+  zip[sheetPath] = strToU8(xml);
+  return { updated, added };
+}
+
 const [cmd = 'sync', inputArg, outputArg] = process.argv.slice(2);
+if (cmd === 'apply') {
+  // apply testi.json [workbook]: sul posto
+  const file = path.resolve(inputArg);
+  const book = path.resolve(outputArg ?? DEFAULT_INPUT);
+  const z = unzipSync(fs.readFileSync(book));
+  const sp = findTextSheet(z);
+  const sx = strFromU8(z[sp]);
+  const sh = z['xl/sharedStrings.xml'] ? strFromU8(z['xl/sharedStrings.xml']) : '';
+  const sharedStrings = [...sh.matchAll(/<si>([\s\S]*?)<\/si>/g)].map((m) => [...m[1].matchAll(/<t\b[^>]*>([\s\S]*?)<\/t>/g)].map((t) => decode(t[1])).join(''));
+  const { updated, added } = applyTranslations(z, sp, sx, parseSheet(sx, sharedStrings), parseItalian(), file);
+  fs.writeFileSync(book, zipSync(z, { level: 6 }));
+  console.log(`${book}: ${updated} righe aggiornate, ${added} aggiunte. Ora: node scripts/i18n-xlsx.mjs sync "${book}"`);
+  process.exit(0);
+}
 const input = path.resolve(inputArg ?? DEFAULT_INPUT);
 const output = path.resolve(outputArg ?? DEFAULT_OUTPUT);
 const zip = unzipSync(fs.readFileSync(input));

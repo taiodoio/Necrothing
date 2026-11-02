@@ -15,7 +15,7 @@ import { icon } from './icons.ts';
 import { openPostcard, portrait } from './memorial.ts';
 import { fruitImg, openMemoryTree } from './memoryTree.ts';
 import { annivHero } from './anniversary.ts';
-import { confirmExhume, MEMORY_LABELS, moreActions, postcardData } from './screens.ts';
+import { actionRow, closeOnlyFooter, confirmExhume, MEMORY_LABELS, moreActions, openGraveEdit, postcardData } from './screens.ts';
 import { graveThumb } from './thumbs.ts';
 import { factLabel, parchment } from './parchment.ts';
 import { groundUrl } from './previews.ts';
@@ -126,6 +126,8 @@ export function openDeceased(ui: UI, id: string, opts: DeceasedOpts = {}) {
       ? h('button', { class: 'big-btn', onclick: () => { closeDrawer(true); game.locate(id); } }, icon('pin', 22), t('deceased.goGrave'))
       : h('button', { class: 'big-btn', onclick: () => { closeDrawer(true); game.performEntityAction(id, act.act); } }, icon(act.ic, 22), act.label);
     more = [
+      // riscrivere quello che si era scritto alla sepoltura (nome, date, causa, epitaffio, foto, lapide)
+      { icon: 'edit', label: t('detail.grave.edit'), run: () => openGraveEdit(ui, id) },
       from === 'note' ? goGrave : null,
       postcard,
       R.memoryTree(s) ? { icon: 'tree', label: t('detail.grave.entrust'), run: () => ui.openEntrust(id) } : null,
@@ -151,7 +153,8 @@ export function openDeceased(ui: UI, id: string, opts: DeceasedOpts = {}) {
   openDrawer('', body, {
     kind: 'deceased',
     beforeClose: opts.back ? () => { opts.back!(); return false; } : from === 'tree' ? () => { openMemoryTree(ui); return false; } : undefined,
-    footer: h('div', { style: 'display:grid;gap:6px' }, moreActions(more), main),
+    // in Modifica la scheda si guarda soltanto
+    footer: game.editMode ? closeOnlyFooter() : actionRow(main, moreActions(more, { compact: true })),
   });
   // i pulsanti stanno sopra il fondo del contenuto: la terra finisce sotto di loro
   if (play) {

@@ -36,6 +36,8 @@ export class UI {
   private ctxId: string | null = null;
   /** Menù ancorato a un personaggio (animale, Custode) invece che a un oggetto. */
   private ctxAnchor: (() => THREE.Vector3 | null) | null = null;
+  /** Il menù sopra l'oggetto che si sta posando (Ruota, Riponi): resta aperto finché si posa. */
+  private ctxPlacing = false;
   private placementBar: HTMLElement | null = null;
   /** Il primo ingresso: pergamena, nome, introduzione, tutorial, giro dell'interfaccia (ui/onboarding.ts). */
   readonly onboarding: Onboarding;
@@ -233,10 +235,30 @@ export class UI {
     $('#ctx').hidden = true;
     this.ctxId = null;
     this.ctxAnchor = null;
+    this.ctxPlacing = false;
   }
 
   /** Chiude il menù di un personaggio (se aperto), lasciando stare quello degli oggetti. */
-  closeActorMenu() { if (this.ctxAnchor) this.closeContext(); }
+  closeActorMenu() { if (this.ctxAnchor && !this.ctxPlacing) this.closeContext(); }
+
+  /**
+   * Mentre si posa un oggetto: sopra di lui lo stesso menù di Modifica, «Ruota» (se si può)
+   * e «Riponi» (resta nell'inventario e si resta in Modifica, per riporne altri).
+   */
+  private openPlacementMenu(type: string) {
+    const def = CATALOG[type];
+    const actions = [
+      def.rotatable ? { act: 'rotate', label: t('ctx.rotate'), icon: 'rotate', run: () => this.game.rotatePlacement() } : null,
+      { act: 'store', label: t('ctx.store'), icon: 'store', run: () => this.game.storePlacement() },
+    ].filter((a) => !!a);
+    this.ctxId = null;
+    this.ctxAnchor = () => this.game.world.ghostTop();
+    this.ctxPlacing = true;
+    $('#ctx-title').replaceChildren(document.createTextNode(def.label));
+    $('#ctx-actions').replaceChildren(...actions.map((a) => h('button', { type: 'button', 'data-ctx': a.act, 'aria-label': a.label, title: a.label, onclick: a.run }, icon(a.icon, 28))));
+    $('#ctx').hidden = false;
+    this.positionContext();
+  }
 
   /** Menù sopra un personaggio: azioni con la loro funzione, segue il personaggio mentre si muove. */
   openActorMenu(title: string, sub: string, actions: Array<{ label: string; icon: string; cls?: string; disabled?: boolean; run: () => void }>, anchor: () => THREE.Vector3 | null) {
@@ -420,6 +442,7 @@ export class UI {
   refreshPlacementBar() {
     const p = this.game.placement;
     const editing = this.game.editMode && !p;
+    if (this.ctxPlacing && !(p?.kind === 'item' && !p.trace)) this.closeContext();
     // mentre si sceglie il posto spariscono il menù e i pulsanti della mappa: i pulsanti degli strumenti prendono il loro posto
     $('#game').classList.toggle('tools-off', !!p || editing);
     if (!p && !editing) { this.placementBar?.remove(); this.placementBar = null; if (!this.game.shrink) $('#bubble').classList.remove('hidden'); return; }
@@ -462,13 +485,13 @@ export class UI {
       return;
     }
     if (p.kind === 'item') {
-      this.closeContext();
+      // Ruota e Riponi stanno nel menù sopra l'oggetto, come in Modifica
+      this.openPlacementMenu(p.type!);
       const def = CATALOG[p.type!];
       this.mountPlacement(
         h('div', { class: 'tutorial tool-bar' },
           h('div', { class: 'tool-head' },
             h('b', {}, icon('edit', 18), def.label),
-            def.rotatable ? h('button', { class: 'pill rotate', 'data-tool': 'rotate', 'aria-label': t('hud.place.rotate'), title: t('hud.place.rotate'), onclick: () => this.game.rotatePlacement() }, icon('rotate', 22)) : null,
             this.exitButton(() => this.game.cancelPlacement())),
           this.toolHint('item'),
           !p.valid ? h('span', { class: 'muted warn' }, busy(this.game.placementBlockers())) : null),

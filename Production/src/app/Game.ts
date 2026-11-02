@@ -994,6 +994,16 @@ export class Game {
     this.refreshPlacement();
   }
 
+  /** «Riponi» mentre si posa: l'oggetto resta nell'inventario e si resta in Modifica (si esce con la X o la spunta). */
+  storePlacement() {
+    const p = this.placement;
+    if (!p || p.kind !== 'item' || p.trace) return;
+    this.placement = null;
+    toast(t('rules.store.done', { item: CATALOG[p.type!].label }));
+    this.setEditMode(true);
+    this.refreshPlacement();
+  }
+
   cancelPlacement() {
     const was = this.placement;
     this.placement = null;

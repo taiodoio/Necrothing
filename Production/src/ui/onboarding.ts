@@ -162,7 +162,7 @@ export class Onboarding {
     else if (step === 'sheet') allowed = ctx('detail', YARD_GRAVE);
     else if (step === 'shop') allowed = ctx('shop', this.shopId()) || matches(`.drawer .card[data-item="${YARD_GIFT.item}"], .dialog .shop-detail .row .big-btn:not(.ghost)`);
     else if (step === 'place') allowed = g.placement
-      ? matches('.place-ui [data-tool="pan"], .place-ui [data-tool="work"], .place-ui [data-tool="undo"], .place-ui [data-tool="confirm"], .place-ui [data-tool="rotate"]')
+      ? matches('.place-ui [data-tool="pan"], .place-ui [data-tool="work"], .place-ui [data-tool="undo"], .place-ui [data-tool="confirm"], #ctx [data-ctx="rotate"]')
       : matches(`.dialog .shop-detail .row .big-btn:not(.ghost), .drawer .card[data-item="${YARD_GIFT.item}"], .drawer .drawer-foot .big-btn:not(.ghost), #fab, #bubble .slot[data-act="inventory"]`);
     else if (step === 'edit') allowed = g.editMode
       ? matches('.place-ui [data-tool="pan"], .place-ui [data-tool="work"], .place-ui [data-tool="undo"]') || (this.moved && matches('.place-ui [data-tool="confirm"]'))

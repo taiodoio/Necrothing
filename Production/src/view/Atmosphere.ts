@@ -69,17 +69,30 @@ const LIGHT_IN = 0.6, LIGHT_OUT = 0.45;
 /** Sorgenti più vicine di così contano come un gruppo (candele, lumini, fiamme dello stesso oggetto). */
 const CROWD_R = 0.9, CLUSTER_R = 1.3;
 
+/** Luminosità di vetri e fiamme accesi (moltiplica il valore della fase del giorno). */
+export const GLOW_SCALE = 0.62;
+/** Opacità degli aloni, e quanto restano quando la vista è larga. */
+export const HALO_OPACITY = 0.7;
+export const HALO_FAR_MIN = 0.35;
+/** Pozza a terra delle luci finte: raggio (in parte della portata della luce) e quota sopra il terreno. */
+export const POOL_RADIUS = 0.65;
+export const POOL_LIFT = 0.11;
+
 let haloTexture: THREE.Texture | null = null;
-/** Pozza di luce a terra (luci finte): qui il centro pieno va bene, sta sotto ai piedi e non davanti. */
+/**
+ * Pozza di luce a terra (luci finte): larga e morbida, con il centro non troppo pieno
+ * (era una macchia piccola e netta, che sui sentieri di pietra spariva sotto i sassi).
+ */
 let poolTexture: THREE.Texture | null = null;
 function getPoolTexture(): THREE.Texture {
-  poolTexture ??= radialGlowTexture([[0, 0.7], [0.2, 0.42], [0.5, 0.13], [1, 0]]);
+  poolTexture ??= radialGlowTexture([[0, 0.34], [0.35, 0.24], [0.7, 0.07], [1, 0]]);
   return poolTexture;
 }
 function getHaloTexture(): THREE.Texture {
   // centro tenue e bagliore largo attorno: l'alone sta davanti alla fonte (vedi update), con un
   // centro quasi bianco copriva la lanterna e chi ci stava vicino (il Custode non si vedeva)
-  haloTexture ??= radialGlowTexture([[0, 0.4], [0.2, 0.3], [0.5, 0.1], [1, 0]]);
+  // (più morbido ancora: un bagliore pieno nascondeva la lanterna stessa, e da lontano diventava un pallino)
+  haloTexture ??= radialGlowTexture([[0, 0.2], [0.3, 0.14], [0.65, 0.04], [1, 0]]);
   return haloTexture;
 }
 
@@ -202,7 +215,8 @@ export class Atmosphere {
     this.sun.color.copy(m.sun);
     this.sun.intensity = m.sunI;
     this.ambient.intensity = m.ambient;
-    (LOWPOLY_MATERIALS.glow as THREE.MeshBasicMaterial).color.setScalar(m.glow);
+    // vetri e fiamme accesi: abbastanza da leggersi come luce, non tanto da diventare macchie bianche
+    (LOWPOLY_MATERIALS.glow as THREE.MeshBasicMaterial).color.setScalar(m.glow * GLOW_SCALE);
     (this.scene.fog as THREE.Fog).color.copy(m.fog);
     this.applyFocus();
   }
@@ -271,9 +285,10 @@ export class Atmosphere {
     for (const e of this.anchors.values()) {
       if (!e.on || e.anchor.intensity <= 0.2 || i >= 512) continue;
       const f = e.flicker.value(t);
-      const r = e.anchor.range * 0.42;
-      // a terra sotto la sorgente (l'ancora sta in alto sul modello: la sua quota nel modello è l'altezza da terra)
-      p.set(e.pos.x, e.pos.y - lightWorldPos(e.anchor, lp).y + 0.04, e.pos.z);
+      const r = e.anchor.range * POOL_RADIUS;
+      // a terra sotto la sorgente (l'ancora sta in alto sul modello: la sua quota nel modello è l'altezza da terra),
+      // un poco sopra i sassi dei sentieri (alti fino a 0,07): sotto, la luce spariva tra una pietra e l'altra
+      p.set(e.pos.x, e.pos.y - lightWorldPos(e.anchor, lp).y + POOL_LIFT, e.pos.z);
       m.setMatrixAt(i, mat4.compose(p, q, sc.set(r, 1, r)));
       m.setColorAt(i, c.set(e.anchor.color).multiplyScalar(Math.min(1, e.anchor.intensity) * 0.3 * pool * f * e.crowd));
       i++;
@@ -377,10 +392,14 @@ export class Atmosphere {
       this.applyMix();
     }
     const p = this.cur;
+    // Da lontano gli aloni si attenuano (fino a un terzo): con la vista larga sarebbero tanti pallini luminosi.
+    const ortho = camera as THREE.OrthographicCamera;
+    const view = ortho.isOrthographicCamera ? (ortho.top - ortho.bottom) / ortho.zoom : 18;
+    const far = THREE.MathUtils.clamp(1.3 - view / 30, HALO_FAR_MIN, 1);
     // Flicker degli aloni e delle luci.
     for (const e of this.anchors.values()) {
       const f = e.flicker.value(t);
-      (e.sprite.material as THREE.SpriteMaterial).opacity = e.on ? p.halo * Math.min(1, e.anchor.intensity * 1.4) * f * e.crowd : 0;
+      (e.sprite.material as THREE.SpriteMaterial).opacity = e.on ? p.halo * Math.min(1, e.anchor.intensity * 1.4) * f * e.crowd * HALO_OPACITY * far : 0;
       e.sprite.visible = e.on && p.halo > 0.02 && e.anchor.halo > 0.05; // alone 0: luce senza bagliore (riverbero diffuso)
       if (e.sprite.visible) e.sprite.position.copy(e.pos).addScaledVector(this.toCamera, e.sprite.scale.x * 0.3);
     }

@@ -94,24 +94,24 @@
   background-size: 100% 100%, 100% 100%, 100% 100%, 300px auto, 100% 100%; background-repeat: no-repeat; box-shadow: 0 8px 18px rgba(0, 0, 0, 0.45);
 }
 /* i pulsanti della home: solo il gradiente, con un rametto */
-.ui-next.ui-play :is(.map-tools .icon-btn:not(.active), .fab) { background: var(--nat-bg); box-shadow: 0 8px 18px rgba(0, 0, 0, 0.45); }
+.ui-next.ui-play :is(:is(.map-tools, .tool-hud) .icon-btn:not(.active), .fab) { background: var(--nat-bg); box-shadow: 0 8px 18px rgba(0, 0, 0, 0.45); }
 /* bici, scopa, bastone in uso: il pulsante si accende (oro); il pipistrello col suo anello viola */
-.ui-next.ui-play .map-tools .icon-btn.active { box-shadow: 0 3px 0 var(--primary-deep), 0 8px 18px rgba(0, 0, 0, 0.45); }
+.ui-next.ui-play :is(.map-tools, .tool-hud) .icon-btn.active { box-shadow: 0 3px 0 var(--primary-deep), 0 8px 18px rgba(0, 0, 0, 0.45); }
 .ui-next.ui-play .map-tools .bat-btn { box-shadow: 0 8px 18px rgba(0, 0, 0, 0.45), 0 0 0 2.5px #a86ad0; }
 .ui-next.ui-play .fab:not(.bury-fab) { background: linear-gradient(165deg, #f6d48a, #e0aa52); }
 
 /* rametti: sotto il contenuto, in angoli opposti (gli pseudo-elementi non vanno dentro :is()) */
-.ui-next.ui-play :is(.player-chip, .clock-block, .npc-note, .map-tools .icon-btn, .fab, .dialog) { isolation: isolate; }
-.ui-next.ui-play .map-tools .icon-btn, .ui-next.ui-play .fab, .ui-next.ui-play .dialog { position: relative; }
+.ui-next.ui-play :is(.player-chip, .clock-block, .npc-note, :is(.map-tools, .tool-hud) .icon-btn, .fab, .dialog) { isolation: isolate; }
+.ui-next.ui-play :is(.map-tools, .tool-hud) .icon-btn, .ui-next.ui-play .fab, .ui-next.ui-play .dialog { position: relative; }
 .ui-next.ui-play .player-chip::before, .ui-next.ui-play .clock-block::after, .ui-next.ui-play .npc-note::before, .ui-next.ui-play .npc-note::after,
-.ui-next.ui-play .map-tools .icon-btn::before, .ui-next.ui-play .fab::before, .ui-next.ui-play .dialog::before, .ui-next.ui-play .dialog::after {
+.ui-next.ui-play :is(.map-tools, .tool-hud) .icon-btn::before, .ui-next.ui-play .fab::before, .ui-next.ui-play .dialog::before, .ui-next.ui-play .dialog::after {
   content: ''; position: absolute; z-index: -1; width: 42px; height: 42px; pointer-events: none; background: var(--sprig) no-repeat 0 0 / 100% 100%;
 }
 .ui-next.ui-play .player-chip::before, .ui-next.ui-play .npc-note::before, .ui-next.ui-play .dialog::before { left: 0; top: 0; }
 .ui-next.ui-play .npc-note::after, .ui-next.ui-play .dialog::after { right: 0; bottom: 0; rotate: 180deg; }
 .ui-next.ui-play .clock-block::after { right: 0; bottom: 0; width: 30px; height: 30px; rotate: 180deg; }
-.ui-next.ui-play .map-tools .icon-btn::before, .ui-next.ui-play .fab::before { width: 30px; height: 30px; }
-.ui-next.ui-play .map-tools .icon-btn::before { right: 0; top: 0; scale: -1 1; }
+.ui-next.ui-play :is(.map-tools, .tool-hud) .icon-btn::before, .ui-next.ui-play .fab::before { width: 30px; height: 30px; }
+.ui-next.ui-play :is(.map-tools, .tool-hud) .icon-btn::before { right: 0; top: 0; scale: -1 1; }
 .ui-next.ui-play .fab::before { left: 0; top: 0; }
 .ui-next.ui-play .dialog::before, .ui-next.ui-play .dialog::after { width: 64px; height: 64px; }
 
@@ -168,7 +168,7 @@
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; --hole: #2c2636;
 }
 .ui-next.ui-play .drawer .tabs:not(.look-tabs) .tab .pxi { display: none; }
-.ui-next.ui-play .drawer .tabs:not(.look-tabs) .tab.active { background: linear-gradient(180deg, #f6d48a, #e8b65e); color: #2a1f12; box-shadow: none; --hole: #eec170; }
+.ui-next.ui-play .drawer .tabs:not(.look-tabs) .tab.active { background: var(--here-bg); color: var(--here-ink); box-shadow: var(--here-shadow); --hole: #4a4160; }
 .ui-next.ui-play .drawer .tabs:not(.look-tabs) .tab .tab-n { position: absolute; top: 4px; right: 8px; margin: 0; padding: 0 5px; font-size: 10px; line-height: 15px; }
 .ui-next.ui-play .player-page .tabs:not(.look-tabs) { margin-bottom: 4px; }
 
@@ -270,7 +270,7 @@
   border: 0; border-radius: 11px; background: transparent; box-shadow: none; color: #b3abbf; font-size: 11px; font-weight: 800; line-height: 1.05; --hole: #2c2636;
 }
 .ui-next.ui-play .drawer[data-kind="look"] .look-tabs .tab .pxi { display: none; }
-.ui-next.ui-play .drawer[data-kind="look"] .look-tabs .tab.active { background: linear-gradient(180deg, #f6d48a, #e8b65e); color: #2a1f12; box-shadow: none; --hole: #eec170; }
+.ui-next.ui-play .drawer[data-kind="look"] .look-tabs .tab.active { background: var(--here-bg); color: var(--here-ink); box-shadow: var(--here-shadow); --hole: #4a4160; }
 
 /* ── Sepoltura: come le altre schede ─────────────────────────────────
    Titoli dei campi come le sezioni (gotico dorato), campi e scelte senza

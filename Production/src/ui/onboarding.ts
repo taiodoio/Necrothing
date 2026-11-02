@@ -162,10 +162,10 @@ export class Onboarding {
     else if (step === 'sheet') allowed = ctx('detail', YARD_GRAVE);
     else if (step === 'shop') allowed = ctx('shop', this.shopId()) || matches(`.drawer .card[data-item="${YARD_GIFT.item}"], .dialog .shop-detail .row .big-btn:not(.ghost)`);
     else if (step === 'place') allowed = g.placement
-      ? matches('.tool-bar [data-tool="pan"], .tool-bar [data-tool="work"], .tool-bar [data-tool="undo"], .tool-bar [data-tool="confirm"], .tool-bar [data-tool="rotate"]')
+      ? matches('.place-ui [data-tool="pan"], .place-ui [data-tool="work"], .place-ui [data-tool="undo"], .place-ui [data-tool="confirm"], .place-ui [data-tool="rotate"]')
       : matches(`.dialog .shop-detail .row .big-btn:not(.ghost), .drawer .card[data-item="${YARD_GIFT.item}"], .drawer .drawer-foot .big-btn:not(.ghost), #fab, #bubble .slot[data-act="inventory"]`);
     else if (step === 'edit') allowed = g.editMode
-      ? matches('.tool-bar [data-tool="pan"], .tool-bar [data-tool="work"], .tool-bar [data-tool="undo"]') || (this.moved && matches('.tool-bar [data-tool="confirm"]'))
+      ? matches('.place-ui [data-tool="pan"], .place-ui [data-tool="work"], .place-ui [data-tool="undo"]') || (this.moved && matches('.place-ui [data-tool="confirm"]'))
       : matches('#fab, #bubble .slot[data-act="edit"], #drawer .drawer-foot .big-btn');
     else if (!step && yardFinished(this.o)) allowed = matches('#drawer-close, .cel-card .big-btn');
     if (!allowed) {
@@ -507,14 +507,14 @@ export class Onboarding {
       case 'flowers': return () => [ctx('flowers'), entity(YARD_GRAVE)];
       case 'light': return () => [ctx('light'), entity(YARD_LANTERN)];
       case 'shop': return () => [shopCta, card(YARD_GIFT.item), ctx('shop'), ...(this.shopId() ? [entity(this.shopId()!)] : [])];
-      case 'place': return () => ['#game > .tutorial .pill.primary', shopCta, '.drawer:not([hidden]) .drawer-foot .big-btn:not(.ghost)', card(YARD_GIFT.item), '#bubble.open .slot[data-act="inventory"]', '#fab'];
+      case 'place': return () => ['.place-ui [data-tool="confirm"]', shopCta, '.drawer:not([hidden]) .drawer-foot .big-btn:not(.ghost)', card(YARD_GIFT.item), '#bubble.open .slot[data-act="inventory"]', '#fab'];
       case 'edit': return () => {
         // la prima volta Modifica si presenta con una scheda: «Inizia»
         if (!g.editMode) return ['#drawer:not([hidden]) .drawer-foot .big-btn', '#bubble.open .slot[data-act="edit"]', '#fab'];
-        if (this.moved) return ['.tool-bar [data-tool="confirm"]'];
+        if (this.moved) return ['.place-ui [data-tool="confirm"]'];
         // la lanterna appena posata (o quella del cortile)
         const lamp = [...g.state.placeables].reverse().find((p) => p.type === YARD_GIFT.item);
-        return lamp ? [entity(lamp.id)] : ['.tool-bar [data-tool="confirm"]'];
+        return lamp ? [entity(lamp.id)] : ['.place-ui [data-tool="confirm"]'];
       };
       case 'ghost': return () => {
         const pos = () => (this.ghostId ? g.roamerPos(this.ghostId) : null);

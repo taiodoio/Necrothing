@@ -371,97 +371,116 @@ export class UI {
 
   // ── Posizionamento ───────────────────────────────────────────────────
 
-  private toolGuide(trace: boolean): HTMLElement {
-    const key = trace ? 'hud.tools.drawGuide' : 'hud.tools.moveGuide';
-    const name = trace ? 'toolPencil' : 'toolMove';
-    const guide = h('span', { class: 'muted tool-guide', role: 'img', 'aria-label': t(key, { hand: t('hud.tools.pan'), tool: t(trace ? 'hud.tools.draw' : 'hud.tools.move') }) });
-    for (const part of t(key).split(/(\{hand\}|\{tool\})/g)) {
-      guide.append(part === '{hand}' ? monoIcon('toolHand', 16) : part === '{tool}' ? monoIcon(name, 16) : document.createTextNode(part));
-    }
-    return guide;
+  /**
+   * Le istruzioni dello strumento scelto (una sola frase): in Modifica e nei posizionamenti
+   * dice cosa fa la mano o cosa fa lo strumento di lavoro (sposta, disegna).
+   */
+  private toolHint(kind: 'edit' | 'item' | 'trace'): HTMLElement {
+    const pan = this.game.toolMode === 'pan';
+    const key = pan ? (kind === 'edit' ? 'hud.tools.panHint' : 'hud.tools.panHintPlace')
+      : kind === 'edit' ? 'hud.tools.moveHint' : kind === 'trace' ? 'hud.tools.drawHint' : 'hud.place.hint';
+    return h('p', { class: 'muted tool-hint' }, t(key));
   }
 
-  private toolButtons(trace: boolean, canConfirm: boolean, placingItem = false): HTMLElement {
+  /**
+   * I pulsanti sotto il pannello, senza riquadro, come quelli della mappa: a sinistra
+   * l'interruttore mano / strumento (come le schede: icona monocromatica e nome, «dove sei»
+   * in viola chiaro), a destra «annulla» e l'azione principale in oro (Conferma, o Compra
+   * quando nel tracciato mancano pezzi).
+   */
+  private toolHud(opts: { work?: 'move' | 'draw'; undo?: boolean; main: { icon: string; label: string; run: () => void; disabled?: boolean; tool: string; cost?: number } }): HTMLElement {
     const game = this.game;
-    const button = (label: string, iconName: string, onClick: () => void, opts: { selected?: boolean; disabled?: boolean; primary?: boolean; tool?: string } = {}) =>
-      h('button', { type: 'button', class: `pill tool-btn${opts.selected ? ' selected' : ''}${opts.primary ? ' primary' : ''}`,
-        'aria-label': label, title: label, 'data-tool': opts.tool, 'aria-pressed': opts.selected === undefined ? undefined : String(opts.selected),
-        disabled: opts.disabled, onclick: onClick }, icon(iconName, 32));
-    const workLabel = t(trace ? 'hud.tools.draw' : 'hud.tools.move');
-    return h('div', { class: 'tool-actions' },
-      h('div', { class: 'tool-toggle', role: 'group', 'aria-label': joinDot([t('hud.tools.pan'), workLabel]) },
-        button(t('hud.tools.pan'), 'toolHand', () => game.setToolMode('pan'), { selected: game.toolMode === 'pan', tool: 'pan' }),
-        button(workLabel, trace ? 'edit' : 'toolMove', () => game.setToolMode('work'), { selected: game.toolMode === 'work', tool: 'work' })),
-      button(t('hud.tools.undo'), 'undo', () => game.undoTool(), { disabled: !game.canUndoTool(), tool: 'undo' }),
-      button(t('hud.place.confirm'), 'check', () => trace || placingItem ? game.confirmPlacement() : game.setEditMode(false), { primary: true, disabled: !canConfirm, tool: 'confirm' }),
-    );
+    const toggle = opts.work ? h('div', { class: 'tool-toggle', role: 'group', 'aria-label': joinDot([t('hud.tools.pan'), t(opts.work === 'draw' ? 'hud.tools.draw' : 'hud.tools.move')]) },
+      ...([['pan', 'toolHand', t('hud.tools.panShort'), t('hud.tools.pan')], ['work', opts.work === 'draw' ? 'toolPencil' : 'toolMove', t(opts.work === 'draw' ? 'hud.tools.drawShort' : 'hud.tools.moveShort'), t(opts.work === 'draw' ? 'hud.tools.draw' : 'hud.tools.move')]] as const)
+        .map(([mode, ic, short, long]) => h('button', {
+          type: 'button', class: `tool-btn${game.toolMode === mode ? ' selected' : ''}`, 'data-tool': mode, 'aria-label': long, title: long, 'aria-pressed': String(game.toolMode === mode),
+          onclick: () => game.setToolMode(mode),
+        }, monoIcon(ic, 20), h('span', {}, short)))) : null;
+    const m = opts.main;
+    return h('div', { class: 'tool-hud' },
+      toggle,
+      h('span', { class: 'tool-gap' }),
+      opts.undo ? h('button', { type: 'button', class: 'icon-btn tool-round', 'data-tool': 'undo', 'aria-label': t('hud.tools.undo'), title: t('hud.tools.undo'), disabled: !game.canUndoTool(), onclick: () => game.undoTool() }, icon('undo', 30)) : null,
+      h('button', { type: 'button', class: 'icon-btn active tool-round tool-main', 'data-tool': m.tool, 'aria-label': m.cost ? t('ctx.costAria', { label: m.label, cost: m.cost }) : m.label, title: m.label, disabled: m.disabled, onclick: m.run },
+        icon(m.icon, 32), m.cost ? h('em', { class: 'tool-cost' }, icon('wisp', 12), String(m.cost)) : null));
+  }
+
+  /** Pannello in alto (titolo, chiudi, istruzioni, avvisi) e pulsanti sotto: insieme, in fondo allo schermo. */
+  private mountPlacement(panel: HTMLElement, hud: HTMLElement) {
+    const ui = h('div', { class: 'place-ui' }, panel, hud);
+    if (this.placementBar) this.placementBar.replaceWith(ui); else $('#game').append(ui);
+    this.placementBar = ui;
+  }
+
+  private exitButton(run: () => void): HTMLElement {
+    return h('button', { class: 'pill exit', 'aria-label': t('hud.place.exit'), title: t('hud.place.exit'), onclick: run }, icon('close', 18));
   }
 
   refreshPlacementBar() {
     const p = this.game.placement;
     const editing = this.game.editMode && !p;
-    // mentre si sceglie il posto spariscono il menù e i pulsanti della mappa: la barra scende in fondo, al loro posto
+    // mentre si sceglie il posto spariscono il menù e i pulsanti della mappa: i pulsanti degli strumenti prendono il loro posto
     $('#game').classList.toggle('tools-off', !!p || editing);
     if (!p && !editing) { this.placementBar?.remove(); this.placementBar = null; if (!this.game.shrink) $('#bubble').classList.remove('hidden'); return; }
     $('#bubble').classList.add('hidden');
+    const busy = (blockers: string[]) => blockers.length ? t('hud.place.busyBy', { what: blockers.slice(0, 3).join(', ') }) : t('hud.place.busy');
     if (editing) {
-      const bar = h('div', { class: 'tutorial tool-bar' },
-        h('div', { class: 'tool-head' },
-          h('b', {}, t('menu.edit')),
-          h('button', { class: 'pill exit', 'aria-label': t('hud.place.exit'), title: t('hud.place.exit'), onclick: () => this.game.setEditMode(false) }, icon('close', 18))),
-        this.toolGuide(false),
-        this.toolButtons(false, true));
-      if (this.placementBar) this.placementBar.replaceWith(bar); else $('#game').append(bar);
-      this.placementBar = bar;
+      this.mountPlacement(
+        h('div', { class: 'tutorial tool-bar' },
+          h('div', { class: 'tool-head' }, h('b', {}, t('menu.edit')), this.exitButton(() => this.game.setEditMode(false))),
+          this.toolHint('edit')),
+        this.toolHud({ work: 'move', undo: true, main: { icon: 'check', label: t('hud.place.confirm'), tool: 'confirm', run: () => this.game.setEditMode(false) } }));
       return;
     }
     if (!p) return;
     const tr = this.game.traceInfo();
     if (tr) {
       const def = CATALOG[p.type!];
-      const status = !tr.segs && !tr.ok && !tr.busy ? '' : joinDot([t('hud.trace.ok', { n: tr.ok }), tr.short ? t('hud.trace.short', { n: tr.short }) : '', tr.busy ? (tr.blockers.length ? t('hud.trace.busyBy', { n: tr.busy, what: tr.blockers.slice(0, 3).join(', ') }) : t('hud.trace.busy', { n: tr.busy })) : '']);
-      const bar = h('div', { class: 'tutorial trace-bar tool-bar' },
-        h('div', { class: 'tool-head' },
-          h('b', {}, icon('edit', 18), def.label, h('span', { class: 'trace-count' }, `${tr.ok}/${tr.have}`)),
-          h('button', { class: 'pill exit', 'aria-label': t('hud.place.exit'), title: t('hud.place.exit'), onclick: () => this.game.cancelPlacement() }, icon('close', 18))),
-        this.toolGuide(true),
-        status ? h('span', { class: tr.short || tr.busy ? 'muted warn' : 'muted' }, status) : null,
-        tr.short ? h('button', { class: 'pill', onclick: () => this.game.buyTraceShortfall() }, t('hud.trace.buyShort', { n: tr.short, cost: tr.short * def.cost }), icon('wisp', 14)) : null,
-        this.toolButtons(true, !!tr.ok),
-      );
-      if (this.placementBar) this.placementBar.replaceWith(bar); else $('#game').append(bar);
-      this.placementBar = bar;
+      const s = this.game.state;
+      // pezzi mancanti: se se ne può comprare almeno uno, l'azione principale diventa «Compra»
+      const canBuy = tr.short > 0 && R.maxBuyable(s, p.type!) > 0;
+      const buyN = canBuy ? Math.min(tr.short, R.maxBuyable(s, p.type!)) : 0;
+      const status = !tr.segs && !tr.ok && !tr.busy ? '' : joinDot([t('hud.trace.ok', { n: tr.ok }), tr.busy ? (tr.blockers.length ? t('hud.trace.busyBy', { n: tr.busy, what: tr.blockers.slice(0, 3).join(', ') }) : t('hud.trace.busy', { n: tr.busy })) : '']);
+      const info = tr.short
+        ? h('p', { class: 'tool-info' }, icon(canBuy ? 'buy' : 'wisp', 20), h('span', {}, canBuy ? t('hud.trace.needBuy', { have: tr.have, n: tr.short, cost: tr.short * def.cost }) : t('hud.trace.noFunds', { n: tr.short })))
+        : null;
+      this.mountPlacement(
+        h('div', { class: 'tutorial trace-bar tool-bar' },
+          h('div', { class: 'tool-head' },
+            h('b', {}, icon('edit', 18), def.label, h('span', { class: 'trace-count' }, `${tr.ok}/${tr.have}`)),
+            this.exitButton(() => this.game.cancelPlacement())),
+          this.toolHint('trace'),
+          status ? h('span', { class: tr.busy ? 'muted warn' : 'muted' }, status) : null,
+          info),
+        this.toolHud({
+          work: 'draw', undo: true,
+          main: canBuy
+            ? { icon: 'buy', label: t('hud.place.buy'), tool: 'buy', cost: buyN * def.cost, run: () => this.game.buyTraceShortfall() }
+            : { icon: 'check', label: t('hud.place.confirm'), tool: 'confirm', disabled: !tr.ok, run: () => this.game.confirmPlacement() },
+        }));
       return;
     }
     if (p.kind === 'item') {
       this.closeContext();
       const def = CATALOG[p.type!];
-      const blockers = this.game.placementBlockers();
-      const bar = h('div', { class: 'tutorial tool-bar' },
-        h('div', { class: 'tool-head' },
-          h('b', {}, icon('edit', 18), def.label),
-          def.rotatable ? h('button', { class: 'pill rotate', 'data-tool': 'rotate', 'aria-label': t('hud.place.rotate'), title: t('hud.place.rotate'), onclick: () => this.game.rotatePlacement() }, icon('variant', 18)) : null,
-          h('button', { class: 'pill exit', 'aria-label': t('hud.place.exit'), title: t('hud.place.exit'), onclick: () => this.game.cancelPlacement() }, icon('close', 18))),
-        this.toolGuide(false),
-        !p.valid ? h('span', { class: 'muted warn' }, blockers.length ? t('hud.place.busyBy', { what: blockers.slice(0, 3).join(', ') }) : t('hud.place.busy')) : null,
-        this.toolButtons(false, p.valid, true));
-      if (this.placementBar) this.placementBar.replaceWith(bar); else $('#game').append(bar);
-      this.placementBar = bar;
+      this.mountPlacement(
+        h('div', { class: 'tutorial tool-bar' },
+          h('div', { class: 'tool-head' },
+            h('b', {}, icon('edit', 18), def.label),
+            def.rotatable ? h('button', { class: 'pill rotate', 'data-tool': 'rotate', 'aria-label': t('hud.place.rotate'), title: t('hud.place.rotate'), onclick: () => this.game.rotatePlacement() }, icon('rotate', 22)) : null,
+            this.exitButton(() => this.game.cancelPlacement())),
+          this.toolHint('item'),
+          !p.valid ? h('span', { class: 'muted warn' }, busy(this.game.placementBlockers())) : null),
+        this.toolHud({ work: 'move', undo: true, main: { icon: 'check', label: t('hud.place.confirm'), tool: 'confirm', disabled: !p.valid, run: () => this.game.confirmPlacement() } }));
       return;
     }
+    // la tomba: dove riposerà, poi «Seppellisci qui» (in oro, sotto, come le altre)
     this.closeContext();
-    const label = t('hud.place.graveTitle', { name: p.draft!.name });
-    const blockers = this.game.placementBlockers();
-    const bar = h('div', { class: 'tutorial' },
-      h('b', {}, icon('bury', 18), label),
-      h('span', { class: 'muted' }, p.valid ? t('hud.place.hint') : blockers.length ? t('hud.place.busyBy', { what: blockers.slice(0, 3).join(', ') }) : t('hud.place.busy')),
-      h('div', { class: 'row' },
-        h('button', { class: 'pill', onclick: () => this.game.cancelPlacement() }, t('dialog.cancel')),
-        h('button', { class: 'pill primary', disabled: !p.valid, onclick: () => this.game.confirmPlacement() }, t('hud.place.bury')),
-      ),
-    );
-    if (this.placementBar) this.placementBar.replaceWith(bar); else $('#game').append(bar);
-    this.placementBar = bar;
+    this.mountPlacement(
+      h('div', { class: 'tutorial tool-bar' },
+        h('div', { class: 'tool-head' }, h('b', {}, icon('bury', 18), t('hud.place.graveTitle', { name: p.draft!.name })), this.exitButton(() => this.game.cancelPlacement())),
+        h('p', { class: p.valid ? 'muted tool-hint' : 'muted warn' }, p.valid ? t('hud.place.hint') : busy(this.game.placementBlockers()))),
+      this.toolHud({ main: { icon: 'bury', label: t('hud.place.bury'), tool: 'confirm', disabled: !p.valid, run: () => this.game.confirmPlacement() } }));
   }
 
   /** Chiamato ogni frame: riposiziona il menù contestuale. */

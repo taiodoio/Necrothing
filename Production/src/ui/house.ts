@@ -19,7 +19,7 @@ import { previewUrl } from './previews.ts';
 import { houseHeader } from './houseHeader.ts';
 import { registryHeader } from './registryHeader.ts';
 import { openDeceased } from './deceased.ts';
-import { needChip, needRows, tabGlyph, type UnlockNeed } from './screens.ts';
+import { buyContent, needChip, needRows, tabGlyph, type UnlockNeed } from './screens.ts';
 import { graveThumb, modelThumb, placeableThumb } from './thumbs.ts';
 import type { UI } from './UI.ts';
 
@@ -190,9 +190,9 @@ export function houseShopDetail(ui: UI, id: string, close: () => void, bought: (
     h('div', { class: 'row' },
       h('button', { class: 'big-btn ghost', onclick: close }, t('dialog.close')),
       h('button', {
-        class: 'big-btn', disabled: has || needs.length > 0,
+        class: has || needs.length ? 'big-btn' : 'big-btn buy-btn', disabled: has || needs.length > 0,
         onclick: () => { if (game.act((st, n) => R.buyHousePart(st, id, n))) bought(); },
-      }, has ? t('house.ui.shop.has') : needs.length ? t('house.ui.shop.notYet') : h('span', { style: 'display:inline-flex;align-items:center;gap:6px' }, t('house.ui.shop.buy', { cost: it.cost }), icon('wisp', 18)))));
+      }, ...(has ? [t('house.ui.shop.has')] : needs.length ? [t('house.ui.shop.notYet')] : buyContent(it.cost)))));
 }
 
 /** Apre la Bottega direttamente sulla scheda «Casa» (dalla personalizzazione). */

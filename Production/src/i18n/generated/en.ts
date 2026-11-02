@@ -1530,5 +1530,13 @@ export default {
   "item.effect.pet": "The pet follows you and now and then brings you a few wisps. Tap it to call it over, let it roam, send it home, pet it or throw its bone.",
   "item.effect.vampireCrypt": "The vampire may bite you: for {s} seconds you turn into a bat.",
   "item.effect.mysticStaff": "Collect wisps from afar.",
-  "item.effect.speed": "The Keeper moves {x} times faster."
+  "item.effect.speed": "The Keeper moves {x} times faster.",
+  "hud.tools.panShort": "Map",
+  "hud.tools.moveShort": "Move",
+  "hud.tools.drawShort": "Draw",
+  "hud.tools.panHintPlace": "Drag the map to move around; pinch to zoom.",
+  "hud.place.buy": "Buy",
+  "shop.buy.short": "Buy",
+  "hud.trace.needBuy": "You have {have}: {n} missing. Tap “Buy” below ({cost} wisps), then confirm.",
+  "hud.trace.noFunds": "{n} missing, but you don’t have enough wisps: remove a few pieces or confirm the ones you have."
 } satisfies Record<string, string>;

@@ -138,6 +138,7 @@ export default {
   'shop.buy.full': 'Nella versione completa',
   // breve: pulsante, seguito dall'icona del fuoco fatuo
   'shop.buy.ctaShort': 'Compra · {n}',
+  'shop.buy.short': 'Compra',
 
   // ── Bottega ──
   'shop.title': 'Bottega',

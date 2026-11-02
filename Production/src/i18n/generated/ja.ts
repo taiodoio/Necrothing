@@ -1490,5 +1490,13 @@ export default {
   "item.effect.pet": "ペットはついて来て、ときどき鬼火を持ってくる。タップで呼ぶ、放す、帰す、なでる、骨を投げることができる。",
   "item.effect.vampireCrypt": "吸血鬼にかまれることがある。{s}秒間コウモリになる。",
   "item.effect.mysticStaff": "遠くから鬼火を集められる。",
-  "item.effect.speed": "墓守の速さが{x}倍になる。"
+  "item.effect.speed": "墓守の速さが{x}倍になる。",
+  "hud.tools.panShort": "マップ",
+  "hud.tools.moveShort": "移動",
+  "hud.tools.drawShort": "描く",
+  "hud.tools.panHintPlace": "マップをドラッグして移動、ピンチで拡大縮小。",
+  "hud.place.buy": "購入",
+  "shop.buy.short": "購入",
+  "hud.trace.needBuy": "手持ち{have}個：あと{n}個足りません。下の「購入」（鬼火{cost}個）をタップしてから確定してね。",
+  "hud.trace.noFunds": "あと{n}個足りませんが、鬼火が足りません。いくつか外すか、手持ちの分で確定してね。"
 } satisfies Record<string, string>;

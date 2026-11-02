@@ -941,3 +941,12 @@ test('varianti: ogni casetta ha il suo animale e ogni variante ha la sua miniatu
   assert.notEqual(key('lamp_post_gothic'), key('lamp_post'));
   for (const fam of Object.values(FAMILY_MEMBERS)) assert.equal(new Set(fam.map((t) => key(t))).size, fam.length);
 });
+
+test('luci più morbide: la pozza a terra sta sopra i sassi dei sentieri, vetri e aloni attenuati', async () => {
+  const A = await import('../src/view/Atmosphere.ts');
+  // i sassi del sentiero arrivano a circa 0,07 sopra il terreno: la luce finta a terra deve stare sopra
+  assert.ok(A.POOL_LIFT > 0.08, 'la pozza non finisce sotto le pietre');
+  assert.ok(A.POOL_RADIUS > 0.42, 'più larga di prima');
+  assert.ok(A.GLOW_SCALE < 1 && A.GLOW_SCALE > 0.4, 'vetri accesi meno abbaglianti, ma ancora luce');
+  assert.ok(A.HALO_OPACITY < 1 && A.HALO_FAR_MIN < 1);
+});

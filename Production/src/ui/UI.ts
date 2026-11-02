@@ -390,12 +390,13 @@ export class UI {
    */
   private toolHud(opts: { work?: 'move' | 'draw'; undo?: boolean; main: { icon: string; label: string; run: () => void; disabled?: boolean; tool: string; cost?: number } }): HTMLElement {
     const game = this.game;
-    const toggle = opts.work ? h('div', { class: 'tool-toggle', role: 'group', 'aria-label': joinDot([t('hud.tools.pan'), t(opts.work === 'draw' ? 'hud.tools.draw' : 'hud.tools.move')]) },
+    // l'interruttore è una barra di schede vera (stesse regole delle schede dei pannelli: ui-play.css)
+    const toggle = opts.work ? h('div', { class: 'tabs tool-toggle', role: 'group', 'aria-label': joinDot([t('hud.tools.pan'), t(opts.work === 'draw' ? 'hud.tools.draw' : 'hud.tools.move')]) },
       ...([['pan', 'toolHand', t('hud.tools.panShort'), t('hud.tools.pan')], ['work', opts.work === 'draw' ? 'toolPencil' : 'toolMove', t(opts.work === 'draw' ? 'hud.tools.drawShort' : 'hud.tools.moveShort'), t(opts.work === 'draw' ? 'hud.tools.draw' : 'hud.tools.move')]] as const)
         .map(([mode, ic, short, long]) => h('button', {
-          type: 'button', class: `tool-btn${game.toolMode === mode ? ' selected' : ''}`, 'data-tool': mode, 'aria-label': long, title: long, 'aria-pressed': String(game.toolMode === mode),
+          type: 'button', class: `tab tool-btn${game.toolMode === mode ? ' active' : ''}`, 'data-tool': mode, 'aria-label': long, title: long, 'aria-pressed': String(game.toolMode === mode),
           onclick: () => game.setToolMode(mode),
-        }, monoIcon(ic, 20), h('span', {}, short)))) : null;
+        }, S.tabGlyph(ic), h('span', {}, short)))) : null;
     const m = opts.main;
     return h('div', { class: 'tool-hud' },
       toggle,
@@ -479,8 +480,8 @@ export class UI {
     this.mountPlacement(
       h('div', { class: 'tutorial tool-bar' },
         h('div', { class: 'tool-head' }, h('b', {}, icon('bury', 18), t('hud.place.graveTitle', { name: p.draft!.name })), this.exitButton(() => this.game.cancelPlacement())),
-        h('p', { class: p.valid ? 'muted tool-hint' : 'muted warn' }, p.valid ? t('hud.place.hint') : busy(this.game.placementBlockers()))),
-      this.toolHud({ main: { icon: 'bury', label: t('hud.place.bury'), tool: 'confirm', disabled: !p.valid, run: () => this.game.confirmPlacement() } }));
+        p.valid ? this.toolHint('item') : h('p', { class: 'muted warn' }, busy(this.game.placementBlockers()))),
+      this.toolHud({ work: 'move', main: { icon: 'bury', label: t('hud.place.bury'), tool: 'confirm', disabled: !p.valid, run: () => this.game.confirmPlacement() } }));
   }
 
   /** Chiamato ogni frame: riposiziona il menù contestuale. */

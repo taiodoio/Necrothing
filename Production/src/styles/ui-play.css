@@ -162,13 +162,16 @@
   border-radius: 15px; background: rgba(28, 23, 35, 0.95); box-shadow: 0 6px 14px rgba(0, 0, 0, 0.3); overflow-x: auto;
 }
 .ui-next.ui-play .drawer.with-hero .tabs:not(.look-tabs) { top: 0; }
-.ui-next.ui-play .drawer .tabs:not(.look-tabs) .tab {
+/* l'interruttore mano / strumento di Modifica e posizionamento: la stessa barra di schede, staccata sulla scena */
+.ui-next.ui-play .tool-hud .tabs { display: flex; gap: 4px; padding: 4px; margin: 0; border-radius: 15px; background: rgba(28, 23, 35, 0.95); box-shadow: 0 6px 14px rgba(0, 0, 0, 0.3); overflow: visible; }
+.ui-next.ui-play .tool-hud .tabs .tab { width: 70px; }
+.ui-next.ui-play .drawer .tabs:not(.look-tabs) .tab, .ui-next.ui-play .tool-hud .tabs .tab {
   position: relative; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; height: 46px; min-height: 0; padding: 4px 4px 3px;
   border: 0; border-radius: 11px; background: transparent; box-shadow: none; color: #b3abbf; font-size: 11px; font-weight: 800; line-height: 1.05;
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; --hole: #2c2636;
 }
 .ui-next.ui-play .drawer .tabs:not(.look-tabs) .tab .pxi { display: none; }
-.ui-next.ui-play .drawer .tabs:not(.look-tabs) .tab.active { background: var(--here-bg); color: var(--here-ink); box-shadow: var(--here-shadow); --hole: #4a4160; }
+.ui-next.ui-play .drawer .tabs:not(.look-tabs) .tab.active, .ui-next.ui-play .tool-hud .tabs .tab.active { background: var(--here-bg); color: var(--here-ink); box-shadow: var(--here-shadow); --hole: #4a4160; }
 .ui-next.ui-play .drawer .tabs:not(.look-tabs) .tab .tab-n { position: absolute; top: 4px; right: 8px; margin: 0; padding: 0 5px; font-size: 10px; line-height: 15px; }
 .ui-next.ui-play .player-page .tabs:not(.look-tabs) { margin-bottom: 4px; }
 

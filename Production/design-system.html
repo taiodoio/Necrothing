@@ -401,6 +401,33 @@
           </div>
           <details class="ds-code"><summary>Markup</summary><pre></pre></details>
         </div>
+              <h3>Modifica e posizionamento</h3>
+        <div class="ds-example">
+          <p class="ds-label">Il pannello dice solo cosa fa lo strumento scelto; sotto, senza riquadro, i pulsanti come quelli della mappa</p>
+          <div class="ds-live bare">
+            <div class="ds-stage" style="height: 260px">
+              <div data-snippet style="display: contents">
+                <div class="place-ui">
+                  <div class="tutorial tool-bar">
+                    <div class="tool-head"><b>Modifica</b><button class="pill exit" aria-label="Esci"><i data-icon="close" style="--s: 18px"></i></button></div>
+                    <p class="muted tool-hint">Tocca un elemento per i dettagli o trascinalo per spostarlo.</p>
+                  </div>
+                  <div class="tool-hud">
+                    <div class="tabs tool-toggle" role="group">
+                      <button class="tab tool-btn" data-tool="pan"><i data-mono="toolHand" data-size="19"></i><span>Mappa</span></button>
+                      <button class="tab tool-btn active" data-tool="work"><i data-mono="toolMove" data-size="19"></i><span>Sposta</span></button>
+                    </div>
+                    <span class="tool-gap"></span>
+                    <button class="icon-btn tool-round" data-tool="undo" disabled><i data-icon="undo" style="--s: 30px"></i></button>
+                    <button class="icon-btn active tool-round tool-main" data-tool="buy"><i data-icon="buy" style="--s: 32px"></i><em class="tool-cost"><i data-icon="wisp" style="--s: 12px"></i>5</em></button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <p class="ds-note">L'interruttore è una barra di schede vera (<code>.tabs</code> + <code>.tab</code>, stesse regole delle schede dei pannelli: icona monocromatica da 19 px e nome da 11 px; «dove sei» in viola chiaro). I pulsanti tondi sono alti <code>--hud</code> come quelli della mappa; spenti restano pieni e si spegne solo l'icona. L'azione principale è la spunta, o «Compra» col costo quando nel tracciato mancano pezzi.</p>
+          <details class="ds-code"><summary>Markup</summary><pre></pre></details>
+        </div>
       </section>
 
       <!-- ═════════════════════ Pannelli ═════════════════════ -->

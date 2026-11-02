@@ -8,6 +8,7 @@ import { LPC } from './lowpoly/palette.ts';
 import { weeds } from './lowpoly/details.ts';
 import { getModel, instantiate, lightWorldPos, LOWPOLY_MATERIALS, type CachedModel } from './modelCache.ts';
 import { placeableKey } from './keys.ts';
+import type { PVis } from './types.ts';
 import { houseRoof, houseVariant } from '../game/house.ts';
 import { housePartLP } from './lowpoly/architecture.ts';
 import type { GraveType } from '../game/graves.ts';
@@ -158,8 +159,9 @@ function settle(src: HTMLCanvasElement, S: number): string {
 }
 
 /** Anteprima di un oggetto del catalogo. */
-export function renderItemPreview(type: string, S = 320): string {
-  const v = { type, variant: 0, dirty: false, broken: false, lit: true, seed: 1 };
+export function renderItemPreview(type: string, S = 320, state: Partial<Pick<PVis, 'variant' | 'dirty' | 'broken' | 'lit'>> = {}): string {
+  // `state`: solo per la guida agli asset (gli stati spento, sporco, rotto); le anteprime del gioco sono pulite e accese
+  const v: PVis = { type, variant: 0, dirty: false, broken: false, lit: true, seed: 1, ...state };
   // con chi lo abita (zombie, strega, fantasmi…), come nelle miniature
   return renderPreview(getModel(placeableKey(v)), type, S, (o) => addPresences(o, v));
 }

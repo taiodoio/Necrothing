@@ -42,7 +42,7 @@ import { ForestMist, mistOptimized } from '../view/ForestMist.ts';
 import { PostFX } from '../view/PostFX.ts';
 import { cellCenter, HALF, worldToCell, WorldView } from '../view/WorldView.ts';
 import { WalkTarget } from '../view/walkTarget.ts';
-import { AutoGovernor, detectTier, newAutoProfile, PROFILES, QUALITY_LABELS, type AutoProfile, type QualityProfile } from './AutoQuality.ts';
+import { AUTO_DOWNGRADE, AutoGovernor, detectTier, newAutoProfile, PROFILES, QUALITY_LABELS, type AutoProfile, type QualityProfile } from './AutoQuality.ts';
 import { Input } from './Input.ts';
 import { flushPersistence, loadSave, persistenceOn, saveNow, scheduleSave, setSaveInstead } from './persistence.ts';
 import { closedCoffinLP } from '../render/lowpoly/memoryTree.ts';
@@ -146,7 +146,7 @@ export class Game {
     const urlSeed = Number(params.get('seed'));
     this.state = opts.state ?? loadSave() ?? createNewGame(now, Number.isFinite(urlSeed) && urlSeed > 0 ? urlSeed : undefined);
     this.shownRank = rankForXp(this.state.player.xp).level;
-    if (this.state.settings.quality === 'auto') this.auto = new AutoGovernor(loadAutoProfile());
+    if (this.state.settings.quality === 'auto') this.auto = new AutoGovernor(loadAutoProfile(), { downgrade: AUTO_DOWNGRADE });
     const q = this.baseQuality();
     this.renderer = new THREE.WebGLRenderer({ canvas, antialias: opts.antialias ?? q !== 'low', powerPreference: 'high-performance', preserveDrawingBuffer: false });
     this.renderer.outputColorSpace = THREE.SRGBColorSpace;
@@ -2032,7 +2032,7 @@ export class Game {
 
   setQuality(q: QualitySetting) {
     this.state.settings.quality = q;
-    this.auto = q === 'auto' ? new AutoGovernor(loadAutoProfile()) : null;
+    this.auto = q === 'auto' ? new AutoGovernor(loadAutoProfile(), { downgrade: AUTO_DOWNGRADE }) : null;
     this.applySettingQuality();
     scheduleSave(this.state);
     this.ui.refreshSettingsButtons();
@@ -2423,7 +2423,7 @@ export class Game {
     R.ensureKeeperHouse(next, this.now());
     this.actors.teleport(this.homeSpot(next));
     this.rig.setMode(next.settings.camera);
-    this.auto = next.settings.quality === 'auto' ? new AutoGovernor(loadAutoProfile()) : null;
+    this.auto = next.settings.quality === 'auto' ? new AutoGovernor(loadAutoProfile(), { downgrade: AUTO_DOWNGRADE }) : null;
     this.applySettingQuality();
     this.afterChange();
     this.updatePhase(true);
@@ -2537,7 +2537,8 @@ function loadAutoProfile(): AutoProfile {
     const saved = JSON.parse(localStorage.getItem(AUTO_KEY) ?? 'null') as (AutoProfile & { gpu: string; v?: number }) | null;
     // il livello in uso si ricorda, ma il tetto torna quello stimato: un livello che una volta non ha retto
     // (magari per un momento pesante) si può ritentare a ogni apertura, non resta escluso per sempre
-    if (saved && saved.v === AUTO_VERSION && saved.gpu === info.gpu && saved.tier in PROFILES) return { tier: saved.tier, step: saved.step, ceiling: saved.ceiling, top: detectTier(info) };
+    // col calo sospeso un livello ridotto in passato non si ricorda: si riparte da quello stimato
+    if (AUTO_DOWNGRADE && saved && saved.v === AUTO_VERSION && saved.gpu === info.gpu && saved.tier in PROFILES) return { tier: saved.tier, step: saved.step, ceiling: saved.ceiling, top: detectTier(info) };
   } catch { /* profilo illeggibile: si riparte */ }
   return newAutoProfile(detectTier(info));
 }

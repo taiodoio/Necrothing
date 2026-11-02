@@ -115,6 +115,14 @@ export const START_SETTLE = 5;
 export const TIER_SETTLE = 4;
 /** Un frame singolo più lungo di così, in mezzo a frame veloci, è uno scatto isolato (un modello generato, un salvataggio): non conta. */
 export const HITCH = 0.25;
+/**
+ * Calo automatico (risoluzione e livello) quando gli FPS restano sotto il ritmo.
+ * SOSPESO per il momento: dopo i secondi d'avvio il ritmo misurato cala e Auto
+ * abbassava la qualità anche dove il gioco gira bene. Auto sceglie solo il
+ * livello stimato dal dispositivo (alla risoluzione più alta) e non scende;
+ * per riattivarlo basta rimettere `true`.
+ */
+export const AUTO_DOWNGRADE = false;
 
 /** Regolatore a finestre di un secondo, con isteresi e tetti per ciò che non regge. */
 export class AutoGovernor {
@@ -134,8 +142,11 @@ export class AutoGovernor {
   /** Da quanto si è saliti di gradino e di livello (per capire se la salita ha fatto crollare gli FPS). */
   private sinceUp = Infinity;
   private sinceTierUp = Infinity;
+  /** Se può scendere di risoluzione o di livello (vedi AUTO_DOWNGRADE). */
+  private readonly downgrade: boolean;
 
-  constructor(p: AutoProfile) {
+  constructor(p: AutoProfile, opts: { downgrade?: boolean } = {}) {
+    this.downgrade = opts.downgrade ?? true;
     this.tier = p.tier;
     this.top = ORDER.indexOf(p.top) >= ORDER.indexOf(p.tier) ? p.top : p.tier;
     const max = PROFILES[p.tier].dpr.length - 1;
@@ -182,6 +193,7 @@ export class AutoGovernor {
     // Sotto il ritmo per due finestre consecutive si riduce subito la risoluzione.
     const slow = last(2);
     if (slow && slow.every((f) => f < low)) {
+      if (!this.downgrade) return null; // calo sospeso: si resta dove si è (e non si sale)
       if (this.step > 0) {
         // la salita di poco fa non ha retto: quel gradino non si ritenta più
         if (this.sinceUp < 12) this.ceiling = this.step - 1;

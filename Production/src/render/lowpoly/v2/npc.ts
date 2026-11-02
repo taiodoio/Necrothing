@@ -594,7 +594,9 @@ function birdSpec(o: Bird): KawaiiSpec {
   const tone = (k: number) => shade(o.color, k);
   // la papera cammina (gambe), il corvo vola (ali che sbattono)
   const P: Partial<Record<KPart, [number, number, number]>> = {
-    body: [0, 0.2, 0], head: [0, 0.3, 0.08], legL: [-0.05, 0.1, 0], legR: [0.05, 0.1, 0],
+    body: [0, 0.2, 0], head: [0, 0.3, 0.08],
+    // le zampe ruotano dall'anca: in volo si piegano all'indietro (lo scheletro ha l'anca più in alto, al bacino)
+    ...(o.bones ? { legL: [-0.045, 0.19, -0.05], legR: [0.045, 0.19, -0.05] } : { legL: [-0.05, 0.1, 0], legR: [0.05, 0.1, 0] }),
     ...(o.duck ? {} : { armL: [-0.12, 0.25, 0.02], armR: [0.12, 0.25, 0.02] }),
   };
   const wing = (s: number) => (lp: LP) => {

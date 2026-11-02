@@ -674,6 +674,14 @@ test('presenze erranti: a frame regolari camminano davvero (prima restavano a gi
 
 test('qualità Auto: livello dal dispositivo, risoluzione dentro al livello, scende presto e sale piano, non ritenta ciò che non regge', async () => {
   const { detectTier, AutoGovernor, PROFILES, newAutoProfile, START_SETTLE } = await import('../src/app/AutoQuality.ts');
+  // il calo automatico è sospeso nel gioco: col regolatore senza calo i frame lenti non cambiano nulla
+  assert.equal((await import('../src/app/AutoQuality.ts')).AUTO_DOWNGRADE, false);
+  {
+    const held = new AutoGovernor(newAutoProfile('high'), { downgrade: false });
+    for (let t = 0; t < START_SETTLE + 40; t += 1 / 20) assert.equal(held.frame(1 / 20, 60), null);
+    assert.equal(held.tier, 'high');
+    assert.equal(held.step, PROFILES.high.dpr.length - 1);
+  }
   assert.equal(detectTier({ gpu: 'Apple GPU', cores: 6, mobile: true }), 'high');
   assert.equal(detectTier({ gpu: 'Apple GPU', cores: 2, mobile: true }), 'high', 'Safari su iPhone dichiara 2 core: non conta');
   assert.equal(detectTier({ gpu: 'Adreno (TM) 509', mobile: true }), 'low');

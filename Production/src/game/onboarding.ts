@@ -24,7 +24,7 @@ const COMPLETES: Record<YardStep, YardSignal> = {
 };
 
 /** I consigli al momento giusto: ognuno una volta sola (game/tips.ts). */
-export const TIP_IDS = ['graveBroken', 'itemBroken', 'pet', 'memoryTree', 'photo'] as const;
+export const TIP_IDS = ['graveBroken', 'itemBroken', 'pet', 'memoryTree', 'photo', 'gravePlace'] as const;
 export type TipId = (typeof TIP_IDS)[number];
 
 export interface OnboardingState {

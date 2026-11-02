@@ -5,7 +5,7 @@ import { DEFAULT_LOOK, normalizeLook, type CustodeLook } from './look.ts';
 import { defaultHouse, houseItem, type HouseState } from './house.ts';
 import type { CauseChoice, Category, DeathCause, GraveType } from './graves.ts';
 import type { DayPhase } from './time.ts';
-import { MAP_SIZE, WISPS } from './balance.ts';
+import { LOOK_UNLOCKS, MAP_SIZE, PET_SPECIES, WISPS, type PetSpecies } from './balance.ts';
 import { CATALOG, FAMILY_MEMBERS, rotatedFootprint } from './catalog.ts';
 import { createRng, hashString } from './rng.ts';
 import { isoDate } from './time.ts';
@@ -161,6 +161,10 @@ export interface Player {
   lastAbstractBurialDate: string | null;
   lastShareDate: string | null;
   counters: Counters;
+  /** Coccole e giochi con ciascuna specie di animale (sbloccano orecchie e becchi). */
+  petBond: Partial<Record<PetSpecies, number>>;
+  /** Pezzi d'aspetto sbloccati («hat:witch»…): restano sbloccati anche se poi si vende chi li ha dati. */
+  lookUnlocks: string[];
 }
 
 export interface WorldMeta {
@@ -349,7 +353,7 @@ export function createNewGame(now: Date, seed = Math.floor(Math.random() * 1e9))
     createdAt: iso,
     player: {
       name: t('state.player.defaultName'), look: { ...DEFAULT_LOOK }, xp: 0, wisps: WISPS.start,
-      lastAbstractBurialDate: null, lastShareDate: null, counters: emptyCounters(),
+      lastAbstractBurialDate: null, lastShareDate: null, counters: emptyCounters(), petBond: {}, lookUnlocks: [],
     },
     graves,
     placeables,
@@ -474,7 +478,15 @@ export function normalizeSave(raw: unknown): SaveData | null {
   return localizeStatic({
     ...base,
     ...data,
-    player: { ...base.player, ...data.player, look: normalizeLook(data.player.look), counters: { ...emptyCounters(), ...(data.player.counters ?? {}) } },
+    player: {
+      ...base.player, ...data.player, look: normalizeLook(data.player.look), counters: { ...emptyCounters(), ...(data.player.counters ?? {}) },
+      petBond: Object.fromEntries(PET_SPECIES.map((k) => [k, Number(data.player?.petBond?.[k]) || 0]).filter(([, n]) => (n as number) > 0)),
+      lookUnlocks: [...new Set([
+        ...(Array.isArray(data.player?.lookUnlocks) ? data.player.lookUnlocks.filter((k) => LOOK_UNLOCKS.some((u) => u.key === k)) : []),
+        // prima il cappello da strega si sbloccava con 30 pozioni vendute: chi ci era arrivato lo tiene
+        ...((data.player?.counters?.potionsSold ?? 0) >= 30 ? ['hat:witch'] : []),
+      ])],
+    },
     world: { ...base.world, ...(data.world ?? {}) },
     settings: { ...DEFAULT_SETTINGS, ...(data.settings ?? {}) },
     inventory: { ...(data.inventory ?? {}) },

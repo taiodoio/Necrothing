@@ -26,12 +26,19 @@ import type { LPModel } from '../render/lowpoly/kit.ts';
 import type { LightAnchor } from '../render/types.ts';
 import { findPath, type Cell } from './pathfinding.ts';
 import { boneMesh, Den, Glyphs } from './petFx.ts';
+import { CROW_NEST, PET_DENS } from '../render/lowpoly/petHouses.ts';
 import { cellCenter, HALF, worldToCell } from './WorldView.ts';
 import { t } from '../i18n/index.ts';
 
 const LIFESPAN: Record<RoamerKind, number> = { ghost: 26, cat: 32, crow: 22, gravedigger: 34, priest: 36, rat: 15, zombie: 30 };
 const SPEED: Record<RoamerKind, number> = { ghost: 0.9, cat: 1.6, crow: 3.2, gravedigger: 1.1, priest: 0.9, rat: 2.6, zombie: 0.85 };
 const RIG_FOR: Record<RoamerKind, CharacterKind> = { ghost: 'ghost', cat: 'cat', crow: 'crow', gravedigger: 'gravedigger', priest: 'priest', rat: 'rat', zombie: 'zombie' };
+/** Da dove esce ciascuna specie (davanti all'apertura della sua casetta). */
+function petDoor(kind: number): THREE.Vector3 {
+  const d = PET_DENS[kind % PET_DENS.length];
+  return d ? new THREE.Vector3(d[0], 0, d[2] + 0.09) : new THREE.Vector3(NEST.x, 0, NEST.z + 0.5);
+}
+
 const PET_KINDS: CharacterKind[] = ['petDog', 'petCat', 'petRabbit', 'petDuck', 'petCrow'];
 /** Le specie, nello stesso ordine di PET_KINDS (chiavi dei testi «pet.<specie>.…»). */
 const PET_SPECIES = ['dog', 'cat', 'rabbit', 'duck', 'crow'] as const;
@@ -178,7 +185,13 @@ export interface Pet extends Walker {
   broken: boolean;
   hitbox: THREE.Mesh;
   den: Den;
+  /** Vola (il corvo): niente sentieri, si alza quando si muove e dorme sul nido, in vista. */
+  flier: boolean;
 }
+
+/** Il corvo vola a questa altezza; il nido del trespolo, rispetto al centro della casetta. */
+const FLY_HEIGHT = 1.5;
+const NEST = new THREE.Vector3(CROW_NEST[0], CROW_NEST[1] - 0.04, CROW_NEST[2]);
 
 const PET_SPEED = { roam: 1.3, run: 3.5, dash: 5 };
 
@@ -1191,7 +1204,7 @@ export class Actors {
       const home = cellCenter(h.x, h.y, fp);
       if (!home.equals(pet.home)) { // casetta spostata: l'animale la segue
         pet.home.copy(home);
-        pet.door.copy(home).add(new THREE.Vector3(0, 0, 0.42));
+        pet.door.copy(home).add(petDoor(pet.variant));
         pet.porch = this.porchOf(h);
         pet.den.place(home);
         if (pet.act === 'sleep' || pet.act === 'enter') { pet.pos.copy(pet.door); pet.path = []; pet.act = 'sleep'; }
@@ -1211,21 +1224,22 @@ export class Actors {
   private makePet(h: Placed): Pet {
     const fp = rotatedFootprint(h.type, h.rot);
     const home = cellCenter(h.x, h.y, fp);
-    const door = home.clone().add(new THREE.Vector3(0, 0, 0.42));
     const kind = petKind(h);
+    const door = home.clone().add(petDoor(kind));
     const w = this.makeWalker(PET_KINDS[kind % PET_KINDS.length], door, PET_SPEED.roam);
     const hitbox = new THREE.Mesh(new THREE.BoxGeometry(0.9, 0.8, 0.9), hitMat);
     hitbox.position.y = 0.4;
     hitbox.userData.petId = h.id;
     w.rig.root.add(hitbox);
     w.rig.root.visible = false;
-    const den = new Den('#8ff0dc');
+    const den = new Den('#8ff0dc', PET_DENS[kind % PET_DENS.length] ?? undefined);
     den.place(home);
     this.group.add(den.group);
     // riprende quello che faceva (salvato nella casetta); libero, si sveglia dopo poco
     return {
       ...w, placeId: h.id, label: PET_LABELS[kind % PET_LABELS.length], variant: kind, home, door, porch: this.porchOf(h),
       mode: h.petMode ?? 'free', act: 'sleep', timer: h.petMode === 'follow' ? 0.3 : 2 + createRng(h.id).next() * 10, repath: 0, roams: 0, chasing: false, broken: h.broken, hitbox, den,
+      flier: !PET_DENS[kind % PET_DENS.length],
     };
   }
 
@@ -1236,6 +1250,14 @@ export class Actors {
     pet.hitbox.geometry.dispose();
     this.pets.delete(pet.placeId);
   }
+
+  /** Il percorso di un animale: chi vola va dritto (sopra tombe e oggetti), gli altri seguono i sentieri. */
+  private petRoute(pet: Pet, goal: Cell, final?: THREE.Vector3): THREE.Vector3[] {
+    return pet.flier ? [final?.clone() ?? cellCenter(goal.x, goal.y, [1, 1])] : this.pathTo(pet.pos, goal, final);
+  }
+
+  /** Il nido del trespolo, nel mondo (dove il corvo si posa e dorme). */
+  private nestOf(pet: Pet): THREE.Vector3 { return pet.home.clone().add(new THREE.Vector3(NEST.x, 0, NEST.z)); }
 
   /** Percorso fino a una cella (il punto di partenza può essere occupato); se non c'è, dritto. */
   private pathTo(from: THREE.Vector3, goal: Cell, final?: THREE.Vector3): THREE.Vector3[] {
@@ -1282,7 +1304,7 @@ export class Actors {
     const target = slot ?? a.clone().add(pet.pos.clone().sub(a).setY(0).normalize().multiplyScalar(stop - 0.05));
     target.y = 0;
     pet.repath -= dt;
-    if (this.clearLine(pet.pos, target)) pet.path = [target];
+    if (pet.flier || this.clearLine(pet.pos, target)) pet.path = [target];
     else if (pet.repath <= 0 || !pet.path.length) { pet.repath = 0.6; pet.path = this.pathTo(pet.pos, worldToCell(a), target); }
     this.pullPath(pet);
     // se è lontano (appena uscito dalla cuccia, o rimasto indietro) corre di più, ma ci arriva sempre a piedi
@@ -1326,7 +1348,8 @@ export class Actors {
 
   /** Esce dalla tana dall'arco e si ferma sul davanzale. */
   private wake(pet: Pet) {
-    pet.pos.copy(pet.door);
+    // il corvo si stacca dal nido in volo; gli altri escono dalla loro apertura
+    if (pet.flier) pet.pos.copy(this.nestOf(pet)); else pet.pos.copy(pet.door);
     pet.rig.root.visible = true;
     pet.path = [cellCenter(pet.porch.x, pet.porch.y, [1, 1])];
     pet.act = pet.mode === 'follow' ? 'follow' : 'roam';
@@ -1337,7 +1360,7 @@ export class Actors {
   private goHome(pet: Pet) {
     if (pet.act === 'sleep') return;
     pet.speed = pet.mode === 'home' ? PET_SPEED.run : PET_SPEED.roam;
-    pet.path = [...this.pathTo(pet.pos, pet.porch), pet.door.clone()];
+    pet.path = pet.flier ? [this.nestOf(pet)] : [...this.pathTo(pet.pos, pet.porch), pet.door.clone()];
     pet.act = 'enter';
   }
 
@@ -1357,14 +1380,27 @@ export class Actors {
     return null;
   }
 
+  /** Un passo dell'animale; chi vola poi sale, scende e sbatte le ali. */
   private stepPet(pet: Pet, dt: number) {
+    this.stepPetAct(pet, dt);
+    if (!pet.flier || pet.act === 'sleep') return;
+    // in volo quando si sposta; arrivando al nido sale alla sua altezza; fermo, atterra
+    const moving = pet.pose === 'walk';
+    const want = pet.act === 'enter' ? NEST.y : moving ? FLY_HEIGHT : 0;
+    pet.lift = THREE.MathUtils.lerp(pet.lift ?? 0, want, Math.min(1, dt * 2.6));
+    if (moving || (pet.lift ?? 0) > 0.06) pet.pose = 'fly';
+  }
+
+  private stepPetAct(pet: Pet, dt: number) {
     const a = this.avatar.pos;
     const toAvatar = Math.hypot(a.x - pet.pos.x, a.z - pet.pos.z);
     const face = (p: THREE.Vector3) => { const dx = p.x - pet.pos.x, dz = p.z - pet.pos.z; if (Math.hypot(dx, dz) > 0.05) pet.facing = Math.atan2(dx, dz); };
-    pet.den.sleeping = pet.act === 'sleep';
+    pet.den.sleeping = pet.act === 'sleep' && !pet.flier;
     switch (pet.act) {
       case 'sleep':
-        pet.rig.root.visible = false;
+        // il corvo dorme sul nido, in vista; gli altri dentro la casetta (si vedono solo gli occhietti)
+        if (pet.flier) { pet.rig.root.visible = true; pet.pos.copy(this.nestOf(pet)); pet.lift = NEST.y; pet.facing = 0.5; }
+        else pet.rig.root.visible = false;
         pet.pose = 'idle';
         // libero: dopo un sonnellino esce di nuovo; al seguito (salvato così): esce subito dal Custode
         if (pet.mode !== 'home' && !pet.broken) { pet.timer -= dt; if (pet.timer <= 0) this.wake(pet); }
@@ -1374,7 +1410,7 @@ export class Actors {
         if (this.followPath(pet, dt)) { pet.pose = 'walk'; return; }
         pet.act = 'sleep';
         pet.timer = 18 + Math.random() * 25;
-        pet.rig.root.visible = false;
+        pet.rig.root.visible = pet.flier;
         return;
       case 'roam':
         pet.speed = PET_SPEED.roam;
@@ -1390,7 +1426,7 @@ export class Actors {
         if (pet.timer > 0) return;
         // dopo qualche giro torna a farsi un pisolino in tana
         if (++pet.roams > 4 + Math.floor(Math.random() * 4)) { this.goHome(pet); return; }
-        { const t = this.randomRoamTarget(pet); pet.path = t ? this.pathTo(pet.pos, t) : []; pet.act = 'roam'; }
+        { const t = this.randomRoamTarget(pet); pet.path = t ? this.petRoute(pet, t) : []; pet.act = 'roam'; }
         return;
       case 'follow': {
         if (this.chase(pet, dt, 1.2, this.followSlot(pet, 1.2))) pet.pose = 'walk';
@@ -1470,6 +1506,7 @@ export class Actors {
   petTop(id: string): THREE.Vector3 | null {
     const p = this.pets.get(id);
     if (!p) return null;
+    if (p.flier) return p.pos.clone().setY(this.ground(p.pos) + (p.lift ?? 0) + 0.8); // il corvo: sopra di lui, anche in volo o sul nido
     return p.act === 'sleep' ? p.home.clone().setY(1.4) : p.pos.clone().setY(this.ground(p.pos) + 0.9);
   }
 
@@ -1546,7 +1583,7 @@ export class Actors {
     b.t = 0; b.dur = 0.9; b.flying = true; b.landed = false; b.carrier = null;
     b.obj.visible = true;
     p.act = 'fetch';
-    p.path = this.pathTo(p.pos, target, to);
+    p.path = this.petRoute(p, target, to);
     return true;
   }
 

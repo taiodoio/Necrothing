@@ -3,7 +3,7 @@
 // espansione/achievement → salvataggio → sincronizzazione della vista.
 
 import * as THREE from 'three';
-import { BAT, BUSINESS, FOREST_MARGIN, GRAVE_FOOTPRINT, KEEPER_LAMP, LIVE_TICK_MS, SOUL_BELL, STAFF, ZOMBIE_MUD } from '../game/balance.ts';
+import { BAT, BUSINESS, FOREST_MARGIN, GRAVE_FOOTPRINT, KEEPER_LAMP, LIVE_TICK_MS, PET_SPECIES, SOUL_BELL, type PetSpecies, STAFF, ZOMBIE_MUD } from '../game/balance.ts';
 import { moveTraceDraw, startTraceDraw, traceDrawCells, type TraceDraw } from '../game/trace.ts';
 import { CATALOG, CATALOG_LIST, EDIT_ONLY, rotatedFootprint, TRACEABLE, ZOMBIE_ATTRACTORS } from '../game/catalog.ts';
 import { watchLifecycle } from './platform.ts';
@@ -23,7 +23,8 @@ import { placeableKey, placeableSeed, seedCount } from '../render/keys.ts';
 import type { PVis } from '../render/types.ts';
 import { UI } from '../ui/UI.ts';
 import { confirmDialog, drawerOpen, floater, keepFieldVisible, toast, uiBlocking } from '../ui/dom.ts';
-import { celebrateAchievement, celebrateRank } from '../ui/celebrate.ts';
+import { celebrateAchievement, celebrateLook, celebrateRank } from '../ui/celebrate.ts';
+import { openCustomize } from '../ui/customize.ts';
 import { rankForXp } from '../game/progression.ts';
 import { npcNote, type NpcNote } from '../ui/npcNote.ts';
 import { annivNote } from '../ui/anniversary.ts';
@@ -49,10 +50,13 @@ import { nextPaint } from './boot.ts';
 
 export type Selection = { kind: 'grave' | 'placeable'; id: string } | null;
 
+/** Icona di «a casa» per specie. */
+const PET_HOME_ICONS: Record<PetSpecies, string> = { dog: 'kennel', cat: 'catBed', rabbit: 'hutch', duck: 'duckHouse', crow: 'perch' };
+
 export type EntityAction =
   | 'detail' | 'clean' | 'repair' | 'flowers' | 'light' | 'shop' | 'rotate' | 'store' | 'confirm' | 'undoMove' | 'move' | 'entrust' | 'memories' | 'ring' | 'registry' | 'house' | 'collect';
 
-const PET_STATUS: Record<PetMode, string> = { free: t('game.pet.status.free'), follow: t('game.pet.status.follow'), home: t('game.pet.status.home') };
+const PET_STATUS: Record<Exclude<PetMode, 'home'>, string> = { free: t('game.pet.status.free'), follow: t('game.pet.status.follow') };
 
 export interface Placement {
   kind: 'grave' | 'item';
@@ -601,13 +605,15 @@ export class Game {
     /** Dopo ogni cambiamento: espansione/achievement, salvataggio, vista, HUD. */
   afterChange() {
     const now = this.now();
-    const { achievements } = R.afterAction(this.state, now);
+    const { achievements, looks } = R.afterAction(this.state, now);
     // un nuovo rango e i traguardi: una celebrazione ciascuno, in coda (il rango prima)
     // (nel cortile niente: quel che si fa lì non resta)
     const rank = rankForXp(this.state.player.xp).level;
     if (!this.realState) {
       for (let r = this.shownRank + 1; r <= rank; r++) celebrateRank(r);
       for (const a of achievements) celebrateAchievement(a);
+      // un pezzo d'aspetto nuovo (cappello, testa, orecchie, becco): «Provalo» apre l'Aspetto
+      for (const k of looks) celebrateLook(k, this.state.player.look, () => openCustomize(this.ui));
     }
     this.shownRank = Math.max(this.shownRank, rank);
     scheduleSave(this.state);
@@ -878,6 +884,7 @@ export class Game {
     this.rig.follow = null;
     this.rig.jumpTo(cellCenter(spot.x, spot.y, GRAVE_FOOTPRINT));
     this.refreshPlacement();
+    this.ui.onboarding.gravePlacement(); // la prima volta: come si sceglie il posto
   }
 
   startItemPlacement(type: string) {
@@ -1180,6 +1187,23 @@ export class Game {
     if (!going) arrived(); // non ci si arriva: il menù compare subito
     else if (later && !this.ctxReady) this.markWalk();
     this.rig.follow = this.actors.avatar.pos;
+    this.roomForMenu(id);
+  }
+
+  /**
+   * Zoom molto vicino: la vista segue il Custode e la cima di un edificio alto
+   * (col suo menù sopra) finirebbe fuori dallo schermo. Si allontana dolcemente
+   * quanto basta perché il menù ci stia; da lontano non cambia nulla.
+   */
+  private roomForMenu(id: string) {
+    const top = this.world.entityTop(id);
+    if (!top) return;
+    const tall = top.y - this.world.heightAt(top.x, top.z);
+    // il punto del menù sta sopra il Custode di circa 1 + altezza·cos(40°); in alto servono la barra e il menù stesso
+    const above = 1.05 + tall * Math.cos(THREE.MathUtils.degToRad(40));
+    const margin = Math.min(0.42, 170 / Math.max(400, window.innerHeight)); // quota dello schermo per barra in alto e menù
+    const need = (2 * above) / (1 - 2 * margin);
+    if (this.rig.viewHeight < need) this.rig.zoomTo(need);
   }
 
   /**
@@ -1227,10 +1251,12 @@ export class Game {
     const p = this.actors.petAt(id);
     if (!p) return [];
     const off = p.broken;
+    const home = this.petSpecies(p.kind);
     return [
       { label: t('game.pet.call'), icon: 'whistle', disabled: off || p.mode === 'follow', run: () => this.petCommand(id, this.actors.callPet(id)) },
       { label: t('game.pet.free'), icon: 'paw', disabled: off || p.mode === 'free', run: () => this.petCommand(id, this.actors.freePet(id)) },
-      { label: t('game.pet.home'), icon: 'kennel', disabled: off || p.mode === 'home', run: () => this.petCommand(id, this.actors.sendPetHome(id)) },
+      // «a casa»: ognuno la sua (cuccia, cuccia del gatto, conigliera, casetta, trespolo)
+      { label: t(`game.pet.home.${home}`), icon: PET_HOME_ICONS[home], disabled: off || p.mode === 'home', run: () => this.petCommand(id, this.actors.sendPetHome(id)) },
       { label: t('game.pet.pet'), icon: 'heart', cls: 'primary', disabled: off || p.sleeping, run: () => this.actors.petPet(id) },
       { label: t('game.pet.throw'), icon: 'bone', disabled: off || p.sleeping, run: () => { if (!this.actors.throwBone(id)) toast(t('game.pet.throwNoSpace')); } },
     ];
@@ -1271,6 +1297,8 @@ export class Game {
   private petJoy(id: string) {
     const pet = this.actors.petAt(id);
     if (!pet) return;
+    // ogni coccola o gioco conta per quella specie (sorprese d'aspetto: orecchie e becchi)
+    this.act((s) => R.bondWithPet(s, this.petSpecies(pet.kind)), undefined, true);
     const n = this.petGifts.interact(id);
     if (n === null) return;
     const at = this.actors.petTop(id) ?? undefined;
@@ -1289,13 +1317,19 @@ export class Game {
     if (house && mode && house.petMode !== mode) { house.petMode = mode; scheduleSave(this.state); }
   }
 
+  /** La specie di un animale dal suo tipo di personaggio (petCat → cat). */
+  private petSpecies(kind: string): PetSpecies {
+    return PET_SPECIES.find((k) => kind.toLowerCase() === `pet${k}`) ?? 'dog';
+  }
+
   /** Stato dell'animale in breve (sotto il nome nel menù). */
   petStatus(id: string): string {
     const p = this.actors.petAt(id);
     if (!p) return '';
     if (p.broken) return t('game.pet.status.broken');
-    if (p.sleeping) return p.mode === 'home' ? t('game.pet.status.homeSleeping') : t('game.pet.status.denSleeping');
-    return PET_STATUS[p.mode];
+    const home = t(`game.pet.home.${this.petSpecies(p.kind)}`);
+    if (p.sleeping) return p.mode === 'home' ? t('game.pet.status.homeSleeping', { home }) : t('game.pet.status.denSleeping');
+    return p.mode === 'home' ? home : PET_STATUS[p.mode];
   }
 
   /** Toccando l'animale si apre il suo menù, che lo segue mentre si muove. */
@@ -2104,6 +2138,7 @@ export class Game {
     this.rig.follow = null;
     this.rig.jumpTo(cellCenter(shop.x, shop.y, rotatedFootprint('shop', shop.rot)));
     this.select({ kind: 'placeable', id: shop.id });
+    this.roomForMenu(shop.id);
   }
 
   /** Camera sulla Casa del Custode, selezionata (dopo un acquisto in Bottega). */
@@ -2242,10 +2277,11 @@ export class Game {
     this.rig.setMode(real.settings.camera);
     this.updatePhase(true);
     const now = this.now();
-    const { achievements } = R.afterAction(real, now);
+    const { achievements, looks } = R.afterAction(real, now);
     const rank = rankForXp(real.player.xp).level;
     for (let r = this.shownRank + 1; r <= rank; r++) celebrateRank(r);
     for (const a of achievements) celebrateAchievement(a);
+    for (const k of looks) celebrateLook(k, real.player.look, () => openCustomize(this.ui));
     this.shownRank = Math.max(this.shownRank, rank);
     scheduleSave(real);
     const area = this.realWorld.area;

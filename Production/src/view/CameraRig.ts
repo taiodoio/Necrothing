@@ -42,7 +42,16 @@ export class CameraRig {
     this.setView(this.viewHeight * factor);
   }
 
+  /** Zoom verso un'altezza in modo morbido (se ne va da solo se l'utente zooma col dito). */
+  private zoomGoal: number | null = null;
+  zoomTo(h: number) { this.zoomGoal = THREE.MathUtils.clamp(h, this.minView, this.maxView); }
+
   setView(h: number) {
+    this.zoomGoal = null;
+    this.setViewNow(h);
+  }
+
+  private setViewNow(h: number) {
     this.viewHeight = THREE.MathUtils.clamp(h, this.minView, this.maxView);
     this.applyProjection();
     this.clampTarget();
@@ -137,6 +146,11 @@ export class CameraRig {
   }
 
   update(dt: number) {
+    if (this.zoomGoal !== null) {
+      const v = THREE.MathUtils.lerp(this.viewHeight, this.zoomGoal, Math.min(1, dt * 4));
+      this.setViewNow(Math.abs(v - this.zoomGoal) < 0.02 ? this.zoomGoal : v);
+      if (this.viewHeight === this.zoomGoal) this.zoomGoal = null;
+    }
     if (this.follow) {
       this.target.lerp(new THREE.Vector3(this.follow.x, 0, this.follow.z), Math.min(1, dt * 3));
       this.clampTarget();

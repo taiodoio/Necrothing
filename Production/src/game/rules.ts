@@ -2,7 +2,7 @@
 // rispetto a three/DOM. Ogni azione muta lo SaveData passato e ritorna un
 // esito (messaggio + ricompense) oppure lancia GameError.
 
-import { BUSINESS, DECAY, ECONOMY, HAT_FEATS, HOUSE_PERKS, EXPANSION, GRAVE_FOOTPRINT, GRAVEDIGGER, WISP_SPAWN, WISPS, XP, ZOMBIE_MUD } from './balance.ts';
+import { BUSINESS, DECAY, ECONOMY, HOUSE_PERKS, LOOK_UNLOCKS, PET_BOND_GOAL, type PetSpecies, EXPANSION, GRAVE_FOOTPRINT, GRAVEDIGGER, WISP_SPAWN, WISPS, XP, ZOMBIE_MUD } from './balance.ts';
 import { CATALOG, isSeasonallyAvailable, placeableDef, repairCost, rotatedFootprint, type PlaceableDef } from './catalog.ts';
 import { CATEGORIES, CUSTOM_CAUSE_MAX, DEATH_CAUSES, GRAVE_TYPE_ACCESS, GRAVE_TYPE_MIN_RANK, GRAVE_TYPES, type CauseChoice, type Category, type DeathCause, type GraveType } from './graves.ts';
 import { evaluateAchievements, rankForXp, type AchievementDef } from './progression.ts';
@@ -60,14 +60,14 @@ function placedById(s: SaveData, id: string): Placed {
  * achievement. Il recinto non si allarga da solo: `unlocked` è il nuovo
  * livello sbloccato (o null) e il giocatore sceglie se ampliare.
  */
-export function afterAction(s: SaveData, now: Date): { achievements: AchievementDef[]; unlocked: number | null } {
+export function afterAction(s: SaveData, now: Date): { achievements: AchievementDef[]; unlocked: number | null; looks: string[] } {
   const prestige = computePrestige(s);
   let unlocked: number | null = null;
   while (s.world.unlockedLevel < EXPANSION.length - 1 && prestige >= EXPANSION[s.world.unlockedLevel + 1].minPrestige) {
     s.world.unlockedLevel++;
     unlocked = s.world.unlockedLevel;
   }
-  return { achievements: evaluateAchievements(s, now), unlocked };
+  return { achievements: evaluateAchievements(s, now), unlocked, looks: refreshLookUnlocks(s) };
 }
 
 /** Tombe e oggetti che non entrano (anche solo in parte) nel recinto di un certo livello. */
@@ -449,19 +449,43 @@ export function featProgress(s: SaveData, feat: NonNullable<PlaceableDef['feat']
   return [Math.min(feat.goal, s.player.counters[feat.counter] ?? 0), feat.goal];
 }
 
-/** Il cappello da strega (e gli altri cappelli a traguardo) si può indossare? */
-export function hatUnlocked(s: SaveData, hat: string): boolean {
-  const f = HAT_FEATS[hat as keyof typeof HAT_FEATS];
-  if (!f) return true;
-  return (s.player.counters[f.counter] ?? 0) >= f.goal;
+/** Il pezzo d'aspetto «chiave:valore» si sblocca? (null = sempre disponibile) */
+const lookUnlockOf = (key: keyof CustodeLook, value: unknown) => LOOK_UNLOCKS.find((u) => u.key === `${key}:${String(value)}`) ?? null;
+
+/** Un pezzo d'aspetto è sbloccato (o non ha bisogno di esserlo)? */
+export function lookUnlocked(s: SaveData, key: keyof CustodeLook, value: unknown): boolean {
+  const u = lookUnlockOf(key, value);
+  return !u || s.player.lookUnlocks.includes(u.key);
 }
 
-export type LookOptionAvailability = 'ok' | 'full' | 'feat';
+/**
+ * Sblocchi d'aspetto nuovi: chi ha (o ha avuto) quel personaggio, o ha fatto
+ * abbastanza coccole e giochi con quell'animale. Si segnano nella partita (non
+ * si perdono) e si restituiscono per festeggiarli.
+ */
+export function refreshLookUnlocks(s: SaveData): string[] {
+  const fresh: string[] = [];
+  for (const u of LOOK_UNLOCKS) {
+    if (s.player.lookUnlocks.includes(u.key)) continue;
+    const met = u.npc ? ownedCount(s, u.npc) + placedCount(s, u.npc) > 0 : (s.player.petBond[u.pet!] ?? 0) >= PET_BOND_GOAL;
+    if (met) { s.player.lookUnlocks.push(u.key); fresh.push(u.key); }
+  }
+  return fresh;
+}
 
-/** Una scelta d'aspetto si può indossare? Prima l'accesso commerciale, poi il traguardo (cappelli). */
+/** Una coccola o un gioco con un animale (conta per le sorprese d'aspetto). */
+export function bondWithPet(s: SaveData, species: PetSpecies): ActionResult {
+  s.player.petBond[species] = (s.player.petBond[species] ?? 0) + 1;
+  return ok('');
+}
+
+/** `hidden`: non si vede finché non si sblocca (si può indossare solo quel che è già addosso). */
+export type LookOptionAvailability = 'ok' | 'full' | 'hidden';
+
+/** Una scelta d'aspetto si può indossare? Prima l'accesso commerciale, poi lo sblocco. */
 export function lookOptionAvailability(s: SaveData, key: keyof CustodeLook, value: unknown): LookOptionAvailability {
   if (!hasAccess(lookOptionAccess(key, value))) return 'full';
-  if (key === 'hat' && !hatUnlocked(s, String(value))) return 'feat';
+  if (!lookUnlocked(s, key, value)) return 'hidden';
   return 'ok';
 }
 

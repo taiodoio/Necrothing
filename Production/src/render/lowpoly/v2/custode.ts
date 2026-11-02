@@ -38,7 +38,7 @@ export interface KawaiiSpec {
 export const CONCEPT_LOOK: CustodeLook = {
   head: 'human', skin: '#f6cba6', sparkle: true, hair: 'spiky', hairColor: '#d98238', eyes: '#1f4d2e',
   glasses: 'none', beard: 'braid', mustache: 'handlebar', beardColor: '#d4567c', freckles: false, bandaid: false,
-  hat: 'none', hatColor: '#4a3326', outfit: 'coat', outfitColor: '#58722f', accentColor: '#eadcc0',
+  hat: 'none', hatColor: '#4a3326', extra: 'none', outfit: 'coat', outfitColor: '#58722f', accentColor: '#eadcc0',
 };
 let L: CustodeLook = CONCEPT_LOOK;
 let SKIN = '', HAIR = '', BEARD = '', EYE = '', JACKET = '', JACKET_D = '', PANTS = '', SCARF = '', SCARF_STRIPE = '';
@@ -53,9 +53,10 @@ function applyLook(l: CustodeLook) {
   L = l;
   HEAD = l.head;
   // lo zombie resta del colore scelto, ma verdognolo; il teschio è osso
-  SKIN = HEAD === 'zombie' ? mix(l.skin, '#9cc27a', 0.68) : HEAD === 'skull' ? BONE : l.skin;
+  // il vampiro resta del colore scelto, ma pallidissimo
+  SKIN = HEAD === 'zombie' ? mix(l.skin, '#9cc27a', 0.68) : HEAD === 'skull' ? BONE : HEAD === 'vampire' ? mix(l.skin, '#ece8f4', 0.72) : l.skin;
   if (BALD_HEADS.includes(HEAD)) L = { ...l, hair: 'none', beard: 'none', mustache: 'none', freckles: false, bandaid: false, sparkle: false };
-  HAIR = l.hairColor; BEARD = l.beardColor; EYE = l.eyes;
+  HAIR = l.hairColor; BEARD = l.beardColor; EYE = HEAD === 'vampire' ? '#b0242f' : l.eyes;
   JACKET = l.outfitColor; JACKET_D = shade(l.outfitColor, -0.05);
   PANTS = l.outfit === 'overalls' ? l.outfitColor : '#5a3c2a';
   SCARF = l.accentColor; SCARF_STRIPE = shade(l.accentColor, -0.18);
@@ -481,6 +482,10 @@ function head(lp: LP) {
     onSkin(lp, headFront(0, 0.612), 0.002, 0, (q) => q.add(rbox(0.17, 0.008, 0.006, 0.003, 1).translate(0, 0.022, 0), '#8e8676', O));
     for (let i = -2.5; i <= 2.5; i++) onSkin(lp, headFront(i * 0.03, 0.59), 0.008, 0, (q) => q.add(rbox(0.025, 0.04, 0.02, 0.007, 1), '#f3ecda', O));
   }
+  if (HEAD === 'vampire') { // canini sotto il sorriso e occhiaie leggere
+    for (const s of [-1, 1]) onSkin(lp, headFront(s * 0.032, 0.592), 0.008, 0, (q) => q.add(new THREE.ConeGeometry(0.016, 0.05, 4).rotateX(Math.PI), '#fbf7ef', O));
+    for (const s of [-1, 1]) onSkin(lp, headFront(s * EYE_X, EYE_Y - 0.062), 0.002, 0, (q) => q.add(new THREE.CircleGeometry(0.04, 10, 0, Math.PI).rotateZ(Math.PI).scale(1, 0.35, 1), shade(SKIN, -0.12), { ...O, vary: 0 }));
+  }
   if (HEAD === 'zombie') onSkin(lp, headAt(-0.35, 40 * DEG), 0.003, 0.3, (q) => { // cicatrice cucita
     q.add(rbox(0.13, 0.01, 0.006, 0.004, 1), '#4a5a3a', O);
     for (let i = -2; i <= 2; i++) q.add(rbox(0.008, 0.04, 0.006, 0.003, 1).translate(i * 0.025, 0, 0.002), '#4a5a3a', O);
@@ -730,7 +735,7 @@ export function hairLayer(lp: LP, o: { locks: number; hem: (thDeg: number) => nu
 }
 
 /** Fin dove arrivano i capelli sotto ciascun cappello (φ, gradi). */
-const HAT_PH: Record<HatStyle, number> = { none: 89, wide: 40, top: 42, beanie: 30, witch: 42 };
+const HAT_PH: Record<HatStyle, number> = { none: 89, wide: 40, top: 42, beanie: 30, witch: 42, straw: 40, catEars: 89, dogEars: 89, bunnyEars: 89 };
 const hatPh = () => X.hatPh ?? HAT_PH[L.hat];
 
 /** Riccioli: palline schiacciate distribuite a file regolari sulla superficie dei capelli. */
@@ -847,6 +852,8 @@ function hatGeo(lp: LP) {
   if (X.hat) { X.hat(lp); return; }
   if (L.hat === 'none') return;
   if (L.hat === 'witch') { witchHat(lp, L.hatColor, L.accentColor, hatPh()); return; }
+  if (L.hat === 'straw') { strawHat(lp, '#c9a35a', L.accentColor, hatPh()); return; }
+  if (L.hat === 'catEars' || L.hat === 'dogEars' || L.hat === 'bunnyEars') { earsHat(lp, L.hat); return; }
   const c = L.hatColor, d = shade(c, -0.08);
   if (L.hat === 'beanie') {
     sheet(lp, 30, 6, (u, v) => [Math.PI + u * Math.PI, lerp(26, 89, v) * DEG], (_u, v) => 0.06 + 0.03 * smooth(0.3, 1, v), c);
@@ -904,6 +911,75 @@ export function witchHat(lp: LP, color = '#2a2235', band = '#5f8a4a', ph = 50, b
   lp.cyl(C.x, y + 0.012, C.z, cr + 0.006, cr * 0.95, 0.065, 18, band, O);
   lp.add(new THREE.BoxGeometry(0.075, 0.07, 0.012).translate(C.x, y + 0.045, C.z + cr * 0.97 + 0.006), '#c9a227', O);
   lp.add(new THREE.BoxGeometry(0.04, 0.035, 0.014).translate(C.x, y + 0.045, C.z + cr * 0.97 + 0.008), band, O);
+}
+
+/**
+ * Orecchie da mettere in testa (come gli animali del cimitero): da gatto e da cane
+ * nel colore del cappello, da coniglietto in osso. Spuntano dai capelli.
+ */
+function earsHat(lp: LP, kind: 'catEars' | 'dogEars' | 'bunnyEars') {
+  const lift = L.hair === 'none' || BALD_HEADS.includes(HEAD) ? 0 : 0.045;
+  const c = L.hatColor, inner = '#c98a96', bone = '#e2d9c3', boneD = '#b9ae95';
+  for (const s of [-1, 1]) {
+    if (kind === 'catEars') onSkin(lp, shellAt(s * 38 * DEG, 56 * DEG), lift + 0.01, 0, (q) => {
+      q.add(new THREE.ConeGeometry(0.1, 0.2, 6).rotateX(Math.PI / 2).translate(0, 0, 0.085), c, O);
+      q.add(new THREE.ConeGeometry(0.06, 0.13, 6).rotateX(Math.PI / 2).scale(1, 0.5, 1).translate(0, -0.038, 0.08), inner, O);
+    });
+    if (kind === 'dogEars') { // orecchie morbide che ricadono ai lati
+      const { p, n } = shellAt(s * 64 * DEG, 46 * DEG);
+      lp.push([p.x + n.x * lift, p.y + n.y * lift, p.z + n.z * lift], 0, 0, s * 0.42);
+      lp.blob(s * 0.035, -0.1, 0, 0.07, 0.14, 0.04, shade(c, -0.04), { ...O, detail: 2 } as LPOpts);
+      lp.blob(s * 0.035, -0.1, 0.022, 0.042, 0.1, 0.02, shade(c, 0.08), { ...O, detail: 1 } as LPOpts);
+      lp.pop();
+    }
+    if (kind === 'bunnyEars') { // orecchie lunghe d'osso, con le giunture
+      const { p, n } = shellAt(s * 30 * DEG, 62 * DEG);
+      lp.push([p.x + n.x * lift, p.y + n.y * lift, p.z + n.z * lift], 0, -0.2, -s * 0.3);
+      lp.blob(0, 0.2, 0, 0.068, 0.22, 0.036, bone, { ...O, detail: 2 } as LPOpts);
+      lp.blob(0, 0.2, 0.02, 0.034, 0.17, 0.02, boneD, { ...O, detail: 1 } as LPOpts);
+      lp.cyl(0, 0.0, 0, 0.04, 0.05, 0.05, 8, boneD, O);
+      lp.pop();
+    }
+  }
+}
+
+/**
+ * Extra sul viso, in grande sul Custode (più dettagliati di quelli degli animali):
+ * becco da corvo curvo con la cresta, la mandibola e le setole alla radice;
+ * becco da papera a due valve, con l'unghia in punta e le narici.
+ */
+function beakGeo(lp: LP) {
+  const V = (x: number, y: number, z: number) => new THREE.Vector3(x, y, z);
+  // i becchi sono la bocca (i baffi stanno sopra, la barba attorno): escono dal viso un po' all'insù, perché lì la faccia guarda già in basso
+  const up = (g: THREE.BufferGeometry, a: number) => g.rotateX(-a);
+  // lo stesso becco per tutti e due: valva di sopra curva con la cresta, valva di sotto più corta, la linea della bocca,
+  // le narici; il corvo lungo e appuntito con le setole, la papera più corta, più bassa, più larga e smussata in punta, arancione
+  const beak = (q: LP, o: { sx: number; sy: number; sz: number; top: string; ridge: string; low: string; line: string; nose: string; bristles?: string; blunt?: boolean; tilt?: number; root?: boolean }) => {
+    const k = o.tilt ?? 0.85; // quanto esce all'insù (la faccia lì guarda già in basso)
+    q.push([0, 0, 0], 0, 0, 0, [o.sx, o.sy, o.sz]);
+    // radice piena che entra nel viso: il becco non sembra appoggiato davanti alla faccia
+    if (o.root) q.add(up(new THREE.SphereGeometry(0.075, 10, 6).scale(1, 0.85, 0.7).translate(0, -0.004, 0.012), k), o.top, O);
+    if (o.blunt) { // punta smussata e tonda, senza uncino (papera)
+      q.add(up(taperTube([V(0, 0.012, 0), V(0, 0.017, 0.09), V(0, 0.01, 0.17), V(0, -0.006, 0.215)], [0.066, 0.06, 0.052, 0.036], 7).scale(1, 0.82, 1), k), o.top, O);
+      q.add(up(new THREE.SphereGeometry(0.036, 10, 6).scale(1, 0.82, 0.8).translate(0, -0.006, 0.215), k), o.top, O);
+      q.add(up(taperTube([V(0, 0.052, 0.01), V(0, 0.056, 0.1), V(0, 0.046, 0.17)], [0.013, 0.011, 0.006], 5), k), o.ridge, O);
+      q.add(up(taperTube([V(0, -0.03, 0.005), V(0, -0.035, 0.09), V(0, -0.038, 0.17)], [0.048, 0.044, 0.03], 6).scale(1, 0.7, 1), k), o.low, O);
+      q.add(up(new THREE.SphereGeometry(0.03, 8, 5).scale(1, 0.7, 0.8).translate(0, -0.038, 0.17), k), o.low, O);
+    } else {
+      q.add(up(taperTube([V(0, 0.012, 0), V(0, 0.018, 0.09), V(0, 0.0, 0.19), V(0, -0.045, 0.26)], [0.066, 0.052, 0.026, 0.004], 7).scale(1, 0.82, 1), k), o.top, O);
+      q.add(up(taperTube([V(0, 0.052, 0.01), V(0, 0.056, 0.1), V(0, 0.034, 0.19)], [0.013, 0.011, 0.004], 5), k), o.ridge, O); // cresta lucida
+      q.add(up(taperTube([V(0, -0.03, 0.005), V(0, -0.036, 0.09), V(0, -0.04, 0.17)], [0.048, 0.032, 0.004], 6).scale(1, 0.7, 1), k), o.low, O);
+    }
+    // la bocca: un filo scuro fra le due valve che segue il becco e si stringe verso la punta (non una lastra che sporge)
+    q.add(up(taperTube([V(0, -0.017, 0.004), V(0, -0.022, 0.09), V(0, -0.027, o.blunt ? 0.17 : 0.16)], [0.05, 0.042, o.blunt ? 0.028 : 0.006], 8).scale(1, 0.12, 1), k), o.line, O);
+    for (const s of [-1, 1]) {
+      q.add(up(new THREE.SphereGeometry(0.01, 6, 4).scale(1.4, 0.8, 1).translate(s * 0.03, 0.034, 0.065), k), o.nose, O); // narici
+      if (o.bristles) for (const k of [0, 1]) q.add(up(new THREE.ConeGeometry(0.011, 0.055, 4).rotateX(Math.PI / 2 - 0.4).translate(s * (0.036 + k * 0.02), 0.048 - k * 0.013, 0.028), k), o.bristles, O); // setole
+    }
+    q.pop();
+  };
+  if (L.extra === 'crowBeak') onSkin(lp, faceAt(0, 0.585), -0.03, 0, (q) => beak(q, { tilt: 0.68, root: true, sx: 1, sy: 1, sz: 0.78, top: '#3b3642', ridge: '#5d5668', low: '#24212a', line: '#16141a', nose: '#16141a', bristles: '#2b2730' }));
+  if (L.extra === 'duckBeak') onSkin(lp, faceAt(0, 0.6), -0.01, 0, (q) => beak(q, { sx: 1.15, sy: 0.6, sz: 0.72, top: '#f2a63c', ridge: '#f7c46a', low: '#d07a24', line: '#5a2a14', nose: '#8a4a1a', blunt: true }));
 }
 
 /** Occhiali, lentiggini, cerotto. */
@@ -1240,7 +1316,7 @@ export function atPivot(state: () => void, pv: [number, number, number], draw: B
 function headPart(lp: LP) {
   // testa (con faccia, barba, baffi e capelli) più grande del 30%, scalata attorno al mento
   lp.push([0, HEAD_T.y, 0], 0, 0, 0, HEAD_S);
-  head(lp); glitter(lp); faceExtras(lp); beard(lp); braid(lp); moustache(lp); hair(lp); hatGeo(lp);
+  head(lp); glitter(lp); faceExtras(lp); beard(lp); braid(lp); moustache(lp); hair(lp); hatGeo(lp); beakGeo(lp);
   if (!X.bare && HEAD !== 'pumpkin') {
     const style = X.eyes ?? (HEAD === 'zombie' ? 'zombie' : HEAD === 'skull' ? 'sockets' : 'open');
     eyesLP(lp, style, style === 'sockets' ? '#8ff0dc' : EYE, SKIN);

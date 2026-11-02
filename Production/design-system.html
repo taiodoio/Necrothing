@@ -260,6 +260,20 @@
             </div>
           </div>
         </div>
+        <h3>Azione principale e «Altro»</h3>
+        <div class="ds-example">
+          <p class="ds-label">In fondo a ogni scheda con azioni secondarie (oggetto, tomba, cartellino dell'albero)</p>
+          <div class="ds-live">
+            <div data-snippet style="display: contents">
+              <div class="act-row">
+                <button class="big-btn"><i data-icon="postcard"></i>Manda una cartolina</button>
+                <div class="more compact"><button class="big-btn ghost more-toggle" aria-label="Altro"><i data-icon="more"></i></button></div>
+              </div>
+            </div>
+          </div>
+          <details class="ds-code"><summary>Markup</summary><pre></pre></details>
+          <p class="ds-note">Sempre così (<code>actionRow(main, moreActions(voci, { compact: true }))</code> in <code>screens.ts</code>): l'azione principale larga, in oro, e accanto «Altro» quadrato con solo i tre puntini. Dentro, le voci con la loro icona; quelle distruttive in rosso. Mai «Altro» con la scritta, mai sopra l'azione principale. Le icone colorate sull'oro hanno sempre il contorno bianco (regola in <code>ui-next.css</code>, la stessa dei pulsanti d'oro).</p>
+        </div>
         <h3>Lo scatto della foto</h3>
         <div class="ds-example">
           <p class="ds-label">Chiudi · scatto · galleria (quello grande è l'unico dorato)</p>

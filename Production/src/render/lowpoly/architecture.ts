@@ -357,12 +357,13 @@ export function gravediggerHouseLP(v: PVis): LPModel {
   shutters(lp, -0.5, 0.31, front + 0.02, 0.4, 0.52, '#5a4a36');
   cobweb(lp, -w / 2 + 0.08, wallH - 0.05, front + 0.03, 0.25);
   lp.pop();
-  // portico: tettoia su due pali
-  // la tettoia parte sotto la gronda del tetto principale e scende verso l'esterno
-  for (const x of [-0.95, 0.95]) lp.cyl(x, 0, front + 0.7, 0.045, 0.04, 1.0, 5, LPC.woodDark, { vary: 0.12 });
-  lp.box(0, 0.96, front + 0.7, 2.0, 0.05, 0.06, LPC.woodDark, { jitter: 0, vary: 0.1 });
-  lp.push([0, 1.1, front + 0.42], 0, 0.27).box(0, 0, 0, 2.34, 0.05, 0.86, '#2f3540', { bevel: 0.008, vary: 0.08 }).pop();
-  hangingLantern(lp, 0.95, 0.96, front + 0.7, lit, 0.9);
+  // pensilina sopra la porta, su due mensole (prima un portico largo quanto la casa copriva porta e finestra)
+  const DX = 0.4;
+  lp.push([DX, 1.3, front + 0.2], 0, 0.32).box(0, 0, 0, 0.82, 0.045, 0.42, '#2f3540', { bevel: 0.008, vary: 0.08 }).pop();
+  for (const s of [-1, 1]) lp.push([DX + s * 0.32, 1.08, front + 0.1], 0, -0.75).box(0, 0, 0, 0.04, 0.04, 0.3, LPC.woodDark, { jitter: 0 }).pop();
+  // lanterna su un braccio accanto alla porta
+  lp.box(DX + 0.5, 1.02, front + 0.12, 0.04, 0.04, 0.26, LPC.iron, { jitter: 0 });
+  hangingLantern(lp, DX + 0.5, 1.02, front + 0.26, lit, 0.8);
   chimney(lp, -w * 0.32, 0.2 + wallH + rise * 0.15, -d * 0.15, rise * 1.1);
   lp.pop();
   // bara appoggiata al muro, legna, attrezzi
@@ -375,7 +376,7 @@ export function gravediggerHouseLP(v: PVis): LPModel {
   pumpkin(lp, 1.6, 0, 0.75, 0.13, false, false);
   ivy(lp, -1.62, 0.0, 0.42, 1.0, 0.1);
   // la finestra illumina il portico e il davanti della casa (prima la luce stava contro il muro: casa buia)
-  lp.light(-0.6, 0.8, 0.95, LPC.window, lit ? 0.95 : 0, 5, 0.1, 0); // senza alone: sta sotto la tettoia (la finestra brilla già da sé)
+  lp.light(-0.6, 0.8, 0.95, LPC.window, lit ? 0.95 : 0, 5, 0.1, 0); // senza alone (la finestra brilla già da sé)
   grassTuft(lp, 1.8, 1.2, 1.2); grassTuft(lp, -1.8, -1.2, 1.1);
   decayLP(lp, v, 3.6, 2.6);
   return lp.build();

@@ -113,7 +113,7 @@ test('beta: si gioca come chiunque, rango, stagione, traguardi e tombe valgono',
   assert.equal(R.shopAvailability(s, 'lovers_bench', NOW), 'season', 'a ottobre la panchina di febbraio no');
   assert.equal(R.houseAvailability(s, 'veggie'), 'rank');
   assert.equal(R.graveTypeAvailability(s, 'angel'), 'rank');
-  assert.equal(R.lookOptionAvailability(s, 'hat', 'witch'), 'feat');
+  assert.equal(R.lookOptionAvailability(s, 'hat', 'witch'), 'hidden', 'il cappello da strega non si vede finché non si ha la strega');
   assert.throws(() => R.buy(s, 'zombie_bar', 1, NOW), /rango/);
   s.player.xp = 99_999;
   assert.equal(R.shopAvailability(s, 'keeper_lamp', NOW), 'feat');
@@ -187,7 +187,7 @@ test('migrazione v2 → v3: progressi, posizioni e preferenze intatti, e gli acq
   const { theme: _theme, style: _style, ...prefs } = raw.settings;
   assert.deepEqual(s.settings, prefs);
   assert.ok(!('style' in s.settings) && !('theme' in s.settings), 'niente scelte di stile o tema nel salvataggio');
-  assert.deepEqual(s.player.look, raw.player.look, 'il cappello da strega indossato resta');
+  assert.deepEqual(s.player.look, { ...raw.player.look, extra: 'none' }, 'il cappello da strega indossato resta (e niente becco)');
   assert.deepEqual(s.meta, { firstDistribution: 'beta-full', lastDistribution: 'beta-full' });
   // comprati prima dei blocchi: restano tuoi, anche se ora servirebbe il rango
   assert.equal(s.inventory.broom, 1);

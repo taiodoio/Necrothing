@@ -379,6 +379,7 @@ export default {
   'look.head.pumpkin': 'Zucca',
   'look.head.skull': 'Teschio',
   'look.head.zombie': 'Zombie',
+  'look.head.vampire': 'Vampiro',
   // capelli (maschile plurale: «capelli ricci»)
   'look.hair.tufts': 'Ciuffi',
   'look.hair.spiky': 'Spettinati',
@@ -400,7 +401,14 @@ export default {
   'look.hat.top': 'Cilindro',
   'look.hat.beanie': 'Berretto',
   'look.hat.witch': 'Da strega',
+  'look.hat.straw': 'Da giardiniere',
+  'look.hat.catEars': 'Orecchie da gatto',
+  'look.hat.dogEars': 'Orecchie da cane',
+  'look.hat.bunnyEars': 'Orecchie d\'osso',
   'look.hat.none': 'Nessuno',
+  'look.extra.none': 'Nessuno',
+  'look.extra.crowBeak': 'Becco da corvo',
+  'look.extra.duckBeak': 'Becco da papera',
   // vestiti
   'look.outfit.coat': 'Cappotto',
   'look.outfit.cloak': 'Mantella',

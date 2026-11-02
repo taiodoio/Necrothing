@@ -122,6 +122,7 @@ export default {
   // titolo della barra quando si sceglie dove seppellire
   'hud.place.graveTitle': 'Dove riposerà {name}?',
   'hud.place.hint': 'Tocca il terreno o trascina per spostare, poi conferma.',
+  'hud.place.graveHint': 'Tocca il terreno o trascina per spostare la tomba, poi tocca «Seppellisci qui».',
   'hud.place.busy': 'Spazio occupato: scegli un punto libero.',
   // {what}: cosa c'è (es. «Fango»)
   'hud.place.busyBy': 'Qui c’è già: {what}. Scegli un punto libero.',
@@ -350,6 +351,8 @@ export default {
   'look.ui.tab.aspetto': 'Aspetto',
   'look.ui.tab.capelli': 'Capelli',
   'look.ui.tab.vestiti': 'Vestiti',
+  'look.ui.tab.extra': 'Extra',
+  'look.ui.extra': 'Sul viso',
   // titoli delle sezioni
   'look.ui.head': 'Testa',
   'look.ui.skin': 'Pelle',
@@ -502,6 +505,9 @@ export default {
   'onboarding.goal.text': 'Qualcosa a cui tenevi se n’è andato? Dagli una tomba: scegli la lapide, scrivi l’epitaffio, scatta il ricordo.',
   // breve: pulsanti del primo obiettivo
   'onboarding.goal.later': 'Più tardi',
+  'onboarding.grave.title': 'Dove riposerà?',
+  'onboarding.grave.text': 'Trascina la tomba dove vuoi (con «Mappa» sposti solo la vista), poi tocca «Seppellisci qui».',
+  'onboarding.grave.ok': 'Ho capito',
   'onboarding.goal.go': 'Seppellisci',
   // i consigli al momento giusto: una notifica del Custode, una volta sola; .say è la sua battuta
   'tips.show': 'Mostrami',

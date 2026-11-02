@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { createNewGame } from '../src/game/state.ts';
+import { createNewGame, normalizeSave } from '../src/game/state.ts';
 import * as R from '../src/game/rules.ts';
 import { runCatchUp, liveTick } from '../src/game/simulation.ts';
 import { computeSpawns, countBuildings } from '../src/game/spawn.ts';
@@ -10,7 +10,7 @@ import { CATALOG_LIST, rotatedFootprint } from '../src/game/catalog.ts';
 import { evaluateAchievements, rankForXp } from '../src/game/progression.ts';
 import { shortWisps } from '../src/ui/numbers.ts';
 import { moveTraceDraw, startTraceDraw, traceDrawCells } from '../src/game/trace.ts';
-import { DECAY, EXPANSION, WISPS, XP } from '../src/game/balance.ts';
+import { DECAY, EXPANSION, PET_BOND_GOAL, WISPS, XP } from '../src/game/balance.ts';
 
 const NOW = new Date('2026-10-09T12:00:00Z');
 const later = (days) => new Date(NOW.getTime() + days * 86_400_000);
@@ -657,9 +657,8 @@ test('nuovi sbloccabili: servono sempre rango, stagione e traguardo', async () =
     s.player.counters.lightsRepaired = 25;
     assert.equal(R.shopAvailability(s, 'keeper_lamp', NOW), 'ok');
     assert.equal(R.shopAvailability(s, 'mystic_staff', NOW), 'feat');
-    assert.equal(R.hatUnlocked(s, 'witch'), false);
-    s.player.counters.potionsSold = 30;
-    assert.equal(R.hatUnlocked(s, 'witch'), true);
+    // il cappello da strega ora arriva con la strega (non più con le pozioni)
+    assert.equal(R.lookUnlocked(s, 'hat', 'witch'), false);
     // finestre a cavallo di mese e d'anno
     const altar = CATALOG.dead_altar, snow = CATALOG.skeleton_snowman;
     assert.ok(isSeasonallyAvailable(altar, 9, 31) && isSeasonallyAvailable(altar, 10, 2));
@@ -1214,4 +1213,37 @@ test('traguardi di rango: uno per ogni rango oltre il primo', async () => {
     assert.equal(ACH_ICONS[a.id], RANK_ICONS[r.level]);
   }
   for (const a of ACHIEVEMENTS) assert.ok(ACH_ICONS[a.id], `icona per ${a.id}`);
+});
+
+test('aspetto: cappelli, testa e becchi si sbloccano con i personaggi e con le coccole, una volta sola', () => {
+  const s = createNewGame(NOW, 7);
+  for (const [k, v] of [['hat', 'witch'], ['hat', 'straw'], ['head', 'vampire'], ['hat', 'catEars'], ['extra', 'duckBeak']]) assert.equal(R.lookOptionAvailability(s, k, v), 'hidden', `${k}.${v} nascosto all'inizio`);
+  assert.equal(R.lookOptionAvailability(s, 'hat', 'wide'), 'ok', 'i cappelli di sempre ci sono');
+  // la strega comprata: arriva il suo cappello (e resta anche se la si rivende)
+  s.inventory.witch_corner = 1;
+  assert.deepEqual(R.refreshLookUnlocks(s), ['hat:witch']);
+  assert.deepEqual(R.refreshLookUnlocks(s), [], 'una volta sola');
+  delete s.inventory.witch_corner;
+  R.refreshLookUnlocks(s);
+  assert.equal(R.lookUnlocked(s, 'hat', 'witch'), true);
+  // giardiniere e vampiro
+  s.inventory.gardener_corner = 1; s.inventory.vampire_crypt = 1;
+  assert.deepEqual(R.refreshLookUnlocks(s).sort(), ['hat:straw', 'head:vampire']);
+  // coccole e giochi: ogni specie per conto suo
+  for (let i = 0; i < PET_BOND_GOAL - 1; i++) R.bondWithPet(s, 'cat');
+  R.bondWithPet(s, 'duck');
+  assert.deepEqual(R.refreshLookUnlocks(s), [], 'non ancora');
+  R.bondWithPet(s, 'cat');
+  assert.deepEqual(R.refreshLookUnlocks(s), ['hat:catEars'], 'solo le orecchie da gatto');
+  assert.equal(R.lookOptionAvailability(s, 'extra', 'duckBeak'), 'hidden');
+});
+
+test('salvataggi: chi aveva già 30 pozioni vendute tiene il cappello da strega; sblocchi e coccole si salvano', () => {
+  const s = createNewGame(NOW, 7);
+  s.player.counters.potionsSold = 30;
+  s.player.petBond = { crow: 7, bogus: 3 };
+  s.player.lookUnlocks = ['extra:crowBeak', 'hat:inventato'];
+  const back = normalizeSave(JSON.parse(JSON.stringify(s)));
+  assert.deepEqual(back.player.lookUnlocks.sort(), ['extra:crowBeak', 'hat:witch']);
+  assert.deepEqual(back.player.petBond, { crow: 7 });
 });

@@ -5,7 +5,9 @@
 // volta fanno la coda e arrivano una dopo l'altra, quando il giocatore è
 // libero (niente pannelli, dialoghi, scatti o fasi a schermo pieno aperti).
 
-import { RANKS } from '../game/balance.ts';
+import { LOOK_UNLOCKS, RANKS } from '../game/balance.ts';
+import { LOOK_STYLES, type CustodeLook } from '../game/look.ts';
+import { custodePortrait } from './lookThumbs.ts';
 import { CATALOG_LIST } from '../game/catalog.ts';
 import { GRAVE_TYPE_MIN_RANK } from '../game/graves.ts';
 import type { AchievementDef } from '../game/progression.ts';
@@ -29,6 +31,9 @@ export interface Celebration {
   /** Il pulsante, se non «Evviva!», e cosa fare chiudendo (la fine del cortile: «Inizia il gioco»). */
   ok?: string;
   onClose?: () => void;
+  /** Cosa fa il pulsante principale (solo lui, non la chiusura toccando fuori), e un secondo pulsante che chiude soltanto. */
+  onOk?: () => void;
+  later?: string;
 }
 
 const queue: Celebration[] = [];
@@ -85,7 +90,9 @@ function show(c: Celebration) {
     c.tier ? h('span', { class: 'cel-tier' }, c.tier) : null,
     h('p', {}, c.text),
     c.extra ? h('p', { class: 'cel-extra' }, c.extra) : null,
-    h('button', { class: 'big-btn', onclick: close }, c.ok ?? t('celebrate.ok')));
+    c.later
+      ? h('div', { class: 'row cel-actions' }, h('button', { class: 'big-btn ghost', onclick: close }, c.later), h('button', { class: 'big-btn', onclick: () => { close(); c.onOk?.(); } }, c.ok ?? t('celebrate.ok')))
+      : h('button', { class: 'big-btn', onclick: () => { close(); c.onOk?.(); } }, c.ok ?? t('celebrate.ok')));
   const scrim = h('div', { class: 'dialog-scrim cel-scrim', onclick: close }, card);
   ($('#drawer').parentElement ?? document.body).append(scrim);
   document.addEventListener('keydown', onKey, true);
@@ -113,5 +120,23 @@ export function celebrateRank(level: number) {
     kicker: t('celebrate.rank.kicker'), title: rank.name, text: t('celebrate.rank.text', { n: level }),
     extra: parts.length ? t('celebrate.rank.unlocks', { what: parts.join(t('celebrate.rank.and')) }) : undefined,
     badge: lpBadgeUrl(RANK_ICONS[level] ?? 'rank', RANK_TIER(level)), count: level,
+  });
+}
+
+/**
+ * Un pezzo d'aspetto sbloccato («hat:witch»…): il Custode che già lo indossa
+ * nel medaglione, chi gliel'ha dato, e «Provalo» che apre l'Aspetto.
+ */
+export function celebrateLook(key: string, look: CustodeLook, tryIt: () => void) {
+  const [part, value] = key.split(':') as [keyof CustodeLook, string];
+  const u = LOOK_UNLOCKS.find((x) => x.key === key);
+  if (!u) return;
+  const style = (LOOK_STYLES as Record<string, Array<[string, string]>>)[part]?.find(([v]) => v === value);
+  celebrate({
+    kicker: t('celebrate.look.kicker'), title: style?.[1] ?? value,
+    text: t(u.npc ? `celebrate.look.npc.${u.npc}` : `celebrate.look.pet.${u.pet}`),
+    extra: t('celebrate.look.where'),
+    badge: custodePortrait({ ...look, [part]: value }, true),
+    ok: t('celebrate.look.try'), later: t('celebrate.look.later'), onOk: tryIt,
   });
 }

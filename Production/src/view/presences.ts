@@ -111,7 +111,7 @@ export function presenceLayout(p: Pick<Placed, 'type' | 'broken'>, opts: { night
       break;
     case 'cat_shelter': {
       const roof = still('idle', 0.55, -0.55, 0.5, 1.04, undefined, 'cat');
-      props.push({ kind: 'sleepingCat', x: -0.45, y: 0.29, z: -0.28, yaw: 0.8, owner: roof });
+      props.push({ kind: 'sleepingCat', x: -0.45, y: 0.37, z: -0.3, yaw: 0.8, owner: roof }); // sul cuscino, sopra il bordo della bara
       cast.push({ kind: 'cat', role: 'wander', x: -0.12, z: 0.6, radius: 1.4, speed: 0.5 });
       break;
     }

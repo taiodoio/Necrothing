@@ -23,6 +23,7 @@ import { markTip, nextTip } from '../game/tips.ts';
 import { applyYardGift, buildYard, YARD_GIFT, YARD_GRAVE, YARD_LANTERN } from '../game/yard.ts';
 import { t, tList } from '../i18n/index.ts';
 import { cellCenter } from '../view/WorldView.ts';
+import { rotatedFootprint } from '../game/catalog.ts';
 import { celebrate } from './celebrate.ts';
 import { $, closeDrawer, drawerOpen, h, setUiBlocking, toast, uiBlocking } from './dom.ts';
 import { lpBadgeUrl, lpIconPng } from './lpIcons.ts';
@@ -89,6 +90,8 @@ export class Onboarding {
   private step: YardStep | null = null;
   /** In Modifica la lanterna è stata spostata: ora si tocca «Fine». */
   private moved = false;
+  /** Passo «posa la lanterna»: dove stava all'inizio (finché non la sposti, l'occhio di bue resta su di lei). */
+  private placeFrom: { x: number; y: number } | null = null;
   /** Il bersaglio nella scena era fuori dallo schermo e la camera ci è già andata (una volta per passo). */
   private framed = false;
   /** I bersagli dentro un pannello già fatti scorrere in vista. */
@@ -162,7 +165,7 @@ export class Onboarding {
     else if (step === 'sheet') allowed = ctx('detail', YARD_GRAVE);
     else if (step === 'shop') allowed = ctx('shop', this.shopId()) || matches(`.drawer .card[data-item="${YARD_GIFT.item}"], .dialog .shop-detail .row .big-btn:not(.ghost)`);
     else if (step === 'place') allowed = g.placement
-      ? matches('.place-ui [data-tool="pan"], .place-ui [data-tool="work"], .place-ui [data-tool="undo"], .place-ui [data-tool="confirm"], #ctx [data-ctx="rotate"]')
+      ? matches('.place-ui [data-tool="pan"], .place-ui [data-tool="work"], .place-ui [data-tool="undo"], #ctx [data-ctx="rotate"]') || (this.placeMoved() && matches('.place-ui [data-tool="confirm"]'))
       : matches(`.dialog .shop-detail .row .big-btn:not(.ghost), .drawer .card[data-item="${YARD_GIFT.item}"], .drawer .drawer-foot .big-btn:not(.ghost), #fab, #bubble .slot[data-act="inventory"]`);
     else if (step === 'edit') allowed = g.editMode
       ? matches('.place-ui [data-tool="pan"], .place-ui [data-tool="work"], .place-ui [data-tool="undo"]') || (this.moved && matches('.place-ui [data-tool="confirm"]'))
@@ -438,6 +441,7 @@ export class Onboarding {
     if (!step) { if (yardFinished(this.o)) this.waitThenFinale(); return; }
     this.step = step;
     this.moved = false;
+    this.placeFrom = null;
     this.ghostId = null;
     this.framed = false;
     this.coachBox(null, t(`onboarding.yard.${step}`),
@@ -485,6 +489,14 @@ export class Onboarding {
     document.body.append(this.halo, this.tap);
   }
 
+  /** La lanterna da posare è già stata spostata dal punto dove è comparsa? */
+  private placeMoved(): boolean {
+    const p = this.game.placement;
+    if (!p) return false;
+    this.placeFrom ??= { x: p.x, y: p.y };
+    return p.x !== this.placeFrom.x || p.y !== this.placeFrom.y;
+  }
+
   private shopId() { return this.game.state.placeables.find((p) => p.type === 'shop')?.id ?? null; }
 
   /**
@@ -507,7 +519,15 @@ export class Onboarding {
       case 'flowers': return () => [ctx('flowers'), entity(YARD_GRAVE)];
       case 'light': return () => [ctx('light'), entity(YARD_LANTERN)];
       case 'shop': return () => [shopCta, card(YARD_GIFT.item), ctx('shop'), ...(this.shopId() ? [entity(this.shopId()!)] : [])];
-      case 'place': return () => ['.place-ui [data-tool="confirm"]', shopCta, '.drawer:not([hidden]) .drawer-foot .big-btn:not(.ghost)', card(YARD_GIFT.item), '#bubble.open .slot[data-act="inventory"]', '#fab'];
+      case 'place': return () => {
+        // prima l'occhio di bue sulla lanterna da spostare; spostata, sulla spunta
+        const p = g.placement;
+        if (p) return this.placeMoved() ? ['.place-ui [data-tool="confirm"]'] : [{
+          at: () => cellCenter(p.x, p.y, rotatedFootprint(p.type ?? '', p.rot)).setY(0.9),
+          base: () => cellCenter(p.x, p.y, rotatedFootprint(p.type ?? '', p.rot)).setY(0),
+        }];
+        return [shopCta, '.drawer:not([hidden]) .drawer-foot .big-btn:not(.ghost)', card(YARD_GIFT.item), '#bubble.open .slot[data-act="inventory"]', '#fab'];
+      };
       case 'edit': return () => {
         // la prima volta Modifica si presenta con una scheda: «Inizia»
         if (!g.editMode) return ['#drawer:not([hidden]) .drawer-foot .big-btn', '#bubble.open .slot[data-act="edit"]', '#fab'];

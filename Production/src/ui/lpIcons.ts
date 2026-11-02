@@ -325,6 +325,11 @@ export function lpBadgeUrl(name: string, tier: BadgeTier | 'locked'): string {
 export const hasLpIcon = (name: string) => name in ICONS;
 /** I nomi delle icone colorate (la pagina del design system). */
 export const LP_ICON_NAMES = Object.keys(ICONS);
+/** I toni (chiaro, medio, scuro) delle icone e la direzione della luce: la guida agli asset (asset-guide.html). */
+export const LP_TONES: Readonly<Record<string, Tones>> = T;
+export const LP_LIGHT = LIGHT;
+/** I poligoni di un'icona (la guida agli asset li mostra uno per uno). */
+export const lpIconPolys = (name: string): ReadonlyArray<{ fill: string; pts: ReadonlyArray<readonly [number, number]> }> => polysOf(name);
 
 const fmt = (n: number) => Math.round(n * 100) / 100;
 const urls = new Map<string, string>();

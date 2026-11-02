@@ -1,0 +1,484 @@
+<!doctype html>
+<html lang="it" class="ui-next ui-play" data-theme="dark">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <meta name="color-scheme" content="dark" />
+    <title>Necrothing — Guida agli asset</title>
+  </head>
+  <body class="ds">
+    <div class="ds-wrap">
+
+      <!-- ═════════════════════ Testata ═════════════════════ -->
+      <header class="ds-top">
+        <h1>Necrothing · Guida agli asset</h1>
+        <p class="lead">Come si fanno icone, medaglie, oggetti 3D e personaggi perché sembrino nati insieme. Nel gioco nessun asset è un file disegnato a mano: sono tutti <b>codice</b> (poligoni SVG per le icone, geometrie generate per il 3D). Quindi si rifanno sempre uguali, e ogni campione di questa pagina esce dagli stessi generatori del gioco. Va letta insieme a <a href="/design-system.html" style="color: var(--gold-bright)">design-system.html</a>, che copre l'interfaccia.</p>
+      </header>
+      <nav class="ds-nav" aria-label="Indice">
+        <a href="#uso">Come usarla</a><a href="#principi">Principi</a><a href="#icone">Icone</a><a href="#mono">Monocromatiche</a>
+        <a href="#medaglie">Medaglie</a><a href="#palette">Palette 3D</a><a href="#oggetti">Oggetti 3D</a><a href="#anteprime">Anteprime</a>
+        <a href="#personaggi">Personaggi</a><a href="#lapidi">Lapidi</a><a href="#qualita">Qualità</a><a href="#consegna">Consegna</a>
+      </nav>
+
+      <!-- ═════════════════════ Come usarla ═════════════════════ -->
+      <section class="ds-sec" id="uso">
+        <h2>Come usarla con Claude</h2>
+        <p class="sub">Apri questa pagina con <code>npm run dev</code> → <code>/asset-guide.html</code>, oppure passa il file a Claude. Le regole e le ricette qui sotto valgono come un contratto: un asset nuovo parte sempre da uno simile che c'è già, ed è registrato in tutti i punti della ricetta.</p>
+        <div class="ds-example plain">
+          <p class="ds-label">Un prompt che funziona</p>
+          <div class="ds-live col">
+            <p>Crea <b>[icona / medaglia / oggetto / personaggio]</b> seguendo <code>asset-guide.html</code>.</p>
+            <ul>
+              <li>Parti da <b>[un asset simile già nel gioco]</b> e copia come è costruito: stesse primitive, stessa scala, stessi stati.</li>
+              <li>Solo colori della palette: <code>LPC</code> per il 3D, i toni <code>T</code> per le icone. Se ne manca uno, chiedimelo prima.</li>
+              <li>Fai tutti i passi della ricetta (catalogo, accesso, generatore, testi, anteprima) e fai passare i test.</li>
+              <li>Mandami l'anteprima, l'oggetto in scena di notte e di giorno, in qualità alta e bassa.</li>
+            </ul>
+          </div>
+        </div>
+        <h3>Dove sta cosa</h3>
+        <div class="ds-scroll">
+          <table class="ds-table">
+            <thead><tr><th>File (in <code>src/</code>)</th><th>Cosa contiene</th></tr></thead>
+            <tbody>
+              <tr><td><code>ui/lpIcons.ts</code></td><td>Icone colorate (poligoni su griglia 24×24), toni <code>T</code>, medaglie (<code>lpBadgeUrl</code>).</td></tr>
+              <tr><td><code>ui/monoIcons.ts</code></td><td>Icone monocromatiche (tracciati SVG nel colore del testo).</td></tr>
+              <tr><td><code>ui/icons.ts</code></td><td><code>icon()</code>, <code>hydrateIcons()</code>, l'icona di ogni traguardo (<code>ACH_ICONS</code>) e il numero sulla medaglia (<code>ACH_COUNT</code>).</td></tr>
+              <tr><td><code>game/progression.ts</code></td><td>I traguardi (<code>ACHIEVEMENTS</code>) col loro grado e obiettivo.</td></tr>
+              <tr><td><code>render/lowpoly/palette.ts</code></td><td>La palette 3D <code>LPC</code>: l'unico posto dove nasce un colore del mondo.</td></tr>
+              <tr><td><code>render/lowpoly/kit.ts</code></td><td>Il toolkit <code>LP</code>: primitive, trasformazioni, luci, profili 2D.</td></tr>
+              <tr><td><code>render/lowpoly/details.ts</code></td><td>Dettagli da riusare: muschio, foglie secche, sassolini, erbacce, fiori, candele, ragnatele, edera, zucche, crepe, iscrizioni.</td></tr>
+              <tr><td><code>render/lowpoly/index.ts</code></td><td>Il registro: id del catalogo → generatore (<code>LP_PLACEABLES</code>), scenografia (<code>LP_SCENERY</code>), parti dei personaggi.</td></tr>
+              <tr><td><code>render/lowpoly/unlockables.ts</code></td><td>Il registro degli sbloccabili (i modelli stanno in <code>newItems*.ts</code>).</td></tr>
+              <tr><td><code>render/lowpoly/weathering.ts</code></td><td>Il degrado comune: sporco e rotto per chi ha <code>decays</code>.</td></tr>
+              <tr><td><code>game/catalog.ts</code></td><td>Il catalogo degli oggetti e la lista <code>ACCESS</code> (Demo / Full).</td></tr>
+              <tr><td><code>i18n/it/catalog.ts</code></td><td>Nome e descrizione di ogni oggetto.</td></tr>
+              <tr><td><code>render/bake.ts</code>, <code>scripts/bake-previews.mjs</code></td><td>Le anteprime degli oggetti, salvate in <code>assets/previews/</code>.</td></tr>
+              <tr><td><code>render/lowpoly/v2/custode.ts</code></td><td>Il kit dei personaggi (testa, capelli, occhi, corpo) e il Custode.</td></tr>
+              <tr><td><code>render/lowpoly/v2/npc.ts</code></td><td>Gli altri personaggi e gli animali (<code>V2_SPECS</code>).</td></tr>
+              <tr><td><code>view/characters.ts</code></td><td>Il rig, le pose e l'elenco dei tipi (<code>CharacterKind</code>).</td></tr>
+              <tr><td><code>view/presences.ts</code>, <code>game/spawn.ts</code></td><td>Chi abita un oggetto (presenze) e chi passa per il cimitero (visitatori).</td></tr>
+              <tr><td><code>ui/npcPortraits.ts</code></td><td>Il ritratto di ogni personaggio, per le notifiche.</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- ═════════════════════ Principi ═════════════════════ -->
+      <section class="ds-sec" id="principi">
+        <h2>Principi comuni</h2>
+        <p class="sub">Lo stile si chiama <b>Stylized Gothic Low-Poly</b>: poche facce ben leggibili, colori opachi e un po' spenti nel mondo, luce calda che arriva dalle lanterne. L'interfaccia usa le stesse forme, ma più luminose.</p>
+        <ol class="ds-rules">
+          <li><b>La luce viene da in alto a sinistra.</b> Nelle icone la faccia rivolta lì prende il tono chiaro, quella opposta lo scuro. Nella scena la luna e le luci sono costruite allo stesso modo. Non si inverte mai.</li>
+          <li><b>Niente contorni.</b> Le forme si separano col tono, non con una linea. Nelle icone ogni poligono ha un bordo sottile del suo stesso colore, solo per chiudere le fessure.</li>
+          <li><b>Poche facce, visibili.</b> Cilindri a 4–8 lati, sfere a icosaedro, archi a pochi segmenti. Una curva liscia è fuori stile. Gli spigoli si smussano con un <code>bevel</code>, non si arrotondano.</li>
+          <li><b>Tre toni per colore.</b> Nelle icone chiaro, medio e scuro (<code>T.gold</code> e gli altri). Nel 3D il tono lo fanno la luce e la variazione per faccia (<code>vary</code>, <code>ao</code>): un solo colore della palette per pezzo.</li>
+          <li><b>Il mondo è spento, l'interfaccia è luminosa.</b> La palette 3D (<code>LPC</code>) è desaturata: pietre non troppo chiare, verde muschio. I toni delle icone sono più chiari e caldi, perché stanno su pannelli scuri.</li>
+          <li><b>Tutto è deterministico.</b> Ogni modello ha un seme (<code>new LP('lp:id:…')</code>). Stesso seme, stesso modello. La casualità passa solo da <code>lp.rng</code>, mai da <code>Math.random()</code>.</li>
+          <li><b>Si legge a colpo d'occhio.</b> Sagoma grande e chiara, dettagli in scala (le ossa sono «in scala 2» per leggersi in gioco). Un oggetto deve farsi riconoscere da un telefono, a zoom medio, di notte.</li>
+          <li><b>Il tono è ironico e gentile.</b> Gotico, ma tenero: personaggi kawaii (testa grande, occhi lucidi), oggetti un po' storti e vissuti, niente sangue o splatter.</li>
+        </ol>
+      </section>
+
+      <!-- ═════════════════════ Icone colorate ═════════════════════ -->
+      <section class="ds-sec" id="icone">
+        <h2>Icone colorate</h2>
+        <p class="sub">Stanno su pulsanti, menù, notifiche, segnalini nella scena e dentro le medaglie. Una sola definizione dà l'SVG per l'interfaccia (<code>lpIconUrl</code>), il disegno su canvas per la scena (<code>drawLpIcon</code>) e il PNG per le notifiche (<code>lpIconPng</code>).</p>
+        <h3>Anatomia</h3>
+        <div class="ag-anat" data-anatomy="shovel" data-labels="come si vede|le facce sulla griglia 24×24|la luce da in alto a sinistra"></div>
+        <div class="ag-anat" data-anatomy="wisp" data-labels="come si vede|le facce sulla griglia 24×24|la luce da in alto a sinistra" style="margin-top: 14px"></div>
+        <div class="ag-two" style="margin-top: 16px">
+          <div class="ag-card yes"><h4>Sì</h4><ul>
+            <li>Griglia 24×24, la sagoma occupa circa da 2 a 22 e lascia un po' d'aria.</li>
+            <li>Forme piene e grosse: tratti spessi almeno 1,6 (le barre di <code>bar()</code>), estremi tondi.</li>
+            <li>Tre o quattro colori al massimo per icona, presi da <code>T</code>.</li>
+            <li>Un dettaglio scuro (<code>T.ink</code>) solo per occhi, fessure, righe.</li>
+            <li>Il centro della luce di un <code>fan()</code> spostato verso l'alto a sinistra (es. <code>[10, 9]</code>), così la faccia chiara è lì.</li>
+          </ul></div>
+          <div class="ag-card no"><h4>No</h4><ul>
+            <li>Contorni, ombre portate, sfumature, gradienti.</li>
+            <li>Colori scritti a mano fuori da <code>T</code> (se ne serve uno nuovo, si aggiunge una terna a <code>T</code>).</li>
+            <li>Dettagli sotto 1 unità: a 18 px spariscono.</li>
+            <li>Emoji o immagini: le icone sono solo poligoni.</li>
+          </ul></div>
+        </div>
+        <h3>I toni (<code>T</code>)</h3>
+        <p class="sub">Ogni terna è [chiaro, medio, scuro]. <code>fan()</code> sceglie da solo il tono di ogni faccia in base a dove guarda rispetto alla luce.</p>
+        <div class="ag-tones" id="lp-tones"></div>
+        <h3>Gli attrezzi</h3>
+        <div class="ds-scroll">
+          <table class="ds-table">
+            <thead><tr><th>Funzione</th><th>Cosa fa</th></tr></thead>
+            <tbody>
+              <tr><td><code>fan(punti, toni, centro?)</code></td><td>Il mattone di base: un poligono diviso in spicchi dal centro, ognuno col tono della sua direzione. Le sagome si fanno così.</td></tr>
+              <tr><td><code>ngon(cx, cy, r, n, rot, sy)</code></td><td>I punti di un poligono regolare (n lati, schiacciato in verticale con <code>sy</code>), da passare a <code>fan</code>.</td></tr>
+              <tr><td><code>disc(cx, cy, r, toni, n)</code></td><td>Un disco sfaccettato (occhi, frutti, pomelli).</td></tr>
+              <tr><td><code>ring(cx, cy, r0, r1, toni, n)</code></td><td>Un anello (ruote, lenti, cornici tonde).</td></tr>
+              <tr><td><code>bar(x1, y1, x2, y2, w, toni)</code></td><td>Una barra con gli estremi tondi (manici, raggi, righe). <code>line(punti, w, toni)</code> ne fa una spezzata.</td></tr>
+              <tr><td><code>rrect(x0, y0, x1, y1, r, toni, centro?)</code></td><td>Un rettangolo con gli angoli tondi (corpi, finestre, libri).</td></tr>
+              <tr><td><code>arc(cx, cy, r, a0, a1, n)</code></td><td>I punti di un arco, per costruire sagome curve o con <code>line</code>.</td></tr>
+              <tr><td><code>star5</code>, <code>spark</code>, <code>crescent</code>, <code>stone</code></td><td>Stella, scintilla, falce di luna, lapide col cappello tondo.</td></tr>
+              <tr><td><code>tf(polys, k, dx, dy)</code></td><td>Scala e sposta un disegno (le icone dentro le medaglie, il sole dietro la nuvola).</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <h3>Ricetta: un'icona nuova</h3>
+        <ol class="ds-rules">
+          <li><b>Schizzo.</b> Disegna la sagoma su carta quadrettata 24×24 e annota i punti. Pensa a cosa resta leggibile a 18 px.</li>
+          <li><b>Codice.</b> Aggiungi una voce all'oggetto <code>ICONS</code> di <code>ui/lpIcons.ts</code>, con un commento che dice cos'è. I pezzi dietro vanno scritti prima.</li>
+          <li><b>Uso.</b> In JS <code>icon('nome', 18)</code>, nell'HTML statico <code>&lt;i data-icon="nome"&gt;</code> con <code>hydrateIcons()</code>. In un canvas <code>drawIcon(g, 'nome', x, y, size)</code>.</li>
+          <li><b>Controllo.</b> Guardala in questa pagina e nel design system a 14, 18, 24 e 48 px, su un pannello scuro e su un pulsante oro.</li>
+        </ol>
+        <details class="ds-code" open><summary>Esempio vero: la pala (<code>shovel</code>)</summary><pre>// manico in diagonale, impugnatura a T, lama di pietra con la luce in alto a sinistra
+shovel: () =&gt; [
+  ...bar(18.2, 4.6, 11.4, 12, 2.2, T.wood),
+  ...line([[16, 3.4], [18.6, 2.4], [20.6, 4.8], [19.6, 6.2]], 1.8, T.wood),
+  ...fan([[8.6, 9.6], [12.6, 12.6], [13, 16.6], [8.8, 21.4], [3.4, 19.6], [3.2, 15], [5.6, 11]], T.stone, [8, 14]),
+],</pre></details>
+        <h3>Dimensioni</h3>
+        <div class="ds-live"><div class="ag-sizes" data-sizes="wisp"></div><div class="ag-sizes" data-sizes="lightOn"></div></div>
+      </section>
+
+      <!-- ═════════════════════ Monocromatiche ═════════════════════ -->
+      <section class="ds-sec" id="mono">
+        <h2>Icone monocromatiche</h2>
+        <p class="sub">Un segno sobrio nel colore del testo: schede, righe di dati sulla pergamena, voci dei cartellini, cronologia. Non si mescolano con quelle colorate nello stesso punto.</p>
+        <div class="ag-mono">
+          <div><i data-mono="light" data-size="34"></i><i data-mono="flower" data-size="34"></i><i data-mono="ghost" data-size="34"></i><i data-mono="pumpkin" data-size="34"></i></div>
+          <div class="gold"><i data-mono="light" data-size="34"></i><i data-mono="flower" data-size="34"></i><i data-mono="ghost" data-size="34"></i><i data-mono="pumpkin" data-size="34"></i></div>
+          <div class="paper"><i data-mono="light" data-size="34"></i><i data-mono="flower" data-size="34"></i><i data-mono="ghost" data-size="34"></i><i data-mono="pumpkin" data-size="34"></i></div>
+        </div>
+        <div class="ag-two" style="margin-top: 16px">
+          <div class="ag-card"><h4>Come sono fatte</h4><ul>
+            <li>viewBox 24×24, riempimento <code>currentColor</code>: prendono il colore dal testo intorno.</li>
+            <li>Forme piene e nette; i dettagli sono <b>buchi</b> ritagliati con la regola <code>evenodd</code>.</li>
+            <li>I tratti in più (gambi, maniglie) vanno nel quarto campo, come SVG con <code>stroke="currentColor"</code>.</li>
+            <li>Se un tratto deve sembrare un buco su uno sfondo non scuro, usa <code>var(--hole)</code> (lo imposta il contenitore).</li>
+          </ul></div>
+          <div class="ag-card"><h4>Il formato</h4><ul>
+            <li><code>[tracciato, null, regola, extra, trasformazione]</code></li>
+            <li>Aiuti: <code>C(cx, cy, r)</code> per un cerchio, <code>R(x, y, w, h)</code> per un rettangolo, da concatenare nel tracciato.</li>
+            <li>Si usa con <code>monoIcon('nome', 19)</code>; l'elenco dei nomi è <code>MONO_ICONS</code>.</li>
+          </ul></div>
+        </div>
+        <details class="ds-code" open><summary>Esempio vero: la lanterna (<code>light</code>)</summary><pre>light: ['M6.8 7.6h10.4L14.6 3.8H9.4z' + R(7.4, 8.4, 9.2, 10) + R(9.8, 10.6, 4.4, 5.6) + R(5.6, 19.4, 12.8, 2.4), null, 'evenodd',
+  '&lt;circle cx="12" cy="2.4" r="1.4" stroke="currentColor" stroke-width="1.5" fill="none"/&gt;'],</pre></details>
+      </section>
+
+      <!-- ═════════════════════ Medaglie ═════════════════════ -->
+      <section class="ds-sec" id="medaglie">
+        <h2>Medaglie</h2>
+        <p class="sub">Una medaglia non si disegna: è un'icona colorata messa dentro il medaglione. <code>lpBadgeUrl(icona, grado)</code> compone, dal fondo: due code di nastro cremisi, l'anello del grado (16 lati), il disco scuro e l'icona al 56% al centro. Con <code>locked</code> anello e nastro diventano grigi.</p>
+        <div class="ds-badges">
+          <figure><img data-badge="flower:bronze" alt="" />bronze</figure>
+          <figure><img data-badge="flower:silver" alt="" />silver</figure>
+          <figure><img data-badge="flower:gold" alt="" />gold</figure>
+          <figure><img data-badge="flower:locked" alt="" />locked</figure>
+          <figure><img data-badge="ghost:gold" alt="" />ghost</figure>
+          <figure><img data-badge="mausoleum:silver" alt="" />mausoleum</figure>
+        </div>
+        <div class="ag-two" style="margin-top: 16px">
+          <div class="ag-card"><h4>Il grado</h4><ul>
+            <li><b>bronze</b>: il primo passo (1 sepoltura, 5 tombe, 3 foto).</li>
+            <li><b>silver</b>: costanza (10 tombe, 15 pulizie, 5 riparazioni).</li>
+            <li><b>gold</b>: traguardi lunghi o rari (25 tombe, 50 fiori, il mausoleo).</li>
+            <li>Il grado è scritto a mano in ogni traguardo. Il rango usa la stessa medaglia (icona <code>rank</code>): bronzo fino al 2, argento al 3, oro dal 4 (in <code>ui/celebrate.ts</code>).</li>
+          </ul></div>
+          <div class="ag-card"><h4>L'icona dentro</h4><ul>
+            <li>Al 56% deve ancora leggersi: sagoma compatta, centrata, senza dettagli fini.</li>
+            <li>Il disco dietro è scuro: va bene un'icona chiara e calda. <code>T.ink</code> da solo sparisce.</li>
+            <li>Più traguardi della stessa serie usano la stessa icona; li distingue il grado e il numero (<code>ACH_COUNT</code>).</li>
+          </ul></div>
+        </div>
+        <h3>Ricetta: un traguardo nuovo</h3>
+        <ol class="ds-rules">
+          <li><b>Regola.</b> In <code>game/progression.ts</code> aggiungi a <code>ACHIEVEMENTS</code>: <code>{ id, name: t('ach.x.name'), description: t('ach.x.desc'), icon, tier, value, goal }</code>. <code>value</code> legge il salvataggio, <code>goal</code> è la soglia.</li>
+          <li><b>Icona.</b> In <code>ui/icons.ts</code> associa l'id a un'icona colorata in <code>ACH_ICONS</code> (se non c'è, va creata prima). Se la medaglia mostra un numero, aggiungilo ad <code>ACH_COUNT</code>.</li>
+          <li><b>Testi.</b> Nome e descrizione in <code>i18n/it/game.ts</code>, poi nel foglio delle traduzioni.</li>
+          <li><b>Controllo.</b> La medaglia compare qui sotto e nella schermata del Custode, sia presa sia <code>locked</code>.</li>
+        </ol>
+        <h3>I traguardi di adesso</h3>
+        <div class="ds-scroll">
+          <table class="ds-table" id="ach-table">
+            <thead><tr><th>id</th><th>Medaglia</th><th>Icona</th><th>Grado</th><th>Obiettivo</th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- ═════════════════════ Palette 3D ═════════════════════ -->
+      <section class="ds-sec" id="palette">
+        <h2>Palette 3D e materiali</h2>
+        <p class="sub">Tutti i generatori usano solo le chiavi di <code>LPC</code> (<code>render/lowpoly/palette.ts</code>): cambiando un valore lì si ritocca tutto il mondo. Un colore scritto a mano dentro un modello è accettato solo per un dettaglio unico (la terracotta di un'urna, il nastro di un fiocco), mai per pietra, legno, ferro, erba o luce.</p>
+        <div class="ag-swatches" id="lpc-swatches"></div>
+        <h3>I materiali (bucket)</h3>
+        <p class="sub">Un modello non sceglie il materiale: mette ogni pezzo in un <b>bucket</b> (<code>{ bucket: 'glow' }</code>). Tutti i modelli condividono gli stessi materiali, e i colori sono per vertice.</p>
+        <div class="ds-scroll">
+          <table class="ds-table">
+            <thead><tr><th>Bucket</th><th>Materiale</th><th>Per cosa</th></tr></thead>
+            <tbody>
+              <tr><td><code>solid</code></td><td>PBR opaco, <code>roughness 0.9</code>, niente metallo, flat shading. In qualità media e bassa diventa Lambert.</td><td>Quasi tutto: pietra, legno, ferro, stoffa, foglie.</td></tr>
+              <tr><td><code>glow</code></td><td>Non illuminato, non tone-mapped: brilla da solo. L'Atmosfera ne regola l'intensità per fase del giorno.</td><td>Vetri accesi, fiamme, finestre, occhi che brillano.</td></tr>
+              <tr><td><code>ghost</code></td><td>Additivo, trasparente al 55%, non scrive la profondità.</td><td>Veli dei fantasmi, aloni spettrali.</td></tr>
+              <tr><td><code>water</code></td><td>Lucido (<code>roughness 0.25</code>) e trasparente all'86%.</td><td>Stagno, fontana, pozze.</td></tr>
+              <tr><td><code>gloss</code></td><td>Lucido, con il riflesso della luce.</td><td>Solo gli occhi dei personaggi.</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="ds-note">Un pezzo acceso ha sempre <b>due</b> parti: la geometria nel bucket <code>glow</code> (si vede anche dove la luce vera è finta, in qualità media e bassa) e la sorgente <code>lp.light(…)</code> (illumina intorno). Da spento si passa a <code>solid</code> con un colore scuro (<code>#3c3a35</code>) e si toglie la luce.</p>
+      </section>
+
+      <!-- ═════════════════════ Oggetti 3D ═════════════════════ -->
+      <section class="ds-sec" id="oggetti">
+        <h2>Oggetti 3D</h2>
+        <p class="sub">Ogni oggetto del catalogo è una funzione che riceve gli stati (<code>PVis</code>) e costruisce il modello col toolkit <code>LP</code>. Non ci sono file .glb: la geometria si genera all'avvio ed è condivisa da tutte le copie.</p>
+        <h3>Misure e orientamento</h3>
+        <div class="ag-two">
+          <div class="ag-card"><h4>Lo spazio del modello</h4><ul>
+            <li><b>1 unità = 1 cella</b> del cimitero. L'altezza è libera.</li>
+            <li>Origine al <b>centro dell'ingombro a terra</b>, il terreno è y = 0, il davanti guarda <b>+z</b>.</li>
+            <li>Il modello deve stare dentro il suo <code>footprint</code> (larghezza × profondità in celle), anche sporco o rotto: lo controlla un test.</li>
+            <li>Riferimenti: il Custode è alto circa 1,4 (col cappello); una lanterna da terra 0,9; un lampione 3 (tabelle sotto, misurate sui modelli veri).</li>
+          </ul></div>
+          <div class="ag-card"><h4>Gli stati (<code>PVis</code>)</h4><ul>
+            <li><code>lit</code>: acceso o spento (solo per chi ha <code>light: true</code>).</li>
+            <li><code>dirty</code>, <code>broken</code>: sporco e rotto (solo per chi ha <code>decays: true</code>). Sopra il degrado del modello arriva quello comune (<code>weathered</code>).</li>
+            <li><code>variant</code>: la forma, per le famiglie (lanterna da terra, su palo, su pietra).</li>
+            <li><code>seed</code>: piccole differenze tra copie dello stesso oggetto. <code>corner</code>: pezzo d'angolo di muretti e staccionate.</li>
+          </ul></div>
+        </div>
+        <h3>Gli stati di un oggetto vero</h3>
+        <div class="ag-figs" data-states="lantern" data-labels="acceso|spento|sporco|rotto"></div>
+        <div class="ag-figs" data-states="lamp_post" data-labels="acceso|spento|sporco|rotto" style="margin-top: 12px"></div>
+        <h3>Il toolkit (<code>LP</code>)</h3>
+        <div class="ds-scroll">
+          <table class="ds-table">
+            <thead><tr><th>Metodo</th><th>Cosa fa</th></tr></thead>
+            <tbody>
+              <tr><td><code>new LP('lp:id:…')</code></td><td>Un modello nuovo, con il suo seme. Nel seme mettere tutto ciò che cambia la forma: <code>`lp:lantern:${v.variant}:${v.seed}:${v.dirty}${v.broken}`</code>.</td></tr>
+              <tr><td><code>box(cx, y0, cz, w, h, d, col, {bevel})</code></td><td>Parallelepipedo appoggiato su <code>y0</code>, con lo smusso opzionale.</td></tr>
+              <tr><td><code>cyl(cx, y0, cz, r0, r1, h, seg, col)</code></td><td>Cilindro o tronco di cono. <code>seg</code> basso = sfaccettato (4 = quadrato, 5–8 per pali e vasi).</td></tr>
+              <tr><td><code>lathe(cx, y0, cz, profilo, seg, col)</code></td><td>Solido di rotazione da un profilo <code>[raggio, y]</code>: vasi, piedi torniti, urne, campane.</td></tr>
+              <tr><td><code>blob(cx, cy, cz, rx, ry, rz, col, {detail})</code></td><td>Icosaedro schiacciato e irregolare: massi, chiome, teschi, terra.</td></tr>
+              <tr><td><code>extrude(shape, depth, col)</code></td><td>Un profilo 2D estruso: lapidi, archi, porte, finestre. Profili pronti: <code>rectShape</code>, <code>roundTopShape</code>, <code>gothicArchShape</code>, <code>irregularShape</code>.</td></tr>
+              <tr><td><code>plate(shape, thick, col)</code></td><td>Una lastra sottile: incisioni, foglie, toppe di muschio.</td></tr>
+              <tr><td><code>add(geometria, col, opts)</code></td><td>Qualsiasi geometria three.js (es. <code>TorusGeometry</code> per anelli e manici).</td></tr>
+              <tr><td><code>push([x,y,z], ry, rx, rz, s)</code> / <code>pop()</code></td><td>Sposta, ruota e scala i pezzi che seguono (pila come in un disegno vettoriale). Ogni <code>push</code> ha il suo <code>pop</code>.</td></tr>
+              <tr><td><code>light(x, y, z, col, intensità, raggio, flicker, alone)</code></td><td>Una sorgente di luce. Lanterna: <code>(…, LPC.lantern, 0.75, 4, 0.2, 0.9)</code>; torcia: <code>(…, '#ff9a3c', 1, 5, 0.45, 1.2)</code>.</td></tr>
+              <tr><td><code>lp.rng</code></td><td>Il caso deterministico: <code>range(a, b)</code>, <code>pick([…])</code>, <code>chance(p)</code>, <code>next()</code>.</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <h3>Le opzioni di stile di ogni pezzo</h3>
+        <div class="ds-scroll">
+          <table class="ds-table">
+            <thead><tr><th>Opzione</th><th>Di base</th><th>Effetto e quando cambiarla</th></tr></thead>
+            <tbody>
+              <tr><td><code>jitter</code></td><td class="num">0.012</td><td>Sposta un poco i vertici per togliere l'aria «da CAD». Mettere <code>0</code> sulle parti che devono restare dritte e combaciare (ferri, vetri, cornici).</td></tr>
+              <tr><td><code>vary</code></td><td class="num">0.08</td><td>Variazione di luminosità per faccia. 0.1–0.15 per pietra e legno vissuti, 0.04–0.05 per vetro e metallo.</td></tr>
+              <tr><td><code>ao</code></td><td class="num">0.18</td><td>Scurisce verso la base del pezzo (finta occlusione). 0.25–0.35 per basamenti e cordoli, <code>0</code> per pezzi piccoli e nastri.</td></tr>
+              <tr><td><code>topTint</code>, <code>topAmount</code></td><td class="num">—</td><td>Mescola un colore sulle facce rivolte in alto: <code>{ topTint: LPC.moss, topAmount: 0.5 }</code> per il muschio degli oggetti sporchi.</td></tr>
+              <tr><td><code>bucket</code></td><td class="num">solid</td><td>Il materiale (tabella sopra).</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <h3>Ricetta: un oggetto nuovo</h3>
+        <ol class="ds-rules">
+          <li><b>Catalogo.</b> In <code>game/catalog.ts</code> aggiungi la voce nella sua categoria: <code>id</code> in snake_case, <code>footprint</code>, <code>cost</code>, <code>minRank</code>, e solo i flag che servono (<code>light</code>, <code>decays</code>, <code>rotatable</code>, <code>walkable</code>, <code>unique</code>, <code>season</code>, <code>feat</code>…).</li>
+          <li><b>Accesso.</b> Metti l'id in <b>una sola</b> lista di <code>ACCESS</code>: <code>demo</code> (rango 1–2, non unico, non stagionale) o <code>full</code>. Un test controlla che ci sia.</li>
+          <li><b>Generatore.</b> Scrivi <code>xxxLP(v: PVis): LPModel</code> nel file della sua famiglia (luci in <code>lights.ts</code>, decorazioni in <code>decor.ts</code>, sbloccabili in <code>newItems*.ts</code>…). Parti da un oggetto simile e gestisci tutti gli stati.</li>
+          <li><b>Registro.</b> Aggiungi <code>id: generatore</code> a <code>LP_PLACEABLES</code> (<code>render/lowpoly/index.ts</code>) o a <code>LP_UNLOCKABLES</code>. Senza, il test «ogni oggetto ha un generatore» fallisce.</li>
+          <li><b>Variante?</b> Se è solo un'altra forma di un oggetto che c'è già, non serve un generatore: la voce del catalogo prende <code>family: 'lantern', look: 2</code> e il generatore della famiglia gestisce <code>v.variant === 2</code>.</li>
+          <li><b>Testi.</b> In <code>i18n/it/catalog.ts</code> aggiungi <code>item.&lt;idInCamelCase&gt;.label</code> e <code>.desc</code> (una riga ironica), poi il foglio delle traduzioni.</li>
+          <li><b>Anteprima.</b> Con il server di sviluppo acceso: <code>node scripts/bake-previews.mjs &lt;id&gt;</code>. Salva <code>src/assets/previews/&lt;id&gt;.webp</code>, che va committata.</li>
+          <li><b>Chi lo abita?</b> Se ci vivono dei personaggi (bar degli zombie, angolo della strega), aggiungi l'id a <code>PRESENCE_TYPES</code> e la sua scena in <code>view/presences.ts</code>. Nel modello va solo l'ambiente.</li>
+          <li><b>Controllo.</b> <code>npm test</code>, poi guardalo in gioco: piazzato, ruotato, di notte e di giorno, sporco e rotto, in qualità alta e bassa.</li>
+        </ol>
+        <details class="ds-code" open><summary>Uno scheletro da copiare (lumino votivo)</summary><pre>// game/catalog.ts, fra le luci
+{ id: 'votive_candle', label: t('item.votiveCandle.label'), category: 'light', footprint: [1, 1], cost: 4, minRank: 1,
+  decays: true, light: true, description: t('item.votiveCandle.desc') },
+
+// render/lowpoly/lights.ts
+export function votiveCandle(v: PVis): LPModel {
+  const lp = new LP(`lp:votive:${v.seed}:${v.dirty}${v.broken}`);
+  const on = v.lit;
+  // gradino di pietra, col muschio se è sporco
+  lp.box(0, 0, 0, 0.42, 0.08, 0.42, LPC.stoneDark, { bevel: 0.015, ...(v.dirty ? { topTint: LPC.moss, topAmount: 0.5 } : {}) });
+  // il bicchiere rosso inclinato se è rotto
+  lp.push([0, 0.08, 0], 0, 0, v.broken ? 0.5 : 0);
+  lp.cyl(0, 0, 0, 0.1, 0.12, 0.22, 7, on ? LPC.red : '#3c3a35', { bucket: on ? 'glow' : 'solid', jitter: 0, vary: 0.05 });
+  lp.cyl(0, 0.22, 0, 0.125, 0.125, 0.025, 7, LPC.gold, { jitter: 0, ao: 0 });
+  if (on) {
+    lp.cyl(0, 0.24, 0, 0.025, 0, 0.08, 4, LPC.flameCore, { bucket: 'glow', jitter: 0 });
+    lp.light(0, 0.3, 0, '#ff8a5c', 0.6, 3, 0.25, 0.8);
+  }
+  lp.pop();
+  decayLP(lp, v, 0.5, 0.5); // foglie, muschio, sassolini
+  return lp.build();
+}
+
+// render/lowpoly/index.ts → LP_PLACEABLES
+votive_candle: votiveCandle,
+
+// i18n/it/catalog.ts
+'item.votiveCandle.label': 'Lumino votivo',
+'item.votiveCandle.desc': 'Una fiammella che non si spegne mai. Quasi mai.',</pre></details>
+        <h3>Varianti di una famiglia</h3>
+        <div class="ag-figs" data-previews="lantern,lantern_pole,lantern_stone,lamp_post,lamp_post_double,lamp_post_gothic"></div>
+        <h3>Misure di riferimento</h3>
+        <p class="sub">Contate adesso sui modelli veri (acceso, pulito). Un oggetto piccolo nuovo dovrebbe stare vicino a quelli della sua taglia; se ha molti più triangoli, va semplificato (meno segmenti, meno <code>detail</code>).</p>
+        <div class="ds-scroll">
+          <table class="ds-table" id="tri-table">
+            <thead><tr><th>Oggetto</th><th>Ingombro</th><th>Altezza</th><th>Triangoli</th><th>Luci</th><th>Bucket</th></tr></thead>
+            <tbody data-ids="bones,vase,lantern,torch,lamp_post,wreath,sign,glow_pumpkin,angel_statue,bonfire,well,arch_gothic,mausoleum,shop,keeper_house"></tbody>
+          </table>
+        </div>
+        <div class="ag-two" style="margin-top: 16px">
+          <div class="ag-card yes"><h4>Sì</h4><ul>
+            <li>Una luce per gli oggetti piccoli (il lampione doppio ne ha due), qualcuna in più per gli edifici (finestre, lanterne sulla porta). <code>flicker</code> basso per le lanterne, alto per il fuoco.</li>
+            <li>Sporco = foglie, muschio, erbacce alla base. Rotto = inclinato, scheggiato, macerie. Si riconoscono anche da lontano.</li>
+            <li>I pezzi che si posano in serie (sentieri, muretti) senza <code>decays</code>: sarebbero troppi da pulire.</li>
+            <li>Riusare i dettagli di <code>details.ts</code> invece di riscriverli.</li>
+          </ul></div>
+          <div class="ag-card no"><h4>No</h4><ul>
+            <li>Texture, immagini, modelli importati: il mondo è solo geometria con colori per vertice.</li>
+            <li>Superfici lisce (troppi segmenti) o <code>detail</code> oltre 2.</li>
+            <li>Pezzi fuori dall'ingombro, sotto il terreno o sospesi.</li>
+            <li>Personaggi dentro il modello di un oggetto: arrivano dalle presenze.</li>
+          </ul></div>
+        </div>
+      </section>
+
+      <!-- ═════════════════════ Anteprime ═════════════════════ -->
+      <section class="ds-sec" id="anteprime">
+        <h2>Anteprime</h2>
+        <p class="sub">Le schede (Bottega, inventario, dettaglio) mostrano un'immagine già pronta, non il modello. <code>render/bake.ts</code> la rende sempre allo stesso modo: di notte, su una zolla d'erba tonda con ciuffi e fiori, con le sue luci accese e una lucina calda fuori quadro. La camera è a tre quarti, l'immagine è 320×320, ritagliata e appoggiata in basso al centro (così le zolle stanno tutte alla stessa altezza), in WebP.</p>
+        <div class="ag-figs" data-previews="candelabra,skull_candle,ghost_lantern,gargoyle,reaper_statue,witch_corner,cat_shelter,soul_bell,memory_tree,pumpkin_patch,cypress,bike"></div>
+        <p class="ds-note">Si rifà <b>ogni volta che cambia un modello</b>: <code>node scripts/bake-previews.mjs id1 id2</code> con il server di sviluppo acceso (<code>npx vite --port 5173</code>). Senza argomenti rifà tutto: oggetti, tetti e aggiunte della casa (<code>house-&lt;id&gt;</code>), lapidi (<code>grave-&lt;tipo&gt;</code>) e la terra in fondo alle schede. Chi abita l'oggetto (zombie, strega, gatti) entra nell'anteprima da solo.</p>
+      </section>
+
+      <!-- ═════════════════════ Personaggi ═════════════════════ -->
+      <section class="ds-sec" id="personaggi">
+        <h2>Personaggi (NPC)</h2>
+        <p class="sub">Stile «kawaii v2»: testa grande (superellissoide un po' piatto davanti, il 30% più grande del corpo), occhi lucidi con la stellina, capelli a casco di ciocche, corpo a pera, stivali. Un personaggio non ha scheletro: è diviso in <b>sei parti</b>, ognuna costruita a parte e appesa al suo perno. Le animazioni (camminare, lavorare, ballare, sedersi, pregare) ruotano le parti attorno ai perni e valgono per tutti.</p>
+        <div class="ag-rig" id="rig-front" data-kind="custode">
+          <div class="ag-card"><h4>Il rig</h4><ul>
+            <li>Parti: <code>head</code>, <code>body</code>, <code>armL</code>, <code>armR</code>, <code>legL</code>, <code>legR</code>.</li>
+            <li>Perni degli umani (<code>HUMAN_PIVOTS</code>): collo a y 0,5; spalle a ±0,18 e 0,46; anca e gambe a 0,2.</li>
+            <li>Ogni parte si disegna nello spazio del personaggio e <code>atPivot</code> la porta in quello del suo perno: per questo gli arti devono partire dentro il busto (lo controlla un test).</li>
+            <li>Chiavi dei modelli: <code>char:&lt;tipo&gt;:&lt;parte&gt;</code>, generate da <code>v2Generators()</code>.</li>
+            <li>Spec (<code>KawaiiSpec</code>): <code>pivots</code>, <code>parts</code>, <code>scale</code>, e se serve <code>hover</code> (fluttua), <code>ghost</code> (bucket ghost, senza ombra), <code>quadruped</code>, <code>flier</code>.</li>
+          </ul></div>
+        </div>
+        <h3>Un umano: <code>humanSpec(aspetto, aggiunte)</code></h3>
+        <p class="sub">Becchino, prete, corteo, strega, vampiro, zombie: hanno tutti la testa e il corpo del Custode. Cambiano l'<b>aspetto</b> (le stesse opzioni della personalizzazione, <code>CustodeLook</code>) e le <b>aggiunte</b> (<code>V2Extra</code>).</p>
+        <div class="ds-scroll">
+          <table class="ds-table">
+            <thead><tr><th>Campo</th><th>Cosa cambia</th></tr></thead>
+            <tbody>
+              <tr><td><code>aspetto</code></td><td><code>skin</code>, <code>hair</code> + <code>hairColor</code>, <code>eyes</code>, <code>beard</code>, <code>mustache</code>, <code>glasses</code>, <code>hat</code>, <code>outfit</code> + <code>outfitColor</code>, <code>accentColor</code> (sciarpa), <code>freckles</code>, <code>sparkle</code>.</td></tr>
+              <tr><td><code>eyes</code>, <code>mouth</code>, <code>blush</code></td><td>L'espressione: <code>open</code>, <code>sleepy</code>, <code>closed</code>, <code>zombie</code>, <code>sockets</code>; bocca <code>smile</code>, <code>flat</code>, <code>o</code>, <code>stitched</code>, <code>none</code>; il colore delle guance.</td></tr>
+              <tr><td><code>hair</code></td><td>Capelli con un orlo proprio (es. la corona grigia del prete, le basette sotto la coppola).</td></tr>
+              <tr><td><code>hat</code>, <code>hatPh</code></td><td>Un cappello su misura costruito nello spazio della testa, e fin dove scendono i capelli sotto.</td></tr>
+              <tr><td><code>robe</code>, <code>plainCoat</code>, <code>sleeve</code>, <code>cuff</code></td><td>Tonaca al posto dei pantaloni; giacca senza sciarpa né borsello; colori di maniche e polsini.</td></tr>
+              <tr><td><code>head</code>, <code>chest</code></td><td>Dettagli sulla faccia (naso, sopracciglia, lacrima, canini) e sul petto (collarino, croce, toppa, fiocco), con <code>onSkin(…)</code> per appoggiarli sulla pelle.</td></tr>
+              <tr><td><code>held</code></td><td>Oggetti in mano, con l'origine al centro della mano: pala, libro, giglio, ombrello. <code>side</code> 1 è la destra, -1 la sinistra.</td></tr>
+              <tr><td><code>body</code></td><td>Un corpo del tutto diverso (lo scheletro): busto, braccio e gamba propri, stessi perni.</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <details class="ds-code" open><summary>Esempio vero: la signora del corteo (<code>mourner</code>)</summary><pre>const mourner = () =&gt; humanSpec(
+  { skin: '#f0d2bd', sparkle: false, hair: 'bun', hairColor: '#2a2226', eyes: '#1b1a20', beard: 'none', mustache: 'none',
+    outfitColor: '#2b2b35', accentColor: '#4a3a48' },
+  {
+    name: 'corteo-a', eyes: 'closed', mouth: 'flat', blush: '#d99a9a', robe: true, hat: veilHat,
+    head: (lp) =&gt; onSkin(lp, headFront(0.13, 0.65), 0.012, 0, (q) =&gt; q.blob(0, 0, 0, 0.014, 0.022, 0.01, '#8fc4e6', { ...D1, bucket: 'glow' })), // lacrimuccia
+    chest: (lp) =&gt; { for (const y of [0.25, 0.32, 0.39]) lp.blob(0, y, 0.2 + (0.39 - y) * 0.15, 0.014, 0.014, 0.008, '#5a5a66', D1); },
+    held: [{ side: 1, build: lily }],
+  },
+);</pre></details>
+        <h3>Fantasmi e animali</h3>
+        <p class="sub">Non sono umani, ma riusano gli stessi pezzi (testa implicita, occhi lucidi, ciuffi). <code>beginCreature()</code> prepara lo stato; poi ci sono i costruttori pronti: <code>ghostSpec</code>, <code>quadSpec</code> (gatto, ratto, cane, coniglio: orecchie, coda, muso, ossa) e <code>birdSpec</code> (corvo, papera). Gli animali dell'aldilà sono scheletrini color osso (<code>bones: true</code>).</p>
+        <h3>Ricetta: un personaggio nuovo</h3>
+        <ol class="ds-rules">
+          <li><b>Spec.</b> In <code>render/lowpoly/v2/npc.ts</code> scrivi la spec partendo dal più simile (<code>humanSpec</code>, <code>quadSpec</code>, <code>birdSpec</code>, <code>ghostSpec</code>) e aggiungila a <code>V2_SPECS</code> col suo tipo in camelCase.</li>
+          <li><b>Tipo.</b> Aggiungi lo stesso nome all'unione <code>CharacterKind</code> in <code>view/characters.ts</code>.</li>
+          <li><b>Dove compare.</b> Abitante di un oggetto: una scena in <code>view/presences.ts</code> (con posa, posizione e oggetto in mano). Visitatore: <code>game/spawn.ts</code> e <code>view/Actors.ts</code>. Galleria di sviluppo: <code>HUMANS</code> / <code>ANIMALS</code>.</li>
+          <li><b>Ritratto.</b> Non si disegna: <code>npcPortrait('tipo')</code> lo rende da solo (busto per gli umani, figura intera per animali e fantasmi). Va solo controllato qui sotto.</li>
+          <li><b>Controllo.</b> <code>npm test</code> (parti, perni, arti dentro il busto), poi in scena tutte le pose che usa, di notte e di giorno.</li>
+        </ol>
+        <div class="ag-two" style="margin-top: 16px">
+          <div class="ag-card yes"><h4>Sì</h4><ul>
+            <li>Silhouette riconoscibile da un dettaglio grande: il cappello, l'oggetto in mano, il colore del vestito.</li>
+            <li>Stessa testa e stesse proporzioni del Custode per gli umani: non si cambiano i perni.</li>
+            <li>Espressioni semplici e gentili; i «cattivi» sono buffi (il vampiro sorride).</li>
+            <li>Colori della pelle e dei vestiti un po' spenti, come la palette; un solo accento vivo.</li>
+          </ul></div>
+          <div class="ag-card no"><h4>No</h4><ul>
+            <li>Corpi realistici, teste piccole, braccia lunghe: rompono le animazioni comuni.</li>
+            <li>Particolari minuscoli sul viso: a zoom medio diventano rumore.</li>
+            <li>Luci forti portate in giro (la lanterna del Custode è l'unica vera).</li>
+          </ul></div>
+        </div>
+        <h3>Altezze</h3>
+        <div class="ds-scroll">
+          <table class="ds-table" id="height-table">
+            <thead><tr><th>Tipo</th><th>Altezza</th><th>Larghezza</th><th>Spec</th></tr></thead>
+            <tbody data-kinds="custode,gravedigger,priest,witch,vampire,zombie,skeleton,ghost,cat,petDog,crow"></tbody>
+          </table>
+        </div>
+        <h3>I ritratti</h3>
+        <p class="sub">Quelli delle notifiche, resi adesso da <code>npcPortrait</code>: 192 px di larghezza, camera ortografica, figura girata di 0,32 rad verso destra (la notifica sta alla sua destra), luce chiave calda da in alto a sinistra e controluce fredda. Per gli umani l'inquadratura parte 0,3 sotto il collo ed è alta 1,5 volte la larghezza (i cappelli alti entrano). Il Custode dell'HUD usa <code>custodePortrait</code>.</p>
+        <div class="ag-figs small portraits" id="npc-portraits"></div>
+      </section>
+
+      <!-- ═════════════════════ Lapidi ═════════════════════ -->
+      <section class="ds-sec" id="lapidi">
+        <h2>Lapidi</h2>
+        <p class="sub">Le lapidi non sono nel catalogo: sono i tipi di <code>GRAVE_TYPES</code> (<code>game/graves.ts</code>), disegnati da <code>lowpolyGrave</code> (<code>render/lowpoly/graves.ts</code>). Tumulo e cordolo sono comuni; ogni tipo ha la sua sagoma nella tabella <code>FAMILY</code>. Gli stati sono <code>clean</code>, <code>dirty</code> e <code>broken</code>; fiori e lumini arrivano dalla cura del giocatore.</p>
+        <div class="ag-figs small" data-previews="graves"></div>
+        <ol class="ds-rules" style="margin-top: 16px">
+          <li><b>Tipo.</b> Aggiungi il nome a <code>GRAVE_TYPES</code> e l'etichetta a <code>GRAVE_TYPE_LABELS</code> (<code>grave.type.&lt;camelCase&gt;</code> in <code>i18n/it/</code>).</li>
+          <li><b>Sagoma.</b> Una voce in <code>FAMILY</code>: di solito un profilo estruso (<code>roundTopShape</code>, <code>gothicArchShape</code>, <code>rectShape</code>) con iscrizione e decori. Pietra da <code>c.stone</code>, così invecchia da sola.</li>
+          <li><b>Anteprima.</b> <code>node scripts/bake-previews.mjs grave-&lt;tipo&gt;</code>.</li>
+        </ol>
+      </section>
+
+      <!-- ═════════════════════ Qualità ═════════════════════ -->
+      <section class="ds-sec" id="qualita">
+        <h2>Qualità grafica</h2>
+        <p class="sub">Lo stesso modello deve stare bene a tutti e tre i livelli. Ecco cosa cambia (letto da <code>app/AutoQuality.ts</code>):</p>
+        <div class="ds-scroll">
+          <table class="ds-table" id="quality-table">
+            <thead><tr><th>Livello</th><th>Materiali leggeri</th><th>Luci finte</th><th>Ombre</th><th>Scena alleggerita</th><th>Presenze</th><th>FPS</th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </div>
+        <ul style="margin-top: 14px">
+          <li><b>Materiali leggeri</b>: Lambert al posto del PBR. Il modello non deve contare sulla lucentezza; la forma si legge dalle facce.</li>
+          <li><b>Luci finte</b>: niente PointLight, solo aloni e il bucket <code>glow</code>. Un oggetto acceso deve sembrare acceso anche così.</li>
+          <li><b>Ombre</b>: <code>live</code> si aggiornano sempre, <code>still</code> solo quando la scena cambia, <code>off</code> mai. Gli oggetti non devono servirsi dell'ombra per farsi capire.</li>
+        </ul>
+      </section>
+
+      <!-- ═════════════════════ Consegna ═════════════════════ -->
+      <section class="ds-sec" id="consegna">
+        <h2>Prima di consegnare un asset</h2>
+        <ol class="ds-rules">
+          <li><b>Riferimento.</b> Sono partito da un asset simile e l'ho detto nella PR.</li>
+          <li><b>Colori.</b> Solo <code>LPC</code> (3D) e <code>T</code> (icone). Colori nuovi aggiunti alla palette, non scritti nel modello.</li>
+          <li><b>Forma.</b> Poche facce, niente contorni, luce da in alto a sinistra, sagoma leggibile da lontano (o a 18 px).</li>
+          <li><b>Stati.</b> Acceso e spento, sporco e rotto, ogni variante: tutti fatti e guardati.</li>
+          <li><b>Misure.</b> Dentro l'ingombro, altezza in scala col Custode, triangoli vicini agli oggetti della stessa taglia.</li>
+          <li><b>Registrazione.</b> Catalogo, <code>ACCESS</code>, registro dei generatori, testi, <code>ACH_ICONS</code> o <code>CharacterKind</code>: niente di dimenticato.</li>
+          <li><b>Anteprima.</b> Rifatta con <code>bake-previews</code> e committata.</li>
+          <li><b>Testi.</b> In <code>i18n/it/</code> e nel foglio delle traduzioni (con l'apostrofo davanti ai testi che iniziano con <code>+ = - @</code>).</li>
+          <li><b>Schermate.</b> L'anteprima e l'asset in scena, di notte e di giorno, in qualità alta e bassa, a 390×844.</li>
+          <li><b>Controlli.</b> <code>npm test</code>, <code>npm run typecheck</code>, <code>npm run build</code> e <code>node scripts/i18n-check.mjs --count</code> (deve dare 0).</li>
+        </ol>
+      </section>
+
+    </div>
+    <script type="module" src="/src/assetGuide.ts"></script>
+  </body>
+</html>

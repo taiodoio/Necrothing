@@ -14,7 +14,8 @@ import { DEFAULT_LOOK, lookKey, type CustodeLook } from '../game/look.ts';
 export type CharacterKind =
   | 'custode' | 'priest' | 'gravedigger' | 'mourner' | 'mournerB' | 'ghost' | 'ghostRare'
   | 'zombie' | 'skeleton' | 'gardener' | 'cat' | 'crow' | 'rat' | 'witch' | 'vampire'
-  | 'petDog' | 'petCat' | 'petRabbit' | 'petDuck' | 'petCrow';
+  | 'petDog' | 'petCat' | 'petRabbit' | 'petDuck' | 'petCrow'
+  | 'hunterA' | 'hunterB' | 'postman' | 'florist' | 'icecreamGhost' | 'icecreamCustomer';
 
 type PartName = 'body' | 'head' | 'armL' | 'armR' | 'legL' | 'legR' | 'extra';
 

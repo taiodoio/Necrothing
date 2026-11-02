@@ -234,6 +234,12 @@ const ICONS: Record<string, () => Poly[]> = {
   shirt: () => [...fan([[8, 3.6], [10.6, 5.2], [13.4, 5.2], [16, 3.6], [21, 7.8], [18.4, 11.8], [16.6, 10.6], [16.6, 20.8], [7.4, 20.8], [7.4, 10.6], [5.6, 11.8], [3, 7.8]], T.leaf, [10, 9]),
     ...fan([[10.6, 5.2], [12, 8.6], [13.4, 5.2]], T.paper), ...[11.2, 14.4, 17.6].flatMap((y) => disc(12, y, 0.9, T.ink, 6))],
   bone: () => [...bar(7, 17, 17, 7, 3.2, T.bone), ...[[5.2, 16.2], [7.8, 18.8], [16.2, 5.2], [18.8, 7.8]].flatMap(([x, y]) => disc(x, y, 2.4, T.bone, 8))],
+  // lettera: busta di carta con la patta chiusa e il sigillo di ceralacca col fuoco fatuo
+  letter: () => [...P([[2.6, 6.4], [21.4, 6.4], [21.4, 19.4], [2.6, 19.4]], T.paper[1]), ...P([[12, 6.4], [21.4, 6.4], [21.4, 19.4], [12, 19.4]], T.paper[2]),
+    ...P([[2.6, 19.4], [12, 12.6], [21.4, 19.4]], T.paper[0]), ...P([[2.6, 6.4], [21.4, 6.4], [12, 14.2]], T.paper[0]),
+    ...disc(12, 13.6, 3.2, T.crimson, 10), ...fan([[12, 11.6], [13.4, 13.6], [12, 15.4], [10.6, 13.6]], T.dawn, [12, 13.2])],
+  // spedire: la busta che vola via, con le scie
+  letterSend: () => [...tf(ICONS.letter(), 0.74, 5.6, 4.2), ...bar(1.8, 10, 5.4, 10, 1.6, T.spectral), ...bar(0.8, 14, 4.6, 14, 1.6, T.spectral), ...bar(2.2, 18, 5.6, 18, 1.6, T.spectral)],
   // cuccia del cane: casetta di legno col timpano pieno, tetto scuro, porta ad arco e l'osso davanti
   kennel: () => [...gableHouse(4.4, 17.6, 11.6, 20.6, 4.2, T.wood, T.woodDark), ...archDoor(11, 20.6, 4.6, 6.4),
     ...bar(15.2, 20.6, 20.8, 20.6, 2, T.bone), ...[[14.6, 19.6], [14.6, 21.6], [21.4, 19.6], [21.4, 21.6]].flatMap(([x, y]) => disc(x, y, 1.25, T.bone, 8))],

@@ -25,6 +25,7 @@ import { memoryTreeLP } from './memoryTree.ts';
 import { bicycleLP, brainFarmLP, zombieBarLP } from './extraItems.ts';
 import { LP_UNLOCKABLES } from './unlockables.ts';
 import { gardenerCornerLP, scarecrowBodyLP } from './newItems3.ts';
+import { carnivorousPlantLP, flowerKioskLP, foodTruckLP, huntersCarLP, iceCreamCartLP, postOfficeLP } from './newItems4.ts';
 import { weathered } from './weathering.ts';
 import { CATALOG } from '../../game/catalog.ts';
 import { GRAVE_FOOTPRINT } from '../../game/balance.ts';
@@ -87,6 +88,12 @@ export const LP_PLACEABLES: Record<string, (v: PVis) => LPModel> = {
   gardener_corner: () => gardenerCornerLP(),
   ghosts_ball: npcHomeLP,
   zombie_bar: zombieBarLP,
+  food_truck: foodTruckLP,
+  ice_cream_cart: iceCreamCartLP,
+  carnivorous_plant: () => carnivorousPlantLP(),
+  flower_kiosk: flowerKioskLP,
+  post_office: postOfficeLP,
+  ghost_hunters: huntersCarLP,
   brain_farm: brainFarmLP,
   // non si piazza (il Custode la porta con sé): questo è il modello per le miniature
   bike: () => bicycleLP(true),

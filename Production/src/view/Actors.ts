@@ -30,9 +30,19 @@ import { CROW_NEST, PET_DENS } from '../render/lowpoly/petHouses.ts';
 import { cellCenter, HALF, worldToCell } from './WorldView.ts';
 import { t } from '../i18n/index.ts';
 
-const LIFESPAN: Record<RoamerKind, number> = { ghost: 26, cat: 32, crow: 22, gravedigger: 34, priest: 36, rat: 15, zombie: 30 };
-const SPEED: Record<RoamerKind, number> = { ghost: 0.9, cat: 1.6, crow: 3.2, gravedigger: 1.1, priest: 0.9, rat: 2.6, zombie: 0.85 };
-const RIG_FOR: Record<RoamerKind, CharacterKind> = { ghost: 'ghost', cat: 'cat', crow: 'crow', gravedigger: 'gravedigger', priest: 'priest', rat: 'rat', zombie: 'zombie' };
+const LIFESPAN: Record<RoamerKind, number> = { ghost: 26, cat: 32, crow: 22, gravedigger: 34, priest: 36, rat: 15, zombie: 30, postman: 40, hunterA: 60, hunterB: 60 };
+const SPEED: Record<RoamerKind, number> = { ghost: 0.9, cat: 1.6, crow: 3.2, gravedigger: 1.1, priest: 0.9, rat: 2.6, zombie: 0.85, postman: 1.5, hunterA: 1.3, hunterB: 1.3 };
+const RIG_FOR: Record<RoamerKind, CharacterKind> = { ghost: 'ghost', cat: 'cat', crow: 'crow', gravedigger: 'gravedigger', priest: 'priest', rat: 'rat', zombie: 'zombie', postman: 'postman', hunterA: 'hunterA', hunterB: 'hunterB' };
+/** Chi fa un giro con delle tappe e poi se ne torna da dove è venuto. */
+export type VisitorKind = 'priest' | 'gravedigger' | 'postman' | 'hunterA' | 'hunterB';
+/** Le presenze ferme che si toccano e rispondono (il giardiniere, i fratelli accanto all'auto, il postino, il fioraio). */
+const TALKERS = new Set<CharacterKind>(['gardener', 'hunterA', 'hunterB', 'postman', 'florist']);
+/** Ad ogni tappa: posa e quanto si ferma. */
+const VISIT_STOP: Record<VisitorKind, { pose: Pose; secs: number }> = {
+  gravedigger: { pose: 'work', secs: 2.2 }, priest: { pose: 'pray', secs: 2.8 },
+  // il postino lascia (forse) qualcosa; i fratelli puntano la torcia sulla lapide
+  postman: { pose: 'idle', secs: 1.4 }, hunterA: { pose: 'idle', secs: 2.2 }, hunterB: { pose: 'idle', secs: 2.2 },
+};
 /** Da dove esce ciascuna specie (davanti all'apertura della sua casetta). */
 function petDoor(kind: number): THREE.Vector3 {
   const d = PET_DENS[kind % PET_DENS.length];
@@ -114,6 +124,8 @@ interface Visit {
   exit: THREE.Vector3;
   onStop: (id: string) => void;
   onDone: () => void;
+  /** Parte dopo un po' (il secondo dei due fratelli). */
+  delay?: number;
 }
 
 interface Presence extends Walker {
@@ -415,7 +427,7 @@ export class Actors {
     this.remount();
     for (const r of this.roamers.values()) { rebuild(r); r.rig.root.add(r.hitbox); }
     for (const p of this.pets.values()) { rebuild(p); p.rig.root.add(p.hitbox); p.rig.root.visible = p.act !== 'sleep'; }
-    for (const p of this.presences) { rebuild(p); this.presenceHits.filter((h) => (h.userData.vampireId === p.placeId && p.rig.kind === 'vampire') || (h.userData.talkerId === p.placeId && p.rig.kind === 'gardener')).forEach((h) => p.rig.root.add(h)); this.attachProp(p); dimGhosts(p.rig.root, p.dim); if (p.size) p.rig.root.scale.setScalar(p.size); p.rig.root.visible = !p.hidden; }
+    for (const p of this.presences) { rebuild(p); this.presenceHits.filter((h) => (h.userData.vampireId === p.placeId && p.rig.kind === 'vampire') || (h.userData.talkerId === p.placeId && h.userData.talkerKind === p.rig.kind)).forEach((h) => p.rig.root.add(h)); this.attachProp(p); dimGhosts(p.rig.root, p.dim); if (p.size) p.rig.root.scale.setScalar(p.size); p.rig.root.visible = !p.hidden && !this.castAway.has(p.placeId); }
     if (this.funeral) for (const m of this.funeral.members) rebuild(m);
     if (this.rite) for (const m of this.rite.members) rebuild(m);
     if (this.exhume) { rebuild(this.exhume.digger); if (this.exhume.digger.push) this.exhume.digger.rig.root.add(this.exhume.barrow); }
@@ -868,12 +880,24 @@ export class Actors {
    * Becchino o prete in visita: entra da `start`, fa le sue tappe (lavora o prega
    * accanto a ciascuna) e se ne va da `exit`. Non svanisce se lo si tocca.
    */
-  spawnVisitor(kind: 'priest' | 'gravedigger', start: THREE.Vector3, exit: THREE.Vector3, stops: VisitStop[], onStop: (id: string) => void, onDone: () => void): Roamer {
+  spawnVisitor(kind: VisitorKind, start: THREE.Vector3, exit: THREE.Vector3, stops: VisitStop[], onStop: (id: string) => void, onDone: () => void, delay = 0): Roamer {
     const r = this.spawnRoamer({ kind }, start);
-    r.speed = kind === 'gravedigger' ? 1.9 : 1.6;
-    r.visit = { stops, i: 0, stage: 'go', timer: 0, planned: false, exit, onStop, onDone };
+    r.speed = kind === 'gravedigger' ? 1.9 : kind === 'priest' ? 1.6 : SPEED[kind] * 1.3;
+    r.visit = { stops, i: 0, stage: 'go', timer: 0, planned: false, exit, onStop, onDone, delay };
+    if (delay) r.rig.root.visible = false;
     return r;
   }
+
+  /** Chi abita un oggetto è uscito a fare il giro (i fratelli con le torce): accanto all'oggetto non si vede. */
+  private readonly castAway = new Set<string>();
+  setCastAway(placeId: string, away: boolean) {
+    if (away) this.castAway.add(placeId); else this.castAway.delete(placeId);
+    for (const p of this.presences) if (p.placeId === placeId && !p.hidden) {
+      p.rig.root.visible = !away;
+      p.lightHandles.forEach((h) => this.atmosphere.setAnchorOn(h, !away));
+    }
+  }
+  isCastAway(placeId: string) { return this.castAway.has(placeId); }
 
   /** Percorso a piedi fino a una cella (si può partire anche da una cella occupata); null se non c'è. */
   private visitPath(from: THREE.Vector3, to: Cell): THREE.Vector3[] | null {
@@ -908,6 +932,11 @@ export class Actors {
   }
 
   private stepVisit(r: Roamer, v: Visit, dt: number) {
+    if (v.delay && v.delay > 0) {
+      v.delay -= dt; r.pose = 'idle';
+      if (v.delay <= 0) r.rig.root.visible = true;
+      return;
+    }
     if (v.stage === 'go') {
       if (!v.planned) {
         const s = v.stops[v.i];
@@ -927,9 +956,9 @@ export class Actors {
       const c = cellCenter(s.x, s.y, s.fp);
       r.facing = Math.atan2(c.x - r.pos.x, c.z - r.pos.z);
       v.stage = 'work';
-      v.timer = r.kind === 'gravedigger' ? 2.2 : 2.8;
+      v.timer = VISIT_STOP[r.kind as VisitorKind]?.secs ?? 2.8;
     } else if (v.stage === 'work') {
-      r.pose = r.kind === 'gravedigger' ? 'work' : 'pray';
+      r.pose = VISIT_STOP[r.kind as VisitorKind]?.pose ?? 'pray';
       v.timer -= dt;
       if (v.timer <= 0) {
         v.onStop(v.stops[v.i].id);
@@ -1088,14 +1117,15 @@ export class Actors {
       pr.rig.root.rotation.y = pr.facing;
       if (c.size) pr.rig.root.scale.setScalar(c.size);
       dimGhosts(pr.rig.root, c.dim);
-      if (c.hidden) pr.rig.root.visible = false;
+      if (c.hidden || this.castAway.has(p.id)) pr.rig.root.visible = false;
+      if (this.castAway.has(p.id)) pr.lightHandles.forEach((h) => this.atmosphere.setAnchorOn(h, false));
       this.attachProp(pr);
-      // il vampiro si tocca (ci si può far mordere); il giardiniere scheletro si tocca e risponde
-      if (c.kind === 'vampire' || c.kind === 'gardener') {
+      // il vampiro si tocca (ci si può far mordere); il giardiniere scheletro (e gli altri che parlano) si tocca e risponde
+      if (c.kind === 'vampire' || TALKERS.has(c.kind)) {
         const hit = new THREE.Mesh(new THREE.BoxGeometry(1.1, 1.8, 1.1), hitMat);
         hit.position.y = 0.8;
         if (c.kind === 'vampire') hit.userData.vampireId = p.id;
-        else hit.userData.talkerId = p.id;
+        else { hit.userData.talkerId = p.id; hit.userData.talkerKind = c.kind; }
         pr.rig.root.add(hit);
         this.presenceHits.push(hit);
       }
@@ -1127,7 +1157,7 @@ export class Actors {
   }
 
   private stepPresence(pr: Presence, dt: number, t: number) {
-    if (pr.hidden) return;
+    if (pr.hidden || this.castAway.has(pr.placeId)) return;
     switch (pr.role) {
       case 'still': pr.pose = pr.still ?? 'idle'; break;
       case 'sit': pr.pose = 'sit'; break;
@@ -2103,7 +2133,7 @@ export class Actors {
       animateRig(w.rig, riding && w.pose === 'walk' ? 'idle' : w.pose, t + w.phase, w.phase);
       if (riding && this.ride) this.poseRider(dt);
       else if (riding) this.poseBroom(t);
-      else if ((w as Presence).prop === 'mug') this.sip(w as Presence, t);
+      else if ((w as Presence).prop === 'mug' || (w as Presence).prop === 'taco') this.sip(w as Presence, t); // un sorso, o un morso
       else if ((w as Presence).prop) propPose(w.rig, (w as Presence).prop!, t + w.pos.x, w.pose === 'walk');
       else if (w.push) { const p = w.rig.parts; if (p.armL) p.armL.rotation.x = -0.75; if (p.armR) p.armR.rotation.x = -0.75; }
       // ombra vera nella mappa delle ombre, oppure disco sotto i piedi
@@ -2133,7 +2163,7 @@ export class Actors {
     if (this.bat) this.poseBat(dt, t, ground);
     for (const r of this.roamers.values()) apply(r);
     for (const p of this.presences) {
-      if (!p.hidden) apply(p);
+      if (!p.hidden && !this.castAway.has(p.placeId)) apply(p);
       if (p.extra && p.extra.userData.lift !== undefined) p.extra.position.y = ground(p.extra.position) + p.extra.userData.lift;
       if (p.extra?.userData.notes) animateNotes(p.extra, t);
     }

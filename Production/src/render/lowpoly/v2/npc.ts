@@ -228,6 +228,7 @@ const skeleton = (look: Partial<CustodeLook> = {}, extra: V2Extra = {}) => human
         for (const s of [-1, 1]) lp.add(new THREE.ConeGeometry(0.035, 0.07, 4).rotateZ(-s * Math.PI / 2).translate(s * 0.035, 0, 0), '#8e2f2f', O);
         lp.blob(0, 0, 0.005, 0.02, 0.02, 0.02, '#8e2f2f', D1);
         lp.pop();
+        extra.chest?.(lp); // tracolla, grembiule…
       },
       arm: (lp, s) => {
         const sh = v(s * 0.18, 0.46, 0), el = v(s * 0.23, 0.33, 0.02), wr = v(s * 0.26, 0.23, 0.05);
@@ -257,15 +258,118 @@ export function gardenerSpec(): KawaiiSpec {
   );
 }
 
+/** Torcia elettrica nella mano (origine al centro della mano): punta in avanti, la lente brilla e fa luce davanti. */
+function flashlight(lp: LP) {
+  lp.push([0, -0.01, 0.06], 0, Math.PI / 2);
+  lp.cyl(0, -0.05, 0, 0.022, 0.022, 0.15, 8, '#3a3d44', O);
+  lp.cyl(0, 0.1, 0, 0.022, 0.034, 0.05, 8, '#5a5f66', O);
+  lp.cyl(0, 0.15, 0, 0.03, 0.03, 0.006, 8, '#fff6cf', { ...O, bucket: 'glow' });
+  lp.pop();
+  lp.light(0, -0.05, 0.6, '#fff1c8', 0.55, 3.4, 0.08, 0.12); // il fascio arriva davanti ai piedi
+}
+
+/** I due fratelli cacciatori di fantasmi: camicia a quadri, jeans, la torcia; uno coi ciuffi corti, l'altro coi capelli lunghi. */
+function hunter(long: boolean): KawaiiSpec {
+  return humanSpec(
+    long
+      ? { skin: '#e8c4a4', hair: 'long', hairColor: '#6b4a33', eyes: '#3b2a1e', outfit: 'flannel', outfitColor: '#3f5a6e', accentColor: '#c9b48a', hat: 'none', beard: 'none', mustache: 'none', sparkle: false }
+      : { skin: '#e8c4a4', hair: 'tufts', hairColor: '#5a3c26', eyes: '#2f5a32', outfit: 'flannel', outfitColor: '#8e2f2a', accentColor: '#2a2226', hat: 'none', beard: 'none', mustache: 'none', sparkle: false },
+    { name: long ? 'cacciatoreB' : 'cacciatoreA', mouth: long ? 'flat' : 'smile', pants: long ? '#46607e' : '#3f5878', boot: '#3a2a20', held: [{ side: 1, build: flashlight }] },
+  );
+}
+
+/**
+ * Berretto da postino sulla testa dello scheletro: calotta alta e dritta col
+ * cielo piatto, fascia scura, fregio dorato davanti, e la visiera che nasce
+ * dentro la fascia (incastrata, non appoggiata davanti).
+ */
+function postCap(lp: LP) {
+  const COL = '#2f3a5a', BAND = '#232c46';
+  const thick = (w: number) => 0.055 + 0.04 * smooth(0.35, 1, w);
+  sheet(lp, 36, 8, (u, w) => [Math.PI + u * Math.PI, lerp(18, 90, w) * DEG], (_u, w) => thick(w), COL);
+  sheet(lp, 36, 2, (u, w) => [Math.PI + u * Math.PI, lerp(16, 30, w) * DEG], () => 0.062, BAND); // fascia
+  // visiera: mezzo disco che parte da dentro la fascia e sporge in avanti, un po' in giù
+  const f = headAt(0, 20 * DEG);
+  lp.push([f.p.x + f.n.x * 0.03, f.p.y + 0.01, f.p.z + f.n.z * 0.03], 0, 0.3);
+  lp.add(new THREE.CylinderGeometry(0.16, 0.16, 0.024, 14, 1, false, -Math.PI / 2, Math.PI).scale(1, 1, 0.82).translate(0, 0, -0.01), BAND, O);
+  lp.pop();
+  const b = headAt(0, 42 * DEG), k = thick(0.33) + 0.006;
+  lp.blob(b.p.x + b.n.x * k, b.p.y + b.n.y * k, b.p.z + b.n.z * k, 0.032, 0.028, 0.012, '#c9a227', D1); // fregio
+}
+
+/** Scheletro postino: berretto con la visiera blu, tracolla di cuoio con la borsa piena di buste. */
+function postmanSpec(): KawaiiSpec {
+  return skeleton({}, {
+    name: 'postino', hatPh: 26, held: [],
+    // berretto da postino: la coppola blu (sulla testa dello scheletro) col fregio dorato davanti
+    hat: postCap,
+    chest: (lp) => {
+      lp.add(taperTube([v(-0.16, 0.48, 0.07), v(0, 0.36, 0.13), v(0.17, 0.24, 0.1)], [0.016, 0.016, 0.016], 4), '#6b4a2e', O); // tracolla
+      lp.push([0.2, 0.2, 0.03], Math.PI / 2 - 0.15); // la borsa sul fianco destro, con la patta che guarda fuori
+      lp.add(rbox(0.16, 0.13, 0.07, 0.02, 2), '#8a5a36', O);
+      lp.add(rbox(0.16, 0.05, 0.075, 0.015, 1).translate(0, 0.045, 0.002), '#6b4a2e', O); // patta
+      for (const [x, c] of [[-0.03, '#f2ead6'], [0.03, '#e8dcc0']] as const) lp.add(rbox(0.05, 0.05, 0.004, 0.002, 1).translate(x, 0.09, 0), c, O); // buste che spuntano
+      lp.blob(0, 0.03, 0.04, 0.01, 0.01, 0.006, '#c9a227', D1);
+      lp.pop();
+    },
+  });
+}
+
+/** Scheletro fioraio: coroncina di fiori, grembiule verde con la tasca e un mazzo di fiori in mano. */
+function floristSpec(): KawaiiSpec {
+  // corona di fiori ben leggibile: una ghirlanda di foglie tutt'attorno e sette fiori grandi a cinque petali
+  const crown = (lp: LP) => {
+    const cols = ['#e7a6bf', '#f2ead6', '#c9a7d9', '#f2c75a', '#c44a5a', '#e7a6bf', '#f2ead6'];
+    const PH = 34 * DEG;
+    for (let i = 0; i < 18; i++) {
+      const a = (i / 18) * Math.PI * 2;
+      const { p, n } = headAt(a, PH);
+      const t = new THREE.Vector3(Math.cos(a), 0, -Math.sin(a));
+      lp.push([p.x + n.x * 0.022, p.y + n.y * 0.022, p.z + n.z * 0.022], Math.atan2(t.x, t.z));
+      lp.blob(0, 0, 0, 0.012, 0.02, 0.04, i % 2 ? '#5c8a3e' : '#4a7232', D0); // foglia lungo la ghirlanda
+      lp.pop();
+    }
+    for (let i = 0; i < 7; i++) {
+      const a = ((i / 7) * 2 - 1) * Math.PI * 0.86;
+      const { p, n } = headAt(a, PH + 4 * DEG);
+      const t1 = new THREE.Vector3(Math.cos(a), 0, -Math.sin(a));
+      const t2 = new THREE.Vector3().crossVectors(n, t1).normalize();
+      const c = p.clone().addScaledVector(n, 0.045);
+      for (let k = 0; k < 5; k++) {
+        const q = (k / 5) * Math.PI * 2;
+        const at = c.clone().addScaledVector(t1, Math.cos(q) * 0.026).addScaledVector(t2, Math.sin(q) * 0.026);
+        lp.blob(at.x, at.y, at.z, 0.02, 0.02, 0.02, cols[i], D1);
+      }
+      const m = c.clone().addScaledVector(n, 0.01);
+      lp.blob(m.x, m.y, m.z, 0.014, 0.014, 0.014, '#f2c75a', D1);
+    }
+  };
+  const bouquet = (lp: LP) => {
+    lp.add(new THREE.ConeGeometry(0.05, 0.12, 6).rotateX(Math.PI).translate(0, 0.0, 0.05), '#e8dcc0', O); // carta
+    const cols = ['#c44a5a', '#e7a6bf', '#f2ead6', '#c9a7d9', '#f2c75a'];
+    for (let i = 0; i < 6; i++) { const a = (i / 6) * Math.PI * 2; lp.blob(Math.cos(a) * 0.03, 0.08 + (i % 2) * 0.02, 0.05 + Math.sin(a) * 0.03, 0.026, 0.024, 0.026, cols[i % cols.length], D1); }
+    lp.blob(0, 0.11, 0.05, 0.025, 0.025, 0.025, '#c44a5a', D1);
+  };
+  return skeleton({}, {
+    name: 'fioraio', hat: crown, hatPh: 89, held: [{ side: 1, build: bouquet }],
+    chest: (lp) => {
+      lp.add(rbox(0.22, 0.24, 0.02, 0.03, 2).translate(0, 0.25, 0.12), '#5f8a6a', O); // grembiule
+      lp.add(rbox(0.1, 0.06, 0.012, 0.01, 1).translate(0, 0.2, 0.135), '#4d7458', O); // tasca
+      lp.blob(0.03, 0.235, 0.14, 0.015, 0.03, 0.01, '#c44a5a', D1); // fiorellino nella tasca
+      for (const s of [-1, 1]) lp.add(taperTube([v(s * 0.1, 0.37, 0.11), v(s * 0.12, 0.47, 0.05)], [0.01, 0.01], 3), '#5f8a6a', O); // spalline
+    },
+  });
+}
+
 // ── Fantasmi ────────────────────────────────────────────────────────────
 
 /** Fantasmino: la testa stessa è il corpo (superellissoide), sotto si apre in una gonna a onde. */
-function ghostSpec(rare: boolean): KawaiiSpec {
+function ghostSpec(rare: boolean, opts: { hat?: (lp: LP) => void; held?: (lp: LP) => void } = {}): KawaiiSpec {
   const col = rare ? '#ffe0b2' : '#d7f2ea';
   const state = () => beginCreature({ c: [0, 0.46, 0], r: [0.3, 0.36, 0.28], pw: 2.05, cheek: 0.04, eyeX: 0.105, eyeY: 0.5, eyeS: 1.05 });
   const g = { bucket: 'ghost' as const };
   const P: Partial<Record<KPart, [number, number, number]>> = { body: [0, 0, 0], armL: [-0.3, 0.33, 0.05], armR: [0.3, 0.33, 0.05] };
-  const hand = (s: number) => (lp: LP) => lp.blob(s * 0.3, 0.3, 0.05, 0.05, 0.075, 0.05, col, { ...D2, ...g });
+  const hand = (s: number) => (lp: LP) => { lp.blob(s * 0.3, 0.3, 0.05, 0.05, 0.075, 0.05, col, { ...D2, ...g }); if (s > 0 && opts.held) { lp.push([0.3, 0.3, 0.05]); opts.held(lp); lp.pop(); } };
   return {
     scale: V2_SCALE, hover: 0.12, ghost: true, pivots: P,
     parts: {
@@ -296,6 +400,7 @@ function ghostSpec(rare: boolean): KawaiiSpec {
             q.blob(0, 0, 0.01, 0.026, 0.026, 0.026, '#e07a6a', D1);
           });
         }
+        opts.hat?.(lp);
         eyesLP(lp, 'open', '#28404a', col);
         lp.light(0, 0.4, 0, rare ? '#ffcf8a' : '#85c8ba', 0.7, 3.5, 0.25, 1.3);
       }),
@@ -580,7 +685,50 @@ function vampire(): KawaiiSpec {
   );
 }
 
+/** Il fantasma del carretto dei gelati: cappellino di carta a barchetta e la paletta col gelato rosa. */
+function iceCreamGhostSpec(): KawaiiSpec {
+  return ghostSpec(false, {
+    // paglietta (cappello di paglia piatto) col nastro menta: si legge subito come cappello
+    hat: (lp) => {
+      // sulla cima vera del fantasma (la sua sagoma non è la testa standard), un po' affondata
+      const top = surfaceAlong(new THREE.Vector3(0, 1, 0));
+      lp.push([top.x, top.y - 0.05, top.z - 0.01], 0, -0.12, 0.06);
+      lp.cyl(0, 0, 0, 0.2, 0.2, 0.018, 18, '#e8d29a', O); // tesa piatta
+      lp.cyl(0, 0.018, 0, 0.12, 0.115, 0.085, 16, '#e8d29a', O); // cupola dritta
+      lp.cyl(0, 0.1, 0, 0.116, 0.116, 0.01, 16, '#d9c088', O); // cielo piatto
+      lp.cyl(0, 0.02, 0, 0.123, 0.123, 0.032, 16, '#9fd8c4', O); // nastro
+      lp.blob(0.1, 0.04, 0.06, 0.022, 0.022, 0.022, '#e7a6bf', D1); // ciliegina sul nastro
+      lp.pop();
+    },
+    held: (lp) => {
+      lp.push([0, -0.02, 0.05], 0, -0.5);
+      lp.cyl(0, -0.02, 0, 0.012, 0.012, 0.16, 5, '#c9c6c0', O);
+      lp.blob(0, 0.17, 0.02, 0.05, 0.045, 0.05, '#e7a6bf', D1); // pallina di gelato
+      lp.pop();
+    },
+  });
+}
+
+/** Fantasma cliente del carretto: un cono a due gusti in mano. */
+function iceCreamCustomerSpec(): KawaiiSpec {
+  return ghostSpec(false, {
+    held: (lp) => {
+      lp.push([0, 0.0, 0.05]);
+      lp.add(new THREE.ConeGeometry(0.035, 0.1, 7).rotateX(Math.PI).translate(0, 0.0, 0), '#d6a55a', O);
+      lp.blob(0, 0.065, 0, 0.04, 0.035, 0.04, '#a6f0d0', D1);
+      lp.blob(0, 0.11, 0, 0.034, 0.03, 0.034, '#e7a6bf', D1);
+      lp.pop();
+    },
+  });
+}
+
 export const V2_SPECS: Record<string, KawaiiSpec> = {
+  icecreamCustomer: iceCreamCustomerSpec(),
+  hunterA: hunter(false),
+  hunterB: hunter(true),
+  postman: postmanSpec(),
+  florist: floristSpec(),
+  icecreamGhost: iceCreamGhostSpec(),
   witch: witch(),
   vampire: vampire(),
   custode: humanSpec(DEFAULT_LOOK),

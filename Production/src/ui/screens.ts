@@ -48,7 +48,7 @@ function itemImg(type: string, cls: 'lit' | 'lit-hero', variant = 0): HTMLElemen
 }
 
 /** Interfaccia «viva»: un'icona monocromatica per ogni scheda delle categorie. */
-const CAT_ICON: Record<PlaceableCategory | 'all', string> = { all: 'all', light: 'light', decoration: 'flower', structure: 'fence', ambient: 'tree', npc: 'ghost', extra: 'star' };
+const CAT_ICON: Record<PlaceableCategory | 'all', string> = { all: 'all', light: 'light', decoration: 'flower', structure: 'fence', business: 'wisp', ambient: 'tree', npc: 'ghost', extra: 'star' };
 /** L'icona di una scheda (solo nell'interfaccia «viva»). */
 export const tabGlyph = (name: string) => monoIcon(name, 19);
 const tabIcon = (c: PlaceableCategory | 'all') => tabGlyph(CAT_ICON[c]);

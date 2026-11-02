@@ -3,7 +3,7 @@
 // espansione/achievement → salvataggio → sincronizzazione della vista.
 
 import * as THREE from 'three';
-import { BAT, BUSINESS, FOREST_MARGIN, GRAVE_FOOTPRINT, KEEPER_LAMP, LIVE_TICK_MS, PET_SPECIES, SOUL_BELL, type PetSpecies, STAFF, ZOMBIE_MUD } from '../game/balance.ts';
+import { BAT, BUSINESS, ROUNDS, FOREST_MARGIN, GRAVE_FOOTPRINT, KEEPER_LAMP, LIVE_TICK_MS, PET_SPECIES, SOUL_BELL, type PetSpecies, STAFF, ZOMBIE_MUD } from '../game/balance.ts';
 import { moveTraceDraw, startTraceDraw, traceDrawCells, type TraceDraw } from '../game/trace.ts';
 import { CATALOG, CATALOG_LIST, EDIT_ONLY, rotatedFootprint, TRACEABLE, ZOMBIE_ATTRACTORS } from '../game/catalog.ts';
 import { watchLifecycle } from './platform.ts';
@@ -23,13 +23,14 @@ import { placeableKey, placeableSeed, seedCount } from '../render/keys.ts';
 import type { PVis } from '../render/types.ts';
 import { UI } from '../ui/UI.ts';
 import { confirmDialog, drawerOpen, floater, keepFieldVisible, toast, uiBlocking } from '../ui/dom.ts';
-import { celebrateAchievement, celebrateLook, celebrateRank } from '../ui/celebrate.ts';
+import { celebrateAchievement, celebrateLooks, celebrateRank } from '../ui/celebrate.ts';
 import { openCustomize } from '../ui/customize.ts';
+import { openLetterRead, openLetterWrite } from '../ui/letter.ts';
 import { rankForXp } from '../game/progression.ts';
 import { npcNote, type NpcNote } from '../ui/npcNote.ts';
 import { annivNote } from '../ui/anniversary.ts';
 import { npcPortrait } from '../ui/npcPortraits.ts';
-import { ROAMER_LABELS } from '../game/spawn.ts';
+import { ROAMER_LABELS, type RoamerKind } from '../game/spawn.ts';
 import type { CharacterKind } from '../view/characters.ts';
 import { PetGifts } from '../game/petGifts.ts';
 import { signalOnboarding } from '../ui/onboarding.ts';
@@ -54,7 +55,7 @@ export type Selection = { kind: 'grave' | 'placeable'; id: string } | null;
 const PET_HOME_ICONS: Record<PetSpecies, string> = { dog: 'kennel', cat: 'catBed', rabbit: 'hutch', duck: 'duckHouse', crow: 'perch' };
 
 export type EntityAction =
-  | 'detail' | 'clean' | 'repair' | 'flowers' | 'light' | 'shop' | 'rotate' | 'store' | 'confirm' | 'undoMove' | 'move' | 'entrust' | 'memories' | 'ring' | 'registry' | 'house' | 'collect';
+  | 'detail' | 'clean' | 'repair' | 'flowers' | 'light' | 'shop' | 'rotate' | 'store' | 'confirm' | 'undoMove' | 'move' | 'entrust' | 'memories' | 'ring' | 'registry' | 'house' | 'collect' | 'sendLetter' | 'readMail';
 
 const PET_STATUS: Record<Exclude<PetMode, 'home'>, string> = { free: t('game.pet.status.free'), follow: t('game.pet.status.follow') };
 
@@ -211,6 +212,7 @@ export class Game {
     this.resize();
     saveNow(this.state);
     const msg = catchUpMessage(this.announceAnniversaries(report, 1200));
+    window.setTimeout(() => this.checkMail(), 3500); // una lettera tornata mentre non c'eri
     if (msg) setTimeout(() => toast(msg), 900);
     this.ui.refreshHud();
     if (this.sceneReady) this.scheduleStartupTasks(opts.prewarm !== false);
@@ -401,6 +403,8 @@ export class Game {
       this.actors.spawnRoamer(s, g ? cellCenter(g.x, g.y + 2, [2, 1]) : undefined, s.kind === 'zombie' ? this.zombieGoal() : undefined);
     }
     if (res.wisp) { this.world.sync(this.state); scheduleSave(this.state); }
+    this.maybeRounds();
+    this.checkMail();
   }
 
   updatePhase(force: boolean) {
@@ -563,6 +567,7 @@ export class Game {
       const report = runCatchUp(this.state, this.now());
       this.afterChange();
       const msg = catchUpMessage(this.announceAnniversaries(report, 400));
+      window.setTimeout(() => this.checkMail(), 2500);
       if (msg) toast(msg);
     }
     this.renderer.setAnimationLoop(this.loop);
@@ -613,7 +618,7 @@ export class Game {
       for (let r = this.shownRank + 1; r <= rank; r++) celebrateRank(r);
       for (const a of achievements) celebrateAchievement(a);
       // un pezzo d'aspetto nuovo (cappello, testa, orecchie, becco): «Provalo» apre l'Aspetto
-      for (const k of looks) celebrateLook(k, this.state.player.look, () => openCustomize(this.ui));
+      celebrateLooks(looks, this.state.player.look, () => openCustomize(this.ui));
     }
     this.shownRank = Math.max(this.shownRank, rank);
     scheduleSave(this.state);
@@ -808,7 +813,7 @@ export class Game {
     const grave = this.state.graves.find((g) => g.id === id);
     // durante il rito la tomba affidata e l'albero restano dove sono finché il corteo non ha finito
     if (this.riteIds?.includes(id) && !['detail', 'memories', 'shop', 'registry', 'house'].includes(action)) { toast(t('game.rite.wait')); return; }
-    const instant: EntityAction[] = ['detail', 'shop', 'rotate', 'store', 'confirm', 'undoMove', 'move', 'entrust', 'memories', 'registry', 'house', 'collect'];
+    const instant: EntityAction[] = ['detail', 'shop', 'rotate', 'store', 'confirm', 'undoMove', 'move', 'entrust', 'memories', 'registry', 'house', 'collect', 'sendLetter', 'readMail'];
     const run = () => {
       switch (action) {
         case 'clean': this.actors.work(); if (this.act((s, n) => (grave ? R.cleanGrave(s, id, n) : R.cleanPlaceable(s, id, n)), center, 'rewarded') && grave) signalOnboarding('graveCleaned'); break;
@@ -841,6 +846,8 @@ export class Game {
         case 'ring': this.ringBell(id); break;
         case 'registry': this.ui.openRegistry(); break;
         case 'house': this.ui.openHouse(); break;
+        case 'sendLetter': this.select(null); openLetterWrite(this.ui); break;
+        case 'readMail': this.select(null); this.readMail(); break;
         case 'collect': this.collectBusiness(id); break;
       }
     };
@@ -1079,7 +1086,7 @@ export class Game {
     return new THREE.Vector2(((x - r.left) / r.width) * 2 - 1, -((y - r.top) / r.height) * 2 + 1);
   }
 
-  private pick(x: number, y: number): { entityId?: string; wispId?: string; roamerId?: string; petId?: string; vampireId?: string; talkerId?: string } | null {
+  private pick(x: number, y: number): { entityId?: string; wispId?: string; roamerId?: string; petId?: string; vampireId?: string; talkerId?: string; talkerKind?: string } | null {
     this.raycaster.setFromCamera(this.ndc(x, y), this.rig.camera);
     // la tomba affidata, mentre la sua bara è in viaggio, non c'è più
     const hits = this.raycaster.intersectObjects([...this.actors.pickables(), ...this.world.hitboxes], false)
@@ -1089,7 +1096,7 @@ export class Game {
     const order = (o: THREE.Object3D) => (o.userData.roamerId || o.userData.petId || o.userData.vampireId || o.userData.talkerId ? 0 : o.userData.wispId ? 1 : 2);
     hits.sort((a, b) => order(a.object) - order(b.object) || a.distance - b.distance);
     const u = hits[0].object.userData;
-    return { entityId: u.entityId, wispId: u.wispId, roamerId: u.roamerId, petId: u.petId, vampireId: u.vampireId, talkerId: u.talkerId };
+    return { entityId: u.entityId, wispId: u.wispId, roamerId: u.roamerId, petId: u.petId, vampireId: u.vampireId, talkerId: u.talkerId, talkerKind: u.talkerKind };
   }
 
   groundCell(x: number, y: number) {
@@ -1150,7 +1157,7 @@ export class Game {
     if (hit?.roamerId) { this.tapRoamer(hit.roamerId); return; }
     if (hit?.petId && !this.editMode) { this.tapPet(hit.petId); return; }
     if (hit?.vampireId && !this.editMode) { this.tapVampire(hit.vampireId); return; }
-    if (hit?.talkerId && !this.editMode) { this.tapGardener(); return; }
+    if (hit?.talkerId && !this.editMode) { this.tapTalker(hit.talkerKind ?? 'gardener'); return; }
     if (hit?.wispId) {
       const w = this.state.world.looseWisps.find((q) => q.id === hit.wispId);
       if (w && !this.editMode && this.actors.walkTo({ x: w.x, y: w.y })) { this.markWalk(); this.rig.follow = this.actors.avatar.pos; }
@@ -1281,6 +1288,28 @@ export class Game {
   }
 
   /** Un personaggio parla: notifica col ritratto (interfaccia nuova) o toast. */
+  // ── Posta ──────────────────────────────────────────────────────────────
+
+  /** Spedisce una lettera (dalla pergamena): vero se è partita. */
+  sendLetter(text: string): boolean { return this.act((s, n) => R.sendLetter(s, text, n), undefined, true); }
+  closeLetter() { this.act((s, n) => R.closeLetter(s, n), undefined, true); }
+  resendLetter() { this.act((s, n) => R.resendLetter(s, n), undefined, true); toast(t('rules.post.resent')); }
+
+  /** Apre la lettera tornata nella buca (dalla notifica o dal menù della casa). */
+  readMail() {
+    const l = this.state.post.inbox;
+    if (l) openLetterRead(this.ui, l);
+  }
+
+  /** È tornata una lettera? Allora la buca ha la sua icona e il postino lo dice (col suo mezzobusto). */
+  checkMail() {
+    if (this.realState || !R.checkMail(this.state, this.now())) return;
+    scheduleSave(this.state);
+    this.world.sync(this.state);
+    this.ui.refreshContext();
+    this.say({ kind: 'postman', name: t('npc.postman.name'), say: t('post.note.say'), text: t('post.note.text'), action: { label: t('post.note.read'), run: () => this.readMail() } });
+  }
+
   private say(n: NpcNote) {
     npcNote(n);
   }
@@ -1423,6 +1452,7 @@ export class Game {
     const r = this.actors.roamerAt(id);
     if (!r || r.dying > 0) return;
     // becchino e prete in visita: non svaniscono, raccontano cosa stanno facendo
+    if (r.visit && (r.kind === 'postman' || r.kind === 'hunterA' || r.kind === 'hunterB')) { this.tapTalker(r.kind); return; }
     if (r.visit) {
       const v = r.visit, left = Math.max(0, v.stops.length - v.i);
       // torna a casa (o al santuario), o da dove è venuto se non c'è: frasi intere per ognuno
@@ -1552,6 +1582,75 @@ export class Game {
     }, () => {
       if (kind === 'gravedigger' && cleaned) this.say({ kind: 'gravedigger', name: t('say.gravedigger.name'), text: t('say.gravedigger.finished', { n: cleaned }) });
     });
+  }
+
+  /** La cella davanti a un oggetto (da dove escono e dove rientrano postino e fratelli). */
+  private doorOf(p: Placed): THREE.Vector3 {
+    const fp = rotatedFootprint(p.type, p.rot);
+    return cellCenter(p.x + Math.floor(fp[0] / 2), p.y + fp[1], [1, 1]);
+  }
+
+  /** Il giro: le tappe in ordine di vicinanza partendo dalla porta. */
+  private roundFrom(door: THREE.Vector3, ids: string[]): VisitStop[] {
+    const stops: VisitStop[] = [];
+    const left = ids.map((id) => ({ id, ...this.entityCells(id)! })).filter((s) => s.fp);
+    let at = worldToCell(door);
+    while (left.length) {
+      left.sort((a, b) => Math.hypot(a.x - at.x, a.y - at.y) - Math.hypot(b.x - at.x, b.y - at.y));
+      const s = left.shift()!;
+      stops.push(s);
+      at = { x: s.x, y: s.y };
+    }
+    return stops;
+  }
+
+  private roaming(kind: RoamerKind) { return [...this.actors.roamers.values()].some((r) => r.kind === kind && r.visit); }
+
+  /**
+   * Il postino scheletro esce dall'ufficio postale, passa da qualche tomba (e
+   * dalla casa del Custode) e rientra. Toccato, dice che sta consegnando. Forse.
+   */
+  spawnPostman() {
+    const office = this.state.placeables.find((p) => p.type === 'post_office' && !p.broken);
+    if (!office || this.roaming('postman')) return;
+    const door = this.doorOf(office);
+    const house = this.state.placeables.find((p) => p.type === 'keeper_house');
+    const ids = [...this.state.graves].sort(() => Math.random() - 0.5).slice(0, 2).map((g) => g.id);
+    if (house) ids.push(house.id);
+    this.actors.spawnVisitor('postman', door, door.clone(), this.roundFrom(door, ids), () => undefined, () => undefined);
+  }
+
+  /**
+   * I due fratelli cacciatori di fantasmi, la sera e la notte: lasciano l'auto,
+   * fanno il giro di qualche tomba con le torce accese e tornano all'auto.
+   */
+  spawnHunters() {
+    const car = this.state.placeables.find((p) => p.type === 'ghost_hunters' && !p.broken);
+    if (!car || this.roaming('hunterA') || this.roaming('hunterB')) return;
+    const door = this.doorOf(car);
+    const stops = this.roundFrom(door, [...this.state.graves].sort(() => Math.random() - 0.5).slice(0, 3).map((g) => g.id));
+    if (!stops.length) return;
+    this.actors.setCastAway(car.id, true);
+    let back = 0;
+    const home = () => { if (++back === 2) this.actors.setCastAway(car.id, false); };
+    this.actors.spawnVisitor('hunterA', door, door.clone(), stops, () => undefined, home);
+    this.actors.spawnVisitor('hunterB', door.clone().add(new THREE.Vector3(0.6, 0, 0)), door.clone(), stops, () => undefined, home, 1.4);
+  }
+
+  /** Ogni tanto, nel tick: il postino (se c'è l'ufficio) e, la sera e la notte, i fratelli (se c'è l'auto). */
+  private maybeRounds() {
+    if (Math.random() < ROUNDS.postman) this.spawnPostman();
+    const phase = this.state.settings.timeOverride === 'auto' ? dayPhaseForHour(this.now().getHours()) : this.state.settings.timeOverride;
+    if ((phase === 'dusk' || phase === 'night') && Math.random() < ROUNDS.hunters) this.spawnHunters();
+  }
+
+  /** Una battuta a caso di chi sta facendo il giro, o di chi sta accanto al suo oggetto. */
+  private tapTalker(kind: string) {
+    if (kind === 'gardener') { this.tapGardener(); return; }
+    const who = kind === 'hunterA' || kind === 'hunterB' ? 'hunters' : kind;
+    const lines = tList(`say.${who}.lines`);
+    const name = kind === 'postman' ? t('npc.postman.name') : kind === 'florist' ? t('npc.florist.name') : t(`npc.${kind}.name`);
+    this.say({ kind: kind as CharacterKind, name, text: lines[Math.floor(Math.random() * lines.length)] });
   }
 
   // ── Albero dei ricordi ───────────────────────────────────────────────
@@ -1923,6 +2022,8 @@ export class Game {
       if (type === 'witch_corner') this.say({ kind: 'witch', name: t('say.witch.name'), text: t('say.witch.sold', { n }), wisps: n });
       else if (type === 'zombie_bar') this.say({ kind: 'zombie', name: t('say.zombieBar.name'), say: t('say.zombieBar.say'), text: t('say.zombieBar.text', { n }), wisps: n });
       else if (type === 'brain_farm') this.say({ kind: 'zombie', name: t('say.brainFarm.name'), say: t('say.brainFarm.say'), text: t('say.brainFarm.text', { n }), wisps: n });
+      else if (type === 'food_truck') this.say({ kind: 'zombie', name: t('say.foodTruck.name'), say: t('say.foodTruck.say'), text: t('say.foodTruck.text', { n }), wisps: n });
+      else if (type === 'ice_cream_cart') this.say({ kind: 'icecreamGhost', name: t('say.iceCream.name'), say: t('say.iceCream.say'), text: t('say.iceCream.text', { n }), wisps: n });
       else this.custodeSays(t('say.custode.veggie.say'), t('say.custode.veggie.text', { n }), res);
       this.world.setEarnings(id, 0);
       this.ui.bumpWisps();
@@ -2281,7 +2382,7 @@ export class Game {
     const rank = rankForXp(real.player.xp).level;
     for (let r = this.shownRank + 1; r <= rank; r++) celebrateRank(r);
     for (const a of achievements) celebrateAchievement(a);
-    for (const k of looks) celebrateLook(k, real.player.look, () => openCustomize(this.ui));
+    celebrateLooks(looks, real.player.look, () => openCustomize(this.ui));
     this.shownRank = Math.max(this.shownRank, rank);
     scheduleSave(real);
     const area = this.realWorld.area;
@@ -2384,9 +2485,9 @@ export class Game {
     this.actors.spawnRoamer({ kind, rare, graveId: g?.id }, g && kind === 'ghost' ? cellCenter(g.x, g.y + 2, [2, 1]) : undefined, kind === 'zombie' ? this.zombieGoal() : undefined);
   }
 
-  /** Dove va uno zombie appena entrato: una delle cose che lo chiamano (tomba o bara aperta, bar, orto), a caso. */
+  /** Dove va uno zombie appena entrato: una delle cose che lo chiamano (tomba o bara aperta, bar, orto, food truck), a caso. */
   private zombieGoal(): VisitStop | undefined {
-    const calls = this.state.placeables.filter((p) => !p.broken && (ZOMBIE_ATTRACTORS.has(p.type) || p.type === 'zombie_bar' || p.type === 'brain_farm'));
+    const calls = this.state.placeables.filter((p) => !p.broken && (ZOMBIE_ATTRACTORS.has(p.type) || p.type === 'zombie_bar' || p.type === 'brain_farm' || p.type === 'food_truck'));
     const p = calls[Math.floor(Math.random() * calls.length)];
     return p ? { id: p.id, x: p.x, y: p.y, fp: rotatedFootprint(p.type, p.rot) } : undefined;
   }

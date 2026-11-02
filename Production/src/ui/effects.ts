@@ -29,6 +29,11 @@ const EFFECTS: Record<string, () => string> = {
   mystic_staff: () => t('item.effect.mysticStaff'),
   broom: () => t('item.effect.speed', { x: num(CUSTODE_SPEED.broom) }),
   bike: () => t('item.effect.speed', { x: num(CUSTODE_SPEED.bike) }),
+  food_truck: () => t('item.effect.foodTruck'),
+  ice_cream_cart: () => t('item.effect.iceCreamCart'),
+  flower_kiosk: () => t('item.effect.flowerKiosk'),
+  post_office: () => t('item.effect.postOffice'),
+  ghost_hunters: () => t('item.effect.ghostHunters', { n: Math.round(SPAWN_MODIFIERS.huntersBonus * 100) }),
 };
 
 /** L'effetto di un oggetto (le varianti hanno quello della loro famiglia), o null se non ne ha. */

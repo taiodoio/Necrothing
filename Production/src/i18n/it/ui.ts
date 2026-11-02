@@ -144,6 +144,8 @@ export default {
   'ctx.shop': 'Entra in bottega',
   'ctx.registry': 'Registro delle sepolture',
   'ctx.house': 'Personalizza la casa',
+  'ctx.readMail': 'Leggi la posta',
+  'ctx.sendLetter': 'Spedisci una lettera',
   // l'Albero dei ricordi: apre l'elenco dei ricordi
   'ctx.memories': 'Ricordi',
   'ctx.bell.ring': 'Suona la campana',

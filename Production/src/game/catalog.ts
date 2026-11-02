@@ -7,14 +7,15 @@ import { DECAY } from './balance.ts';
 import { t } from '../i18n/index.ts';
 import type { Access } from '../config/distribution.ts';
 
-export type PlaceableCategory = 'light' | 'decoration' | 'structure' | 'ambient' | 'npc' | 'extra';
+export type PlaceableCategory = 'light' | 'decoration' | 'structure' | 'business' | 'ambient' | 'npc' | 'extra';
 
-export const CATEGORY_ORDER: PlaceableCategory[] = ['light', 'decoration', 'structure', 'ambient', 'npc', 'extra'];
+export const CATEGORY_ORDER: PlaceableCategory[] = ['light', 'decoration', 'structure', 'business', 'ambient', 'npc', 'extra'];
 
 export const PLACEABLE_CATEGORY_LABELS: Record<PlaceableCategory, string> = {
   light: t('category.light'),
   decoration: t('category.decoration'),
   structure: t('category.structure'),
+  business: t('category.business'),
   ambient: t('category.ambient'),
   npc: t('category.npc'),
   extra: t('category.extra'),
@@ -100,7 +101,7 @@ const list: Array<Omit<PlaceableDef, 'access'>> = [
   { id: 'sign', label: t('item.sign.label'), category: 'decoration', footprint: [1, 1], cost: 4, minRank: 1, editableText: true, description: t('item.sign.desc') },
   { id: 'angel_statue', label: t('item.angelStatue.label'), category: 'decoration', footprint: [2, 2], cost: 22, minRank: 3, description: t('item.angelStatue.desc') },
   { id: 'votive_statue', label: t('item.votiveStatue.label'), category: 'decoration', footprint: [2, 2], cost: 18, minRank: 2, description: t('item.votiveStatue.desc') },
-  { id: 'open_coffin', label: t('item.openCoffin.label'), category: 'decoration', footprint: [1, 2], cost: 10, minRank: 2, rotatable: true, description: t('item.openCoffin.desc') },
+  { id: 'open_coffin', label: t('item.openCoffin.label'), category: 'npc', footprint: [1, 2], cost: 10, minRank: 2, rotatable: true, description: t('item.openCoffin.desc') },
   { id: 'bones', label: t('item.bones.label'), category: 'decoration', footprint: [1, 1], cost: 3, minRank: 1, walkable: true, description: t('item.bones.desc') },
   { id: 'vase', label: t('item.vase.label'), category: 'decoration', footprint: [1, 1], cost: 3, minRank: 1, description: t('item.vase.desc') },
   { id: 'book_pile', label: t('item.bookPile.label'), category: 'decoration', footprint: [1, 1], cost: 6, minRank: 1, description: t('item.bookPile.desc') },
@@ -115,8 +116,8 @@ const list: Array<Omit<PlaceableDef, 'access'>> = [
   { id: 'keeper_house', label: t('item.keeperHouse.label'), category: 'structure', footprint: [4, 4], cost: 0, minRank: 1, unique: true, permanent: true, light: true, description: t('item.keeperHouse.desc') },
   { id: 'gravedigger_house', label: t('item.gravediggerHouse.label'), category: 'structure', footprint: [4, 3], cost: 60, minRank: 3, unique: true, decays: true, light: true, description: t('item.gravediggerHouse.desc') },
   { id: 'shrine', label: t('item.shrine.label'), category: 'structure', footprint: [3, 3], cost: 55, minRank: 3, unique: true, decays: true, light: true, description: t('item.shrine.desc') },
-  { id: 'zombie_bar', label: t('item.zombieBar.label'), category: 'structure', footprint: [3, 2], cost: 45, minRank: 3, unique: true, decays: true, light: true, description: t('item.zombieBar.desc') },
-  { id: 'brain_farm', label: t('item.brainFarm.label'), category: 'structure', footprint: [4, 3], cost: 35, minRank: 3, unique: true, decays: true, light: true, description: t('item.brainFarm.desc') },
+  { id: 'zombie_bar', label: t('item.zombieBar.label'), category: 'business', footprint: [3, 2], cost: 45, minRank: 3, unique: true, decays: true, light: true, description: t('item.zombieBar.desc') },
+  { id: 'brain_farm', label: t('item.brainFarm.label'), category: 'business', footprint: [4, 3], cost: 35, minRank: 3, unique: true, decays: true, light: true, description: t('item.brainFarm.desc') },
   { id: 'mausoleum', label: t('item.mausoleum.label'), category: 'structure', footprint: [3, 3], cost: 80, minRank: 4, unique: true, decays: true, light: true, description: t('item.mausoleum.desc') },
   { id: 'open_grave', label: t('item.openGrave.label'), category: 'structure', footprint: [2, 2], cost: 12, minRank: 2, decays: true, description: t('item.openGrave.desc') },
   { id: 'wall_stone', label: t('item.wallStone.label'), category: 'structure', footprint: [1, 1], cost: 3, minRank: 1, rotatable: true, description: t('item.wallStone.desc') },
@@ -158,7 +159,7 @@ const list: Array<Omit<PlaceableDef, 'access'>> = [
   { id: 'swing_tree', label: t('item.swingTree.label'), category: 'ambient', footprint: [2, 2], cost: 28, minRank: 3, description: t('item.swingTree.desc') },
   { id: 'stone_circle', label: t('item.stoneCircle.label'), category: 'ambient', footprint: [3, 3], cost: 30, minRank: 3, description: t('item.stoneCircle.desc') },
   { id: 'hand_swamp', label: t('item.handSwamp.label'), category: 'ambient', footprint: [4, 3], cost: 35, minRank: 3, unique: true, description: t('item.handSwamp.desc') },
-  { id: 'hell_crack', label: t('item.hellCrack.label'), category: 'ambient', footprint: [3, 2], cost: 60, minRank: 5, unique: true, light: true, description: t('item.hellCrack.desc') },
+  { id: 'hell_crack', label: t('item.hellCrack.label'), category: 'npc', footprint: [3, 2], cost: 60, minRank: 5, unique: true, light: true, description: t('item.hellCrack.desc') },
   { id: 'mud', label: t('item.mud.label'), category: 'ambient', footprint: [1, 1], cost: 1, minRank: 1, walkable: true, description: t('item.mud.desc') },
 
   // ── Presenze (NPC piazzabili) ─────────────────────────────────────────
@@ -170,9 +171,18 @@ const list: Array<Omit<PlaceableDef, 'access'>> = [
 
   { id: 'cat_shelter', label: t('item.catShelter.label'), category: 'npc', footprint: [2, 2], cost: 25, minRank: 2, unique: true, description: t('item.catShelter.desc') },
   { id: 'ghost_picnic', label: t('item.ghostPicnic.label'), category: 'npc', footprint: [2, 2], cost: 40, minRank: 3, unique: true, description: t('item.ghostPicnic.desc') },
-  { id: 'witch_corner', label: t('item.witchCorner.label'), category: 'npc', footprint: [2, 2], cost: 55, minRank: 4, unique: true, decays: true, light: true, description: t('item.witchCorner.desc') },
+  { id: 'witch_corner', label: t('item.witchCorner.label'), category: 'business', footprint: [2, 2], cost: 55, minRank: 4, unique: true, decays: true, light: true, description: t('item.witchCorner.desc') },
   { id: 'skeleton_band', label: t('item.skeletonBand.label'), category: 'npc', footprint: [3, 3], cost: 65, minRank: 4, unique: true, light: true, description: t('item.skeletonBand.desc') },
   { id: 'vampire_crypt', label: t('item.vampireCrypt.label'), category: 'npc', footprint: [2, 2], cost: 90, minRank: 5, unique: true, decays: true, light: true, description: t('item.vampireCrypt.desc') },
+
+  // ── Attività (rendono fuochi fatui o danno un bonus) ──────────────────
+  { id: 'food_truck', label: t('item.foodTruck.label'), category: 'business', footprint: [3, 2], cost: 50, minRank: 3, unique: true, decays: true, light: true, description: t('item.foodTruck.desc') },
+  { id: 'ice_cream_cart', label: t('item.iceCreamCart.label'), category: 'business', footprint: [2, 2], cost: 40, minRank: 3, unique: true, decays: true, light: true, description: t('item.iceCreamCart.desc') },
+  { id: 'flower_kiosk', label: t('item.flowerKiosk.label'), category: 'business', footprint: [2, 2], cost: 35, minRank: 3, unique: true, decays: true, light: true, description: t('item.flowerKiosk.desc') },
+  { id: 'post_office', label: t('item.postOffice.label'), category: 'business', footprint: [3, 3], cost: 60, minRank: 3, unique: true, decays: true, light: true, description: t('item.postOffice.desc') },
+  // ── Decorazioni e presenze nuove ──────────────────────────────────────
+  { id: 'carnivorous_plant', label: t('item.carnivorousPlant.label'), category: 'decoration', footprint: [1, 1], cost: 10, minRank: 2, description: t('item.carnivorousPlant.desc') },
+  { id: 'ghost_hunters', label: t('item.ghostHunters.label'), category: 'npc', footprint: [3, 2], cost: 75, minRank: 4, unique: true, light: true, description: t('item.ghostHunters.desc') },
 
   // ── Stagionali ────────────────────────────────────────────────────────
   { id: 'pumpkin_patch', label: t('item.pumpkinPatch.label'), category: 'ambient', footprint: [3, 3], cost: 20, minRank: 1, light: true, season: { from: [9, 1], to: [9, 31], label: t('season.october') }, description: t('item.pumpkinPatch.desc') },
@@ -183,7 +193,7 @@ const list: Array<Omit<PlaceableDef, 'access'>> = [
   { id: 'lovers_bench', label: t('item.loversBench.label'), category: 'npc', footprint: [2, 1], cost: 30, minRank: 1, light: true, rotatable: true, season: { from: [1, 1], to: [1, 29], label: t('season.february') }, description: t('item.loversBench.desc') },
 
   // ── Extra (non si piazzano: si usano) ─────────────────────────────────
-  { id: 'mystic_staff', label: t('item.mysticStaff.label'), category: 'extra', footprint: [1, 1], cost: 0, minRank: 4, unique: true, feat: { counter: 'wispsEarned', goal: 500, label: t('feat.wispsEarned') }, description: t('item.mysticStaff.desc') },
+  { id: 'mystic_staff', label: t('item.mysticStaff.label'), category: 'extra', footprint: [1, 1], cost: 0, minRank: 2, unique: true, feat: { counter: 'wispsEarned', goal: 500, label: t('feat.wispsEarned') }, description: t('item.mysticStaff.desc') },
   { id: 'broom', label: t('item.broom.label'), category: 'extra', footprint: [1, 2], cost: 120, minRank: 5, unique: true, description: t('item.broom.desc') },
   { id: 'bike', label: t('item.bike.label'), category: 'extra', footprint: [1, 1], cost: 60, minRank: 2, unique: true, description: t('item.bike.desc') },
 ];
@@ -199,6 +209,7 @@ export const ACCESS: Record<Access, readonly string[]> = {
   demo: [
     'lamp_post', 'lamp_post_double', 'lamp_post_gothic', 'lantern', 'lantern_pole', 'lantern_stone', 'ghost_lantern', 'glow_pumpkin', 'skull_candle', 'torch', 'candelabra',
     'wreath', 'sign', 'angel_statue', 'votive_statue', 'open_coffin', 'bones', 'vase', 'book_pile', 'stuffed_crow', 'urn',
+    'carnivorous_plant',
     'shop', 'keeper_house', 'open_grave', 'wall_stone', 'fence_wood', 'fence_iron', 'arch_stone', 'path_stone', 'path_dirt', 'well', 'pet_house', 'pet_house_cat',
     'pond', 'dead_tree', 'half_pine', 'xmas_tree', 'toxic_puddle', 'monster_rocks', 'flowerbed', 'poison_shrooms', 'bushes', 'hillock', 'tall_grass', 'cypress', 'glow_shrooms', 'witch_apple', 'mud',
     'bike',
@@ -211,6 +222,7 @@ export const ACCESS: Record<Access, readonly string[]> = {
     'spectral_tree', 'swing_tree', 'stone_circle', 'hand_swamp', 'hell_crack', 'pumpkin_patch',
     'zombies_play', 'zombies_dance', 'scarecrow', 'gardener_corner', 'ghosts_ball', 'cat_shelter', 'ghost_picnic', 'witch_corner', 'skeleton_band', 'vampire_crypt', 'lovers_bench',
     'mystic_staff', 'broom',
+    'food_truck', 'ice_cream_cart', 'flower_kiosk', 'post_office', 'ghost_hunters',
   ],
 };
 const FULL = new Set(ACCESS.full);
@@ -282,4 +294,5 @@ export const ZOMBIE_ATTRACTORS = new Set(['open_grave', 'open_coffin']);
 
 /** Le presenze piazzabili che vivono attorno al loro oggetto (anche fuori dalla categoria Presenze). */
 export const PRESENCE_TYPES = new Set(['zombies_play', 'zombies_dance', 'gardener_corner', 'ghosts_ball', 'zombie_bar', 'brain_farm',
-  'cat_shelter', 'ghost_picnic', 'witch_corner', 'skeleton_band', 'vampire_crypt', 'lovers_bench', 'soul_gazebo', 'keeper_statue']);
+  'cat_shelter', 'ghost_picnic', 'witch_corner', 'skeleton_band', 'vampire_crypt', 'lovers_bench', 'soul_gazebo', 'keeper_statue',
+  'food_truck', 'ice_cream_cart', 'flower_kiosk', 'post_office', 'ghost_hunters']);

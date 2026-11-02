@@ -16,6 +16,7 @@ import { createRng } from '../../game/rng.ts';
 import type { PVis } from '../types.ts';
 import { decodeHouseVariant } from '../../game/house.ts';
 import { SCARECROW_NECK, SCARECROW_PERCH, scarecrowHead } from './newItems3.ts';
+import { PLANT_JAW, plantJawHalf } from './newItems4.ts';
 
 export interface Animated {
   root: THREE.Group;
@@ -509,6 +510,44 @@ const crowWing = (lp: LP) => ball(lp, 0, 0, -0.02, 0.012, 0.045, 0.075, '#2c2c36
  * Testa che segue il Custode (si gira piano, anche del tutto: è un palo) e un
  * corvo che ogni tanto arriva in volo, si posa sulla manica, si guarda attorno e riparte.
  */
+/**
+ * La pianta carnivora: la bocca respira piano, si guarda attorno e ogni tanto
+ * si chiude di scatto (gnam!); se le passa vicino il Custode, scatta subito.
+ */
+function carnivorousPlant(seed: number): Animated {
+  const root = new THREE.Group();
+  const head = new THREE.Group();
+  head.position.set(...PLANT_JAW);
+  const halves = ([1, -1] as const).map((s) => { const g = new THREE.Group(); g.add(piece(`plantJaw:${s}`, (lp) => plantJawHalf(lp, s))); head.add(g); return g; });
+  root.add(head);
+  const rng = createRng(seed + 77);
+  let target: THREE.Vector3 | null = null, nextSnap = 3 + rng.next() * 5, snapAt = -10, last = -1, near = false;
+  const local = new THREE.Vector3();
+  return {
+    root,
+    watch: (p) => { target = p; },
+    update: (t) => {
+      last = t;
+      // il Custode vicino: un morso al volo (una volta per passaggio)
+      if (target) {
+        local.copy(target); root.worldToLocal(local);
+        const close = Math.hypot(local.x, local.z) < 1.4;
+        if (close && !near && t - snapAt > 1.2) snapAt = t;
+        near = close;
+      }
+      if (t > nextSnap) { snapAt = t; nextSnap = t + 5 + rng.next() * 7; }
+      const k = t - snapAt;
+      // aperta che respira; al morso si chiude in un lampo e si riapre piano
+      const breathe = 0.55 + Math.sin(t * 1.3 + seed) * 0.12;
+      const open = k < 0.12 ? breathe * (1 - k / 0.12) : k < 0.5 ? 0 : k < 1.3 ? breathe * ((k - 0.5) / 0.8) : breathe;
+      const a = 0.12 + open * 0.6;
+      halves[0].rotation.x = -a; halves[1].rotation.x = a;
+      head.rotation.set(Math.sin(t * 0.7) * 0.06, Math.sin(t * 0.35 + seed) * 0.5, Math.sin(t * 0.9) * 0.05);
+      void last;
+    },
+  };
+}
+
 function scarecrow(lit: boolean): Animated {
   const root = new THREE.Group();
   const head = piece(`scarecrowHead:${lit ? 1 : 0}`, (lp) => scarecrowHead(lp, lit));
@@ -567,6 +606,7 @@ export function createAnimated(v: PVis): Animated | null {
     case 'zombies_play': return zombiesPlay();
     case 'zombies_dance': return zombiesDance();
     case 'scarecrow': return scarecrow(v.lit);
+    case 'carnivorous_plant': return carnivorousPlant(v.seed);
     case 'toxic_puddle': return toxic(v.seed);
     case 'mud': return rising('bubble', '#5a4a3a', 2, [0.2, 0.2], 0.06, v.seed, false);
     case 'dead_tree': return fallingLeaves(v.seed, 4, 1.9, 0.6);

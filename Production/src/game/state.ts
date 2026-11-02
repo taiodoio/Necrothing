@@ -218,6 +218,28 @@ export interface SaveData {
   meta: SaveMeta;
   /** Il percorso del primo ingresso (pergamena, nome, introduzione, cortile, primo obiettivo, consigli): game/onboarding.ts. */
   onboarding: OnboardingState;
+  /** La posta dell'ufficio postale: le lettere spedite (in giro), quella tornata nella buca, quando ne torna un'altra. */
+  post: PostState;
+}
+
+export interface Letter { id: string; text: string; sentAt: string }
+export interface PostState {
+  /** Lettere spedite che possono tornare (al massimo POST.maxLetters). */
+  letters: Letter[];
+  /** La lettera tornata nella buca della casa, da leggere. */
+  inbox: Letter | null;
+  /** Quando può tornare la prossima (null finché non se ne spedisce una). */
+  nextAt: string | null;
+}
+
+export function normalizePost(raw: unknown): PostState {
+  const r = (raw && typeof raw === 'object' ? raw : {}) as Partial<PostState>;
+  const ok = (l: unknown): l is Letter => !!l && typeof (l as Letter).text === 'string' && typeof (l as Letter).id === 'string' && typeof (l as Letter).sentAt === 'string';
+  return {
+    letters: Array.isArray(r.letters) ? r.letters.filter(ok).map((l) => ({ id: l.id, text: l.text.slice(0, 400), sentAt: l.sentAt })) : [],
+    inbox: ok(r.inbox) ? { id: r.inbox.id, text: r.inbox.text.slice(0, 400), sentAt: r.inbox.sentAt } : null,
+    nextAt: typeof r.nextAt === 'string' ? r.nextAt : null,
+  };
 }
 
 /**
@@ -377,6 +399,7 @@ export function createNewGame(now: Date, seed = Math.floor(Math.random() * 1e9))
     memories: [],
     entrusted: [],
     house: defaultHouse(),
+    post: { letters: [], inbox: null, nextAt: null },
     settings: { ...DEFAULT_SETTINGS },
     meta: { firstDistribution: distribution().id, lastDistribution: distribution().id },
     onboarding: newOnboarding(),
@@ -495,6 +518,7 @@ export function normalizeSave(raw: unknown): SaveData | null {
     memories: data.memories ?? [],
     entrusted: Array.isArray(data.entrusted) ? data.entrusted : [],
     house: normalizeHouse(data.house),
+    post: normalizePost((data as { post?: unknown }).post),
     meta: { firstDistribution: data.meta?.firstDistribution ?? distribution().id, lastDistribution: distribution().id },
     onboarding: normalizeOnboarding(data.onboarding),
     // una partita di una versione più nuova del gioco resta alla sua versione (le sue migrazioni sono già fatte)

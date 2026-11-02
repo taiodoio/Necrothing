@@ -94,7 +94,7 @@ export function addPresences(g: THREE.Object3D, v: PVis) {
   if (PRESENCE_TYPES.has(v.type)) addCast(g, v.type);
   if (isPetHouse(v.type)) addPet(g, visualOf(v.type, v.variant).variant);
   // la testa dello spaventapasseri è una parte animata: in miniatura c'è lo stesso
-  if (v.type === 'scarecrow') { const anim = createAnimated(v); if (anim) { anim.update(30); g.add(anim.root); } }
+  if (v.type === 'scarecrow' || v.type === 'carnivorous_plant') { const anim = createAnimated(v); if (anim) { anim.update(30); g.add(anim.root); } }
 }
 
 /** Chi abita la casetta, fuori: cane e coniglio davanti, il gatto sul tiragraffi, la papera nella pozza, il corvo sul nido. */

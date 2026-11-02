@@ -146,7 +146,7 @@ export function foodTruckLP(v: PVis): LPModel {
   band.moveTo(-1.3, 0.3); band.lineTo(XR - 0.3, 0.3); band.absarc(XR, 0.22, 0.3, Math.PI * 0.85, Math.PI * 0.15, true);
   band.lineTo(XF - 0.3, 0.3); band.absarc(XF, 0.22, 0.3, Math.PI * 0.85, Math.PI * 0.15, true);
   band.lineTo(1.28, 0.3); band.lineTo(1.28, 0.56); band.lineTo(-1.32, 0.56); band.closePath();
-  for (const s of [-1, 1]) lp.push([0, 0, s > 0 ? HW + 0.002 : -HW - 0.014]).plate(band, 0.012, BAND, { ao: 0 }).pop();
+  for (const s of [-1, 1]) lp.push([0, 0, s > 0 ? HW + 0.004 : -HW - 0.016]).plate(band, 0.012, BAND, { ao: 0 }).pop();
   for (const s of [-1, 1]) lp.push([0, 0.56, s * (HW + 0.012)]).box(0, 0, 0, 2.5, 0.035, 0.012, ROOF, { jitter: 0, ao: 0 }).pop();
   lp.push([-0.12, 1.43, 0]).box(0, 0, 0, 1.95, 0.05, W - 0.04, ROOF, { bevel: 0.02 }).pop();
   for (let i = 0; i < 6; i++) lp.box(-1.0 + i * 0.36, 1.48, 0, 0.03, 0.012, W - 0.1, '#cfc4a8', { jitter: 0, ao: 0 }); // nervature
@@ -209,7 +209,7 @@ export function foodTruckLP(v: PVis): LPModel {
     rod(lp, [1.085, 0.82, s * 0.36], [1.08, 0.96, s * 0.12], 0.008, '#2a2226'); // tergicristallo
   }
   lp.box(1.075, 0.78, 0, 0.03, 0.5, 0.04, TRIM, { jitter: 0 }); // montante in mezzo
-  for (const s of [-1, 1]) lp.push([0, 0, s > 0 ? HW + 0.002 : -HW - 0.01]).plate(poly([[0.56, 0.8], [1.0, 0.8], [1.0, 1.2], [0.56, 1.22]]), 0.008, glass, { ao: 0 }).pop(); // finestrini della cabina
+  for (const s of [-1, 1]) lp.push([0, 0, s > 0 ? HW + 0.004 : -HW - 0.012]).plate(poly([[0.56, 0.8], [1.0, 0.8], [1.0, 1.2], [0.56, 1.22]]), 0.008, glass, { ao: 0 }).pop(); // finestrini della cabina
   for (const s of [-1, 1]) lp.box(0.5, 0.3, s * (HW + 0.008), 0.012, 0.9, 0.006, TRIM, { jitter: 0, ao: 0 }); // fessura della portiera
   lp.box(0.62, 0.7, HW + 0.02, 0.07, 0.015, 0.02, CHROME, { jitter: 0, bucket: 'gloss' }); // maniglia
   lp.push([1.0, 1.0, HW + 0.06]).cyl(0, 0, 0, 0.008, 0.008, 0.1, 4, LPC.iron, { jitter: 0 }).blob(0, 0.12, 0.02, 0.025, 0.045, 0.012, CHROME, { jitter: 0, bucket: 'gloss' }).pop();
@@ -571,11 +571,11 @@ export function flowerKioskLP(v: PVis): LPModel {
   for (const s of [-1, 1]) lp.box(s * 0.3, 0, 0, 0.03, 0.14, 0.03, LPC.iron, { jitter: 0 });
   lp.push([0, 0.12, 0]);
   lp.extrude(roundTopShape(0.86, 0.32, 7), 0.05, '#e8dcc0', { bevel: 0.012 });
-  lp.push([0, 0, 0.026]).plate(roundTopShape(0.76, 0.24, 7, 0.04), 0.004, '#3b2a3f', { ao: 0 }).pop();
-  lp.blob(-0.18, 0.17, 0.032, 0.05, 0.05, 0.01, '#c44a5a', { jitter: 0 }); lp.blob(-0.18, 0.17, 0.04, 0.02, 0.02, 0.006, '#9e4b45', { jitter: 0 });
-  lp.box(-0.18, 0.08, 0.032, 0.008, 0.06, 0.004, '#5c8a3e', { jitter: 0 });
-  lp.blob(0.05, 0.16, 0.032, 0.04, 0.04, 0.008, LPC.bone, { jitter: 0 }); for (const sx of [-1, 1]) lp.blob(0.05 + sx * 0.014, 0.165, 0.04, 0.008, 0.009, 0.003, LPC.charcoal, { jitter: 0 });
-  for (let i = 0; i < 3; i++) lp.box(0.22, 0.1 + i * 0.05, 0.032, 0.14 - i * 0.03, 0.012, 0.004, '#e8dcc0', { jitter: 0, ao: 0 }); // «scritte»
+  lp.push([0, 0, 0.029]).plate(roundTopShape(0.76, 0.24, 7, 0.04), 0.004, '#3b2a3f', { ao: 0 }).pop();
+  lp.blob(-0.18, 0.17, 0.036, 0.05, 0.05, 0.01, '#c44a5a', { jitter: 0 }); lp.blob(-0.18, 0.17, 0.044, 0.02, 0.02, 0.006, '#9e4b45', { jitter: 0 });
+  lp.box(-0.18, 0.08, 0.036, 0.008, 0.06, 0.004, '#5c8a3e', { jitter: 0 });
+  lp.blob(0.05, 0.16, 0.036, 0.04, 0.04, 0.008, LPC.bone, { jitter: 0 }); for (const sx of [-1, 1]) lp.blob(0.05 + sx * 0.014, 0.165, 0.044, 0.008, 0.009, 0.003, LPC.charcoal, { jitter: 0 });
+  for (let i = 0; i < 3; i++) lp.box(0.22, 0.1 + i * 0.05, 0.036, 0.14 - i * 0.03, 0.012, 0.004, '#e8dcc0', { jitter: 0, ao: 0 }); // «scritte»
   lp.pop();
   lp.pop();
   // corvo appollaiato sul colmo
@@ -693,9 +693,9 @@ export function postOfficeLP(v: PVis): LPModel {
   const pedIn = poly([[-W / 2 + 0.16, 0.06], [W / 2 - 0.16, 0.06], [0, 0.48]]);
   lp.push([0, 0, 0.082]).plate(pedIn, 0.006, WALL_D, { ao: 0 }).pop();
   slab(lp, [-W / 2 - 0.06, -0.01], [0, 0.6], 0.2, 0.06, TRIM, { bevel: 0.008 }); slab(lp, [0, 0.6], [W / 2 + 0.06, -0.01], 0.2, 0.06, TRIM, { bevel: 0.008 }); // cornici inclinate
-  lp.push([0, 0.24, 0.088]).add(new THREE.CircleGeometry(0.11, 12), glow('#f0b45f').color, { bucket: glow('#f0b45f').bucket, jitter: 0, ao: 0 }).pop();
-  lp.push([0, 0.24, 0.09]).add(new THREE.TorusGeometry(0.115, 0.02, 4, 14), TRIM, { jitter: 0, ao: 0 }).pop();
-  for (const a of [0, Math.PI / 2]) lp.push([0, 0.24, 0.094], 0, 0, a).box(0, -0.11, 0, 0.012, 0.22, 0.006, TRIM, { jitter: 0, ao: 0 }).pop();
+  lp.push([0, 0.24, 0.093]).add(new THREE.CircleGeometry(0.11, 12), glow('#f0b45f').color, { bucket: glow('#f0b45f').bucket, jitter: 0, ao: 0 }).pop();
+  lp.push([0, 0.24, 0.095]).add(new THREE.TorusGeometry(0.115, 0.02, 4, 14), TRIM, { jitter: 0, ao: 0 }).pop();
+  for (const a of [0, Math.PI / 2]) lp.push([0, 0.24, 0.1], 0, 0, a).box(0, -0.11, 0, 0.012, 0.22, 0.006, TRIM, { jitter: 0, ao: 0 }).pop();
   // in cima: piedistallo e la grande busta di ferro battuto col sigillo
   lp.push([0, 0.58, 0]);
   lp.box(0, -0.04, 0, 0.18, 0.1, 0.16, TRIM, { bevel: 0.01 });
@@ -717,7 +717,7 @@ export function postOfficeLP(v: PVis): LPModel {
   lp.push([0, 0, 0.03]).plate(roundTopShape(0.62, 0.9, 8), 0.02, DOOR, { ao: 0 }).pop();
   lp.box(0, 0, 0.05, 0.012, 0.66, 0.008, '#1f3329', { jitter: 0, ao: 0 });
   for (const s of [-1, 1]) for (const y of [0.12, 0.42]) lp.box(s * 0.15, y, 0.052, 0.2, 0.2, 0.006, '#28413a', { jitter: 0, ao: 0 }); // riquadri
-  lp.push([0, 0.69, 0.052]).plate(roundTopShape(0.5, 0.18, 6, -0.02), 0.004, glow('#f0b45f').color, { bucket: glow('#f0b45f').bucket, ao: 0 }).pop(); // lunetta
+  lp.push([0, 0.69, 0.055]).plate(roundTopShape(0.5, 0.18, 6, -0.02), 0.004, glow('#f0b45f').color, { bucket: glow('#f0b45f').bucket, ao: 0 }).pop(); // lunetta
   for (const s of [-1, 1]) lp.blob(s * 0.05, 0.36, 0.06, 0.018, 0.018, 0.012, LPC.gold, { jitter: 0 });
   lp.box(-0.15, 0.24, 0.056, 0.12, 0.025, 0.006, LPC.gold, { jitter: 0 }); // feritoia per le lettere
   skull(lp, 0, 0.92, 0.02, 0.4);
@@ -726,22 +726,23 @@ export function postOfficeLP(v: PVis): LPModel {
   for (const s of [-1, 1]) {
     lp.push([s * 0.8, 0.48, FZ + 0.002]);
     lp.plate(roundTopShape(0.4, 0.74, 7), 0.03, TRIM, { ao: 0 });
-    lp.push([0, 0.04, 0.02]).plate(roundTopShape(0.3, 0.64, 7), 0.01, glow('#f0b45f').color, { bucket: glow('#f0b45f').bucket, ao: 0 }).pop();
-    lp.box(0, 0.04, 0.035, 0.02, 0.6, 0.008, TRIM, { jitter: 0, ao: 0 });
-    lp.box(0, 0.34, 0.035, 0.3, 0.02, 0.008, TRIM, { jitter: 0, ao: 0 });
-    for (const x of [-0.09, 0.09]) lp.box(x, 0.04, 0.045, 0.012, 0.5, 0.012, LPC.iron, { jitter: 0, ao: 0 });
-    lp.box(0, -0.04, 0.05, 0.46, 0.04, 0.1, TRIM, { bevel: 0.006 });
+    // (il vetro sta 4 mm davanti alla cornice: sullo stesso piano sfarfallavano)
+    lp.push([0, 0.04, 0.034]).plate(roundTopShape(0.3, 0.64, 7), 0.006, glow('#f0b45f').color, { bucket: glow('#f0b45f').bucket, ao: 0 }).pop();
+    lp.box(0, 0.04, 0.046, 0.02, 0.6, 0.008, TRIM, { jitter: 0, ao: 0 });
+    lp.box(0, 0.34, 0.046, 0.3, 0.02, 0.008, TRIM, { jitter: 0, ao: 0 });
+    for (const x of [-0.09, 0.09]) lp.box(x, 0.04, 0.056, 0.012, 0.5, 0.012, LPC.iron, { jitter: 0, ao: 0 });
+    lp.box(0, -0.04, 0.06, 0.46, 0.04, 0.12, TRIM, { bevel: 0.006 });
     // dentro, contro il vetro: pile di lettere e un pacco
-    lp.box(s * -0.08, 0.0, 0.03, 0.14, 0.08, 0.02, '#c9a27a', { jitter: 0, ao: 0 });
+    lp.box(s * -0.08, 0.04, 0.042, 0.14, 0.08, 0.006, '#c9a27a', { jitter: 0, ao: 0 });
     lp.pop();
   }
   // fianchi: due finestre ad arco per lato; dietro: porta di servizio e pluviale
   for (const s of [-1, 1]) for (const z of [-0.38, 0.26]) {
     lp.push([s * (W / 2 + 0.002), 0.5, z], s * Math.PI / 2);
     lp.plate(roundTopShape(0.36, 0.62, 7), 0.025, TRIM, { ao: 0 });
-    lp.push([0, 0.04, 0.015]).plate(roundTopShape(0.26, 0.52, 7), 0.012, glow('#f0b45f').color, { bucket: glow('#f0b45f').bucket, ao: 0 }).pop();
-    lp.box(0, 0.04, 0.03, 0.016, 0.48, 0.008, TRIM, { jitter: 0, ao: 0 });
-    lp.box(0, -0.04, 0.04, 0.42, 0.04, 0.08, TRIM, { bevel: 0.006 });
+    lp.push([0, 0.04, 0.029]).plate(roundTopShape(0.26, 0.52, 7), 0.006, glow('#f0b45f').color, { bucket: glow('#f0b45f').bucket, ao: 0 }).pop();
+    lp.box(0, 0.04, 0.041, 0.016, 0.48, 0.008, TRIM, { jitter: 0, ao: 0 });
+    lp.box(0, -0.04, 0.05, 0.42, 0.04, 0.1, TRIM, { bevel: 0.006 });
     lp.pop();
   }
   lp.push([0.55, 0.14, -D / 2 - 0.002], Math.PI);
@@ -845,7 +846,7 @@ export function huntersCarLP(v: PVis): LPModel {
   // vetri laterali (due per lato, col montante in mezzo), parabrezza e lunotto
   const front = poly([[-0.06, 0.64], [0.46, 0.64], [0.23, 0.89], [-0.06, 0.89]]);
   const rear = poly([[-0.74, 0.64], [-0.14, 0.64], [-0.14, 0.89], [-0.42, 0.89], [-0.54, 0.85]]);
-  for (const s of [-1, 1]) for (const g of [front, rear]) lp.push([0, 0, s > 0 ? 0.422 : -0.43]).plate(g, 0.008, GLASS, { ao: 0, bucket: lit ? 'glow' : 'solid' }).pop();
+  for (const s of [-1, 1]) for (const g of [front, rear]) lp.push([0, 0, s > 0 ? 0.424 : -0.432]).plate(g, 0.008, GLASS, { ao: 0, bucket: lit ? 'glow' : 'solid' }).pop();
   slab(lp, [0.26, 0.9], [0.56, 0.58], 0.74, 0.014, GLASS, { jitter: 0, ao: 0, bucket: 'gloss' }, 0.86, CB);
   slab(lp, [-0.84, 0.58], [-0.58, 0.88], 0.74, 0.014, GLASS, { jitter: 0, ao: 0, bucket: 'gloss' }, 0.84, CB);
   // filetti cromati lungo i fianchi e attorno ai vetri, portiere, maniglie, specchietti

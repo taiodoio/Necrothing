@@ -289,6 +289,24 @@ const ICONS: Record<string, () => Poly[]> = {
   // 5 · Lord of Decay: il teschio con la corona
   rankLord: () => [...tf(ICONS.skull(), 0.82, 2.2, 4.6), ...fan([[5.6, 7.4], [7.2, 2.6], [9.8, 5.4], [12, 0.8], [14.2, 5.4], [16.8, 2.6], [18.4, 7.4]], T.gold, [10, 4.6]),
     ...disc(12, 1.2, 1.1, T.crimson, 6)],
+  // il recinto del cimitero com'è nella scena: due pilastri di pietra col cappello e l'inferriata con le punte, sul prato
+  enclosure: () => [...fan(ngon(12, 20.6, 11, 12, 0, 0.2), T.leaf, [9, 19.6]),
+    ...[8.2, 10.6, 13.4, 15.8].flatMap((x) => [...bar(x, 9.2, x, 19.6, 1.3, T.iron), ...fan([[x - 1.1, 9.4], [x, 6.6], [x + 1.1, 9.4]], T.iron, [x - 0.3, 8.6])]),
+    ...bar(5.6, 11.6, 18.4, 11.6, 1.2, T.iron), ...bar(5.6, 17, 18.4, 17, 1.2, T.iron),
+    ...rrect(1.8, 7.4, 6.2, 20.6, 0.6, T.stone, [3, 10]), ...fan([[1.2, 7.6], [4, 4], [6.8, 7.6]], T.stone, [3.4, 6]), ...disc(4, 3.6, 0.9, T.flame, 6),
+    ...rrect(17.8, 7.4, 22.2, 20.6, 0.6, T.stone, [19, 10]), ...fan([[17.2, 7.6], [20, 4], [22.8, 7.6]], T.stone, [19.4, 6]), ...disc(20, 3.6, 0.9, T.flame, 6)],
+  // i distretti: tre lapidi diverse vicine (tonda, croce, piccola) su una collinetta d'erba, con un fiore
+  graves: () => [...fan(ngon(12, 19.4, 11, 12, 0, 0.3), T.leaf, [8.6, 17.6]),
+    ...stone(2.6, 8.4, 9.4, 19.8, T.stone),
+    ...bar(15.6, 5.4, 15.6, 19.6, 2.6, T.paper), ...bar(12.4, 9.2, 18.8, 9.2, 2.6, T.paper),
+    ...stone(9.2, 12.6, 14.4, 20.6, ['#d8d3e0', '#a9a3b6', '#7d778c']),
+    ...bar(4.6, 12.6, 7.4, 12.6, 0.9, T.iron), ...bar(4.6, 15, 7.4, 15, 0.9, T.iron),
+    ...disc(19.6, 18.2, 1.5, T.pink, 6), ...disc(19.6, 18.2, 0.6, T.gold, 6)],
+  // compra: la borsa delle monete col fuoco fatuo davanti e il «+» verde
+  buy: () => [...fan([[6.6, 10.6], [17.4, 10.6], [20.2, 15.2], [19.2, 20.2], [15.8, 22.2], [8.2, 22.2], [4.8, 20.2], [3.8, 15.2]], T.wood, [9, 13]),
+    ...fan([[7.4, 8], [9.6, 4.6], [12, 6.6], [14.4, 4.6], [16.6, 8], [15.4, 10.8], [8.6, 10.8]], T.wood, [10, 6.5]), ...bar(8, 10.2, 16, 10.2, 1.6, T.red),
+    ...fan([[12, 12.2], [13.9, 15.4], [13.6, 18.2], [12, 19.4], [10.4, 18.2], [10.1, 15.4]], T.spectral, [11.4, 15]),
+    ...disc(19.2, 5, 3.9, T.leaf, 10), ...bar(19.2, 3, 19.2, 7, 1.3, T.ghost), ...bar(17.2, 5, 21.2, 5, 1.3, T.ghost)],
   angled: () => [...P([[12, 3], [20.4, 7.6], [12, 12.2], [3.6, 7.6]], T.stone[0]), ...P([[3.6, 7.6], [12, 12.2], [12, 21.4], [3.6, 16.8]], T.stone[1]), ...P([[12, 12.2], [20.4, 7.6], [20.4, 16.8], [12, 21.4]], T.stone[2])],
 };
 

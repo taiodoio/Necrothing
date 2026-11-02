@@ -29,14 +29,14 @@ export function hydrateIcons(root: ParentNode = document) {
 }
 
 export const ACH_ICONS: Record<string, string> = {
-  first_burial: 'shovel', five_graves: 'district', ten_graves: 'district', twentyfive_graves: 'district',
+  first_burial: 'shovel', five_graves: 'graves', ten_graves: 'graves', twentyfive_graves: 'graves',
   abstract_grief: 'heart', variety_5: 'variant', all_categories: 'book',
   florist: 'flower', green_thumb: 'flower', gardener_master: 'flower',
   caretaker: 'broom', caretaker_silver: 'broom', fixer: 'hammer',
   haunted: 'ghost', ghost_whisperer: 'ghost', socialite: 'paw', decorator: 'pumpkin',
   spender: 'wisp', photographer: 'photo', mausoleum_built: 'mausoleum',
   district_gothic: 'bat', district_natural: 'tree', district_tech: 'gear', master_planner: 'top',
-  expansion: 'fence',
+  expansion: 'enclosure',
   // un traguardo per rango, ognuno con l'icona del suo titolo (le stesse della festa del nuovo rango)
   rank_2: 'rankScrapper', rank_3: 'rankSilicon', rank_4: 'rankReaper', rank_5: 'rankLord',
 };

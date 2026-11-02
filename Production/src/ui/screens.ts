@@ -336,6 +336,11 @@ export const needRows = (needs: UnlockNeed[]) => needs.length ? h('div', { class
     n.progress ? h('div', { class: 'xp-bar', style: 'height:6px' }, h('i', { style: `width:${Math.min(100, Math.round((n.progress[0] / Math.max(1, n.progress[1])) * 100))}%` })) : null)))) : null;
 
 /** Testo del pulsante d'acquisto (o del perché non si può). */
+/** Il contenuto del pulsante «Compra» (Bottega, Casa): l'icona, la parola e il prezzo in una capsula col fuoco fatuo, su una riga. */
+export function buyContent(cost: number): HTMLElement[] {
+  return [icon('buy', 22), h('span', {}, t('shop.buy.short')), h('span', { class: 'cost-pill' }, icon('wisp', 14), String(cost))];
+}
+
 function buyText(s: SaveData, d: PlaceableDef, av: R.ShopAvailability, qty: number): string {
   switch (av) {
     case 'ok': return d.cost ? t('shop.buy.cta', { n: d.cost * qty }) : t('shop.buy.free');
@@ -439,7 +444,7 @@ export function openShop(ui: UI, cat: PlaceableCategory | 'house' = 'light', sel
         h('button', { onclick: () => { qty = Math.min(max, qty + 1); again(); } }, '+')) : null,
       av === 'ok' && d.cost ? h('p', { class: 'muted after-buy' }, t('shop.detail.afterBuy', { n: s.player.wisps - d.cost * qty, amount: (s.player.wisps - d.cost * qty).toLocaleString(currentLang()) })) : null,
       ((b: HTMLElement) => h('div', { class: 'row' }, h('button', { class: 'big-btn ghost', onclick: close }, t('shop.detail.close')), b))(h('button', {
-        class: 'big-btn', disabled: av !== 'ok',
+        class: av === 'ok' && d.cost ? 'big-btn buy-btn' : 'big-btn', disabled: av !== 'ok',
         onclick: () => {
           if (!game.act((st, n) => R.buy(st, d.id, qty, n))) return;
           signalOnboarding('itemBought');
@@ -460,7 +465,7 @@ export function openShop(ui: UI, cat: PlaceableCategory | 'house' = 'light', sel
             h('div', { class: 'shop-detail-top' }, itemImg(d.id, 'lit-hero'), h('h3', {}, d.label), h('p', { class: 'muted' }, text)),
             h('div', { class: 'row' }, h('button', { class: 'big-btn ghost', onclick: close }, t('shop.bought.continue')), go)));
         },
-      }, av === 'ok' && d.cost ? h('span', { style: 'display:inline-flex;align-items:center;gap:6px' }, t('shop.buy.ctaShort', { n: d.cost * qty }), icon('wisp', 18)) : buyText(s, d, av, qty))),
+      }, ...(av === 'ok' && d.cost ? buyContent(d.cost * qty) : [buyText(s, d, av, qty)]))),
     );
   };
   // la scheda «Casa»: tetti e aggiunte, comprati dallo stesso modale
@@ -745,8 +750,8 @@ function keeperTab(ui: UI, openLook: () => void): HTMLElement {
       statChip('prestige', String(computePrestige(s)), t('player.prestige'), `${t('player.prestige')}: ${computePrestige(s)}`)),
     h('div', { class: 'section-title' }, t('player.section.cemetery')),
     h('div', { class: 'pl-stats' },
-      statRow('fence', t('player.fence'), fence, null, true),
-      statRow('district', t('player.districts'), districts.length ? districts.map((d) => DISTRICT_LABELS[d.theme]).join(', ') : t('player.districts.none'), null, true)));
+      statRow('enclosure', t('player.fence'), fence, null, true),
+      statRow('graves', t('player.districts'), districts.length ? districts.map((d) => DISTRICT_LABELS[d.theme]).join(', ') : t('player.districts.none'), null, true)));
 }
 
 /** I traguardi: in testa quanti se ne hanno, poi una carta per ciascuno col suo medaglione (prima quelli ottenuti). */

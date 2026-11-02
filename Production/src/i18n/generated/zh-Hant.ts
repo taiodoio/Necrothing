@@ -1490,5 +1490,13 @@ export default {
   "item.effect.pet": "寵物會跟著你，不時為你帶來幾個鬼火。點牠可以召喚、放牠玩耍、送回家、撫摸或丟骨頭。",
   "item.effect.vampireCrypt": "吸血鬼可能會咬你：你會變成蝙蝠{s}秒。",
   "item.effect.mysticStaff": "可以遠距離收集鬼火。",
-  "item.effect.speed": "守墓人的速度提升到{x}倍。"
+  "item.effect.speed": "守墓人的速度提升到{x}倍。",
+  "hud.tools.panShort": "地圖",
+  "hud.tools.moveShort": "移動",
+  "hud.tools.drawShort": "繪製",
+  "hud.tools.panHintPlace": "拖動地圖移動視角，雙指縮放。",
+  "hud.place.buy": "購買",
+  "shop.buy.short": "購買",
+  "hud.trace.needBuy": "你有{have}個：還差{n}個。點擊下方的「購買」（{cost}個鬼火），然後確認。",
+  "hud.trace.noFunds": "還差{n}個，但鬼火不夠：去掉幾塊，或確認已有的。"
 } satisfies Record<string, string>;

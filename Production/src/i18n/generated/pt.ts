@@ -1490,5 +1490,13 @@ export default {
   "item.effect.pet": "O animal segue-te e de vez em quando traz-te alguns fogos-fátuos. Toca-lhe para o chamar, soltar, mandar para casa, acariciar ou atirar o osso.",
   "item.effect.vampireCrypt": "O vampiro pode morder-te: durante {s} segundos transformas-te num morcego.",
   "item.effect.mysticStaff": "Apanha fogos-fátuos à distância.",
-  "item.effect.speed": "O Guardião anda {x} vezes mais depressa."
+  "item.effect.speed": "O Guardião anda {x} vezes mais depressa.",
+  "hud.tools.panShort": "Mapa",
+  "hud.tools.moveShort": "Mover",
+  "hud.tools.drawShort": "Desenhar",
+  "hud.tools.panHintPlace": "Arrasta o mapa para te moveres e usa dois dedos para ampliar.",
+  "hud.place.buy": "Comprar",
+  "shop.buy.short": "Comprar",
+  "hud.trace.needBuy": "Tens {have}: faltam {n}. Toca em «Comprar» em baixo ({cost} fogos-fátuos) e depois confirma.",
+  "hud.trace.noFunds": "Faltam {n}, mas não tens fogos-fátuos suficientes: tira algumas peças ou confirma as que tens."
 } satisfies Record<string, string>;

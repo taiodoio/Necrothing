@@ -1490,5 +1490,13 @@ export default {
   "item.effect.pet": "동물이 따라다니며 가끔 도깨비불을 가져와요. 탭해서 부르고 풀어 주거나 집에 보내고, 쓰다듬거나 뼈를 던져 주세요.",
   "item.effect.vampireCrypt": "뱀파이어에게 물리면 {s}초 동안 박쥐가 돼요.",
   "item.effect.mysticStaff": "멀리서도 도깨비불을 모아요.",
-  "item.effect.speed": "묘지기가 {x}배 빨라져요."
+  "item.effect.speed": "묘지기가 {x}배 빨라져요.",
+  "hud.tools.panShort": "지도",
+  "hud.tools.moveShort": "이동",
+  "hud.tools.drawShort": "그리기",
+  "hud.tools.panHintPlace": "지도를 드래그해 이동하고 두 손가락으로 확대하세요.",
+  "hud.place.buy": "구매",
+  "shop.buy.short": "구매",
+  "hud.trace.needBuy": "{have}개 있어요. {n}개가 부족해요. 아래 ‘구매’(도깨비불 {cost}개)를 누른 뒤 확인하세요.",
+  "hud.trace.noFunds": "{n}개가 부족한데 도깨비불이 모자라요. 몇 개를 빼거나 가진 만큼만 확인하세요."
 } satisfies Record<string, string>;

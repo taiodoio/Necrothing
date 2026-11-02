@@ -1490,5 +1490,13 @@ export default {
   "item.effect.pet": "L’animal te suit et t’apporte de temps en temps quelques feux follets. Touche-le pour l’appeler, le laisser courir, le renvoyer, le caresser ou lui lancer l’os.",
   "item.effect.vampireCrypt": "Le vampire peut te mordre : pendant {s} secondes, tu deviens une chauve-souris.",
   "item.effect.mysticStaff": "Ramasse les feux follets de loin.",
-  "item.effect.speed": "Le Gardien va {x} fois plus vite."
+  "item.effect.speed": "Le Gardien va {x} fois plus vite.",
+  "hud.tools.panShort": "Carte",
+  "hud.tools.moveShort": "Déplacer",
+  "hud.tools.drawShort": "Tracer",
+  "hud.tools.panHintPlace": "Fais glisser la carte pour te déplacer et pince pour zoomer.",
+  "hud.place.buy": "Acheter",
+  "shop.buy.short": "Acheter",
+  "hud.trace.needBuy": "Tu en as {have} : il en manque {n}. Touche « Acheter » ci-dessous ({cost} feux follets), puis confirme.",
+  "hud.trace.noFunds": "Il en manque {n}, mais tu n’as pas assez de feux follets : retire quelques pièces ou confirme celles que tu as."
 } satisfies Record<string, string>;

@@ -1490,5 +1490,13 @@ export default {
   "item.effect.pet": "Das Tier folgt dir und bringt dir ab und zu ein paar Irrlichter. Tippe es an, um es zu rufen, freizulassen, heimzuschicken, zu streicheln oder den Knochen zu werfen.",
   "item.effect.vampireCrypt": "Der Vampir kann dich beißen: {s} Sekunden lang wirst du zur Fledermaus.",
   "item.effect.mysticStaff": "Sammle Irrlichter aus der Ferne.",
-  "item.effect.speed": "Der Hüter ist {x}-mal so schnell."
+  "item.effect.speed": "Der Hüter ist {x}-mal so schnell.",
+  "hud.tools.panShort": "Karte",
+  "hud.tools.moveShort": "Bewegen",
+  "hud.tools.drawShort": "Zeichnen",
+  "hud.tools.panHintPlace": "Ziehe die Karte zum Bewegen und zoome mit zwei Fingern.",
+  "hud.place.buy": "Kaufen",
+  "shop.buy.short": "Kaufen",
+  "hud.trace.needBuy": "Du hast {have}: Es fehlen {n}. Tippe unten auf „Kaufen“ ({cost} Irrlichter) und bestätige dann.",
+  "hud.trace.noFunds": "Es fehlen {n}, aber du hast nicht genug Irrlichter: Entferne ein paar Teile oder bestätige die, die du hast."
 } satisfies Record<string, string>;

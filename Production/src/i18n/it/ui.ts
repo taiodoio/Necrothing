@@ -85,6 +85,10 @@ export default {
   'hud.tools.undo': 'Annulla ultima modifica',
   'hud.tools.drawGuide': 'Tocca {hand} per spostarti sulla mappa. Tocca {tool} per disegnare.',
   'hud.tools.moveGuide': 'Tocca {hand} per spostarti sulla mappa. Tocca {tool} per selezionare e spostare un oggetto.',
+  'hud.tools.panShort': 'Mappa',
+  'hud.tools.moveShort': 'Sposta',
+  'hud.tools.drawShort': 'Disegna',
+  'hud.tools.panHintPlace': 'Trascina la mappa per spostarti; usa due dita per zoomare.',
   'hud.tools.panHint': 'Trascina la mappa per spostarti; usa due dita per zoomare. Tocca un elemento per i dettagli.',
   'hud.tools.moveHint': 'Tocca un elemento per i dettagli o trascinalo per spostarlo.',
   'hud.tools.drawHint': 'Tocca la mappa per aggiungere o togliere un elemento. Trascina sulla mappa per tracciare: il percorso curva automaticamente.',
@@ -93,6 +97,8 @@ export default {
   // tracciando sentieri e recinti, prima di cominciare
   'hud.trace.hint': 'Trascina il dito sul terreno per tracciare: quando giri, il tracciato piega da solo. Due dita spostano la vista.',
   // tracciando: pezzi pronti da posare
+  'hud.trace.needBuy': 'Ne hai {have}: ne mancano {n}. Tocca «Compra» qui sotto ({cost} fuochi fatui), poi conferma.',
+  'hud.trace.noFunds': 'Ne mancano {n}, ma non hai abbastanza fuochi fatui: togli qualche pezzo o conferma quelli che hai.',
   'hud.trace.ok': '{n} da posare',
   // tracciando: pezzi che non si hanno
   'hud.trace.short': 'ne mancano {n}',
@@ -107,6 +113,7 @@ export default {
   // per i lettori di schermo: la X che esce dal tracciamento
   'hud.place.exit': 'Esci',
   // breve: pulsante
+  'hud.place.buy': 'Compra',
   'hud.place.confirm': 'Conferma',
   // breve: pulsante
   'hud.place.rotate': 'Ruota',

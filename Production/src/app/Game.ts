@@ -735,7 +735,7 @@ export class Game {
 
   canUndoTool() { return this.placement?.trace ? this.placement.trace.history.length > 0 : this.placement?.kind === 'item' ? !!this.placement.history?.length : this.moveHistory.length > 0; }
 
-  private toolControlsActive() { return this.placement?.kind === 'item' || (this.editMode && !this.placement); }
+  private toolControlsActive() { return this.placement?.kind === 'item' || this.placement?.kind === 'grave' || (this.editMode && !this.placement); }
 
   setToolMode(mode: 'pan' | 'work') {
     this.toolMode = mode;
@@ -874,6 +874,7 @@ export class Game {
     if (!spot) { toast(t('game.noSpace.grave')); return; }
     this.select(null);
     this.placement = { kind: 'grave', draft, x: spot.x, y: spot.y, rot: 0, valid: true };
+    this.toolMode = 'work';
     this.rig.follow = null;
     this.rig.jumpTo(cellCenter(spot.x, spot.y, GRAVE_FOOTPRINT));
     this.refreshPlacement();
@@ -990,6 +991,16 @@ export class Game {
     if (!p || p.kind !== 'item' || !CATALOG[p.type!].rotatable) return;
     p.history?.push({ x: p.x, y: p.y, rot: p.rot });
     p.rot = (p.rot + 1) % 4;
+    this.refreshPlacement();
+  }
+
+  /** «Riponi» mentre si posa: l'oggetto resta nell'inventario e si resta in Modifica (si esce con la X o la spunta). */
+  storePlacement() {
+    const p = this.placement;
+    if (!p || p.kind !== 'item' || p.trace) return;
+    this.placement = null;
+    toast(t('rules.store.done', { item: CATALOG[p.type!].label }));
+    this.setEditMode(true);
     this.refreshPlacement();
   }
 
@@ -1116,7 +1127,8 @@ export class Game {
       return;
     }
     if (this.placement) {
-      if (this.placement.kind === 'item' && this.toolMode === 'pan') return;
+      // con la mano si sposta solo la vista (oggetti e tombe)
+      if (this.toolControlsActive() && this.toolMode === 'pan') return;
       const g = this.groundCell(x, y);
       if (!g) return;
       const fp = this.placementFp();

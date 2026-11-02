@@ -18,7 +18,7 @@ export function openExpansionOffer(ui: UI, level: number) {
   const game = ui.game;
   const area = EXPANSION[level];
   openDrawer(t('area.offer.title'), h('div', {},
-    h('div', { class: 'ach got', style: 'margin-bottom:10px' }, h('div', { class: 'ico' }, icon('fence', 30)),
+    h('div', { class: 'ach got', style: 'margin-bottom:10px' }, h('div', { class: 'ico' }, icon('enclosure', 30)),
       h('div', {}, h('b', {}, area.label), h('p', {}, t('area.offer.grow', { size: sizeOf(level), now: sizeOf(game.state.world.expansionLevel) })))),
     h('p', {}, t('area.offer.text')),
   ), {

@@ -347,7 +347,9 @@ export class Game {
     if (this.frameSamples.length > 120) this.frameSamples.shift();
     const t = this.clock.elapsedTime;
     // Auto giudica solo i frame al ritmo pieno (da fermo o sotto un menù il gioco rallenta apposta)
-    if (this.auto) { if (cap === this.frameCap) this.autoFrame(raw); else this.auto.hold(); }
+    // e niente giudizi nel cortile del tutorial: lì convivono due cimiteri in memoria, e cambiare la resa
+    // a metà di un passo è il momento in cui un telefono rischia di chiudere l'app
+    if (this.auto) { if (cap === this.frameCap && !this.inYard) this.autoFrame(raw); else this.auto.hold(); }
 
     const menu = drawerOpen() || uiBlocking();
     if (!menu) {

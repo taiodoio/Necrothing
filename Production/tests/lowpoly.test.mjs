@@ -984,3 +984,13 @@ test('chi parla accanto al suo oggetto: c’è davvero (i fratelli, il postino, 
   // i fratelli restano accanto all'auto anche rotta (il fumetto c'è sempre)
   assert.ok(presenceLayout({ type: 'ghost_hunters', broken: true }, { night: false, tier: 'high' }).cast.some((c) => c.kind === 'hunterA'));
 });
+
+test('ogni oggetto con luce si spegne davvero col comando (luci e bagliore cambiano)', () => {
+  const v2 = (type, lit) => ({ type, variant: 0, seed: 1, dirty: false, broken: false, lit });
+  for (const d of Object.values(CATALOG).filter((x) => x.light)) {
+    const on = resolveLowpoly(placeableKey(v2(d.id, true)))(), off = resolveLowpoly(placeableKey(v2(d.id, false)))();
+    const glow = (m) => m.geometries.glow?.getAttribute('position').count ?? 0;
+    assert.ok(on.lights.length !== off.lights.length || glow(on) !== glow(off), `${d.id}: acceso e spento uguali`);
+    assert.ok(off.lights.every((l) => !l.intensity || l.intensity === 0) || off.lights.length < on.lights.length, `${d.id}: spento ha ancora luci`);
+  }
+});

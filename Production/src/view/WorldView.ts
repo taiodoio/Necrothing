@@ -713,6 +713,47 @@ export class WorldView {
 
   isHidden(id: string) { return this.hidden.has(id); }
 
+  /**
+   * Tutorial: quel che non si deve toccare diventa semitrasparente (al posto del velo scuro);
+   * `keep` resta pieno (la lanterna, la tomba del passo). null: tutto torna com'era.
+   * I materiali semitrasparenti sono copie condivise per materiale: la fusione per zona li
+   * tiene insieme come gli altri (stesse draw call).
+   */
+  private faded: Set<string> | null = null;
+  private static fadeMats = new Map<THREE.Material, THREE.Material>();
+  setFade(keep: Set<string> | null) {
+    const same = (a: Set<string> | null, b: Set<string> | null) => (!a && !b) || (!!a && !!b && a.size === b.size && [...a].every((x) => b.has(x)));
+    if (same(this.faded, keep)) return;
+    this.faded = keep ? new Set(keep) : null;
+    for (const e of this.entities.values()) this.applyFade(e);
+    this.flushZones();
+  }
+
+  private applyFade(e: EntityView) {
+    const fade = !!this.faded && !this.faded.has(e.id);
+    e.visual.traverse((o) => {
+      const m = o as THREE.Mesh;
+      if (!m.isMesh || Array.isArray(m.material)) return;
+      const orig = (m.userData.fadeFrom as THREE.Material | undefined) ?? m.material;
+      if (fade) {
+        let f = WorldView.fadeMats.get(orig);
+        if (!f) {
+          f = orig.clone();
+          f.transparent = true;
+          f.opacity = (orig.transparent ? orig.opacity : 1) * 0.32;
+          f.depthWrite = false;
+          WorldView.fadeMats.set(orig, f);
+        }
+        m.userData.fadeFrom = orig;
+        m.material = f;
+      } else if (m.userData.fadeFrom) {
+        m.material = orig;
+        delete m.userData.fadeFrom;
+      }
+    });
+    this.markZone(e);
+  }
+
   private syncGrave(g: Grave) {
     const key = this.graveKey(g);
     const center = cellCenter(g.x, g.y, GRAVE_FOOTPRINT);
@@ -855,6 +896,7 @@ export class WorldView {
     group.userData.model = model;
     group.rotation.y = -rot * Math.PI / 2;
     this.entities.set(id, e);
+    if (this.faded) this.applyFade(e); // rifatto durante il tutorial (la lanterna accesa): resta come gli altri
     return e;
   }
 

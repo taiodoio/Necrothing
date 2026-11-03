@@ -15,7 +15,7 @@
 
 import type * as THREE from 'three';
 import { Capacitor } from '@capacitor/core';
-import { scheduleSave } from '../app/persistence.ts';
+import { flushPersistence, saveNow, scheduleSave } from '../app/persistence.ts';
 import { checkName, NAME_MAX } from '../game/playerName.ts';
 import { currentStep, yardFinished, yardSignal, YARD_STEPS, type OnboardingStage, type OnboardingState, type YardSignal, type YardStep } from '../game/onboarding.ts';
 import { personalGraves } from '../game/rules.ts';
@@ -455,6 +455,7 @@ export class Onboarding {
       t('onboarding.tutorial.progress', { n: this.o.step + 1, total: YARD_STEPS.length }),
       this.yardSkipButton());
     this.mark(this.targetsOf(step));
+    this.game.world.setFade(this.keepOf(step));
     const look: Partial<Record<YardStep, string>> = { clean: YARD_GRAVE, flowers: YARD_GRAVE, light: YARD_LANTERN, ghost: YARD_GRAVE, sheet: YARD_GRAVE, shop: this.shopId() ?? '' };
     if (look[step]) this.game.focusEntity(look[step]!);
   }
@@ -480,6 +481,7 @@ export class Onboarding {
 
   private dropCoach() {
     window.clearTimeout(this.doneTimer);
+    if (this.game.inYard) this.game.world.setFade(null);
     this.coach?.remove(); this.coach = null;
     $('#game').classList.remove('has-coach');
     this.clearMarks();
@@ -494,6 +496,23 @@ export class Onboarding {
     this.tap = h('div', { class: 'ob-tap', 'aria-hidden': 'true' }, h('i'), h('i'));
     this.haloKey = '';
     document.body.append(this.halo, this.tap);
+  }
+
+  /**
+   * Cosa resta pieno nella scena durante un passo (il resto è semitrasparente): la tomba da curare,
+   * la lanterna da accendere, la Bottega, la lanterna da spostare in Modifica. Dove si tocca il prato,
+   * un fuoco fatuo, il fantasma o la lanterna in mano (non sono oggetti posati) gli oggetti sono tutti velati.
+   */
+  private keepOf(step: YardStep): Set<string> {
+    const g = this.game;
+    const lamp = [...g.state.placeables].reverse().find((p) => p.type === YARD_GIFT.item && p.id !== YARD_LANTERN);
+    switch (step) {
+      case 'clean': case 'flowers': case 'sheet': return new Set([YARD_GRAVE]);
+      case 'light': return new Set([YARD_LANTERN]);
+      case 'shop': return new Set(this.shopId() ? [this.shopId()!] : []);
+      case 'edit': return new Set(lamp ? [lamp.id] : []);
+      default: return new Set();
+    }
   }
 
   /** La lanterna da posare è nel punto illuminato (non in un posto a caso)? */
@@ -585,7 +604,9 @@ export class Onboarding {
   signal(sig: OnboardingSignal) {
     if (sig === 'itemMoved') { if (this.step === 'edit') this.moved = true; return; }
     if (!this.game.inYard || !yardSignal(this.o, sig)) return;
-    this.save();
+    // il passo fatto si salva subito (non dopo un quarto di secondo): se il telefono chiude l'app
+    // proprio adesso, alla riapertura il cortile riprende dal passo dopo, non da questo
+    if (!this.replaying) { saveNow(this.game.state); void flushPersistence(); }
     this.stepDone();
   }
 

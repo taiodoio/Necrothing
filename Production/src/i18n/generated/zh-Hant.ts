@@ -1620,7 +1620,7 @@ export default {
   "onboarding.yard.shopPlace": "現在點「立即放置」：燈籠會出現在院子裡。",
   "onboarding.yard.fromInventory": "燈籠在物品欄裡：打開選單，選擇物品欄，再點「放置」。",
   "celebrate.rank.textMany": "你連升 {k} 級，到了等級 {n}。墓園又多認識了你一點。",
-  "celebrate.more": "此外",
+  "celebrate.more": "你還解鎖了",
   "celebrate.moreN#one": "還有一個成就",
   "celebrate.moreN#other": "還有 {n} 個成就"
 } satisfies Record<string, string>;

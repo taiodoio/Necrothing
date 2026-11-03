@@ -1620,7 +1620,7 @@ export default {
   "onboarding.yard.shopPlace": "이제 «지금 배치»를 누르세요. 등불이 마당에 나타나요.",
   "onboarding.yard.fromInventory": "등불은 보관함에 있어요. 메뉴를 열고 보관함을 고른 뒤 «배치»를 누르세요.",
   "celebrate.rank.textMany": "{k}등급을 한 번에 올라 {n}등급이 됐어요. 묘지가 당신을 조금 더 알아봐요.",
-  "celebrate.more": "그리고",
+  "celebrate.more": "함께 달성했어요",
   "celebrate.moreN#one": "업적 하나 더",
   "celebrate.moreN#other": "업적 {n}개 더"
 } satisfies Record<string, string>;

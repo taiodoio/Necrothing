@@ -1660,7 +1660,7 @@ export default {
   "onboarding.yard.shopPlace": "Now tap “Place Now”: the lantern appears in the yard.",
   "onboarding.yard.fromInventory": "The lantern is in your Inventory: open the menu, choose Inventory and tap “Place”.",
   "celebrate.rank.textMany": "You've climbed {k} ranks, up to rank {n}. The cemetery knows you a little better now.",
-  "celebrate.more": "Also",
+  "celebrate.more": "You also unlocked",
   "celebrate.moreN#one": "and one more achievement",
   "celebrate.moreN#other": "and {n} more achievements"
 } satisfies Record<string, string>;

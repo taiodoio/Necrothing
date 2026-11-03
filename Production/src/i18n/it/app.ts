@@ -56,7 +56,7 @@ export default {
   // breve: chiude la celebrazione
   'celebrate.ok': 'Evviva!',
   // le altre cose arrivate insieme nella stessa celebrazione
-  'celebrate.more': 'Anche',
+  'celebrate.more': 'Hai sbloccato anche',
   'celebrate.moreN#one': 'e un altro traguardo',
   'celebrate.moreN#other': 'e altri {n} traguardi',
   'celebrate.look.kicker': 'Nuovo aspetto',

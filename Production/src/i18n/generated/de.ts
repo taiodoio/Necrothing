@@ -1620,7 +1620,7 @@ export default {
   "onboarding.yard.shopPlace": "Tippe jetzt auf „Jetzt platzieren“: Die Laterne erscheint im Hof.",
   "onboarding.yard.fromInventory": "Die Laterne ist im Inventar: Öffne das Menü, wähle Inventar und tippe auf „Platzieren“.",
   "celebrate.rank.textMany": "Du bist {k} Ränge aufgestiegen, bis Rang {n}. Der Friedhof kennt dich jetzt etwas besser.",
-  "celebrate.more": "Außerdem",
+  "celebrate.more": "Außerdem freigeschaltet",
   "celebrate.moreN#one": "und ein weiterer Erfolg",
   "celebrate.moreN#other": "und {n} weitere Erfolge"
 } satisfies Record<string, string>;

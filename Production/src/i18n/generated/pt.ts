@@ -1620,7 +1620,7 @@ export default {
   "onboarding.yard.shopPlace": "Agora toca em «Colocar agora»: a lanterna aparece no pátio.",
   "onboarding.yard.fromInventory": "A lanterna está no Inventário: abre o menu, escolhe Inventário e toca em «Colocar».",
   "celebrate.rank.textMany": "Subiste {k} níveis, até ao nível {n}. O cemitério já te reconhece melhor.",
-  "celebrate.more": "E também",
+  "celebrate.more": "Também desbloqueaste",
   "celebrate.moreN#one": "e mais uma conquista",
   "celebrate.moreN#other": "e mais {n} conquistas"
 } satisfies Record<string, string>;

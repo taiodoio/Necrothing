@@ -1620,7 +1620,7 @@ export default {
   "onboarding.yard.shopPlace": "「今すぐ設置」をタップしましょう。ランタンが中庭に現れます。",
   "onboarding.yard.fromInventory": "ランタンはインベントリにあります。メニューを開いてインベントリを選び、「設置」をタップ。",
   "celebrate.rank.textMany": "ランクが{k}つ上がり、ランク{n}に到達。墓地があなたを少し認めてくれました。",
-  "celebrate.more": "ほかにも",
+  "celebrate.more": "ほかにも達成",
   "celebrate.moreN#one": "ほかに実績がひとつ",
   "celebrate.moreN#other": "ほかに実績が{n}つ"
 } satisfies Record<string, string>;

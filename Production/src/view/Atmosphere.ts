@@ -11,6 +11,7 @@ import { lightWorldPos, LOWPOLY_MATERIALS } from '../render/modelCache.ts';
 import type { LightAnchor } from '../render/types.ts';
 import { FireFlicker, seedFromPosition } from './FireFlicker.ts';
 import { radialGlowTexture } from '../render/glowTexture.ts';
+import { LightMapPainter } from '../render/lightMap.ts';
 
 interface Preset {
   top: string; bottom: string; fog: string;
@@ -79,15 +80,6 @@ export const POOL_RADIUS = 0.65;
 export const POOL_LIFT = 0.11;
 
 let haloTexture: THREE.Texture | null = null;
-/**
- * Pozza di luce a terra (luci finte): larga e morbida, con il centro non troppo pieno
- * (era una macchia piccola e netta, che sui sentieri di pietra spariva sotto i sassi).
- */
-let poolTexture: THREE.Texture | null = null;
-function getPoolTexture(): THREE.Texture {
-  poolTexture ??= radialGlowTexture([[0, 0.34], [0.35, 0.24], [0.7, 0.07], [1, 0]]);
-  return poolTexture;
-}
 function getHaloTexture(): THREE.Texture {
   // centro tenue e bagliore largo attorno: l'alone sta davanti alla fonte (vedi update), con un
   // centro quasi bianco copriva la lanterna e chi ci stava vicino (il Custode non si vedeva)
@@ -120,8 +112,14 @@ export class Atmosphere {
   private crowdDirty = true;
   private readonly toCamera = new THREE.Vector3();
   private readonly scene: THREE.Scene;
-  /** Luci finte (telefoni deboli): niente luci vere, una pozza di luce dipinta a terra per ogni sorgente. */
-  private fake: THREE.InstancedMesh | null = null;
+  /** Luci finte (telefoni deboli): niente luci vere, ogni sorgente dipinta nella mappa di luce (render/lightMap.ts). */
+  private fake: LightMapPainter | null = null;
+  private fakeStrength = 0;
+  private fakeT = 0;
+  private fakePool = 0;
+  private lastMapTime = -Infinity;
+  private readonly lastMapAt = new THREE.Vector3(Infinity, 0, 0);
+  private viewRadius = 12;
   quality: Quality;
 
   constructor(scene: THREE.Scene, quality: Quality) {
@@ -242,6 +240,7 @@ export class Atmosphere {
   /** Centra ombre e nebbia sul punto osservato (raggio = mezza vista). */
   focus(center: THREE.Vector3, radius: number, cameraDistance = 60) {
     this.focusPoint.copy(center);
+    this.viewRadius = radius;
     const cam = this.sun.shadow.camera;
     const r = Math.max(8, radius);
     cam.left = -r; cam.right = r; cam.top = r; cam.bottom = -r;
@@ -263,39 +262,42 @@ export class Atmosphere {
 
   /**
    * Luci finte: le luci vere si tolgono (lo shader non le calcola più) e al
-   * loro posto ogni sorgente accesa ha un alone tondo a terra, additivo, che
-   * tremola con la fiamma. Un'unica mesh per tutte (una sola draw call).
+   * loro posto ogni sorgente accesa si dipinge, vista dall'alto, nella mappa di
+   * luce che i materiali leggeri leggono: accende il terreno e anche le pareti,
+   * le porte e i personaggi rivolti verso la fonte. Tremola con la fiamma.
    */
   setFakeLights(on: boolean) {
     if (on === !!this.fake) return;
     this.setLightBudget(on ? 0 : null);
-    if (!on) { this.group.remove(this.fake!); this.fake!.geometry.dispose(); (this.fake!.material as THREE.Material).dispose(); this.fake = null; return; }
-    const mat = new THREE.MeshBasicMaterial({ map: getPoolTexture(), transparent: true, blending: THREE.AdditiveBlending, depthWrite: false, fog: false });
-    this.fake = new THREE.InstancedMesh(new THREE.PlaneGeometry(2, 2).rotateX(-Math.PI / 2), mat, 512);
-    this.fake.count = 0;
-    this.fake.frustumCulled = false;
-    this.fake.renderOrder = 2;
-    this.group.add(this.fake);
+    if (!on) { this.fake!.dispose(); this.fake = null; return; }
+    this.fake = new LightMapPainter(512);
   }
 
   private updateFake(t: number, pool: number) {
     const m = this.fake!;
-    const mat4 = new THREE.Matrix4(), q = new THREE.Quaternion(), p = new THREE.Vector3(), sc = new THREE.Vector3(), c = new THREE.Color(), lp = new THREE.Vector3();
-    let i = 0;
+    const c = new THREE.Color(), lp = new THREE.Vector3();
+    m.begin();
+    this.fakeStrength = pool;
+    if (pool <= 0.01) return;
     for (const e of this.anchors.values()) {
-      if (!e.on || e.anchor.intensity <= 0.2 || i >= 512) continue;
+      if (!e.on || e.anchor.intensity <= 0.2) continue;
       const f = e.flicker.value(t);
-      const r = e.anchor.range * POOL_RADIUS;
-      // a terra sotto la sorgente (l'ancora sta in alto sul modello: la sua quota nel modello è l'altezza da terra),
-      // un poco sopra i sassi dei sentieri (alti fino a 0,07): sotto, la luce spariva tra una pietra e l'altra
-      p.set(e.pos.x, e.pos.y - lightWorldPos(e.anchor, lp).y + POOL_LIFT, e.pos.z);
-      m.setMatrixAt(i, mat4.compose(p, q, sc.set(r, 1, r)));
-      m.setColorAt(i, c.set(e.anchor.color).multiplyScalar(Math.min(1, e.anchor.intensity) * 0.3 * pool * f * e.crowd));
-      i++;
+      // la quota del modello dell'ancora è l'altezza da terra: il suolo sotto la fonte
+      const ground = e.pos.y - lightWorldPos(e.anchor, lp).y;
+      c.set(e.anchor.color).multiplyScalar(Math.min(1, e.anchor.intensity) * f * e.crowd * e.boost);
+      m.add(e.pos.x, ground, e.pos.z, e.anchor.range * POOL_RADIUS, c);
     }
-    m.count = i;
-    m.instanceMatrix.needsUpdate = true;
-    if (m.instanceColor) m.instanceColor.needsUpdate = true;
+  }
+
+  /** Disegna la mappa di luce (solo con le luci finte), prima della scena. */
+  renderLightMap(renderer: THREE.WebGLRenderer) {
+    if (!this.fake) return;
+    // al più 24 volte al secondo (il tremolio non ne chiede di più), subito se la vista si è spostata
+    const now = performance.now(), moved = this.lastMapAt.distanceToSquared(this.focusPoint) > 0.04;
+    if (!moved && now - this.lastMapTime < 1000 / 24) return;
+    this.lastMapTime = now; this.lastMapAt.copy(this.focusPoint);
+    this.updateFake(this.fakeT, this.fakePool);
+    this.fake.render(renderer, this.focusPoint.x, this.focusPoint.z, THREE.MathUtils.clamp(this.viewRadius * 2.6, 24, 96), this.fakeStrength);
   }
 
   addAnchor(pos: THREE.Vector3, anchor: LightAnchor, on = true): AnchorHandle {
@@ -403,7 +405,8 @@ export class Atmosphere {
       e.sprite.visible = e.on && p.halo > 0.02 && e.anchor.halo > 0.05; // alone 0: luce senza bagliore (riverbero diffuso)
       if (e.sprite.visible) e.sprite.position.copy(e.pos).addScaledVector(this.toCamera, e.sprite.scale.x * 0.3);
     }
-    if (this.fake) this.updateFake(t, p.pool);
+    // la mappa di luce si riempie solo quando si ridisegna (renderLightMap)
+    this.fakeT = t; this.fakePool = p.pool;
     // Il pool di luci reali segue le sorgenti più vicine al centro della vista.
     // Assegnazione stabile (una luce resta sulla sua sorgente finché serve) e
     // dissolvenze in entrata/uscita: niente accensioni di colpo.

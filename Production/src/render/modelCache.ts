@@ -3,6 +3,7 @@
 
 import * as THREE from 'three';
 import { BufferGeometryLoader } from 'three/src/loaders/BufferGeometryLoader.js';
+import { withLightMap } from './lightMap.ts';
 import { VOX, type Bucket, type BucketGeometries, type LightAnchor } from './types.ts';
 
 export type MaterialSet = Record<Bucket | 'selected' | 'invalid', THREE.Material>;
@@ -42,13 +43,14 @@ let liteOn = false;
 export const liteMaterialsOn = () => liteOn;
 
 function liteMaterialSwap(on: boolean) {
+  // con le luci finte leggono la mappa di luce (render/lightMap.ts): le sorgenti accendono anche pareti e personaggi
   liteMats ??= {
-    solid: new THREE.MeshLambertMaterial({ vertexColors: true, flatShading: true }),
-    water: new THREE.MeshLambertMaterial({ vertexColors: true, flatShading: true, transparent: true, opacity: 0.86 }),
-    gloss: new THREE.MeshLambertMaterial({ vertexColors: true, flatShading: true }),
-    selected: new THREE.MeshLambertMaterial({ vertexColors: true, flatShading: true, emissive: new THREE.Color('#5a4120'), emissiveIntensity: 0.45 }),
-    invalid: new THREE.MeshLambertMaterial({ vertexColors: true, flatShading: true, emissive: new THREE.Color('#7a1f1f'), emissiveIntensity: 0.9 }),
-    terrain: new THREE.MeshLambertMaterial({ vertexColors: true }),
+    solid: withLightMap(new THREE.MeshLambertMaterial({ vertexColors: true, flatShading: true })),
+    water: withLightMap(new THREE.MeshLambertMaterial({ vertexColors: true, flatShading: true, transparent: true, opacity: 0.86 })),
+    gloss: withLightMap(new THREE.MeshLambertMaterial({ vertexColors: true, flatShading: true })),
+    selected: withLightMap(new THREE.MeshLambertMaterial({ vertexColors: true, flatShading: true, emissive: new THREE.Color('#5a4120'), emissiveIntensity: 0.45 })),
+    invalid: withLightMap(new THREE.MeshLambertMaterial({ vertexColors: true, flatShading: true, emissive: new THREE.Color('#7a1f1f'), emissiveIntensity: 0.9 })),
+    terrain: withLightMap(new THREE.MeshLambertMaterial({ vertexColors: true })),
   };
   liteOn = on;
   const swap = new Map<THREE.Material, THREE.Material>([[on ? LOWPOLY_TERRAIN : liteMats.terrain, on ? liteMats.terrain : LOWPOLY_TERRAIN]]);

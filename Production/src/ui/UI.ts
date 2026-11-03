@@ -111,7 +111,7 @@ export class UI {
     const now = this.game.now();
     $('#hud-clock').textContent = now.toLocaleTimeString(currentLang(), { hour: '2-digit', minute: '2-digit' });
     const phase = this.game.getPhase();
-    const w = this.game.state.world.weather;
+    const w = this.game.weatherNow();
     const el = $('#hud-weather');
     const key = `${phase}|${w}|${window.innerWidth < 420}`;
     if (el.dataset.key === key) return;

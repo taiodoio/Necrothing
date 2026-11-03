@@ -11,6 +11,7 @@ import { askReminderPermission, clearReminders, remindersAvailable, syncReminder
 import type { GraveVisualState } from '../game/graves.ts';
 import { graveVisualState } from '../game/graves.ts';
 import * as R from '../game/rules.ts';
+import { weatherNow } from '../game/weather.ts';
 import { anniversaryYears, catchUpMessage, liveTick, runCatchUp, type CatchUpReport } from '../game/simulation.ts';
 import { createNewGame, type FpsSetting, type Placed, type Quality, type QualitySetting, type SaveData, type TimeOverride } from '../game/state.ts';
 import { buildYard } from '../game/yard.ts';
@@ -373,6 +374,7 @@ export class Game {
       if (!this.renderer.shadowMap.autoUpdate) this.refreshStaticShadows();
       this.world.updateDecorLod(this.rig.camera);
       this.renderer.info.reset();
+      this.atmosphere.renderLightMap(this.renderer);
       this.postfx.render(this.scene, this.rig.camera);
     }
     this.drawnUnderMenu = menu;
@@ -410,7 +412,7 @@ export class Game {
   updatePhase(force: boolean) {
     const o: TimeOverride = this.state.settings.timeOverride;
     const phase = o === 'auto' ? dayPhaseForHour(this.now().getHours()) : o;
-    const weather = this.state.settings.weatherEffects ? this.state.world.weather : 'clear';
+    const weather = this.state.settings.weatherEffects ? this.weatherNow() : 'clear';
     if (!force && phase === this.phase && weather === this.atmosphere.getWeather()) return;
     this.phase = phase;
     this.actors?.setNight(this.isNight());
@@ -422,6 +424,9 @@ export class Game {
   }
 
   getPhase() { return this.phase; }
+
+  /** Il tempo di adesso (la pioggia viene a rovesci di qualche ora: game/weather.ts). */
+  weatherNow() { return weatherNow(this.state, this.now()); }
 
   /** Notte (anche forzata dalle impostazioni): il vampiro esce, i fantasmi ballano nel gazebo. */
   private isNight(): boolean {
@@ -2265,6 +2270,7 @@ export class Game {
 
   /** Cattura un rettangolo (px CSS) della scena, a colori. */
   capture(rect: { x: number; y: number; w: number; h: number }): string {
+    this.atmosphere.renderLightMap(this.renderer);
     this.postfx.render(this.scene, this.rig.camera);
     const src = this.renderer.domElement;
     const sx = src.width / src.clientWidth, sy = src.height / src.clientHeight;
@@ -2447,7 +2453,7 @@ export class Game {
       this.qualityInfo(),
       t('game.debug.draw', { calls: info.calls, tris: info.triangles.toLocaleString(currentLang()) }),
       t('game.debug.gpuObjects', { geometries: memory.geometries, textures: memory.textures, programs: this.renderer.info.programs?.length ?? 0 }),
-      t('game.debug.seed', { seed: this.state.seed, phase: this.phase, weather: this.state.world.weather }),
+      t('game.debug.seed', { seed: this.state.seed, phase: this.phase, weather: `${this.state.world.weather} → ${this.weatherNow()}` }),
       t('game.debug.counts', { graves: this.state.graves.length, items: this.state.placeables.length }),
       t('game.debug.presences', { roamers: this.actors.stats().roamers, presences: this.actors.stats().presences, models: cs.models }),
     ].join('\n');

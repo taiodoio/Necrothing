@@ -1611,5 +1611,6 @@ export default {
   "guide.wisps.text": "Die Währung des Friedhofs: Du sammelst sie und verdienst sie mit Grabpflege und Begegnungen mit den Wesen. Ausgegeben wird sie im Laden.",
   "guide.xp.text": "Die Erfahrung des Hüters: Jede Pflege und jede Begegnung bringt ein paar. Sie werden nicht ausgegeben: Sie lassen dich im Rang steigen.",
   "guide.prestige.text": "Es zeigt, wie der Friedhof gerade aussieht: Es steigt mit Gräbern, Blumen und Dekorationen und sinkt, wenn du ihn vernachlässigst. Mit mehr Prestige wird der Zaun größer.",
-  "player.info.more": "Tippe, um mehr zu erfahren"
+  "player.info.more": "Tippe, um mehr zu erfahren",
+  "ctx.talk": "Sprechen"
 } satisfies Record<string, string>;

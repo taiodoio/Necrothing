@@ -1611,5 +1611,6 @@ export default {
   "guide.wisps.text": "La monnaie du cimetière : on la ramasse et on la gagne en soignant les tombes et en rencontrant les créatures. Elle se dépense à la Boutique.",
   "guide.xp.text": "L’expérience du Gardien : chaque soin et chaque rencontre en rapporte un peu. Ils ne se dépensent pas : ils font monter de rang.",
   "guide.prestige.text": "Il dit à quoi ressemble le cimetière en ce moment : il monte avec les tombes, les fleurs et les décorations, et baisse si tu le négliges. Plus de prestige agrandit l’enclos.",
-  "player.info.more": "Touche pour savoir ce que c’est"
+  "player.info.more": "Touche pour savoir ce que c’est",
+  "ctx.talk": "Parler"
 } satisfies Record<string, string>;

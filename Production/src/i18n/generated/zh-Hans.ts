@@ -1611,5 +1611,6 @@ export default {
   "guide.wisps.text": "墓园的货币：照料坟墓、遇见生灵就能拾取和获得。可在商店里花费。",
   "guide.xp.text": "守墓人的经验：每次照料和相遇都会带来一些。它们不会被花掉，而是提升你的等级。",
   "guide.prestige.text": "它反映墓园此刻的样子：坟墓、鲜花和装饰会让它上升，疏于照料则会下降。声望越高，围栏越大。",
-  "player.info.more": "点按了解详情"
+  "player.info.more": "点按了解详情",
+  "ctx.talk": "交谈"
 } satisfies Record<string, string>;

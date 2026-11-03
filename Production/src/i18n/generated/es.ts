@@ -1611,5 +1611,6 @@ export default {
   "guide.wisps.text": "La moneda del cementerio: la recoges y la ganas cuidando las tumbas y encontrando a las criaturas. Se gasta en la Tienda.",
   "guide.xp.text": "La experiencia del Guardián: cada cuidado y cada encuentro da algunos. No se gastan: hacen subir de rango.",
   "guide.prestige.text": "Dice cómo está el cementerio ahora: sube con tumbas, flores y decoraciones, y baja si lo descuidas. Con más prestigio el recinto se amplía.",
-  "player.info.more": "Toca para saber qué es"
+  "player.info.more": "Toca para saber qué es",
+  "ctx.talk": "Hablar"
 } satisfies Record<string, string>;

@@ -66,7 +66,11 @@ const INTRO: Array<[() => string, number, string]> = [
   [wispPortrait, 1, 'wisp'], [() => lpIconPng('flower', 160), 2, 'icon'], [() => npcPortrait('ghost'), 3, 'ghost'], [() => lpIconPng('coffin', 160), 4, 'icon'],
 ];
 /** Un bersaglio sulla scena: dove toccare (`at`) e dove poggia (`base`, per misurare l'occhio di bue). */
-interface SceneTarget { at: () => THREE.Vector3 | null; base: () => THREE.Vector3 | null }
+/**
+ * Un punto della scena, misurato dalla cima (`at`) a dove poggia (`base`). `also`: altri punti che la
+ * luce deve comprendere (la lanterna da trascinare, oltre al punto d'arrivo): il cerchio del tocco resta sul bersaglio.
+ */
+interface SceneTarget { at: () => THREE.Vector3 | null; base: () => THREE.Vector3 | null; also?: () => THREE.Vector3[] }
 /** Un bersaglio: un pulsante (selettore CSS) o un punto della scena. */
 type Target = SceneTarget | string;
 
@@ -541,7 +545,12 @@ export class Onboarding {
       case 'place': return () => {
         // prima l'occhio di bue sul punto dove posarla (accanto al sentiero, non a caso); arrivata lì, sulla spunta
         const p = g.placement;
-        if (p) return this.placeAtSpot() ? ['.place-ui [data-tool="confirm"]'] : [point(YARD_PLACE_SPOT.x, YARD_PLACE_SPOT.y, 0.9, 0)];
+        if (p) {
+          if (this.placeAtSpot()) return ['.place-ui [data-tool="confirm"]'];
+          // la luce prende il punto d'arrivo e anche la lanterna da portarci (non resta al buio); il tocco va sul punto
+          const lamp = () => cellCenter(p.x, p.y, rotatedFootprint(p.type ?? '', p.rot));
+          return [{ ...point(YARD_PLACE_SPOT.x, YARD_PLACE_SPOT.y, 0.9, 0), also: () => [lamp().setY(0.9), lamp().setY(0)] }];
+        }
         return [shopCta, '.drawer:not([hidden]) .drawer-foot .big-btn:not(.ghost)', card(YARD_GIFT.item), '#bubble.open .slot[data-act="inventory"]', '#fab'];
       };
       case 'edit': return () => {
@@ -799,6 +808,8 @@ export class Onboarding {
     let edge: number | null = null;
     // dentro un pannello il buio attorno è più leggero (il pannello si deve leggere)
     let inPanel = false;
+    // dove va il cerchio del tocco (di solito al centro della luce)
+    let tapAt: { x: number; y: number } | null = null;
     for (const tg of this.targets()) {
       if (typeof tg === 'string') {
         const el = document.querySelector<HTMLElement>(tg);
@@ -820,6 +831,14 @@ export class Onboarding {
       if (this.step && !this.framed && (pb.x < 0 || pb.x > innerWidth || pb.y < 0 || pb.y > innerHeight)) { this.framed = true; this.game.focusPoint(base!); }
       const d = Math.hypot(pt.x - pb.x, pt.y - pb.y);
       r = { x: (pt.x + pb.x) / 2, y: (pt.y + pb.y) / 2, w: Math.max(120, d * 1.8 + 60), h: Math.max(110, d * 1.2 + 70) };
+      tapAt = { x: r.x, y: r.y };
+      // altri punti da comprendere nella luce: l'ovale si allarga fino a loro (il cerchio del tocco resta dov'era)
+      const extra = tg.also?.().map((v) => this.game.project(v)).filter((q): q is { x: number; y: number } => !!q) ?? [];
+      if (extra.length) {
+        const xs = [pt.x, pb.x, ...extra.map((q) => q.x)], ys = [pt.y, pb.y, ...extra.map((q) => q.y)];
+        const x0 = Math.min(...xs), x1 = Math.max(...xs), y0 = Math.min(...ys), y1 = Math.max(...ys);
+        r = { x: (x0 + x1) / 2, y: (y0 + y1) / 2, w: Math.max(r.w, (x1 - x0) * 1.15 + 110), h: Math.max(r.h, (y1 - y0) * 1.15 + 100) };
+      }
       // sopra l'oggetto compare il suo menù: un po' di spazio anche per quello
       edge = pt.y - 80;
       break;
@@ -831,7 +850,8 @@ export class Onboarding {
     if (!r) return;
     halo.classList.toggle('soft', inPanel);
     // con `translate` (non `transform`): la pulsazione (`scale`) non deve ingrandire anche lo spostamento
-    halo.style.translate = tap.style.translate = `${r.x}px ${r.y}px`; // i18n-ok: stile
+    halo.style.translate = `${r.x}px ${r.y}px`; // i18n-ok: stile
+    tap.style.translate = `${(tapAt ?? r).x}px ${(tapAt ?? r).y}px`; // i18n-ok: stile
     this.beamSize(r.w, r.h);
   }
 }

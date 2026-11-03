@@ -412,7 +412,10 @@ export class Game {
   updatePhase(force: boolean) {
     const o: TimeOverride = this.state.settings.timeOverride;
     const phase = o === 'auto' ? dayPhaseForHour(this.now().getHours()) : o;
-    const weather = this.state.settings.weatherEffects ? this.weatherNow() : 'clear';
+    const now = this.weatherNow();
+    // il tempo visto conta per il traguardo anche con gli effetti spenti (l'icona sotto l'ora lo dice)
+    if (!force && !this.realState && R.weatherIsNew(this.state, now)) this.act((s) => { R.noteWeather(s, now); }, undefined, true);
+    const weather = this.state.settings.weatherEffects ? now : 'clear';
     if (!force && phase === this.phase && weather === this.atmosphere.getWeather()) return;
     this.phase = phase;
     this.actors?.setNight(this.isNight());
@@ -1337,7 +1340,7 @@ export class Game {
     if (n === null) return;
     const at = this.actors.petTop(id) ?? undefined;
     let gift: R.ActionResult | null = null;
-    if (!this.act((s) => (gift = R.petGift(s, n)), at, true) || !gift) return;
+    if (!this.act((s) => (gift = R.petGift(s, n, this.petSpecies(pet.kind))), at, true) || !gift) return;
     const species = pet.kind.replace(/^pet/, '').toLowerCase();
     this.say({ kind: pet.kind, name: pet.label, text: t(`pet.${species}.gift`, { n }), wisps: n });
   }

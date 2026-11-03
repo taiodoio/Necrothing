@@ -213,6 +213,18 @@ export default {
   'ach.rank4.desc': 'Raggiungi il rango 4.',
   'ach.rank5.name': 'Lord of Decay',
   'ach.rank5.desc': 'Raggiungi il rango massimo.',
+  'ach.ornithologist.name': 'Ornitologo',
+  'ach.ornithologist.desc': 'Raccogli 10 fuochi fatui dai corvi.',
+  'ach.loyalFriend.name': 'Amico Fedele',
+  'ach.loyalFriend.desc': 'Coccola o gioca con i tuoi animali 25 volte.',
+  'ach.quill.name': 'Penna d’Oca',
+  'ach.quill.desc': 'Spedisci 3 lettere dall’ufficio postale.',
+  'ach.allWeathers.name': 'Custode d’Ogni Tempo',
+  'ach.allWeathers.desc': 'Veglia sul cimitero con nebbia, pioggia e temporale.',
+  'ach.shopkeeper.name': 'Bottegaio delle Tenebre',
+  'ach.shopkeeper.desc': 'Apri 3 attività nel cimitero.',
+  'ach.livingLantern.name': 'Lanterna Viva',
+  'ach.livingLantern.desc': 'Guadagna 500 fuochi fatui in tutto.',
 
   // ── Tombe: categorie ──
   'grave.category.electronics': 'Elettronica',

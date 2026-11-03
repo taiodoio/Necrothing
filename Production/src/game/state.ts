@@ -150,6 +150,12 @@ export interface Counters {
   potionsSold: number;
   /** Tombe e ricordi riesumati: le sepolture fatte contano ancora per gli sblocchi. */
   exhumed: number;
+  /** Fuochi fatui avuti dai corvi (di passaggio o il proprio): traguardo «Ornitologo». */
+  crowWisps: number;
+  /** Lettere spedite dall'ufficio postale. */
+  lettersSent: number;
+  /** Tempi visti nel cimitero, a bit: nebbia 1, pioggia 2, temporale 4. */
+  weathersSeen: number;
 }
 
 export interface Player {
@@ -271,6 +277,7 @@ export function emptyCounters(): Counters {
     flowersBrought: 0, cleanups: 0, ghostsWitnessed: 0, npcEncountered: 0,
     wispsSpent: 0, decorationsPlaced: 0, photosTaken: 0, repairs: 0,
     lightsRepaired: 0, wispsEarned: 0, potionsSold: 0, exhumed: 0,
+    crowWisps: 0, lettersSent: 0, weathersSeen: 0,
   };
 }
 

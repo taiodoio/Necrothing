@@ -1375,3 +1375,39 @@ test('meteo: per stagione, con continuità, e la pioggia a rovesci di qualche or
   liveTick(s, new Date(2027, 2, 5, 0, 30), 1);
   assert.equal(s.world.lastWeatherDate, '2027-03-05');
 });
+
+test('traguardi nuovi: corvi, coccole, lettere, tempi visti, attività e fuochi guadagnati', async () => {
+  const { ACHIEVEMENTS } = await import('../src/game/progression.ts');
+  assert.equal(ACHIEVEMENTS.length, 35);
+  const ids = (s) => evaluateAchievements(s, NOW).map((a) => a.id);
+  const s = richAt(2600);
+  for (let i = 0; i < 9; i++) R.interactRoamer(s, 'crow', NOW);
+  assert.ok(!ids(s).includes('ornithologist'));
+  R.petGift(s, 1, 'crow'); // il proprio corvo conta anche lui
+  assert.equal(s.player.counters.crowWisps, 10);
+  assert.ok(ids(s).includes('ornithologist'));
+  R.petGift(s, 3, 'dog');
+  assert.equal(s.player.counters.crowWisps, 10, 'il regalo del cane no');
+  for (let i = 0; i < 20; i++) R.bondWithPet(s, 'cat');
+  for (let i = 0; i < 5; i++) R.bondWithPet(s, 'dog');
+  assert.ok(ids(s).includes('loyal_friend'), 'le coccole di tutte le specie insieme');
+  placeBusiness(s, 'post_office');
+  for (let i = 0; i < 3; i++) R.sendLetter(s, `lettera ${i}`, NOW);
+  assert.ok(ids(s).includes('quill'));
+  assert.equal(R.noteWeather(s, 'clear'), false, 'il sereno non conta');
+  assert.equal(R.noteWeather(s, 'fog'), true);
+  assert.equal(R.noteWeather(s, 'fog'), false, 'una volta sola');
+  R.noteWeather(s, 'rain');
+  assert.ok(!ids(s).includes('all_weathers'));
+  R.noteWeather(s, 'storm');
+  assert.ok(ids(s).includes('all_weathers'));
+  placeBusiness(s, 'zombie_bar'); placeBusiness(s, 'food_truck');
+  assert.ok(ids(s).includes('shopkeeper'));
+  s.player.counters.wispsEarned = 500;
+  assert.ok(ids(s).includes('living_lantern'));
+  // i contatori nuovi si salvano, e i salvataggi di prima partono da zero
+  const back = normalizeSave(JSON.parse(JSON.stringify(s)));
+  assert.equal(back.player.counters.crowWisps, 10);
+  const old = JSON.parse(JSON.stringify(s)); delete old.player.counters.crowWisps; delete old.player.counters.weathersSeen;
+  assert.equal(normalizeSave(old).player.counters.crowWisps, 0);
+});

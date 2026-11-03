@@ -8,7 +8,7 @@ import { CATEGORIES, CUSTOM_CAUSE_MAX, DEATH_CAUSES, GRAVE_TYPE_ACCESS, GRAVE_TY
 import { evaluateAchievements, rankForXp, type AchievementDef } from './progression.ts';
 import { hashString, newId } from './rng.ts';
 import type { RoamerKind } from './spawn.ts';
-import type { Grave, MemoryType, Placed, SaveData } from './state.ts';
+import type { Grave, MemoryType, Placed, SaveData, Weather } from './state.ts';
 import { isoDate } from './time.ts';
 import { areaForLevel, buildOccupancy, canPlaceAt, cellsOf, computePrestige, nearestFreeSpot } from './world.ts';
 import { houseHasVeggie, houseItem, housePart, housePerk, houseRoof } from './house.ts';
@@ -482,6 +482,15 @@ export function refreshLookUnlocks(s: SaveData): string[] {
   return fresh;
 }
 
+/** Il tempo che c'è adesso nel cimitero (traguardo «Custode d'Ogni Tempo»); vero se è la prima volta che si vede. */
+const weatherBit = (w: Weather) => (w === 'fog' ? 1 : w === 'rain' ? 2 : w === 'storm' ? 4 : 0);
+export const weatherIsNew = (s: SaveData, w: Weather) => !!weatherBit(w) && !(s.player.counters.weathersSeen & weatherBit(w));
+export function noteWeather(s: SaveData, w: Weather): boolean {
+  if (!weatherIsNew(s, w)) return false;
+  s.player.counters.weathersSeen |= weatherBit(w);
+  return true;
+}
+
 /** Una coccola o un gioco con un animale (conta per le sorprese d'aspetto). */
 export function bondWithPet(s: SaveData, species: PetSpecies): ActionResult {
   s.player.petBond[species] = (s.player.petBond[species] ?? 0) + 1;
@@ -817,7 +826,7 @@ export function interactRoamer(
     }
     case 'cat': reward(s, 0, WISPS.cat); return ok(t('rules.cat.met'), 0, WISPS.cat);
     case 'rat': reward(s, 0, WISPS.rat); return ok(t('rules.rat.met'), 0, WISPS.rat);
-    case 'crow': reward(s, 0, WISPS.crow); return ok(t('rules.crow.met'), 0, WISPS.crow);
+    case 'crow': reward(s, 0, WISPS.crow); c.crowWisps += WISPS.crow; return ok(t('rules.crow.met'), 0, WISPS.crow);
     case 'zombie': reward(s, XP.zombie, WISPS.zombie); return ok(t('rules.zombie.met'), XP.zombie, WISPS.zombie);
     case 'priest': {
       if (opts.graveId && s.graves.some((g) => g.id === opts.graveId)) memory(s, opts.graveId, 'blessing', now);
@@ -840,9 +849,10 @@ export function interactRoamer(
 }
 
 /** L'animale, felice per le coccole o per il gioco, porta qualche fuoco fatuo. */
-export function petGift(s: SaveData, wisps: number): ActionResult {
+export function petGift(s: SaveData, wisps: number, species?: PetSpecies): ActionResult {
   const n = Math.max(1, Math.round(wisps));
   reward(s, 0, n);
+  if (species === 'crow') s.player.counters.crowWisps += n;
   return ok('', 0, n);
 }
 
@@ -952,6 +962,7 @@ export function sendLetter(s: SaveData, text: string, now: Date): ActionResult {
   s.post.letters.push({ id: newId('l'), text: clean, sentAt: now.toISOString() });
   if (s.post.letters.length > POST.maxLetters) s.post.letters.splice(0, s.post.letters.length - POST.maxLetters);
   if (!s.post.nextAt) s.post.nextAt = nextMailAt(s, now);
+  s.player.counters.lettersSent++;
   return ok(t('rules.post.sent'));
 }
 

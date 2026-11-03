@@ -198,7 +198,6 @@
 .ui-next .ach-card:not(.got) .ach-badge img { opacity: 0.75; }
 .ui-next .ach-n { position: absolute; right: 0; top: 2px; min-width: 22px; height: 20px; padding: 0 5px; border-radius: 999px; display: grid; place-items: center;
   background: var(--primary); color: var(--on-primary); font-size: 11.5px; font-weight: 800; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.4); }
-.ui-next .ach-card:not(.got) .ach-n { background: var(--track); color: var(--paper); }
 .ui-next .ach-card b { display: block; color: var(--paper); font-size: 15px; font-weight: 800; }
 .ui-next .ach-card p { margin: 2px 0 4px; color: var(--muted); font-size: 13px; }
 .ui-next .ach-tier { display: inline-block; padding: 1px 8px; border-radius: 999px; font-size: 11px; font-weight: 800; }
@@ -206,3 +205,11 @@
 .ui-next .ach-tier.tier-silver { background: rgba(195, 202, 214, 0.18); color: #c3cad6; }
 .ui-next .ach-tier.tier-bronze { background: rgba(200, 138, 84, 0.2); color: #d39a66; }
 .ui-next .ach-bar { display: block; height: 5px; margin-top: 6px; }
+
+/* Tasselli del Custode: la «i» in alto a destra (e tutto il tassello) apre cosa vuol dire quel dato */
+.ui-next button.pl-chip { position: relative; border: 0; color: inherit; font: inherit; cursor: pointer; }
+.ui-next button.pl-chip:active { transform: translateY(1px); }
+.ui-next .pl-info { position: absolute; top: 5px; right: 5px; width: 16px; height: 16px; border-radius: 50%; display: grid; place-items: center;
+  border: 1.5px solid var(--muted); color: var(--muted); font: italic 800 10px/1 Georgia, 'Times New Roman', serif; }
+.ui-next .stat-info h2 { display: flex; align-items: center; gap: 10px; padding-right: 44px; }
+.ui-next .stat-info p { color: var(--muted); font-size: 15px; }

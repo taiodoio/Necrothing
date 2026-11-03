@@ -13,7 +13,7 @@ import { GRAVE_TYPE_MIN_RANK } from '../game/graves.ts';
 import type { AchievementDef } from '../game/progression.ts';
 import { t } from '../i18n/index.ts';
 import { $, drawerOpen, h, uiBlocking } from './dom.ts';
-import { ACH_COUNT, ACH_ICONS, RANK_ICONS } from './icons.ts';
+import { ACH_ICONS, RANK_ICONS } from './icons.ts';
 import { lpBadgeUrl, type BadgeTier } from './lpIcons.ts';
 
 export interface Celebration {
@@ -102,7 +102,7 @@ function show(c: Celebration) {
 export function celebrateAchievement(a: AchievementDef) {
   celebrate({
     kicker: t('celebrate.ach.kicker'), title: a.name, text: a.description,
-    badge: lpBadgeUrl(ACH_ICONS[a.id] ?? 'trophy', a.tier), count: ACH_COUNT[a.id], tier: t(`player.tier.${a.tier}`),
+    badge: lpBadgeUrl(ACH_ICONS[a.id] ?? 'trophy', a.tier), tier: t(`player.tier.${a.tier}`),
   });
 }
 

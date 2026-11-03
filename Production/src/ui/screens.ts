@@ -18,7 +18,7 @@ import { $, closeDrawer, confirmDialog, fmtDate, h, type Modal, openDrawer, open
 import { shopHeader } from './shopHeader.ts';
 import { houseBoughtView, houseShopDetail, houseShopGrid } from './house.ts';
 import { graveThumb, placeableThumb } from './thumbs.ts';
-import { ACH_COUNT, ACH_ICONS, hydrateIcons, icon } from './icons.ts';
+import { ACH_ICONS, hydrateIcons, icon } from './icons.ts';
 import { lpBadgeUrl, lpIconPng } from './lpIcons.ts';
 import { personalGraveLimit } from '../game/entitlement.ts';
 import { signalOnboarding } from './onboarding.ts';
@@ -684,8 +684,19 @@ const statRow = (ic: string, label: string, value: string, extra?: HTMLElement |
   h('div', { class: `pl-stat${long ? ' long' : ''}` }, icon(ic, 26), h('div', { class: 'pl-stat-text' }, h('span', {}, label), h('b', {}, value), extra ?? null));
 
 /** Un dato in breve, in una riga di quattro: icona, valore grande e, sotto, cosa è; il titolo lo dice per intero. */
-const statChip = (ic: string, value: string, label: string, title: string, extra?: HTMLElement | null) =>
-  h('div', { class: 'pl-chip', title, 'aria-label': title }, icon(ic, 30), h('b', {}, value), h('small', {}, label), extra ?? null);
+/** Un dato in breve, in una riga di quattro: icona, valore grande e, sotto, cosa è; la «i» in alto a destra apre cosa vuol dire. */
+const statChip = (ic: string, value: string, label: string, title: string, extra: HTMLElement | null, topic: InfoTopic) =>
+  h('button', { class: 'pl-chip', title, 'aria-label': `${title}. ${t('player.info.more')}`, onclick: () => openStatInfo(topic, ic) },
+    h('span', { class: 'pl-info', 'aria-hidden': 'true' }, 'i'), // i18n-ok: simbolo dell'informazione
+    icon(ic, 30), h('b', {}, value), h('small', {}, label), extra);
+
+type InfoTopic = 'wisps' | 'xp' | 'rank' | 'prestige';
+
+/** Cosa vuol dire un dato del Custode (fuochi fatui, punti Necro, rango, prestigio): due righe in una finestra. */
+function openStatInfo(topic: InfoTopic, ic: string) {
+  const title = t(`guide.${topic}.title`);
+  openModal(h('div', { class: 'info-modal stat-info' }, h('h2', {}, icon(ic, 30), title), h('p', {}, t(`guide.${topic}.text`))), { label: title });
+}
 
 /**
  * Il Custode: il nome (la matita accanto al campo apre la tastiera e diventa
@@ -743,11 +754,11 @@ function keeperTab(ui: UI, openLook: () => void): HTMLElement {
     h('div', { class: 'pl-name-row' }, name, pen),
     h('button', { class: 'big-btn pl-look', onclick: openLook }, icon('shirt', 22), t('player.customize')),
     h('div', { class: 'pl-chips' },
-      statChip('rank', String(rank.level), rank.name, `${t('player.rank')}: ${t('player.rank.value', { level: rank.level, name: rank.name })}`),
+      statChip('rank', String(rank.level), rank.name, `${t('player.rank')}: ${t('player.rank.value', { level: rank.level, name: rank.name })}`, null, 'rank'),
       statChip('xp', p.xp.toLocaleString(lang), t('player.xp'), `${t('player.xp')}: ${xp}`,
-        h('div', { class: 'xp-bar pl-bar' }, h('i', { style: `width:${Math.round(rankProgress(p.xp) * 100)}%` }))),
-      statChip('wisp', p.wisps.toLocaleString(lang), t('player.wisps'), `${t('player.wisps')}: ${p.wisps.toLocaleString(lang)}`),
-      statChip('prestige', String(computePrestige(s)), t('player.prestige'), `${t('player.prestige')}: ${computePrestige(s)}`)),
+        h('div', { class: 'xp-bar pl-bar' }, h('i', { style: `width:${Math.round(rankProgress(p.xp) * 100)}%` })), 'xp'),
+      statChip('wisp', p.wisps.toLocaleString(lang), t('player.wisps'), `${t('player.wisps')}: ${p.wisps.toLocaleString(lang)}`, null, 'wisps'),
+      statChip('prestige', String(computePrestige(s)), t('player.prestige'), `${t('player.prestige')}: ${computePrestige(s)}`, null, 'prestige')),
     h('div', { class: 'section-title' }, t('player.section.cemetery')),
     h('div', { class: 'pl-stats' },
       statRow('enclosure', t('player.fence'), fence, null, true),
@@ -765,9 +776,8 @@ function achievementsTab(s: SaveData, got: Set<string>): HTMLElement {
     h('div', { class: 'ach-list' }, ...list.map((a) => {
       const done = got.has(a.id);
       const prog = achievementProgress(a, s);
-      const n = ACH_COUNT[a.id];
       return h('div', { class: `ach-card ${done ? 'got' : ''}` },
-        h('div', { class: 'ach-badge' }, h('img', { src: lpBadgeUrl(ACH_ICONS[a.id] ?? 'trophy', done ? a.tier : 'locked'), alt: '' }), n ? h('span', { class: 'ach-n' }, String(n)) : null),
+        h('div', { class: 'ach-badge' }, h('img', { src: lpBadgeUrl(ACH_ICONS[a.id] ?? 'trophy', done ? a.tier : 'locked'), alt: '' })),
         h('div', {}, h('b', {}, a.name), h('p', {}, a.description),
           h('span', { class: `ach-tier tier-${a.tier}` }, tiers[a.tier]), // i18n-ok: classe
           !done && prog > 0 ? h('div', { class: 'xp-bar ach-bar' }, h('i', { style: `width:${Math.round(prog * 100)}%` })) : null));

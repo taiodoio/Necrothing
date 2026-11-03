@@ -2,6 +2,7 @@
 
 import { RANKS } from './balance.ts';
 import { detectDistricts } from './world.ts';
+import { CATALOG } from './catalog.ts';
 import type { SaveData } from './state.ts';
 import { t } from '../i18n/index.ts';
 
@@ -70,6 +71,12 @@ export const ACHIEVEMENTS: AchievementDef[] = [
   { id: 'rank_2', name: t('ach.rank2.name'), description: t('ach.rank2.desc'), icon: '🔧', tier: 'bronze', value: (s) => rankForXp(s.player.xp).level, goal: 2 },
   { id: 'rank_3', name: t('ach.rank3.name'), description: t('ach.rank3.desc'), icon: '⛏️', tier: 'silver', value: (s) => rankForXp(s.player.xp).level, goal: 3 },
   { id: 'rank_4', name: t('ach.rank4.name'), description: t('ach.rank4.desc'), icon: '🌾', tier: 'gold', value: (s) => rankForXp(s.player.xp).level, goal: 4 },
+  { id: 'ornithologist', name: t('ach.ornithologist.name'), description: t('ach.ornithologist.desc'), icon: '🐦‍⬛', tier: 'silver', value: (s) => s.player.counters.crowWisps, goal: 10 },
+  { id: 'loyal_friend', name: t('ach.loyalFriend.name'), description: t('ach.loyalFriend.desc'), icon: '🦴', tier: 'bronze', value: (s) => Object.values(s.player.petBond).reduce((a: number, n) => a + (n ?? 0), 0), goal: 25 },
+  { id: 'quill', name: t('ach.quill.name'), description: t('ach.quill.desc'), icon: '✉️', tier: 'bronze', value: (s) => s.player.counters.lettersSent, goal: 3 },
+  { id: 'all_weathers', name: t('ach.allWeathers.name'), description: t('ach.allWeathers.desc'), icon: '⛈️', tier: 'silver', value: (s) => [1, 2, 4].filter((b) => s.player.counters.weathersSeen & b).length, goal: 3 },
+  { id: 'shopkeeper', name: t('ach.shopkeeper.name'), description: t('ach.shopkeeper.desc'), icon: '🏪', tier: 'silver', value: (s) => s.placeables.filter((p) => CATALOG[p.type]?.category === 'business').length, goal: 3 },
+  { id: 'living_lantern', name: t('ach.livingLantern.name'), description: t('ach.livingLantern.desc'), icon: '🏮', tier: 'gold', value: (s) => s.player.counters.wispsEarned, goal: 500 },
   { id: 'rank_5', name: t('ach.rank5.name'), description: t('ach.rank5.desc'), icon: '👑', tier: 'gold', value: (s) => rankForXp(s.player.xp).level, goal: 5 },
 ];
 

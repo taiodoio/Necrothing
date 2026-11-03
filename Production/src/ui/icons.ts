@@ -39,11 +39,7 @@ export const ACH_ICONS: Record<string, string> = {
   expansion: 'enclosure',
   // un traguardo per rango, ognuno con l'icona del suo titolo (le stesse della festa del nuovo rango)
   rank_2: 'rankScrapper', rank_3: 'rankSilicon', rank_4: 'rankReaper', rank_5: 'rankLord',
-};
-
-export const ACH_COUNT: Record<string, number> = {
-  five_graves: 5, ten_graves: 10, twentyfive_graves: 25, variety_5: 5, green_thumb: 10, gardener_master: 50,
-  caretaker_silver: 15, fixer: 5, ghost_whisperer: 5, socialite: 10, decorator: 5, spender: 50, photographer: 3,
+  ornithologist: 'crow', loyal_friend: 'bone', quill: 'letterSend', all_weathers: 'rain', shopkeeper: 'store', living_lantern: 'lightOn',
 };
 
 /** L'icona di ogni rango (medaglia del traguardo e festa del nuovo rango). */

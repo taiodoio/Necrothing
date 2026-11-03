@@ -187,7 +187,7 @@
         <h3>Monocromatiche</h3>
         <div class="ds-icons" id="mono-icons"></div>
         <h3>Medaglie</h3>
-        <p class="sub">Il grado (bronzo, argento, oro) è scritto a mano in ogni traguardo. <code>locked</code> è il grigio dei traguardi non ancora presi. Si ottengono con <code>lpBadgeUrl(icona, grado)</code>.</p>
+        <p class="sub">Il grado (bronzo, argento, oro) è scritto a mano in ogni traguardo. <code>locked</code> è il grigio dei traguardi non ancora presi. Si ottengono con <code>lpBadgeUrl(icona, grado)</code>. Sui medaglioni dei traguardi non va nessun numero: il tondo dorato col numero è il rango (HUD e festa del nuovo rango).</p>
         <div class="ds-badges">
           <figure><img data-badge="trophy:bronze" alt="" />bronzo</figure>
           <figure><img data-badge="trophy:silver" alt="" />argento</figure>
@@ -196,6 +196,7 @@
           <figure><img data-badge="rank:gold" alt="" />rango</figure>
           <figure><img data-badge="wisp:gold" alt="" />fuoco fatuo</figure>
           <figure><img data-badge="letter:gold" alt="" />lettera spedita</figure>
+          <figure><img data-badge="crow:silver" alt="" />ornitologo</figure>
         </div>
       </section>
 
@@ -556,13 +557,13 @@
         <h3>Profilo e traguardi</h3>
         <div class="ds-grid">
           <div class="ds-example">
-            <p class="ds-label">Tasselli del profilo (<code>.pl-chip</code>)</p>
+            <p class="ds-label">Tasselli del profilo (<code>button.pl-chip</code>): la «i» in alto a destra (<code>.pl-info</code>) dice che toccandolo si apre cosa vuol dire quel dato, in due righe</p>
             <div class="ds-live col">
               <div class="pl-chips">
-                <div class="pl-chip"><i data-icon="rank" style="--s: 30px"></i><b>4</b><small>Rango</small></div>
-                <div class="pl-chip"><i data-icon="xp" style="--s: 30px"></i><b>2.410</b><small>Punti Necro</small><div class="xp-bar pl-bar"><i style="width: 40%"></i></div></div>
-                <div class="pl-chip"><i data-icon="wisp" style="--s: 30px"></i><b>30</b><small>Fuochi fatui</small></div>
-                <div class="pl-chip"><i data-icon="prestige" style="--s: 30px"></i><b>142</b><small>Prestigio</small></div>
+                <button class="pl-chip"><span class="pl-info">i</span><i data-icon="rank" style="--s: 30px"></i><b>4</b><small>Rango</small></button>
+                <button class="pl-chip"><span class="pl-info">i</span><i data-icon="xp" style="--s: 30px"></i><b>2.410</b><small>Punti Necro</small><div class="xp-bar pl-bar"><i style="width: 40%"></i></div></button>
+                <button class="pl-chip"><span class="pl-info">i</span><i data-icon="wisp" style="--s: 30px"></i><b>30</b><small>Fuochi fatui</small></button>
+                <button class="pl-chip"><span class="pl-info">i</span><i data-icon="prestige" style="--s: 30px"></i><b>142</b><small>Prestigio</small></button>
               </div>
             </div>
           </div>

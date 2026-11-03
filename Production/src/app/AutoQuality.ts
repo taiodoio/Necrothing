@@ -5,16 +5,16 @@
 //   Bassa per i telefoni deboli (mondo alleggerito, luci finte, materiale
 //   semplice, niente ombre), Media per i medi (luci finte, materiale
 //   semplice, ombre ferme), Alta per i forti (luci vere, ombre vive);
-// - Auto sceglie il livello dal dispositivo (mai più su di quello stimato),
-//   dentro al livello regola solo la risoluzione, e se anche la risoluzione
-//   più bassa non regge scende di livello (cambiarlo ricostruisce parte
-//   della scena: mezzo secondo di blocco). Può risalire fino al livello
-//   stimato; un livello che appena raggiunto non ha retto non si ritenta
-//   (per la sessione: alla prossima apertura si riparte dal livello stimato).
-// - il regolatore giudica rispetto al ritmo atteso (30 o 60 FPS): scende
-//   subito se resta sotto per qualche secondo, risale solo dopo un lungo
-//   periodo pieno; un gradino che ha appena fatto crollare gli FPS non viene
-//   più ritentato (tetto).
+// - Auto sceglie il livello dal dispositivo e parte dalla risoluzione più alta
+//   di quel livello; nel gioco (AUTO_POLICY) il livello non cambia più e scende
+//   solo la risoluzione, come rete di sicurezza: dopo 25 secondi di gioco
+//   attivo e con gli FPS sotto il ritmo per 8 secondi di fila. Da fermo
+//   (risparmio batteria) e sotto i menù il gioco rallenta apposta: quei frame
+//   non si giudicano. Ogni apertura riparte dal livello stimato.
+// - il regolatore giudica rispetto al ritmo atteso (30 o 60 FPS) e risale
+//   (fino alla risoluzione più alta del livello) solo dopo un periodo pieno; un
+//   gradino che ha appena fatto crollare gli FPS non viene più ritentato (tetto).
+//   EAGER_POLICY è il comportamento di prima (scende presto, anche di livello).
 
 import type { Quality } from '../game/state.ts';
 import { t } from '../i18n/index.ts';
@@ -115,14 +115,29 @@ export const START_SETTLE = 5;
 export const TIER_SETTLE = 4;
 /** Un frame singolo più lungo di così, in mezzo a frame veloci, è uno scatto isolato (un modello generato, un salvataggio): non conta. */
 export const HITCH = 0.25;
+/** Come può scendere il regolatore. */
+export interface AutoPolicy {
+  /** Se può scendere (di risoluzione e, con `tierDown`, di livello). */
+  downgrade: boolean;
+  /** Se, alla risoluzione minima, può scendere anche di livello (ricostruisce parte della scena). */
+  tierDown: boolean;
+  /** Secondi di gioco attivo, a ritmo pieno, prima di poter scendere (da fermo e sotto i menù non contano). */
+  warmup: number;
+  /** Finestre di un secondo consecutive sotto il ritmo per scendere di un gradino. */
+  sustain: number;
+}
+
+/** Il regolatore di prima (i test lo usano così): scende presto, anche di livello. */
+export const EAGER_POLICY: AutoPolicy = { downgrade: true, tierDown: true, warmup: 0, sustain: 2 };
+
 /**
- * Calo automatico (risoluzione e livello) quando gli FPS restano sotto il ritmo.
- * SOSPESO per il momento: dopo i secondi d'avvio il ritmo misurato cala e Auto
- * abbassava la qualità anche dove il gioco gira bene. Auto sceglie solo il
- * livello stimato dal dispositivo (alla risoluzione più alta) e non scende;
- * per riattivarlo basta rimettere `true`.
+ * Quello del gioco: rete di sicurezza prudente. Auto parte dal livello stimato
+ * per il dispositivo, alla risoluzione più alta, e il livello non cambia più;
+ * scende solo di risoluzione, dopo almeno 25 secondi di gioco attivo e se gli
+ * FPS restano sotto il ritmo per 8 secondi di fila (mai nei primi secondi,
+ * mai da fermo o sotto un menù: lì il gioco rallenta apposta).
  */
-export const AUTO_DOWNGRADE = false;
+export const AUTO_POLICY: AutoPolicy = { downgrade: true, tierDown: false, warmup: 25, sustain: 8 };
 
 /** Regolatore a finestre di un secondo, con isteresi e tetti per ciò che non regge. */
 export class AutoGovernor {
@@ -142,11 +157,13 @@ export class AutoGovernor {
   /** Da quanto si è saliti di gradino e di livello (per capire se la salita ha fatto crollare gli FPS). */
   private sinceUp = Infinity;
   private sinceTierUp = Infinity;
-  /** Se può scendere di risoluzione o di livello (vedi AUTO_DOWNGRADE). */
-  private readonly downgrade: boolean;
+  /** Come può scendere (vedi AUTO_POLICY). */
+  private readonly policy: AutoPolicy;
+  /** Secondi giudicati (gioco attivo a ritmo pieno, dopo l'assestamento). */
+  private active = 0;
 
-  constructor(p: AutoProfile, opts: { downgrade?: boolean } = {}) {
-    this.downgrade = opts.downgrade ?? true;
+  constructor(p: AutoProfile, policy: Partial<AutoPolicy> = {}) {
+    this.policy = { ...EAGER_POLICY, ...policy };
     this.tier = p.tier;
     this.top = ORDER.indexOf(p.top) >= ORDER.indexOf(p.tier) ? p.top : p.tier;
     const max = PROFILES[p.tier].dpr.length - 1;
@@ -180,6 +197,7 @@ export class AutoGovernor {
     this.sinceTierUp += dt;
     if (this.cooldown > 0) this.cooldown -= dt;
     if (this.settle > 0) { this.settle -= dt; return null; }
+    this.active += dt;
     this.winFrames++;
     this.winTime += dt;
     if (this.winTime < 1) return null;
@@ -190,10 +208,11 @@ export class AutoGovernor {
     if (this.history.length > 30) this.history.shift();
     const last = (n: number) => this.history.length >= n && this.history.slice(-n);
     const low = AutoGovernor.low(target), high = AutoGovernor.high(target);
-    // Sotto il ritmo per due finestre consecutive si riduce subito la risoluzione.
-    const slow = last(2);
+    // Sotto il ritmo per `sustain` finestre consecutive (e dopo `warmup` secondi di gioco) si riduce la risoluzione.
+    const pol = this.policy;
+    const slow = last(pol.sustain);
     if (slow && slow.every((f) => f < low)) {
-      if (!this.downgrade) return null; // calo sospeso: si resta dove si è (e non si sale)
+      if (!pol.downgrade || this.active < pol.warmup) return null; // si resta dove si è (e non si sale)
       if (this.step > 0) {
         // la salita di poco fa non ha retto: quel gradino non si ritenta più
         if (this.sinceUp < 12) this.ceiling = this.step - 1;
@@ -202,9 +221,9 @@ export class AutoGovernor {
       }
       // Se anche alla risoluzione minima restiamo sotto il ritmo per tre
       // finestre, si riducono ombre, luci e densità della scena.
-      const slower = last(3);
+      const slower = last(pol.sustain + 1);
       const i = ORDER.indexOf(this.tier);
-      if (slower && slower.every((f) => f < low) && i > 0) {
+      if (pol.tierDown && slower && slower.every((f) => f < low) && i > 0) {
         // il livello raggiunto da poco non regge: non ci si torna più
         if (this.sinceTierUp < 40) this.top = ORDER[i - 1];
         this.tier = ORDER[i - 1];

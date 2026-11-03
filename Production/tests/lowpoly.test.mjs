@@ -674,13 +674,27 @@ test('presenze erranti: a frame regolari camminano davvero (prima restavano a gi
 
 test('qualità Auto: livello dal dispositivo, risoluzione dentro al livello, scende presto e sale piano, non ritenta ciò che non regge', async () => {
   const { detectTier, AutoGovernor, PROFILES, newAutoProfile, START_SETTLE } = await import('../src/app/AutoQuality.ts');
-  // il calo automatico è sospeso nel gioco: col regolatore senza calo i frame lenti non cambiano nulla
-  assert.equal((await import('../src/app/AutoQuality.ts')).AUTO_DOWNGRADE, false);
+  // il gioco usa la rete di sicurezza prudente: solo risoluzione, dopo 25 s di gioco attivo e 8 s di fila sotto il ritmo
   {
-    const held = new AutoGovernor(newAutoProfile('high'), { downgrade: false });
-    for (let t = 0; t < START_SETTLE + 40; t += 1 / 20) assert.equal(held.frame(1 / 20, 60), null);
-    assert.equal(held.tier, 'high');
-    assert.equal(held.step, PROFILES.high.dpr.length - 1);
+    const { AUTO_POLICY } = await import('../src/app/AutoQuality.ts');
+    assert.equal(AUTO_POLICY.tierDown, false, 'il livello non scende più');
+    assert.ok(AUTO_POLICY.warmup >= 20 && AUTO_POLICY.sustain >= 8);
+    const tick = (g, fps, seconds, held = false) => { const out = []; for (let t = 0; t < seconds; t += 1 / fps) { if (held) g.hold(); else { const d = g.frame(1 / fps, 60); if (d) out.push(d); } } return out; };
+    // da fermo (risparmio batteria) o sotto un menù non si giudica: anche minuti a 15 FPS non cambiano nulla
+    const idle = new AutoGovernor(newAutoProfile('high'), AUTO_POLICY);
+    assert.deepEqual(tick(idle, 15, 120, true), []);
+    assert.equal(idle.step, PROFILES.high.dpr.length - 1);
+    // gioco attivo ma lento: nei primi secondi niente; poi scende solo di risoluzione, mai di livello
+    const slow = new AutoGovernor(newAutoProfile('high'), AUTO_POLICY);
+    assert.deepEqual(tick(slow, 20, START_SETTLE + 20), [], 'prima di 25 s di gioco attivo non si scende');
+    const later = tick(slow, 20, 120);
+    assert.ok(later.length > 0 && later.every((d) => d === 'step'));
+    assert.equal(slow.step, 0);
+    assert.equal(slow.tier, 'high');
+    // un calo breve (5 s) dopo il riscaldamento non basta
+    const brief = new AutoGovernor(newAutoProfile('high'), AUTO_POLICY);
+    tick(brief, 60, START_SETTLE + 30);
+    assert.deepEqual(tick(brief, 20, 5), []);
   }
   assert.equal(detectTier({ gpu: 'Apple GPU', cores: 6, mobile: true }), 'high');
   assert.equal(detectTier({ gpu: 'Apple GPU', cores: 2, mobile: true }), 'high', 'Safari su iPhone dichiara 2 core: non conta');

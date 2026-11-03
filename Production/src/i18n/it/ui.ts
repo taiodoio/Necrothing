@@ -79,19 +79,10 @@ export default {
   'hud.staff.take': 'Impugna il bastone mistico',
   // banner di Modifica, interfaccia nuova (breve: deve stare intero sul telefono)
   'hud.edit.banner': 'Tocca un elemento e trascinalo',
-  'hud.tools.pan': 'Sposta la vista',
-  'hud.tools.move': 'Sposta elemento',
-  'hud.tools.draw': 'Disegna',
   'hud.tools.undo': 'Annulla ultima modifica',
-  'hud.tools.drawGuide': 'Tocca {hand} per spostarti sulla mappa. Tocca {tool} per disegnare.',
-  'hud.tools.moveGuide': 'Tocca {hand} per spostarti sulla mappa. Tocca {tool} per selezionare e spostare un oggetto.',
-  'hud.tools.panShort': 'Mappa',
-  'hud.tools.moveShort': 'Sposta',
-  'hud.tools.drawShort': 'Disegna',
-  'hud.tools.panHintPlace': 'Trascina la mappa per spostarti; usa due dita per zoomare.',
-  'hud.tools.panHint': 'Trascina la mappa per spostarti; usa due dita per zoomare. Tocca un elemento per i dettagli.',
-  'hud.tools.moveHint': 'Tocca un elemento per i dettagli o trascinalo per spostarlo.',
-  'hud.tools.drawHint': 'Tocca la mappa per aggiungere o togliere un elemento. Trascina sulla mappa per tracciare: il percorso curva automaticamente.',
+  'hud.tools.moveHint': 'Tocca un oggetto per prenderlo e trascinalo, o tienilo premuto e trascinalo subito. Fuori dall’oggetto il dito sposta la vista; due dita per lo zoom.',
+  'hud.tools.moveHintLocked': 'Trascina l’oggetto dove vuoi: vicino al bordo la vista scorre da sola. Conferma per lasciarlo lì, Annulla per rimetterlo com’era.',
+  'hud.tools.drawHint': 'Tocca il terreno per scegliere da dove partire, poi trascina dal cerchio (o tieni premuto e trascina). Fuori dal cerchio sposti la vista; tocca un pezzo per toglierlo.',
 
   // ── Barra di posizionamento ──
   // tracciando sentieri e recinti, prima di cominciare
@@ -115,14 +106,17 @@ export default {
   // breve: pulsante
   'hud.place.buy': 'Compra',
   'hud.place.confirm': 'Conferma',
+  'hud.edit.confirm': 'Conferma la modifica',
+  'hud.edit.cancel': 'Annulla: rimettilo com’era',
+  'hud.edit.done': 'Esci da Modifica',
   // breve: pulsante
   'hud.place.rotate': 'Ruota',
   // breve: pulsante, conferma il punto della tomba
   'hud.place.bury': 'Seppellisci qui',
   // titolo della barra quando si sceglie dove seppellire
   'hud.place.graveTitle': 'Dove riposerà {name}?',
-  'hud.place.hint': 'Tocca il terreno o trascina per spostare, poi conferma.',
-  'hud.place.graveHint': 'Tocca il terreno o trascina per spostare la tomba, poi tocca «Seppellisci qui».',
+  'hud.place.hint': 'Trascina l’oggetto per spostarlo (o tienilo premuto e trascinalo); fuori dall’oggetto sposti la vista. Poi conferma.',
+  'hud.place.graveHint': 'Trascina la tomba dove vuoi; fuori dalla tomba sposti la vista. Poi tocca «Seppellisci qui».',
   'hud.place.busy': 'Spazio occupato: scegli un punto libero.',
   // {what}: cosa c'è (es. «Fango»)
   'hud.place.busyBy': 'Qui c’è già: {what}. Scegli un punto libero.',
@@ -483,11 +477,12 @@ export default {
   'onboarding.yard.flowers': 'Ora è pulita: portale dei fiori. Una tomba trascurata a lungo si rompe, e ripararla costa.',
   'onboarding.yard.light': 'Le lanterne si accendono e si spengono: tocca questa e accendila.',
   'onboarding.yard.shop': 'Tocca la Bottega e compra una lanterna: si paga in fuochi fatui.',
-  'onboarding.yard.place': 'Fatto! Portala nel punto illuminato, accanto al sentiero: tocca lì o trascinala, poi tocca la spunta per posarla. Quello che compri e non posi aspetta nell’Inventario, nel menu: da lì puoi anche rivenderlo.',
+  'onboarding.yard.place': 'Fatto! Portala nel punto illuminato, accanto al sentiero: trascinala col dito (trascinando fuori dalla lanterna sposti la vista), poi tocca la spunta per posarla. Quello che compri e non posi aspetta nell’Inventario, nel menu: da lì puoi anche rivenderlo.',
   'onboarding.yard.edit': 'Apri il menu e scegli Modifica: lì sposti, ruoti e riponi quello che hai posato.',
-  'onboarding.yard.editPan': 'In Modifica hai due modalità. Con «Mappa» trascini la vista, senza prendere niente: toccala.',
-  'onboarding.yard.editWork': 'Ora la vista si sposta col dito. Con «Sposta» invece prendi gli oggetti: toccala.',
-  'onboarding.yard.editDrag': 'Ora trascina la lanterna dove preferisci. Quando hai finito, tocca la spunta.',
+  'onboarding.yard.editPick': 'Tocca la lanterna per prenderla, oppure tienila premuta e trascinala subito. Trascinando altrove sposti solo la vista.',
+  'onboarding.yard.editDrag': 'Ora trascinala dove preferisci: se il dito arriva al bordo, la vista scorre da sola.',
+  'onboarding.yard.editConfirm': 'Bene! Tocca la spunta per confermare (la freccia la rimette com’era).',
+  'onboarding.yard.editExit': 'Ora tocca di nuovo la spunta per uscire da Modifica.',
   'onboarding.yard.ghost': 'Qualcuno è venuto a trovarti. Tocca il fantasma: ti racconta qualcosa e ti lascia un regalo.',
   'onboarding.yard.sheet': 'Ogni tomba ha la sua scheda. Tocca la tomba e aprila con la lente.',
   'onboarding.yard.sheetOpen': 'Qui ci sono la sua storia e i suoi ricordi. In «Altro» puoi riesumarla o affidarla all’albero. Chiudi la scheda quando hai finito.',
@@ -512,7 +507,7 @@ export default {
   // breve: pulsanti del primo obiettivo
   'onboarding.goal.later': 'Più tardi',
   'onboarding.grave.title': 'Dove riposerà?',
-  'onboarding.grave.text': 'Trascina la tomba dove vuoi (con «Mappa» sposti solo la vista), poi tocca «Seppellisci qui».',
+  'onboarding.grave.text': 'Trascina la tomba dove vuoi (trascinando fuori dalla tomba sposti solo la vista), poi tocca «Seppellisci qui».',
   'onboarding.grave.ok': 'Ho capito',
   'onboarding.goal.go': 'Seppellisci',
   // i consigli al momento giusto: una notifica del Custode, una volta sola; .say è la sua battuta

@@ -27,6 +27,10 @@ const REMOVED_KEYS = [
   'settings.assetGallery', 'settings.info', 'settings.build.dev', 'settings.build.version', 'settings.build.distribution',
   'settings.section.onboarding', 'game.pet.freeOld', 'shop.intro.classic#one', 'shop.intro.classic#other',
   'inventory.sell#one', 'inventory.sell#other',
+  // tolto l'interruttore Mappa/Sposta (gesti unici in Disegno, Posizionamento e Modifica)
+  'hud.tools.pan', 'hud.tools.move', 'hud.tools.draw', 'hud.tools.drawGuide', 'hud.tools.moveGuide', 'hud.tools.panShort',
+  'hud.tools.moveShort', 'hud.tools.drawShort', 'hud.tools.panHintPlace', 'hud.tools.panHint',
+  'onboarding.yard.editPan', 'onboarding.yard.editWork',
 ];
 const RECOVERED = {
   it: { 'detail.business.ready#one': '+{n} pronto da riscuotere ({min}–{max} fuochi fatui al giorno, fino a {cap})', 'detail.business.ready#other': '+{n} pronti da riscuotere ({min}–{max} fuochi fatui al giorno, fino a {cap})', 'inventory.sellGain': '+{n}' },
@@ -41,41 +45,8 @@ const RECOVERED = {
   ko: { 'detail.business.ready#one': '+{n}개 수령 가능 (하루 위스프 {min}~{max}개, 최대 {cap}개)', 'detail.business.ready#other': '+{n}개 수령 가능 (하루 위스프 {min}~{max}개, 최대 {cap}개)', 'inventory.sellGain': '+{n}' },
 };
 const TEXT_OVERRIDES = {
-  'hud.tools.pan': { it: 'Sposta la vista', en: 'Pan view', de: 'Ansicht verschieben', fr: 'Déplacer la vue', es: 'Mover vista', pt: 'Mover vista', 'zh-Hans': '移动视角', 'zh-Hant': '移動視角', ja: '視点を移動', ko: '시점 이동' },
-  'hud.tools.move': { it: 'Sposta elemento', en: 'Move item', de: 'Objekt verschieben', fr: 'Déplacer l’objet', es: 'Mover objeto', pt: 'Mover objeto', 'zh-Hans': '移动物品', 'zh-Hant': '移動物件', ja: 'アイテムを移動', ko: '물건 이동' },
-  'hud.tools.draw': { it: 'Disegna', en: 'Draw', de: 'Zeichnen', fr: 'Tracer', es: 'Dibujar', pt: 'Desenhar', 'zh-Hans': '绘制', 'zh-Hant': '繪製', ja: '描く', ko: '그리기' },
   'hud.tools.undo': { it: 'Annulla ultima modifica', en: 'Undo last change', de: 'Letzte Änderung rückgängig', fr: 'Annuler la dernière modification', es: 'Deshacer último cambio', pt: 'Desfazer última alteração', 'zh-Hans': '撤销上一步', 'zh-Hant': '復原上一步', ja: '直前の変更を元に戻す', ko: '마지막 변경 취소' },
-  'hud.tools.drawGuide': {
-    it: 'Tocca {hand} per spostarti sulla mappa. Tocca {tool} per disegnare.',
-    en: 'Tap {hand} to move around the map. Tap {tool} to draw.',
-    de: 'Tippe auf {hand}, um die Karte zu bewegen. Tippe auf {tool}, um zu zeichnen.',
-    fr: 'Touche {hand} pour te déplacer sur la carte. Touche {tool} pour tracer.',
-    es: 'Toca {hand} para moverte por el mapa. Toca {tool} para dibujar.',
-    pt: 'Toca em {hand} para te moveres pelo mapa. Toca em {tool} para desenhar.',
-    'zh-Hans': '点击{hand}移动地图。点击{tool}绘制。',
-    'zh-Hant': '點擊{hand}移動地圖。點擊{tool}繪製。',
-    ja: '{hand}をタップしてマップを移動。{tool}をタップして描きます。',
-    ko: '{hand}을 눌러 지도를 이동하고 {tool}을 눌러 그리세요.',
-  },
-  'hud.tools.moveGuide': {
-    it: 'Tocca {hand} per spostarti sulla mappa. Tocca {tool} per selezionare e spostare un oggetto.',
-    en: 'Tap {hand} to move around the map. Tap {tool} to select and move an object.',
-    de: 'Tippe auf {hand}, um die Karte zu bewegen. Tippe auf {tool}, um ein Objekt auszuwählen und zu verschieben.',
-    fr: 'Touche {hand} pour te déplacer sur la carte. Touche {tool} pour sélectionner et déplacer un objet.',
-    es: 'Toca {hand} para moverte por el mapa. Toca {tool} para seleccionar y mover un objeto.',
-    pt: 'Toca em {hand} para te moveres pelo mapa. Toca em {tool} para selecionar e mover um objeto.',
-    'zh-Hans': '点击{hand}移动地图。点击{tool}选择并移动物品。',
-    'zh-Hant': '點擊{hand}移動地圖。點擊{tool}選取並移動物件。',
-    ja: '{hand}をタップしてマップを移動。{tool}をタップしてアイテムを選び、移動します。',
-    ko: '{hand}을 눌러 지도를 이동하고 {tool}을 눌러 물건을 선택하고 이동하세요.',
-  },
-  'hud.tools.panHint': {
-    it: 'Trascina la mappa per spostarti; usa due dita per zoomare. Tocca un elemento per i dettagli.', en: 'Drag the map to move around; pinch to zoom. Tap an item for details.', de: 'Ziehe die Karte zum Bewegen und zoome mit zwei Fingern. Tippe auf ein Objekt für Details.', fr: 'Fais glisser la carte pour te déplacer et pince pour zoomer. Touche un objet pour ses détails.', es: 'Arrastra el mapa para desplazarte y pellizca para ampliar. Toca un objeto para ver sus detalles.', pt: 'Arrasta o mapa para te moveres e usa dois dedos para ampliar. Toca num objeto para ver os detalhes.', 'zh-Hans': '拖动地图移动视角，双指缩放。点击物品查看详情。', 'zh-Hant': '拖動地圖移動視角，雙指縮放。點擊物件查看詳情。', ja: 'マップをドラッグして移動、ピンチで拡大縮小。アイテムをタップすると詳細を表示。', ko: '지도를 드래그해 이동하고 두 손가락으로 확대하세요. 물건을 눌러 상세 정보를 보세요.',
-  },
-  'hud.tools.moveHint': { it: 'Tocca un elemento per i dettagli o trascinalo per spostarlo.', en: 'Tap an item for details or drag it to move it.', de: 'Tippe auf ein Objekt für Details oder ziehe es zum Verschieben.', fr: 'Touche un objet pour ses détails ou fais-le glisser pour le déplacer.', es: 'Toca un objeto para ver sus detalles o arrástralo para moverlo.', pt: 'Toca num objeto para ver os detalhes ou arrasta-o para o mover.', 'zh-Hans': '点击物品查看详情，或拖动以移动。', 'zh-Hant': '點擊物件查看詳情，或拖動以移動。', ja: 'アイテムをタップで詳細表示、ドラッグで移動。', ko: '물건을 누르면 상세 정보가 보이고 드래그하면 이동해요.' },
-  'hud.tools.drawHint': { it: 'Tocca la mappa per aggiungere o togliere un elemento. Trascina sulla mappa per tracciare: il percorso curva automaticamente.', en: 'Tap the map to add or remove an item. Drag across the map to draw: the path turns automatically.', de: 'Tippe auf die Karte, um ein Element hinzuzufügen oder zu entfernen. Ziehe über die Karte zum Zeichnen: Der Weg biegt automatisch ab.', fr: 'Touche la carte pour ajouter ou retirer un élément. Fais glisser sur la carte pour tracer : le chemin tourne automatiquement.', es: 'Toca el mapa para añadir o quitar un elemento. Arrastra sobre el mapa para trazar: el camino gira solo.', pt: 'Toca no mapa para adicionar ou remover um elemento. Arrasta no mapa para traçar: o percurso curva automaticamente.', 'zh-Hans': '点击地图添加或移除一格。拖动地图绘制路径，转弯会自动完成。', 'zh-Hant': '點擊地圖新增或移除一格。拖動地圖繪製路徑，轉彎會自動完成。', ja: 'マップをタップして追加・削除。マップをドラッグして描くと、道は自動で曲がります。', ko: '지도를 눌러 추가하거나 제거하세요. 지도를 드래그해 그리면 길이 자동으로 꺾여요.' },
-  'edit.intro.text': { it: 'In Modifica scegli la mano per spostare la vista o le frecce per trascinare un elemento. Tocca la lente per i dettagli, la freccia circolare per annullare e la spunta per confermare.', en: 'In Edit, choose the hand to move the view or the arrows to drag an item. Tap the magnifier for details, the curved arrow to undo and the checkmark to confirm.', de: 'Wähle im Bearbeitungsmodus die Hand zum Bewegen der Ansicht oder die Pfeile zum Verschieben eines Objekts. Die Lupe zeigt Details, der runde Pfeil macht rückgängig und der Haken bestätigt.', fr: 'En mode modification, choisis la main pour déplacer la vue ou les flèches pour déplacer un objet. La loupe affiche les détails, la flèche annule et la coche confirme.', es: 'En edición, elige la mano para mover la vista o las flechas para mover un objeto. La lupa muestra detalles, la flecha deshace y la marca confirma.', pt: 'Em edição, escolhe a mão para mover a vista ou as setas para mover um objeto. A lupa mostra detalhes, a seta desfaz e o visto confirma.', 'zh-Hans': '在编辑模式中，选择手形移动视角，或选择箭头拖动物品。点击放大镜查看详情、弯箭头撤销、对勾确认。', 'zh-Hant': '在編輯模式中，選擇手形移動視角，或選擇箭頭拖動物件。點擊放大鏡查看詳情、彎箭頭復原、勾號確認。', ja: '編集では手で視点を動かし、矢印でアイテムを移動します。虫眼鏡で詳細、曲がった矢印で取り消し、チェックで確定します。', ko: '편집에서 손을 선택해 시점을, 화살표를 선택해 물건을 이동하세요. 돋보기는 상세 정보, 굽은 화살표는 취소, 체크 표시는 확인이에요.' },
-  // onboarding.yard.place e onboarding.yard.edit: tolti, ora i testi li dà il workbook (CMS)
+  // onboarding.yard.place e onboarding.yard.edit, i suggerimenti degli strumenti e edit.intro.text: tolti, ora i testi li dà il workbook (CMS)
   'tree.memory.free': {
     it: 'Libera ricordo', en: 'Release Memory', de: 'Erinnerung freigeben', fr: 'Libérer le souvenir', es: 'Liberar recuerdo', pt: 'Libertar memória',
     'zh-Hans': '放下回忆', 'zh-Hant': '放下回憶', ja: '思い出を手放す', ko: '추억 놓아주기',

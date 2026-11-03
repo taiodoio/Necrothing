@@ -63,7 +63,7 @@ export default {
 
   // ── Modalità Modifica ──
   'edit.intro.title': 'Modalità Modifica',
-  'edit.intro.text': 'In Modifica scegli la mano per spostare la vista o le frecce per trascinare un elemento. Tocca la lente per i dettagli, la freccia circolare per annullare e la spunta per confermare.',
+  'edit.intro.text': 'In Modifica tocca un oggetto per prenderlo e trascinalo, oppure tienilo premuto e trascinalo subito. Fuori dall’oggetto il dito sposta la vista, due dita fanno lo zoom. Conferma per lasciarlo lì, Annulla per rimetterlo com’era; la lente apre i dettagli.',
   'edit.intro.dontShow': 'Non mostrare più',
   // breve: pulsante
   'edit.intro.start': 'Inizia',

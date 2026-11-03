@@ -1412,8 +1412,8 @@ export default {
   "onboarding.yard.clean": "このお墓は手入れが必要です。タップして、ほうきを選びましょう。",
   "onboarding.yard.flowers": "きれいになりました。お花を供えましょう。長く放置したお墓は壊れてしまい、修理には鬼火が必要です。",
   "onboarding.yard.light": "ランタンは点灯・消灯できます。このランタンをタップして明かりをつけましょう。",
-  "onboarding.yard.shop": "ショップを開いてランタンを買いましょう。鬼火で支払います。",
-  "onboarding.yard.place": "買えました！小道のそばの光っている場所へ運びましょう。指でドラッグして（ランタン以外をドラッグすると視点が動きます）、チェックをタップで置けます。購入後に置いていないアイテムはメニューのインベントリに残り、そこで売ることもできます。",
+  "onboarding.yard.shop": "ショップを開いてランタンを買いましょう（鬼火で支払います）。",
+  "onboarding.yard.place": "好きな場所へドラッグして、チェックをタップ。",
   "onboarding.yard.edit": "メニューで編集を選びましょう。置いたものを動かしたり、回したり、しまったりできます。",
   "onboarding.yard.ghost": "誰かが遊びに来たようです。幽霊をタップしてみましょう。お話と贈り物を残してくれます。",
   "onboarding.yard.sheet": "お墓にはそれぞれ記録があります。お墓をタップし、虫眼鏡で開いてみましょう。",
@@ -1603,7 +1603,7 @@ export default {
   "guide.prestige.text": "いまの墓地の様子を表します。お墓、花、飾りで上がり、放っておくと下がります。名声が上がると柵が広がります。",
   "player.info.more": "タップして詳しく見る",
   "ctx.talk": "話す",
-  "onboarding.yard.editDrag": "好きな場所へドラッグしましょう。指が端に来ると、視点が自動で動きます。",
+  "onboarding.yard.editDrag": "好きな場所へドラッグしましょう。",
   "burial.leave.title": "埋葬をやめますか？",
   "burial.leave.text": "書いた内容と写真は失われます。",
   "burial.leave.ok": "埋葬をやめる",
@@ -1614,7 +1614,9 @@ export default {
   "hud.edit.done": "編集を終了",
   "game.edit.locked": "先に{what}の変更を確定するかキャンセルしてください。",
   "game.edit.lockedThis": "このアイテム",
-  "onboarding.yard.editPick": "ランタンをタップして持ち上げるか、長押ししてそのままドラッグしましょう。ほかの場所をドラッグすると視点が動くだけです。",
-  "onboarding.yard.editConfirm": "いいですね！チェックをタップして確定しましょう（矢印で元に戻せます）。",
-  "onboarding.yard.editExit": "もう一度チェックをタップして編集を終了しましょう。"
+  "onboarding.yard.editPick": "ランタンをタップして持ち上げ、ドラッグしましょう（長押しでも）。",
+  "onboarding.yard.editConfirm": "チェックをタップして確定。",
+  "onboarding.yard.editExit": "もう一度チェックをタップして編集を終了。",
+  "onboarding.yard.shopPlace": "「今すぐ設置」をタップしましょう。ランタンが中庭に現れます。",
+  "onboarding.yard.fromInventory": "ランタンはインベントリにあります。メニューを開いてインベントリを選び、「設置」をタップ。"
 } satisfies Record<string, string>;

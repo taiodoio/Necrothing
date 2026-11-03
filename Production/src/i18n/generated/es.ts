@@ -1412,8 +1412,8 @@ export default {
   "onboarding.yard.clean": "Esta tumba está descuidada. Tócala y elige la escoba.",
   "onboarding.yard.flowers": "Ya está limpia. Llévale flores. Si descuidas una tumba demasiado tiempo, se romperá y repararla costará fuegos fatuos.",
   "onboarding.yard.light": "Puedes encender y apagar las linternas. Toca esta para encenderla.",
-  "onboarding.yard.shop": "Toca la Tienda y compra una linterna. Se paga con fuegos fatuos.",
-  "onboarding.yard.place": "¡Listo! Llévala al punto iluminado junto al sendero: arrástrala con el dedo (si arrastras fuera de la linterna, mueves la vista) y luego toca la marca para colocarla. Lo que compres y no coloques queda en el Inventario del menú, donde también puedes venderlo.",
+  "onboarding.yard.shop": "Toca la Tienda y compra una linterna (se paga con fuegos fatuos).",
+  "onboarding.yard.place": "Arrástrala donde quieras y luego toca la marca.",
   "onboarding.yard.edit": "Abre el menú y elige Editar: ahí mueves, giras y guardas lo que has colocado.",
   "onboarding.yard.ghost": "Alguien ha venido a visitarte. Toca al fantasma: te contará algo y te dejará un regalo.",
   "onboarding.yard.sheet": "Cada tumba tiene su ficha. Toca una tumba y ábrela con la lupa.",
@@ -1603,7 +1603,7 @@ export default {
   "guide.prestige.text": "Dice cómo está el cementerio ahora: sube con tumbas, flores y decoraciones, y baja si lo descuidas. Con más prestigio el recinto se amplía.",
   "player.info.more": "Toca para saber qué es",
   "ctx.talk": "Hablar",
-  "onboarding.yard.editDrag": "Ahora arrástrala donde quieras: si el dedo llega al borde, la vista se desplaza sola.",
+  "onboarding.yard.editDrag": "Arrástrala donde quieras.",
   "burial.leave.title": "¿Cancelar el entierro?",
   "burial.leave.text": "Lo que has escrito y la foto se perderán.",
   "burial.leave.ok": "Cancelar el entierro",
@@ -1614,7 +1614,9 @@ export default {
   "hud.edit.done": "Salir de Editar",
   "game.edit.locked": "Primero confirma o cancela el cambio de {what}.",
   "game.edit.lockedThis": "este objeto",
-  "onboarding.yard.editPick": "Toca la linterna para tomarla, o mantenla pulsada para arrastrarla enseguida. Si arrastras en otro sitio, solo mueves la vista.",
-  "onboarding.yard.editConfirm": "¡Bien! Toca la marca para confirmar (la flecha la deja como estaba).",
-  "onboarding.yard.editExit": "Ahora toca otra vez la marca para salir de Editar."
+  "onboarding.yard.editPick": "Toca la linterna para tomarla y luego arrástrala (o mantenla pulsada).",
+  "onboarding.yard.editConfirm": "Toca la marca para confirmar.",
+  "onboarding.yard.editExit": "Toca otra vez la marca para salir de Editar.",
+  "onboarding.yard.shopPlace": "Ahora toca «Colocar ahora»: la linterna aparece en el patio.",
+  "onboarding.yard.fromInventory": "La linterna está en el Inventario: abre el menú, elige Inventario y toca «Colocar»."
 } satisfies Record<string, string>;

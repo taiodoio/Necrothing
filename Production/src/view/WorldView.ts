@@ -1145,12 +1145,17 @@ export class WorldView {
   }
 
   /** Anteprima di trascinamento: sposta il gruppo e colora l'ingombro. */
+  /** Di quanto si alza quel che si tiene col dito (l'oggetto trascinato, quello che si posa). */
+  private lift = 0;
+  setLift(y: number) { this.lift = y; }
+
   previewMove(id: string, x: number, y: number, valid: boolean) {
     const e = this.entities.get(id);
     if (!e) return;
     const c = cellCenter(x, y, e.fp);
     c.y = this.heightAt(c.x, c.z);
     e.group.position.copy(c);
+    e.group.position.y += this.lift;
     e.group.updateMatrix();
     // la versione fa ridisegnare le ombre ferme (e ricalcolare i posti delle tombe): mentre si
     // trascina basta farlo ogni tanto, non a ogni movimento del dito (in Alta crollavano gli FPS)
@@ -1188,6 +1193,7 @@ export class WorldView {
     const c = cellCenter(x, y, fp);
     c.y = this.heightAt(c.x, c.z);
     this.ghost!.position.copy(c);
+    this.ghost!.position.y += this.lift;
     this.ghost!.rotation.y = -rot * Math.PI / 2;
     this.ghost!.traverse((o) => {
       const m = o as THREE.Mesh;

@@ -1412,8 +1412,8 @@ export default {
   "onboarding.yard.clean": "이 무덤은 관리가 필요해요. 터치하고 빗자루를 선택하세요.",
   "onboarding.yard.flowers": "이제 깨끗해졌어요. 꽃을 놓아 주세요. 무덤을 오래 방치하면 망가지고, 수리에는 도깨비불이 필요해요.",
   "onboarding.yard.light": "등불은 켜고 끌 수 있어요. 이 등불을 터치해 불을 밝혀 보세요.",
-  "onboarding.yard.shop": "상점을 열어 등불을 사 보세요. 도깨비불로 살 수 있어요.",
-  "onboarding.yard.place": "잘했어요! 길 옆 빛나는 자리로 옮기세요. 손가락으로 끌어다 놓고(등불 밖에서 끌면 화면이 움직여요) 체크 표시를 눌러 배치하세요. 구매 후 배치하지 않은 물건은 메뉴의 보관함에 남으며 거기서 판매할 수도 있어요.",
+  "onboarding.yard.shop": "상점을 열어 등불을 사 보세요(도깨비불로 살 수 있어요).",
+  "onboarding.yard.place": "원하는 곳으로 끌어다 놓고 체크 표시를 누르세요.",
   "onboarding.yard.edit": "메뉴에서 편집을 선택하세요. 배치한 것을 옮기고, 돌리고, 보관할 수 있어요.",
   "onboarding.yard.ghost": "누군가 찾아왔어요. 유령을 터치해 보세요. 이야기도 들려주고 선물도 남겨 줄 거예요.",
   "onboarding.yard.sheet": "무덤마다 기록이 있어요. 무덤을 터치한 뒤 돋보기로 열어 보세요.",
@@ -1603,7 +1603,7 @@ export default {
   "guide.prestige.text": "지금 묘지의 모습을 보여 줘요. 무덤, 꽃, 장식으로 오르고, 돌보지 않으면 내려가요. 명성이 높을수록 울타리가 넓어져요.",
   "player.info.more": "눌러서 알아보기",
   "ctx.talk": "말 걸기",
-  "onboarding.yard.editDrag": "이제 원하는 곳으로 끌어 보세요. 손가락이 가장자리에 닿으면 화면이 저절로 움직여요.",
+  "onboarding.yard.editDrag": "원하는 곳으로 끌어 보세요.",
   "burial.leave.title": "매장을 취소할까요?",
   "burial.leave.text": "작성한 내용과 사진이 사라져요.",
   "burial.leave.ok": "매장 취소",
@@ -1614,7 +1614,9 @@ export default {
   "hud.edit.done": "편집 끝내기",
   "game.edit.locked": "먼저 {what}의 변경을 확인하거나 취소하세요.",
   "game.edit.lockedThis": "이 물건",
-  "onboarding.yard.editPick": "등불을 눌러 집거나, 길게 눌러 바로 끌어 보세요. 다른 곳에서 끌면 화면만 움직여요.",
-  "onboarding.yard.editConfirm": "잘했어요! 체크 표시를 눌러 확인하세요(화살표를 누르면 원래대로 돌아가요).",
-  "onboarding.yard.editExit": "이제 체크 표시를 한 번 더 눌러 편집을 끝내세요."
+  "onboarding.yard.editPick": "등불을 눌러 집은 뒤 끌어 보세요(길게 눌러도 돼요).",
+  "onboarding.yard.editConfirm": "체크 표시를 눌러 확인하세요.",
+  "onboarding.yard.editExit": "체크 표시를 한 번 더 눌러 편집을 끝내세요.",
+  "onboarding.yard.shopPlace": "이제 «지금 배치»를 누르세요. 등불이 마당에 나타나요.",
+  "onboarding.yard.fromInventory": "등불은 보관함에 있어요. 메뉴를 열고 보관함을 고른 뒤 «배치»를 누르세요."
 } satisfies Record<string, string>;

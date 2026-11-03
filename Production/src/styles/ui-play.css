@@ -315,3 +315,28 @@
 .ui-next .steps.with-icons .step.now .mono { filter: drop-shadow(0 0 6px rgba(244, 213, 138, 0.45)); }
 /* modifica della tomba: le cinque schede in parti uguali, senza scorrere */
 .ui-next.ui-play .drawer[data-kind="burial"] .tabs.edit-tabs { grid-auto-columns: minmax(0, 1fr); overflow: visible; }
+
+/* ── Pressione lunga: l'anello dorato sotto il dito (ui/pressRing.ts) ──
+   112 px: si vede attorno al polpastrello. Compare dopo 120 ms (un tocco non lampeggia), si riempie
+   fino ai 350 ms; quando prende, scatta, si illumina e svanisce. */
+@property --press { syntax: '<number>'; inherits: false; initial-value: 0; }
+.press-ring {
+  position: fixed; z-index: 6; left: 0; top: 0; width: 112px; height: 112px; margin: -56px 0 0 -56px; border-radius: 50%;
+  pointer-events: none; opacity: 0; --press: 0;
+  background: conic-gradient(#f0c46e calc(var(--press) * 360deg), rgba(255, 244, 220, 0.2) 0);
+  -webkit-mask: radial-gradient(circle, transparent 47px, #000 48px, #000 55px, transparent 56px);
+  mask: radial-gradient(circle, transparent 47px, #000 48px, #000 55px, transparent 56px);
+  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.65));
+}
+.press-ring.on { animation: pressShow 0.08s linear var(--delay) both, pressFill var(--fill) linear var(--delay) both; }
+.press-ring.on.fire {
+  --press: 1; opacity: 1; animation: pressFire 0.34s cubic-bezier(0.2, 1.2, 0.4, 1) both;
+  filter: drop-shadow(0 0 8px rgba(240, 196, 110, 0.95)) drop-shadow(0 0 3px rgba(255, 226, 168, 0.9));
+}
+@keyframes pressShow { from { opacity: 0; } to { opacity: 1; } }
+@keyframes pressFill { from { --press: 0; } to { --press: 1; } }
+@keyframes pressFire { 0% { opacity: 1; transform: scale(1); } 45% { opacity: 1; transform: scale(1.16); } 100% { opacity: 0; transform: scale(1.24); } }
+@media (prefers-reduced-motion: reduce) {
+  .press-ring.on { animation: none; opacity: 0; }
+  .press-ring.on.fire { animation: pressShow 0.01s both reverse 0.3s; opacity: 1; transform: none; }
+}

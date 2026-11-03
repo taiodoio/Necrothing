@@ -1412,8 +1412,8 @@ export default {
   "onboarding.yard.clean": "Cette tombe a été négligée. Touche-la et choisis le balai.",
   "onboarding.yard.flowers": "La voilà propre. Apporte-lui des fleurs. Si une tombe reste trop longtemps négligée, elle se brise, et la réparer coûte des feux follets.",
   "onboarding.yard.light": "On peut allumer et éteindre les lanternes. Touche celle-ci pour l'allumer.",
-  "onboarding.yard.shop": "Ouvre la Boutique et achète une lanterne. Tu paieras avec des feux follets.",
-  "onboarding.yard.place": "C’est fait ! Porte-la à l’endroit éclairé, près du chemin : fais-la glisser du doigt (en glissant ailleurs, tu déplaces la vue), puis touche la coche pour la placer. Les objets achetés mais non placés restent dans l’Inventaire du menu, où tu peux aussi les revendre.",
+  "onboarding.yard.shop": "Ouvre la Boutique et achète une lanterne (on paie en feux follets).",
+  "onboarding.yard.place": "Fais-la glisser où tu veux, puis touche la coche.",
   "onboarding.yard.edit": "Ouvre le menu et choisis Modifier : tu y déplaces, tournes et ranges ce que tu as placé.",
   "onboarding.yard.ghost": "Quelqu'un est venu te rendre visite. Touche le fantôme : il te racontera quelque chose et te laissera un cadeau.",
   "onboarding.yard.sheet": "Chaque tombe a sa fiche. Touche une tombe, puis ouvre sa fiche avec la loupe.",
@@ -1603,7 +1603,7 @@ export default {
   "guide.prestige.text": "Il dit à quoi ressemble le cimetière en ce moment : il monte avec les tombes, les fleurs et les décorations, et baisse si tu le négliges. Plus de prestige agrandit l’enclos.",
   "player.info.more": "Touche pour savoir ce que c’est",
   "ctx.talk": "Parler",
-  "onboarding.yard.editDrag": "Fais-la maintenant glisser où tu veux : si ton doigt atteint le bord, la vue défile toute seule.",
+  "onboarding.yard.editDrag": "Fais-la glisser où tu veux.",
   "burial.leave.title": "Annuler l’enterrement ?",
   "burial.leave.text": "Ce que tu as écrit et la photo seront perdus.",
   "burial.leave.ok": "Annuler l’enterrement",
@@ -1614,7 +1614,9 @@ export default {
   "hud.edit.done": "Quitter Modifier",
   "game.edit.locked": "Confirme ou annule d’abord la modification de {what}.",
   "game.edit.lockedThis": "cet objet",
-  "onboarding.yard.editPick": "Touche la lanterne pour la prendre, ou maintiens-la appuyée pour la déplacer tout de suite. En glissant ailleurs, tu ne déplaces que la vue.",
-  "onboarding.yard.editConfirm": "Bravo ! Touche la coche pour confirmer (la flèche la remet comme avant).",
-  "onboarding.yard.editExit": "Touche encore la coche pour quitter Modifier."
+  "onboarding.yard.editPick": "Touche la lanterne pour la prendre, puis fais-la glisser (ou maintiens-la appuyée).",
+  "onboarding.yard.editConfirm": "Touche la coche pour confirmer.",
+  "onboarding.yard.editExit": "Touche encore la coche pour quitter Modifier.",
+  "onboarding.yard.shopPlace": "Touche maintenant « Placer maintenant » : la lanterne apparaît dans la cour.",
+  "onboarding.yard.fromInventory": "La lanterne est dans l’Inventaire : ouvre le menu, choisis Inventaire et touche « Placer »."
 } satisfies Record<string, string>;

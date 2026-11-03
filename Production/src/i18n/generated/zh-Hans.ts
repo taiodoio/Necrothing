@@ -1412,8 +1412,8 @@ export default {
   "onboarding.yard.clean": "这座墓已经很久没人打理了。点击它，选择扫帚。",
   "onboarding.yard.flowers": "现在干净了，给它放些花吧。墓穴如果长期无人打理就会损坏，修复需要消耗鬼火。",
   "onboarding.yard.light": "灯笼可以开关。点击这个灯笼把它点亮。",
-  "onboarding.yard.shop": "打开商店，买一盏灯笼。需要用鬼火支付。",
-  "onboarding.yard.place": "买好了！把灯笼放到小路旁亮起的位置：用手指拖过去（在灯笼以外拖动会移动视角），然后点击对勾放置。购买后尚未放置的物品会留在菜单的背包中，也可以在那里转卖。",
+  "onboarding.yard.shop": "打开商店，买一盏灯笼（用鬼火支付）。",
+  "onboarding.yard.place": "把它拖到想要的位置，然后点击对勾。",
   "onboarding.yard.edit": "打开菜单并选择编辑：在这里可以移动、旋转和收起已放置的东西。",
   "onboarding.yard.ghost": "有访客来了。点击幽灵，它会告诉你一件事，还会留下一份礼物。",
   "onboarding.yard.sheet": "每座墓都有自己的档案。点击墓碑，再点击放大镜打开。",
@@ -1603,7 +1603,7 @@ export default {
   "guide.prestige.text": "它反映墓园此刻的样子：坟墓、鲜花和装饰会让它上升，疏于照料则会下降。声望越高，围栏越大。",
   "player.info.more": "点按了解详情",
   "ctx.talk": "交谈",
-  "onboarding.yard.editDrag": "现在把它拖到喜欢的位置：手指靠近边缘时，视角会自动滚动。",
+  "onboarding.yard.editDrag": "把它拖到想要的位置。",
   "burial.leave.title": "取消这次埋葬？",
   "burial.leave.text": "你写的内容和照片都会丢失。",
   "burial.leave.ok": "取消埋葬",
@@ -1614,7 +1614,9 @@ export default {
   "hud.edit.done": "退出编辑",
   "game.edit.locked": "请先确认或取消对{what}的修改。",
   "game.edit.lockedThis": "这个物品",
-  "onboarding.yard.editPick": "点一下灯笼把它拿起，或长按后直接拖动。在其他地方拖动只会移动视角。",
-  "onboarding.yard.editConfirm": "很好！点击对勾确认（箭头会恢复原样）。",
-  "onboarding.yard.editExit": "现在再点一次对勾，退出编辑。"
+  "onboarding.yard.editPick": "点一下灯笼把它拿起，再拖动（或长按）。",
+  "onboarding.yard.editConfirm": "点击对勾确认。",
+  "onboarding.yard.editExit": "再点一次对勾，退出编辑。",
+  "onboarding.yard.shopPlace": "现在点「立即放置」：灯笼会出现在院子里。",
+  "onboarding.yard.fromInventory": "灯笼在物品栏里：打开菜单，选择物品栏，再点「放置」。"
 } satisfies Record<string, string>;

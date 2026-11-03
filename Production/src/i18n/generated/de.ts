@@ -1412,8 +1412,8 @@ export default {
   "onboarding.yard.clean": "Dieses Grab wurde vernachlässigt. Tippe darauf und wähle den Besen.",
   "onboarding.yard.flowers": "Jetzt ist es sauber. Bring Blumen mit. Bleibt ein Grab zu lange ungepflegt, geht es kaputt – und die Reparatur kostet Irrlichter.",
   "onboarding.yard.light": "Laternen lassen sich ein- und ausschalten. Tippe auf diese, um sie anzuzünden.",
-  "onboarding.yard.shop": "Öffne den Laden und kaufe eine Laterne. Bezahlt wird mit Irrlichtern.",
-  "onboarding.yard.place": "Geschafft! Bring sie an die beleuchtete Stelle neben dem Weg: Ziehe sie mit dem Finger (abseits der Laterne verschiebst du die Ansicht), dann tippe auf den Haken. Gekaufte, nicht platzierte Gegenstände bleiben im Inventar im Menü und können dort verkauft werden.",
+  "onboarding.yard.shop": "Öffne den Laden und kaufe eine Laterne (bezahlt wird mit Irrlichtern).",
+  "onboarding.yard.place": "Ziehe sie, wohin du willst, dann tippe auf den Haken.",
   "onboarding.yard.edit": "Öffne das Menü und wähle Bearbeiten: Dort verschiebst, drehst und verstaust du, was du platziert hast.",
   "onboarding.yard.ghost": "Jemand ist zu Besuch gekommen. Tippe auf den Geist: Er erzählt dir etwas und hinterlässt ein Geschenk.",
   "onboarding.yard.sheet": "Jedes Grab hat einen eigenen Eintrag. Tippe auf ein Grab und öffne ihn über die Lupe.",
@@ -1603,7 +1603,7 @@ export default {
   "guide.prestige.text": "Es zeigt, wie der Friedhof gerade aussieht: Es steigt mit Gräbern, Blumen und Dekorationen und sinkt, wenn du ihn vernachlässigst. Mit mehr Prestige wird der Zaun größer.",
   "player.info.more": "Tippe, um mehr zu erfahren",
   "ctx.talk": "Sprechen",
-  "onboarding.yard.editDrag": "Ziehe sie jetzt, wohin du willst: Erreicht dein Finger den Rand, scrollt die Ansicht von selbst.",
+  "onboarding.yard.editDrag": "Ziehe sie, wohin du willst.",
   "burial.leave.title": "Bestattung abbrechen?",
   "burial.leave.text": "Was du geschrieben hast und das Foto gehen verloren.",
   "burial.leave.ok": "Bestattung abbrechen",
@@ -1614,7 +1614,9 @@ export default {
   "hud.edit.done": "Bearbeiten beenden",
   "game.edit.locked": "Bestätige oder verwirf zuerst die Änderung an {what}.",
   "game.edit.lockedThis": "diesem Objekt",
-  "onboarding.yard.editPick": "Tippe auf die Laterne, um sie zu nehmen, oder halte sie gedrückt und ziehe sie sofort. Woanders verschiebst du nur die Ansicht.",
-  "onboarding.yard.editConfirm": "Gut gemacht! Tippe auf den Haken, um zu bestätigen (der Pfeil setzt sie zurück).",
-  "onboarding.yard.editExit": "Tippe jetzt noch einmal auf den Haken, um Bearbeiten zu beenden."
+  "onboarding.yard.editPick": "Tippe auf die Laterne, um sie zu nehmen, dann ziehe sie (oder halte sie gedrückt).",
+  "onboarding.yard.editConfirm": "Tippe auf den Haken, um zu bestätigen.",
+  "onboarding.yard.editExit": "Tippe noch einmal auf den Haken, um Bearbeiten zu beenden.",
+  "onboarding.yard.shopPlace": "Tippe jetzt auf „Jetzt platzieren“: Die Laterne erscheint im Hof.",
+  "onboarding.yard.fromInventory": "Die Laterne ist im Inventar: Öffne das Menü, wähle Inventar und tippe auf „Platzieren“."
 } satisfies Record<string, string>;

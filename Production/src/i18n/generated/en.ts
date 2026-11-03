@@ -1412,8 +1412,8 @@ export default {
   "onboarding.yard.clean": "This grave has been neglected. Tap it and choose the broom.",
   "onboarding.yard.flowers": "Now it's clean. Bring it some flowers. Leave a grave neglected for too long and it'll break; repairs cost wisps.",
   "onboarding.yard.light": "Lanterns can be switched on and off. Tap this one to light it.",
-  "onboarding.yard.shop": "Tap the Shop and buy a lantern. You'll pay with wisps.",
-  "onboarding.yard.place": "Done! Bring it to the lit spot next to the path: drag it with your finger (dragging away from the lantern moves the view), then tap the checkmark to place it. Anything you buy but do not place stays in the Inventory in the menu, where you can also sell it.",
+  "onboarding.yard.shop": "Tap the Shop and buy a lantern (you pay with wisps).",
+  "onboarding.yard.place": "Drag it wherever you like, then tap the checkmark.",
   "onboarding.yard.edit": "Open the menu and choose Edit: there you move, rotate and store what you have placed.",
   "onboarding.yard.ghost": "Someone has come to visit. Tap the ghost: they'll tell you something and leave you a gift.",
   "onboarding.yard.sheet": "Every grave has its own record. Tap a grave and open it with the magnifying glass.",
@@ -1643,7 +1643,7 @@ export default {
   "guide.prestige.text": "It tells how the cemetery looks right now: it rises with graves, flowers and decorations, and drops if you neglect it. More prestige makes the fence grow.",
   "player.info.more": "Tap to learn what it is",
   "ctx.talk": "Talk",
-  "onboarding.yard.editDrag": "Now drag it wherever you like: if your finger reaches the edge, the view scrolls by itself.",
+  "onboarding.yard.editDrag": "Drag it wherever you like.",
   "burial.leave.title": "Cancel the burial?",
   "burial.leave.text": "What you wrote and the photo will be lost.",
   "burial.leave.ok": "Cancel the burial",
@@ -1654,7 +1654,9 @@ export default {
   "hud.edit.done": "Leave Edit",
   "game.edit.locked": "First confirm or cancel the change to {what}.",
   "game.edit.lockedThis": "this item",
-  "onboarding.yard.editPick": "Tap the lantern to pick it up, or press and hold it to drag it right away. Dragging anywhere else only moves the view.",
-  "onboarding.yard.editConfirm": "Well done! Tap the checkmark to confirm (the arrow puts it back as it was).",
-  "onboarding.yard.editExit": "Now tap the checkmark again to leave Edit."
+  "onboarding.yard.editPick": "Tap the lantern to pick it up, then drag it (or press and hold it).",
+  "onboarding.yard.editConfirm": "Tap the checkmark to confirm.",
+  "onboarding.yard.editExit": "Tap the checkmark again to leave Edit.",
+  "onboarding.yard.shopPlace": "Now tap “Place Now”: the lantern appears in the yard.",
+  "onboarding.yard.fromInventory": "The lantern is in your Inventory: open the menu, choose Inventory and tap “Place”."
 } satisfies Record<string, string>;

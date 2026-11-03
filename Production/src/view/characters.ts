@@ -181,6 +181,9 @@ export function animateRig(rig: Rig, pose: Pose, t: number, phase: number) {
   if (rig.spec.flier) {
     const flap = pose === 'fly' ? Math.sin(t * 18) * 0.9 : pose === 'cheer' ? Math.sin(t * 16) * 0.6 : 0.05;
     set(p.armL, 0, flap); set(p.armR, 0, -flap);
+    // in volo le zampe si piegano all'indietro, sotto la coda (non penzolano); a terra stanno dritte
+    const tuck = pose === 'fly' ? 1.45 + Math.sin(t * 18 + 1) * 0.05 : 0;
+    set(p.legL, tuck); set(p.legR, tuck);
     set(p.head, pose === 'idle' ? Math.sin(t * 1.5) * 0.3 : 0);
     return;
   }

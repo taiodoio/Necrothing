@@ -11,6 +11,7 @@ import { askReminderPermission, clearReminders, remindersAvailable, syncReminder
 import type { GraveVisualState } from '../game/graves.ts';
 import { graveVisualState } from '../game/graves.ts';
 import * as R from '../game/rules.ts';
+import { weatherNow } from '../game/weather.ts';
 import { anniversaryYears, catchUpMessage, liveTick, runCatchUp, type CatchUpReport } from '../game/simulation.ts';
 import { createNewGame, type FpsSetting, type Placed, type Quality, type QualitySetting, type SaveData, type TimeOverride } from '../game/state.ts';
 import { buildYard } from '../game/yard.ts';
@@ -42,7 +43,7 @@ import { ForestMist, mistOptimized } from '../view/ForestMist.ts';
 import { PostFX } from '../view/PostFX.ts';
 import { cellCenter, HALF, worldToCell, WorldView } from '../view/WorldView.ts';
 import { WalkTarget } from '../view/walkTarget.ts';
-import { AutoGovernor, detectTier, newAutoProfile, PROFILES, QUALITY_LABELS, type AutoProfile, type QualityProfile } from './AutoQuality.ts';
+import { AUTO_POLICY, AutoGovernor, detectTier, newAutoProfile, PROFILES, QUALITY_LABELS, type AutoProfile, type QualityProfile } from './AutoQuality.ts';
 import { Input } from './Input.ts';
 import { flushPersistence, loadSave, persistenceOn, saveNow, scheduleSave, setSaveInstead } from './persistence.ts';
 import { closedCoffinLP } from '../render/lowpoly/memoryTree.ts';
@@ -146,7 +147,7 @@ export class Game {
     const urlSeed = Number(params.get('seed'));
     this.state = opts.state ?? loadSave() ?? createNewGame(now, Number.isFinite(urlSeed) && urlSeed > 0 ? urlSeed : undefined);
     this.shownRank = rankForXp(this.state.player.xp).level;
-    if (this.state.settings.quality === 'auto') this.auto = new AutoGovernor(loadAutoProfile());
+    if (this.state.settings.quality === 'auto') this.auto = new AutoGovernor(loadAutoProfile(), AUTO_POLICY);
     const q = this.baseQuality();
     this.renderer = new THREE.WebGLRenderer({ canvas, antialias: opts.antialias ?? q !== 'low', powerPreference: 'high-performance', preserveDrawingBuffer: false });
     this.renderer.outputColorSpace = THREE.SRGBColorSpace;
@@ -373,6 +374,7 @@ export class Game {
       if (!this.renderer.shadowMap.autoUpdate) this.refreshStaticShadows();
       this.world.updateDecorLod(this.rig.camera);
       this.renderer.info.reset();
+      this.atmosphere.renderLightMap(this.renderer);
       this.postfx.render(this.scene, this.rig.camera);
     }
     this.drawnUnderMenu = menu;
@@ -410,7 +412,7 @@ export class Game {
   updatePhase(force: boolean) {
     const o: TimeOverride = this.state.settings.timeOverride;
     const phase = o === 'auto' ? dayPhaseForHour(this.now().getHours()) : o;
-    const weather = this.state.settings.weatherEffects ? this.state.world.weather : 'clear';
+    const weather = this.state.settings.weatherEffects ? this.weatherNow() : 'clear';
     if (!force && phase === this.phase && weather === this.atmosphere.getWeather()) return;
     this.phase = phase;
     this.actors?.setNight(this.isNight());
@@ -422,6 +424,9 @@ export class Game {
   }
 
   getPhase() { return this.phase; }
+
+  /** Il tempo di adesso (la pioggia viene a rovesci di qualche ora: game/weather.ts). */
+  weatherNow() { return weatherNow(this.state, this.now()); }
 
   /** Notte (anche forzata dalle impostazioni): il vampiro esce, i fantasmi ballano nel gazebo. */
   private isNight(): boolean {
@@ -2032,7 +2037,7 @@ export class Game {
 
   setQuality(q: QualitySetting) {
     this.state.settings.quality = q;
-    this.auto = q === 'auto' ? new AutoGovernor(loadAutoProfile()) : null;
+    this.auto = q === 'auto' ? new AutoGovernor(loadAutoProfile(), AUTO_POLICY) : null;
     this.applySettingQuality();
     scheduleSave(this.state);
     this.ui.refreshSettingsButtons();
@@ -2265,6 +2270,7 @@ export class Game {
 
   /** Cattura un rettangolo (px CSS) della scena, a colori. */
   capture(rect: { x: number; y: number; w: number; h: number }): string {
+    this.atmosphere.renderLightMap(this.renderer);
     this.postfx.render(this.scene, this.rig.camera);
     const src = this.renderer.domElement;
     const sx = src.width / src.clientWidth, sy = src.height / src.clientHeight;
@@ -2423,7 +2429,7 @@ export class Game {
     R.ensureKeeperHouse(next, this.now());
     this.actors.teleport(this.homeSpot(next));
     this.rig.setMode(next.settings.camera);
-    this.auto = next.settings.quality === 'auto' ? new AutoGovernor(loadAutoProfile()) : null;
+    this.auto = next.settings.quality === 'auto' ? new AutoGovernor(loadAutoProfile(), AUTO_POLICY) : null;
     this.applySettingQuality();
     this.afterChange();
     this.updatePhase(true);
@@ -2447,7 +2453,7 @@ export class Game {
       this.qualityInfo(),
       t('game.debug.draw', { calls: info.calls, tris: info.triangles.toLocaleString(currentLang()) }),
       t('game.debug.gpuObjects', { geometries: memory.geometries, textures: memory.textures, programs: this.renderer.info.programs?.length ?? 0 }),
-      t('game.debug.seed', { seed: this.state.seed, phase: this.phase, weather: this.state.world.weather }),
+      t('game.debug.seed', { seed: this.state.seed, phase: this.phase, weather: `${this.state.world.weather} → ${this.weatherNow()}` }),
       t('game.debug.counts', { graves: this.state.graves.length, items: this.state.placeables.length }),
       t('game.debug.presences', { roamers: this.actors.stats().roamers, presences: this.actors.stats().presences, models: cs.models }),
     ].join('\n');
@@ -2512,7 +2518,7 @@ const AUTO_KEY = 'necro3d:auto-quality';
 /** Cresce quando cambia la stima del dispositivo: i profili ricordati prima si rifanno (v3: risoluzione massima della fascia stimata). */
 const AUTO_VERSION = 4; // v4: i profili rimasti in Media per gli scatti dell'avvio si rifanno
 /** Dopo quanto senza tocchi il gioco rallenta, e a quanti frame al secondo (sotto i menù ancora meno). */
-const IDLE_MS = 4000, IDLE_FPS = 15, MENU_FPS = 10, UNFOCUSED_FPS = 5;
+const IDLE_MS = 10000, IDLE_FPS = 15, MENU_FPS = 10, UNFOCUSED_FPS = 5;
 let gpuName: string | null = null;
 
 /** GPU e memoria del dispositivo (per stimare la fascia). */
@@ -2537,7 +2543,9 @@ function loadAutoProfile(): AutoProfile {
     const saved = JSON.parse(localStorage.getItem(AUTO_KEY) ?? 'null') as (AutoProfile & { gpu: string; v?: number }) | null;
     // il livello in uso si ricorda, ma il tetto torna quello stimato: un livello che una volta non ha retto
     // (magari per un momento pesante) si può ritentare a ogni apertura, non resta escluso per sempre
-    if (saved && saved.v === AUTO_VERSION && saved.gpu === info.gpu && saved.tier in PROFILES) return { tier: saved.tier, step: saved.step, ceiling: saved.ceiling, top: detectTier(info) };
+    // se il livello non scende più (scende solo la risoluzione) un profilo ridotto in passato non si ricorda:
+    // ogni apertura riparte dal livello stimato, alla risoluzione più alta
+    if (AUTO_POLICY.tierDown && saved && saved.v === AUTO_VERSION && saved.gpu === info.gpu && saved.tier in PROFILES) return { tier: saved.tier, step: saved.step, ceiling: saved.ceiling, top: detectTier(info) };
   } catch { /* profilo illeggibile: si riparte */ }
   return newAutoProfile(detectTier(info));
 }

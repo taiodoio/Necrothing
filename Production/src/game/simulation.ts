@@ -10,7 +10,8 @@ import { housePerk } from './house.ts';
 import { CATALOG, rotatedFootprint } from './catalog.ts';
 import { createRng, hashString, newId, type Rng } from './rng.ts';
 import { computeSpawns, liveWispChance, wispCap, type SpawnRequest } from './spawn.ts';
-import type { SaveData, Weather } from './state.ts';
+import type { SaveData } from './state.ts';
+import { rollWeather } from './weather.ts';
 import { DAY_MS, dayPhaseForHour, daysBetween, isoDate } from './time.ts';
 import { areaForLevel, buildOccupancy } from './world.ts';
 import { t } from '../i18n/index.ts';
@@ -37,7 +38,6 @@ export interface CatchUpReport {
 const MAX_REASONABLE_CATCHUP_DAYS = 3650;
 const validInstant = (value: string | null | undefined) => !!value && Number.isFinite(Date.parse(value));
 
-const WEATHERS: Weather[] = ['clear', 'clear', 'fog', 'rain', 'storm'];
 
 function addMemory(s: SaveData, graveId: string, type: SaveData['memories'][number]['type'], now: Date) {
   s.memories.push({ id: newId('m'), graveId, type, at: now.toISOString() });
@@ -228,13 +228,8 @@ export function runCatchUp(s: SaveData, now: Date): CatchUpReport {
     r.wispsAdded++;
   }
 
-  // Meteo: al massimo un cambio al giorno.
-  const today = isoDate(now);
-  if (s.world.lastWeatherDate !== today) {
-    s.world.weather = rng.pick(WEATHERS);
-    s.world.lastWeatherDate = today;
-    r.weatherChanged = true;
-  }
+  // Meteo: il tempo del giorno, al più un cambio al giorno (per stagione e con continuità: game/weather.ts).
+  if (rollWeather(s, now)) r.weatherChanged = true;
   // il conto avanza solo dei giorni interi già consumati: chi rientra più volte al giorno
   // non azzera ogni volta le ore accumulate (altrimenti erbacce, sporco e fuochi fatui
   // maturati da chiuso non arriverebbero mai)
@@ -252,6 +247,7 @@ export interface LiveTickResult {
 export function liveTick(s: SaveData, now: Date, salt: number): LiveTickResult {
   const rng = createRng(`${s.seed}:live:${Math.floor(now.getTime() / 1000)}:${salt}`);
   const isNight = dayPhaseForHour(now.getHours()) === 'night';
+  rollWeather(s, now); // gioco aperto oltre la mezzanotte: comincia il tempo del giorno nuovo
   const spawns = computeSpawns(s, isNight, rng, now);
   let wisp: LiveTickResult['wisp'] = null;
   if (s.world.looseWisps.length < wispCap(s) && rng.chance(liveWispChance(s, now, isNight))) {

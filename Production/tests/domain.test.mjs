@@ -1333,3 +1333,45 @@ test('comparse: food truck chiama gli zombie, carretto i fantasmi, i cacciatori 
   const z = M.zombieFoodTruck * (1 + M.huntersBonus);
   assert.ok(kinds(s, z * 0.99).includes('zombie') && !kinds(s, z * 1.01).includes('zombie'));
 });
+
+test('meteo: per stagione, con continuità, e la pioggia a rovesci di qualche ora', async () => {
+  const W = await import('../src/game/weather.ts');
+  const { isoDate } = await import('../src/game/time.ts');
+  const days = 3000, count = { clear: 0, fog: 0, rain: 0, storm: 0 };
+  let prev = null, same = 0, stormStorm = 0, maxWet = 0;
+  const winter = { n: 0, wet: 0 }, summer = { n: 0, wet: 0 };
+  for (let i = 0; i < days; i++) {
+    const d = new Date(2027, 0, 1 + i), date = isoDate(d);
+    const k = W.dayWeather('semi', date, prev);
+    count[k]++;
+    if (prev === k) same++;
+    if (prev === 'storm' && k === 'storm') stormStorm++;
+    const m = d.getMonth(), wet = k === 'rain' || k === 'storm' || k === 'fog';
+    if (m >= 9 || m <= 1) { winter.n++; winter.wet += wet; } else if (m >= 5 && m <= 7) { summer.n++; summer.wet += wet; }
+    // ore bagnate di quel giorno (a passi di un quarto d'ora)
+    let wetH = 0;
+    for (let h = 0; h < 24; h += 0.25) { const w = W.weatherAtHour('semi', date, k, h); if (w === 'rain' || w === 'storm') wetH += 0.25; }
+    if (k === 'rain' || k === 'storm') assert.ok(wetH >= 1 && wetH <= 9, `pioggia per ${wetH} ore il ${date}`);
+    else assert.equal(wetH, 0);
+    maxWet = Math.max(maxWet, wetH);
+    prev = k;
+  }
+  assert.equal(stormStorm, 0, 'un temporale non dura due giorni');
+  assert.ok(same / days > 0.5, 'spesso il tempo di ieri continua');
+  const share = (k) => count[k] / days;
+  assert.ok(share('clear') > 0.42 && share('clear') < 0.56, `sereno ${share('clear')}`);
+  assert.ok(share('storm') < 0.1, `temporale ${share('storm')}`);
+  assert.ok(share('rain') + share('storm') < 0.32, 'meno pioggia di prima (era il 40% dei giorni)');
+  assert.ok(winter.wet / winter.n > summer.wet / summer.n + 0.1, 'più nebbia e pioggia d\'inverno');
+  assert.ok(maxWet < 24);
+  // stesso giorno, stesso tempo; un giorno che si salta non porta la continuità
+  assert.equal(W.dayWeather('semi', '2027-03-04', 'rain'), W.dayWeather('semi', '2027-03-04', 'rain'));
+  const s = createNewGame(NOW, 7);
+  s.world.lastWeatherDate = '2027-03-03'; s.world.weather = 'storm';
+  assert.equal(W.rollWeather(s, new Date(2027, 2, 4, 9)), true);
+  assert.notEqual(s.world.weather, 'storm');
+  assert.equal(W.rollWeather(s, new Date(2027, 2, 4, 20)), false, 'al più un cambio al giorno');
+  // gioco aperto oltre la mezzanotte: il giro di vita fa cominciare il giorno nuovo
+  liveTick(s, new Date(2027, 2, 5, 0, 30), 1);
+  assert.equal(s.world.lastWeatherDate, '2027-03-05');
+});

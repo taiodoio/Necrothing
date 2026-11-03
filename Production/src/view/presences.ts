@@ -4,6 +4,14 @@
 // miniature della Bottega (ui/thumbs, che li ritrae fermi).
 
 import * as THREE from 'three';
+
+/**
+ * Chi parla accanto al suo oggetto: toccandolo si seleziona l'oggetto (menù con
+ * «Parla» e «Dettagli», e in Modifica si sposta e si ripone come gli altri).
+ */
+export const TALKER_OF: Readonly<Record<string, 'hunterA' | 'postman' | 'florist' | 'gardener'>> = {
+  ghost_hunters: 'hunterA', post_office: 'postman', flower_kiosk: 'florist', gardener_corner: 'gardener',
+};
 import type { Placed } from '../game/state.ts';
 import { lookKey, type CustodeLook } from '../game/look.ts';
 import { assemble, handPos, HUMAN_PIVOTS, humanSpec } from '../render/lowpoly/v2/custode.ts';

@@ -1651,5 +1651,6 @@ export default {
   "guide.wisps.text": "The cemetery’s currency: you pick it up and earn it by tending graves and meeting the creatures. You spend it in the Shop.",
   "guide.xp.text": "The Keeper’s experience: every bit of care and every encounter brings a few. They are not spent: they raise your rank.",
   "guide.prestige.text": "It tells how the cemetery looks right now: it rises with graves, flowers and decorations, and drops if you neglect it. More prestige makes the fence grow.",
-  "player.info.more": "Tap to learn what it is"
+  "player.info.more": "Tap to learn what it is",
+  "ctx.talk": "Talk"
 } satisfies Record<string, string>;

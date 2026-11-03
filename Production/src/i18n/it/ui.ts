@@ -146,6 +146,7 @@ export default {
   'ctx.house': 'Personalizza la casa',
   'ctx.readMail': 'Leggi la posta',
   'ctx.sendLetter': 'Spedisci una lettera',
+  'ctx.talk': 'Parla',
   // l'Albero dei ricordi: apre l'elenco dei ricordi
   'ctx.memories': 'Ricordi',
   'ctx.bell.ring': 'Suona la campana',

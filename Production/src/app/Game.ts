@@ -12,6 +12,7 @@ import type { GraveVisualState } from '../game/graves.ts';
 import { graveVisualState } from '../game/graves.ts';
 import * as R from '../game/rules.ts';
 import { weatherNow } from '../game/weather.ts';
+import { TALKER_OF } from '../view/presences.ts';
 import { anniversaryYears, catchUpMessage, liveTick, runCatchUp, type CatchUpReport } from '../game/simulation.ts';
 import { createNewGame, type FpsSetting, type Placed, type Quality, type QualitySetting, type SaveData, type TimeOverride } from '../game/state.ts';
 import { buildYard } from '../game/yard.ts';
@@ -56,7 +57,7 @@ export type Selection = { kind: 'grave' | 'placeable'; id: string } | null;
 const PET_HOME_ICONS: Record<PetSpecies, string> = { dog: 'kennel', cat: 'catBed', rabbit: 'hutch', duck: 'duckHouse', crow: 'perch' };
 
 export type EntityAction =
-  | 'detail' | 'clean' | 'repair' | 'flowers' | 'light' | 'shop' | 'rotate' | 'store' | 'confirm' | 'undoMove' | 'move' | 'entrust' | 'memories' | 'ring' | 'registry' | 'house' | 'collect' | 'sendLetter' | 'readMail';
+  | 'detail' | 'clean' | 'repair' | 'flowers' | 'light' | 'shop' | 'rotate' | 'store' | 'confirm' | 'undoMove' | 'move' | 'entrust' | 'memories' | 'ring' | 'registry' | 'house' | 'collect' | 'sendLetter' | 'readMail' | 'talk';
 
 const PET_STATUS: Record<Exclude<PetMode, 'home'>, string> = { free: t('game.pet.status.free'), follow: t('game.pet.status.follow') };
 
@@ -821,7 +822,7 @@ export class Game {
     const grave = this.state.graves.find((g) => g.id === id);
     // durante il rito la tomba affidata e l'albero restano dove sono finché il corteo non ha finito
     if (this.riteIds?.includes(id) && !['detail', 'memories', 'shop', 'registry', 'house'].includes(action)) { toast(t('game.rite.wait')); return; }
-    const instant: EntityAction[] = ['detail', 'shop', 'rotate', 'store', 'confirm', 'undoMove', 'move', 'entrust', 'memories', 'registry', 'house', 'collect', 'sendLetter', 'readMail'];
+    const instant: EntityAction[] = ['detail', 'shop', 'rotate', 'store', 'confirm', 'undoMove', 'move', 'entrust', 'memories', 'registry', 'house', 'collect', 'sendLetter', 'readMail', 'talk'];
     const run = () => {
       switch (action) {
         case 'clean': this.actors.work(); if (this.act((s, n) => (grave ? R.cleanGrave(s, id, n) : R.cleanPlaceable(s, id, n)), center, 'rewarded') && grave) signalOnboarding('graveCleaned'); break;
@@ -856,6 +857,7 @@ export class Game {
         case 'house': this.ui.openHouse(); break;
         case 'sendLetter': this.select(null); openLetterWrite(this.ui); break;
         case 'readMail': this.select(null); this.readMail(); break;
+        case 'talk': { const kind = TALKER_OF[this.state.placeables.find((p) => p.id === id)?.type ?? '']; this.select(null); if (kind) this.tapTalker(kind); break; }
         case 'collect': this.collectBusiness(id); break;
       }
     };
@@ -1104,7 +1106,9 @@ export class Game {
     const order = (o: THREE.Object3D) => (o.userData.roamerId || o.userData.petId || o.userData.vampireId || o.userData.talkerId ? 0 : o.userData.wispId ? 1 : 2);
     hits.sort((a, b) => order(a.object) - order(b.object) || a.distance - b.distance);
     const u = hits[0].object.userData;
-    return { entityId: u.entityId, wispId: u.wispId, roamerId: u.roamerId, petId: u.petId, vampireId: u.vampireId, talkerId: u.talkerId, talkerKind: u.talkerKind };
+    // chi parla accanto al suo oggetto (i fratelli all'auto, il postino, il fioraio, il giardiniere) conta come l'oggetto:
+    // toccandolo lo si seleziona (menù col fumetto e dettagli) e in Modifica lo si sposta e lo si ripone
+    return { entityId: u.entityId ?? u.talkerId, wispId: u.wispId, roamerId: u.roamerId, petId: u.petId, vampireId: u.vampireId, talkerId: u.talkerId, talkerKind: u.talkerKind };
   }
 
   groundCell(x: number, y: number) {
@@ -1165,16 +1169,16 @@ export class Game {
     if (hit?.roamerId) { this.tapRoamer(hit.roamerId); return; }
     if (hit?.petId && !this.editMode) { this.tapPet(hit.petId); return; }
     if (hit?.vampireId && !this.editMode) { this.tapVampire(hit.vampireId); return; }
-    if (hit?.talkerId && !this.editMode) { this.tapTalker(hit.talkerKind ?? 'gardener'); return; }
     if (hit?.wispId) {
       const w = this.state.world.looseWisps.find((q) => q.id === hit.wispId);
       if (w && !this.editMode && this.actors.walkTo({ x: w.x, y: w.y })) { this.markWalk(); this.rig.follow = this.actors.avatar.pos; }
       return;
     }
     // interfaccia nuova: sentieri, recinzioni, erba alta & co. si toccano solo in Modifica, fuori ci si cammina sopra
-    const background = hit?.entityId && !this.editMode && EDIT_ONLY.has(this.state.placeables.find((p) => p.id === hit.entityId)?.type ?? '');
-    if (hit?.entityId && !background) {
-      const id = hit.entityId;
+    const entityId = hit?.entityId;
+    const background = entityId && !this.editMode && EDIT_ONLY.has(this.state.placeables.find((p) => p.id === entityId)?.type ?? '');
+    if (entityId && !background) {
+      const id = entityId;
       // bar e orto con l'incasso pronto: toccandoli si riscuote
       if (!this.editMode && R.businessPending(this.state, id, this.now()) > 0) { this.collectBusiness(id); return; }
       this.goTo(id);

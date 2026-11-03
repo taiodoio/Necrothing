@@ -239,6 +239,9 @@ const ICONS: Record<string, () => Poly[]> = {
     ...P([[2.6, 19.4], [12, 12.6], [21.4, 19.4]], T.paper[0]), ...P([[2.6, 6.4], [21.4, 6.4], [12, 14.2]], T.paper[0]),
     ...disc(12, 13.6, 3.2, T.crimson, 10), ...fan([[12, 11.6], [13.4, 13.6], [12, 15.4], [10.6, 13.6]], T.dawn, [12, 13.2])],
   // spedire: la busta che vola via, con le scie
+  // parla: il fumetto di carta con la codina e i tre puntini
+  talk: () => [...P([[6.4, 16.6], [4.2, 21.2], [11, 17]], T.paper[2]), ...rrect(2.4, 3.6, 21.6, 17.4, 4.2, T.paper, [9, 7]),
+    ...[7.6, 12, 16.4].flatMap((x) => disc(x, 10.5, 1.5, T.ink, 8))],
   letterSend: () => [...tf(ICONS.letter(), 0.74, 5.6, 4.2), ...bar(1.8, 10, 5.4, 10, 1.6, T.spectral), ...bar(0.8, 14, 4.6, 14, 1.6, T.spectral), ...bar(2.2, 18, 5.6, 18, 1.6, T.spectral)],
   // cuccia del cane: casetta di legno col timpano pieno, tetto scuro, porta ad arco e l'osso davanti
   kennel: () => [...gableHouse(4.4, 17.6, 11.6, 20.6, 4.2, T.wood, T.woodDark), ...archDoor(11, 20.6, 4.6, 6.4),

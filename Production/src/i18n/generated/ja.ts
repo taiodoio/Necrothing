@@ -1611,5 +1611,6 @@ export default {
   "guide.wisps.text": "墓地のお金。お墓の手入れや生き物との出会いで拾ったり手に入れたりできます。ショップで使えます。",
   "guide.xp.text": "墓守の経験値。お手入れや出会いのたびに少しずつ増えます。使うものではなく、ランクを上げてくれます。",
   "guide.prestige.text": "いまの墓地の様子を表します。お墓、花、飾りで上がり、放っておくと下がります。名声が上がると柵が広がります。",
-  "player.info.more": "タップして詳しく見る"
+  "player.info.more": "タップして詳しく見る",
+  "ctx.talk": "話す"
 } satisfies Record<string, string>;

@@ -1611,5 +1611,6 @@ export default {
   "guide.wisps.text": "A moeda do cemitério: apanha-se e ganha-se a cuidar das campas e a encontrar as criaturas. Gasta-se na Loja.",
   "guide.xp.text": "A experiência do Guardião: cada cuidado e cada encontro dá alguns. Não se gastam: fazem subir de patente.",
   "guide.prestige.text": "Diz como está o cemitério agora: sobe com campas, flores e decorações, e desce se o descuidares. Com mais prestígio a vedação alarga-se.",
-  "player.info.more": "Toca para saber o que é"
+  "player.info.more": "Toca para saber o que é",
+  "ctx.talk": "Falar"
 } satisfies Record<string, string>;

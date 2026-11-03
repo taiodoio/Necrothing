@@ -1611,5 +1611,6 @@ export default {
   "guide.wisps.text": "묘지의 화폐예요. 무덤을 돌보고 생명체를 만나면 줍고 얻을 수 있어요. 상점에서 써요.",
   "guide.xp.text": "묘지기의 경험치예요. 돌볼 때와 만날 때마다 조금씩 얻어요. 쓰는 게 아니라 등급을 올려 줘요.",
   "guide.prestige.text": "지금 묘지의 모습을 보여 줘요. 무덤, 꽃, 장식으로 오르고, 돌보지 않으면 내려가요. 명성이 높을수록 울타리가 넓어져요.",
-  "player.info.more": "눌러서 알아보기"
+  "player.info.more": "눌러서 알아보기",
+  "ctx.talk": "말 걸기"
 } satisfies Record<string, string>;

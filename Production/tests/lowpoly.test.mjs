@@ -972,3 +972,15 @@ test('luci più morbide: la pozza a terra sta sopra i sassi dei sentieri, vetri 
   assert.ok(A.GLOW_SCALE < 1 && A.GLOW_SCALE > 0.4, 'vetri accesi meno abbaglianti, ma ancora luce');
   assert.ok(A.HALO_OPACITY < 1 && A.HALO_FAR_MIN < 1);
 });
+
+test('chi parla accanto al suo oggetto: c’è davvero (i fratelli, il postino, il fioraio, il giardiniere)', async () => {
+  const { TALKER_OF, presenceLayout } = await import('../src/view/presences.ts');
+  const kinds = { hunterA: ['hunterA', 'hunterB'], postman: ['postman'], florist: ['florist'], gardener: ['gardener'] };
+  assert.deepEqual(Object.keys(TALKER_OF).sort(), ['flower_kiosk', 'gardener_corner', 'ghost_hunters', 'post_office']);
+  for (const [type, talker] of Object.entries(TALKER_OF)) {
+    const { cast } = presenceLayout({ type, broken: false }, { night: false, tier: 'high' });
+    assert.ok(cast.some((c) => kinds[talker].includes(c.kind)), `${type}: manca ${talker}`);
+  }
+  // i fratelli restano accanto all'auto anche rotta (il fumetto c'è sempre)
+  assert.ok(presenceLayout({ type: 'ghost_hunters', broken: true }, { night: false, tier: 'high' }).cast.some((c) => c.kind === 'hunterA'));
+});

@@ -6,6 +6,7 @@ import { areaBanner, openExpansionOffer } from './expansion.ts';
 import type * as THREE from 'three';
 import type { EntityAction, Game } from '../app/Game.ts';
 import { DECAY } from '../game/balance.ts';
+import { TALKER_OF } from '../view/presences.ts';
 import { CATALOG, isPetHouse, repairCost } from '../game/catalog.ts';
 import { GRAVE_STATE_LABELS, GRAVE_TYPE_LABELS, graveVisualState } from '../game/graves.ts';
 import { nextRank, rankForXp, rankProgress } from '../game/progression.ts';
@@ -298,6 +299,8 @@ export class UI {
     // la posta tornata nella buca: prima di tutto
     if (p.type === 'keeper_house' && s.post.inbox) actions.push({ act: 'readMail', label: t('ctx.readMail'), icon: 'letter', cls: 'primary' });
     if (p.type === 'post_office' && !p.broken) actions.push({ act: 'sendLetter', label: t('ctx.sendLetter'), icon: 'letterSend', cls: 'primary' });
+    // chi sta accanto all'oggetto e parla: il fumetto (i fratelli ci sono anche con l'auto rotta)
+    if (TALKER_OF[p.type] && (!p.broken || p.type === 'ghost_hunters')) actions.push({ act: 'talk', label: t('ctx.talk'), icon: 'talk', cls: actions.some((a) => a.cls === 'primary') ? undefined : 'primary' });
     if (p.type === 'keeper_house') {
       actions.push({ act: 'registry', label: t('ctx.registry'), icon: 'book', cls: s.post.inbox ? undefined : 'primary' }, { act: 'house', label: t('ctx.house'), icon: 'house' });
       sub = t('ctx.registry.sub', { n: s.graves.length + s.entrusted.length });

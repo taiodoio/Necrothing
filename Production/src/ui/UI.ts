@@ -409,38 +409,32 @@ export class UI {
   // ── Posizionamento ───────────────────────────────────────────────────
 
   /**
-   * Le istruzioni dello strumento scelto (una sola frase): in Modifica e nei posizionamenti
-   * dice cosa fa la mano o cosa fa lo strumento di lavoro (sposta, disegna).
+   * Le istruzioni della modalità (una sola frase): gli stessi gesti dappertutto. Si trascina
+   * dall'elemento attivo (o lo si tiene premuto) per spostarlo o disegnare; altrove si sposta la vista.
    */
   private toolHint(kind: 'edit' | 'item' | 'trace' | 'grave'): HTMLElement {
-    const pan = this.game.toolMode === 'pan';
-    const key = pan ? (kind === 'edit' ? 'hud.tools.panHint' : 'hud.tools.panHintPlace')
-      : kind === 'edit' ? 'hud.tools.moveHint' : kind === 'trace' ? 'hud.tools.drawHint' : kind === 'grave' ? 'hud.place.graveHint' : 'hud.place.hint';
+    const key = kind === 'edit' ? (this.game.editLocked() ? 'hud.tools.moveHintLocked' : 'hud.tools.moveHint')
+      : kind === 'trace' ? 'hud.tools.drawHint' : kind === 'grave' ? 'hud.place.graveHint' : 'hud.place.hint';
     return h('p', { class: 'muted tool-hint' }, t(key));
   }
 
   /**
-   * I pulsanti sotto il pannello, senza riquadro, come quelli della mappa: a sinistra
-   * l'interruttore mano / strumento (come le schede: icona monocromatica e nome, «dove sei»
-   * in viola chiaro), a destra «annulla» e l'azione principale in oro (Conferma, o Compra
-   * quando nel tracciato mancano pezzi).
+   * I pulsanti sotto il pannello, senza riquadro, come quelli della mappa: a destra «annulla»
+   * e l'azione principale in oro (Conferma, o Compra quando nel tracciato mancano pezzi).
    */
-  private toolHud(opts: { work?: 'move' | 'draw'; undo?: boolean; main: { icon: string; label: string; run: () => void; disabled?: boolean; tool: string; cost?: number } }): HTMLElement {
-    const game = this.game;
-    // l'interruttore è una barra di schede vera (stesse regole delle schede dei pannelli: ui-play.css)
-    const toggle = opts.work ? h('div', { class: 'tabs tool-toggle', role: 'group', 'aria-label': joinDot([t('hud.tools.pan'), t(opts.work === 'draw' ? 'hud.tools.draw' : 'hud.tools.move')]) },
-      ...([['pan', 'toolHand', t('hud.tools.panShort'), t('hud.tools.pan')], ['work', opts.work === 'draw' ? 'toolPencil' : 'toolMove', t(opts.work === 'draw' ? 'hud.tools.drawShort' : 'hud.tools.moveShort'), t(opts.work === 'draw' ? 'hud.tools.draw' : 'hud.tools.move')]] as const)
-        .map(([mode, ic, short, long]) => h('button', {
-          type: 'button', class: `tab tool-btn${game.toolMode === mode ? ' active' : ''}`, 'data-tool': mode, 'aria-label': long, title: long, 'aria-pressed': String(game.toolMode === mode),
-          onclick: () => game.setToolMode(mode),
-        }, S.tabGlyph(ic), h('span', {}, short)))) : null;
-    const m = opts.main;
+  private toolHud(opts: { undo?: { icon: string; label: string; tool: string; run: () => void; disabled?: boolean }; main: { icon: string; label: string; run: () => void; disabled?: boolean; tool: string; cost?: number } }): HTMLElement {
+    const m = opts.main, u = opts.undo;
     return h('div', { class: 'tool-hud' },
-      toggle,
       h('span', { class: 'tool-gap' }),
-      opts.undo ? h('button', { type: 'button', class: 'icon-btn tool-round', 'data-tool': 'undo', 'aria-label': t('hud.tools.undo'), title: t('hud.tools.undo'), disabled: !game.canUndoTool(), onclick: () => game.undoTool() }, icon('undo', 30)) : null,
+      u ? h('button', { type: 'button', class: 'icon-btn tool-round', 'data-tool': u.tool, 'aria-label': u.label, title: u.label, disabled: u.disabled, onclick: u.run }, icon(u.icon, 30)) : null,
       h('button', { type: 'button', class: 'icon-btn active tool-round tool-main', 'data-tool': m.tool, 'aria-label': m.cost ? t('ctx.costAria', { label: m.label, cost: m.cost }) : m.label, title: m.label, disabled: m.disabled, onclick: m.run },
         icon(m.icon, 32), m.cost ? h('em', { class: 'tool-cost' }, icon('wisp', 12), String(m.cost)) : null));
+  }
+
+  /** «Annulla ultima modifica» (tracciato, posa, Modifica senza un oggetto preso). */
+  private undoButton() {
+    const game = this.game;
+    return { icon: 'undo', label: t('hud.tools.undo'), tool: 'undo', disabled: !game.canUndoTool(), run: () => game.undoTool() };
   }
 
   /** Pannello in alto (titolo, chiudi, istruzioni, avvisi) e pulsanti sotto: insieme, in fondo allo schermo. */
@@ -464,11 +458,15 @@ export class UI {
     $('#bubble').classList.add('hidden');
     const busy = (blockers: string[]) => blockers.length ? t('hud.place.busyBy', { what: blockers.slice(0, 3).join(', ') }) : t('hud.place.busy');
     if (editing) {
+      // con un oggetto preso: Annulla (torna com'era) e Conferma; senza: annulla l'ultima mossa e Fine
+      const locked = !!this.game.editLocked();
       this.mountPlacement(
         h('div', { class: 'tutorial tool-bar' },
           h('div', { class: 'tool-head' }, h('b', {}, t('menu.edit')), this.exitButton(() => this.game.setEditMode(false))),
           this.toolHint('edit')),
-        this.toolHud({ work: 'move', undo: true, main: { icon: 'check', label: t('hud.place.confirm'), tool: 'confirm', run: () => this.game.setEditMode(false) } }));
+        locked
+          ? this.toolHud({ undo: { icon: 'undo', label: t('hud.edit.cancel'), tool: 'cancel', run: () => this.game.cancelEdit() }, main: { icon: 'check', label: t('hud.edit.confirm'), tool: 'confirm', run: () => this.game.confirmEdit() } })
+          : this.toolHud({ undo: this.undoButton(), main: { icon: 'check', label: t('hud.edit.done'), tool: 'done', run: () => this.game.setEditMode(false) } }));
       return;
     }
     if (!p) return;
@@ -492,7 +490,7 @@ export class UI {
           status ? h('span', { class: tr.busy ? 'muted warn' : 'muted' }, status) : null,
           info),
         this.toolHud({
-          work: 'draw', undo: true,
+          undo: this.undoButton(),
           main: canBuy
             ? { icon: 'buy', label: t('hud.place.buy'), tool: 'buy', cost: buyN * def.cost, run: () => this.game.buyTraceShortfall() }
             : { icon: 'check', label: t('hud.place.confirm'), tool: 'confirm', disabled: !tr.ok, run: () => this.game.confirmPlacement() },
@@ -510,7 +508,7 @@ export class UI {
             this.exitButton(() => this.game.cancelPlacement())),
           this.toolHint('item'),
           !p.valid ? h('span', { class: 'muted warn' }, busy(this.game.placementBlockers())) : null),
-        this.toolHud({ work: 'move', undo: true, main: { icon: 'check', label: t('hud.place.confirm'), tool: 'confirm', disabled: !p.valid, run: () => this.game.confirmPlacement() } }));
+        this.toolHud({ undo: this.undoButton(), main: { icon: 'check', label: t('hud.place.confirm'), tool: 'confirm', disabled: !p.valid, run: () => this.game.confirmPlacement() } }));
       return;
     }
     // la tomba: dove riposerà, poi «Seppellisci qui» (in oro, sotto, come le altre)
@@ -519,7 +517,7 @@ export class UI {
       h('div', { class: 'tutorial tool-bar' },
         h('div', { class: 'tool-head' }, h('b', {}, icon('bury', 18), t('hud.place.graveTitle', { name: p.draft!.name })), this.exitButton(() => this.game.cancelPlacement())),
         p.valid ? this.toolHint('grave') : h('p', { class: 'muted warn' }, busy(this.game.placementBlockers()))),
-      this.toolHud({ work: 'move', main: { icon: 'bury', label: t('hud.place.bury'), tool: 'confirm', disabled: !p.valid, run: () => this.game.confirmPlacement() } }));
+      this.toolHud({ main: { icon: 'bury', label: t('hud.place.bury'), tool: 'confirm', disabled: !p.valid, run: () => this.game.confirmPlacement() } }));
   }
 
   /** Chiamato ogni frame: riposiziona il menù contestuale. */

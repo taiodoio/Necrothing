@@ -346,7 +346,8 @@ export function shopLP(v: PVis): LPModel {
 
 export function gravediggerHouseLP(v: PVis): LPModel {
   const lp = new LP(`lp:gdhouse:${v.seed}:${v.dirty}${v.broken}`);
-  const lit = !v.broken;
+  // accesa se non è rotta e se non la si è spenta (prima ignorava l'interruttore: «spenta» restava accesa)
+  const lit = !v.broken && v.lit !== false;
   const w = 2.3, d = 1.55, wallH = 1.1, rise = 0.85;
   const front = d / 2;
   lp.push([-0.55, 0, -0.35]);
@@ -384,7 +385,7 @@ export function gravediggerHouseLP(v: PVis): LPModel {
 
 export function mausoleumLP(v: PVis): LPModel {
   const lp = new LP(`lp:mausoleum:${v.seed}:${v.dirty}${v.broken}`);
-  const lit = !v.broken;
+  const lit = !v.broken && v.lit !== false; // come la casa del becchino: segue anche l'interruttore
   const o = v.dirty ? { topTint: LPC.moss, topAmount: 0.45 } : {};
   for (let i = 0; i < 3; i++) lp.box(0, i * 0.1, 0.1 - i * 0.06, 2.7 - i * 0.18, 0.1, 2.7 - i * 0.22, i % 2 ? LPC.stone : LPC.stoneDark, { bevel: 0.02, vary: 0.06, ...o });
   const y0 = 0.3;

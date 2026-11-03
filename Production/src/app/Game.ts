@@ -70,8 +70,11 @@ export interface Placement {
   rot: number;
   valid: boolean;
   history?: Array<{ x: number; y: number; rot: number }>;
-  /** Strumento a traccia (interfaccia nuova): i tratti già tirati e quello sotto il dito. */
-  trace?: { segs: R.TraceCell[][]; history: R.TraceCell[][][]; live: R.TraceCell[] | null; draw?: TraceDraw | null };
+  /**
+   * Strumento a traccia (interfaccia nuova): i tratti già tirati e quello sotto il dito.
+   * `handle`: il punto di partenza scelto con un tocco (trascinando da lì si disegna; altrove si sposta la vista).
+   */
+  trace?: { segs: R.TraceCell[][]; history: R.TraceCell[][][]; live: R.TraceCell[] | null; draw?: TraceDraw | null; handle?: { x: number; y: number } | null };
 }
 
 
@@ -79,6 +82,12 @@ export interface Placement {
 const DUST = '#a08a6c', DUST_GLOW = '#3a2e22';
 /** Nel cortile la camera sta vicina: tutto entra nell'inquadratura. */
 const YARD_VIEW = 16;
+/** Scorrimento ai bordi mentre si sposta o si disegna: la fascia (px) e la velocità al bordo (px/s). */
+const AUTO_PAN_EDGE = 52, AUTO_PAN_SPEED = 560;
+/** Lo scorrimento parte solo se il dito resta un attimo nella fascia (passandoci o posando lì l'oggetto non scappa), poi accelera. */
+const AUTO_PAN_DELAY = 0.25, AUTO_PAN_RAMP = 0.5;
+/** Quanto vicino (px sullo schermo) al punto di partenza deve cominciare il trascinamento per disegnare. */
+const HANDLE_PX = 44;
 
 function isTextEntry(target: EventTarget | null): boolean {
   if (target instanceof HTMLTextAreaElement || target instanceof HTMLSelectElement) return true;
@@ -117,7 +126,11 @@ export class Game {
   /** Tomba affidata e albero mentre il corteo del rito è in scena: non si spostano né si tolgono. */
   private riteIds: string[] | null = null;
   private drag: { id: string; x: number; y: number; valid: boolean; grab: THREE.Vector3; origin?: { x: number; y: number; rot: number } } | null = null;
-  toolMode: 'pan' | 'work' = 'work';
+  /**
+   * In Modifica l'oggetto selezionato è «bloccato»: finché non si conferma o si annulla non se ne
+   * seleziona un altro. Qui quante mosse c'erano quando lo si è preso (Annulla torna fin lì).
+   */
+  private editMark = 0;
   private readonly moveHistory: Array<{ kind: 'move'; id: string; x: number; y: number; rot: number } | { kind: 'store'; item: Placed }> = [];
   private clock = new THREE.Clock();
   private phase: DayPhase = 'night';
@@ -143,6 +156,10 @@ export class Game {
   private postfx: PostFX;
   /** Il cerchio dorato sul punto dove sta andando il Custode. */
   private readonly walkMark = new WalkTarget();
+  /** Il punto di partenza del disegno (stradine, recinti, muretti). */
+  private readonly handleMark = new WalkTarget();
+  /** Da quanto (s) il dito che sposta o disegna è nella fascia del bordo. */
+  private edgeTime = 0;
 
   /**
    * `state`: parte da questo stato invece che dal salvataggio; `prewarm: false` non genera modelli in anticipo;
@@ -180,7 +197,7 @@ export class Game {
     if (!opts.deferInitialScene) { this.world.sync(this.state); this.sceneReady = true; }
     const start = this.homeSpot(this.state);
     this.actors = new Actors(this.scene, this.atmosphere, start, this.state.player.look);
-    this.scene.add(this.walkMark.group);
+    this.scene.add(this.walkMark.group, this.handleMark.group);
     if (this.sceneReady) this.refreshWalkable();
     this.actors.setNight(this.isNight());
     this.actors.syncPresences(this.state, now);
@@ -195,10 +212,11 @@ export class Game {
     this.ui = new UI(this);
     this.input = new Input(canvas, {
       tap: (x, y) => this.onTap(x, y),
-      dragStart: (x, y) => this.onDragStart(x, y),
+      dragStart: (x, y, long) => this.onDragStart(x, y, long),
       dragMove: (x, y, dx, dy, owned) => this.onDragMove(x, y, dx, dy, owned),
-      dragEnd: (x, y, owned) => this.onDragEnd(x, y, owned),
-      zoom: (f) => { if (!this.toolControlsActive() || this.toolMode === 'pan') { this.dismissContextForNavigation(); this.rig.zoomBy(f); } },
+      dragEnd: (x, y, owned, suspended) => this.onDragEnd(x, y, owned, suspended),
+      // pan e zoom ci sono sempre, anche mentre si disegna, si posa o si modifica (il menù dell'oggetto resta)
+      zoom: (f) => { if (!this.toolControlsActive()) this.dismissContextForNavigation(); this.rig.zoomBy(f); },
       key: (k, down) => this.onKey(k, down),
     });
     this.applySettingQuality();
@@ -282,6 +300,40 @@ export class Game {
     const at = this.walkMark.group.position;
     if (!end || Math.hypot(end.x - at.x, end.z - at.z) > 0.05) this.walkMark.hide();
     this.walkMark.update(dt, t);
+    this.handleMark.update(dt, t);
+  }
+
+  /** Il punto di partenza del disegno: il cerchio dorato sulla casella scelta (sparisce mentre si disegna). */
+  private refreshHandleMark() {
+    const tr = this.placement?.trace;
+    const h = tr && !tr.draw ? tr.handle : null;
+    if (!h) { this.handleMark.hide(); return; }
+    const at = cellCenter(h.x, h.y, [1, 1]);
+    const was = this.handleMark.group.position;
+    if (this.handleMark.group.visible && Math.hypot(was.x - at.x, was.z - at.z) < 0.05) return;
+    this.handleMark.show(new THREE.Vector3(at.x, this.world.heightAt(at.x, at.z), at.z));
+  }
+
+  /**
+   * Mentre si sposta o si disegna, il dito vicino al bordo fa scorrere la vista, tanto più veloce
+   * quanto più è vicino al bordo, anche se resta fermo: ogni frame si ricalcola cosa c'è sotto il dito.
+   */
+  private autoPan(raw: number) {
+    const p = this.input.activeDrag();
+    if (!p || (!this.drag && !this.placement?.trace?.draw)) { this.edgeTime = 0; return; }
+    const r = this.canvas.getBoundingClientRect();
+    // in basso il bordo utile è sopra il pannello degli strumenti
+    const bar = document.querySelector('.place-ui')?.getBoundingClientRect();
+    const bottom = bar && bar.top > r.top + r.height / 2 ? bar.top : r.bottom;
+    const near = (d: number) => (d < AUTO_PAN_EDGE ? 1 - Math.max(0, d) / AUTO_PAN_EDGE : 0);
+    const vx = near(p.x - r.left) - near(r.right - p.x), vy = near(p.y - r.top) - near(bottom - p.y);
+    if (!vx && !vy) { this.edgeTime = 0; return; }
+    this.edgeTime += Math.min(0.05, raw);
+    const ramp = Math.min(1, Math.max(0, (this.edgeTime - AUTO_PAN_DELAY) / AUTO_PAN_RAMP));
+    if (!ramp) return;
+    const step = AUTO_PAN_SPEED * ramp * Math.min(0.05, raw);
+    this.rig.panPixels(vx * step, vy * step);
+    this.onDragMove(p.x, p.y, 0, 0, true);
   }
 
   // ── Frame al secondo (batteria) ──────────────────────────────────────
@@ -347,7 +399,9 @@ export class Game {
     if (this.frameSamples.length > 120) this.frameSamples.shift();
     const t = this.clock.elapsedTime;
     // Auto giudica solo i frame al ritmo pieno (da fermo o sotto un menù il gioco rallenta apposta)
-    if (this.auto) { if (cap === this.frameCap) this.autoFrame(raw); else this.auto.hold(); }
+    // e niente giudizi nel cortile del tutorial: lì convivono due cimiteri in memoria, e cambiare la resa
+    // a metà di un passo è il momento in cui un telefono rischia di chiudere l'app
+    if (this.auto) { if (cap === this.frameCap && !this.inYard) this.autoFrame(raw); else this.auto.hold(); }
 
     const menu = drawerOpen() || uiBlocking();
     if (!menu) {
@@ -358,6 +412,7 @@ export class Game {
       if (this.batUntil) this.stepBat(now);
       this.collectNearbyWisps();
       this.stepWalkMark(dt, t);
+      this.autoPan(raw);
       this.world.watch(this.actors.avatar.pos);
       this.world.update(dt, t);
       this.mist?.update(dt, (this.scene.fog as THREE.Fog).color);
@@ -766,9 +821,27 @@ export class Game {
 
   private toolControlsActive() { return this.placement?.kind === 'item' || this.placement?.kind === 'grave' || (this.editMode && !this.placement); }
 
-  setToolMode(mode: 'pan' | 'work') {
-    this.toolMode = mode;
-    this.ui.closeContext();
+  /** In Modifica: l'oggetto preso (bloccato finché non si conferma o si annulla); null se non ce n'è. */
+  editLocked(): string | null {
+    return this.editMode && !this.placement ? this.selection?.id ?? null : null;
+  }
+
+  /** Conferma: la modifica dell'oggetto resta e si può prenderne un altro. */
+  confirmEdit() {
+    if (!this.editLocked()) return;
+    this.select(null);
+    this.ui.refreshPlacementBar();
+  }
+
+  /** Annulla: l'oggetto torna dov'era e com'era girato quando lo si è preso, e si può prenderne un altro. */
+  cancelEdit() {
+    if (!this.editLocked()) return;
+    while (this.moveHistory.length > this.editMark) {
+      const n = this.moveHistory.length;
+      this.undoTool();
+      if (this.moveHistory.length === n) break; // non si riesce a rimetterlo (il posto ora è occupato)
+    }
+    this.select(null);
     this.ui.refreshPlacementBar();
   }
 
@@ -800,10 +873,14 @@ export class Game {
   }
 
   select(sel: Selection) {
+    // in Modifica, prendendo un oggetto nuovo: Annulla torna a com'era adesso
+    if (this.editMode && sel && sel.id !== this.selection?.id) this.editMark = this.moveHistory.length;
+    const lockedBefore = this.editLocked();
     this.selection = sel;
     this.world.select(sel?.id ?? null);
     this.refreshKeeperArea();
     this.ui.refreshContext();
+    if (this.editLocked() !== lockedBefore) this.ui.refreshPlacementBar(); // Annulla e Conferma compaiono (o tornano Annulla ultima e Fine)
   }
 
   /**
@@ -879,7 +956,7 @@ export class Game {
   setEditMode(on: boolean) {
     const was = this.editMode;
     this.editMode = on;
-    if (on && !was) { this.moveHistory.length = 0; this.toolMode = 'work'; }
+    if (on && !was) { this.moveHistory.length = 0; this.editMark = 0; }
     if (!on) { this.moveHistory.length = 0; this.world.endPreview(); this.select(null); }
     if (was && !on) signalOnboarding('editDone');
     this.refreshKeeperArea();
@@ -906,7 +983,6 @@ export class Game {
     if (!spot) { toast(t('game.noSpace.grave')); return; }
     this.select(null);
     this.placement = { kind: 'grave', draft, x: spot.x, y: spot.y, rot: 0, valid: true };
-    this.toolMode = 'work';
     this.rig.follow = null;
     this.rig.jumpTo(cellCenter(spot.x, spot.y, GRAVE_FOOTPRINT));
     this.refreshPlacement();
@@ -922,7 +998,6 @@ export class Game {
     const spot = nearestFreeSpot(c.x, c.y, fp, occ, areaForLevel(this.state.world.expansionLevel));
     if (!spot) { toast(t('game.noSpace.item')); return; }
     this.select(null);
-    this.toolMode = 'work';
     this.placement = { kind: 'item', type, x: spot.x, y: spot.y, rot: 0, valid: true, history: [] };
     this.rig.follow = null;
     this.rig.jumpTo(cellCenter(spot.x, spot.y, fp));
@@ -932,8 +1007,7 @@ export class Game {
   private startTrace(type: string) {
     const c = this.placementOriginCell();
     this.select(null);
-    this.toolMode = 'work';
-    this.placement = { kind: 'item', type, x: c.x, y: c.y, rot: 0, valid: false, trace: { segs: [], history: [], live: null } };
+    this.placement = { kind: 'item', type, x: c.x, y: c.y, rot: 0, valid: false, trace: { segs: [], history: [], live: null, handle: null } };
     this.rig.follow = null;
     this.rig.jumpTo(cellCenter(c.x, c.y, [1, 1])); // si traccia partendo da dove sta il Custode
     this.refreshPlacement();
@@ -987,6 +1061,7 @@ export class Game {
   private refreshPlacement() {
     const p = this.placement;
     this.refreshKeeperArea();
+    this.refreshHandleMark();
     if (!p) { this.world.hideGhost(); this.ui.refreshPlacementBar(); return; }
     if (p.trace) {
       const cells = this.traceCells();
@@ -1142,38 +1217,28 @@ export class Game {
     this.ui.closeBubble();
     this.ui.closeActorMenu();
     if (this.placement?.trace) {
-      if (this.toolMode === 'pan') {
-        const id = this.pick(x, y)?.entityId;
-        this.select(id ? { kind: this.kindOf(id), id } : null);
-        return;
-      }
-      // un tocco posa una cella sola, nel verso dell'ultimo tratto
+      // un tocco sceglie il punto di partenza (trascinando da lì si disegna); toccandolo ancora si posa una cella
+      // sola; toccando una cella già tracciata la si toglie; toccando un oggetto se ne vedono i dettagli
       const g = this.groundCell(x, y), t = this.placement.trace;
       if (!g) return;
       const existing = t.segs.findIndex((segment) => segment.some((cell) => cell.x === g.cell.x && cell.y === g.cell.y));
       const id = this.pick(x, y)?.entityId;
       if (existing < 0 && id) { this.select({ kind: this.kindOf(id), id }); return; }
       this.ui.closeContext();
-      this.rememberTrace(t);
+      const onHandle = t.handle?.x === g.cell.x && t.handle?.y === g.cell.y;
       if (existing >= 0) {
+        this.rememberTrace(t);
         t.segs = t.segs.map((segment) => segment.filter((cell) => cell.x !== g.cell.x || cell.y !== g.cell.y)).filter((segment) => segment.length);
-      } else t.segs.push([{ x: g.cell.x, y: g.cell.y, rot: t.segs.at(-1)?.at(-1)?.rot ?? 0 }]);
+      } else if (onHandle) {
+        this.rememberTrace(t);
+        t.segs.push([{ x: g.cell.x, y: g.cell.y, rot: t.segs.at(-1)?.at(-1)?.rot ?? 0 }]);
+      }
+      t.handle = { x: g.cell.x, y: g.cell.y };
       this.refreshPlacement();
       return;
     }
-    if (this.placement) {
-      // con la mano si sposta solo la vista (oggetti e tombe)
-      if (this.toolControlsActive() && this.toolMode === 'pan') return;
-      const g = this.groundCell(x, y);
-      if (!g) return;
-      const fp = this.placementFp();
-      const nx = g.cell.x - Math.floor(fp[0] / 2), ny = g.cell.y - Math.floor(fp[1] / 2);
-      if (nx !== this.placement.x || ny !== this.placement.y) this.placement.history?.push({ x: this.placement.x, y: this.placement.y, rot: this.placement.rot });
-      this.placement.x = nx;
-      this.placement.y = ny;
-      this.refreshPlacement();
-      return;
-    }
+    // mentre si posa, un tocco non sposta mai l'oggetto: lo si trascina (o lo si tiene premuto)
+    if (this.placement) return;
     const hit = this.pick(x, y);
     if (hit?.roamerId) { this.tapRoamer(hit.roamerId); return; }
     if (hit?.petId && !this.editMode) { this.tapPet(hit.petId); return; }
@@ -1186,13 +1251,18 @@ export class Game {
     // interfaccia nuova: sentieri, recinzioni, erba alta & co. si toccano solo in Modifica, fuori ci si cammina sopra
     const entityId = hit?.entityId;
     const background = entityId && !this.editMode && EDIT_ONLY.has(this.state.placeables.find((p) => p.id === entityId)?.type ?? '');
+    const locked = this.editLocked();
     if (entityId && !background) {
       const id = entityId;
+      // in Modifica, con un oggetto preso, gli altri non si toccano finché non si conferma o si annulla
+      if (locked) { if (locked !== id) this.lockedToast(); return; }
       // bar e orto con l'incasso pronto: toccandoli si riscuote
       if (!this.editMode && R.businessPending(this.state, id, this.now()) > 0) { this.collectBusiness(id); return; }
       this.goTo(id);
       return;
     }
+    // in Modifica, toccando il terreno: se l'oggetto preso non è cambiato lo si lascia, se no si chiede di confermare o annullare
+    if (locked) { if (this.moveHistory.length > this.editMark) this.lockedToast(); else this.confirmEdit(); return; }
     // tap sul terreno: il Custode cammina lì
     if (this.selection) { this.select(null); if (this.editMode) return; }
     const g = this.groundCell(x, y);
@@ -1200,6 +1270,12 @@ export class Game {
       if (this.actors.walkTo(g.cell)) { this.markWalk(); signalOnboarding('walked'); }
       this.rig.follow = this.actors.avatar.pos;
     }
+  }
+
+  private lockedToast() {
+    const id = this.editLocked();
+    const name = id && (this.state.graves.find((g) => g.id === id)?.name ?? CATALOG[this.state.placeables.find((p) => p.id === id)?.type ?? '']?.label);
+    toast(t('game.edit.locked', { what: name || t('game.edit.lockedThis') }));
   }
 
   /** Seleziona una tomba o un oggetto e ci manda il Custode (il menù compare quando arriva). */
@@ -1780,18 +1856,31 @@ export class Game {
     this.ui.closeContext();
   }
 
-  private onDragStart(x: number, y: number): boolean {
-    if (this.inYard && !this.ui.onboarding.allowsYardScene(this.pick(x, y), 'drag')) return false;
-    this.ui.closeBubble();
-    if (this.toolControlsActive() && this.toolMode === 'pan') return false;
+  /**
+   * Un dito che si trascina (o una pressione lunga, `long`): sposta o disegna solo se parte dall'elemento
+   * attivo (il punto di partenza del disegno, l'oggetto che si posa, l'oggetto preso in Modifica);
+   * altrimenti sposta la vista. La pressione lunga prende subito: comincia a disegnare dove si è premuto,
+   * o in Modifica prende l'oggetto sotto il dito.
+   */
+  private onDragStart(x: number, y: number, long = false): boolean {
+    // fuori dagli strumenti la pressione lunga non fa nulla (alzando il dito resta un tocco)
+    if (long && !this.toolControlsActive()) return false;
+    if (this.inYard && !this.ui.onboarding.allowsYardScene(this.pick(x, y), long ? 'hold' : 'drag')) return false;
+    if (!long) this.ui.closeBubble();
     const g = this.groundCell(x, y);
     if (!g) return false;
     if (this.placement?.trace) {
-      // un dito traccia (due dita spostano la vista): il tratto parte dalla casella toccata (toccando
-      // la fine del tratto prima l'angolo è in comune, toccando quella accanto si parte da lì)
+      // il tratto parte dal punto di partenza (toccando la fine del tratto prima l'angolo è in comune);
+      // con la pressione lunga parte da dove si è premuto
       const t = this.placement.trace;
-      t.draw = startTraceDraw(g.cell);
+      let from: { x: number; y: number } | null = null;
+      if (long) from = g.cell;
+      else if (t.handle && this.nearHandle(x, y, g.cell, t.handle)) from = t.handle;
+      if (!from) return false;
+      t.handle = { ...from };
+      t.draw = startTraceDraw(from);
       t.live = traceDrawCells(t.draw);
+      this.ui.closeContext();
       this.refreshPlacement();
       return true;
     }
@@ -1803,17 +1892,39 @@ export class Game {
       return inside;
     }
     if (!this.editMode) return false;
+    const locked = this.editLocked();
     const hit = this.pick(x, y);
-    const id = hit?.entityId;
+    let id: string | null = null;
+    if (locked) {
+      // preso: lo si sposta trascinandolo (anche dal terreno sotto di lui); fuori da lui si sposta la vista
+      const c = this.entityCells(locked);
+      const onIt = hit?.entityId === locked || (!!c && g.cell.x >= c.x && g.cell.x < c.x + c.fp[0] && g.cell.y >= c.y && g.cell.y < c.y + c.fp[1]);
+      if (onIt) id = locked;
+      else if (long && hit?.entityId) { this.lockedToast(); return false; }
+    } else if (long && hit?.entityId) {
+      // pressione lunga su un oggetto: lo si prende e lo si sposta subito
+      id = hit.entityId;
+      if (this.inYard && !this.ui.onboarding.allowsYardScene(hit, 'drag')) return false;
+      if (this.riteIds?.includes(id)) { toast(t('game.rite.wait')); return false; }
+      this.select({ kind: this.kindOf(id), id });
+    }
     if (!id) return false;
     if (this.riteIds?.includes(id)) { toast(t('game.rite.wait')); return false; }
-    if (this.selection?.id !== id) this.select({ kind: this.kindOf(id), id });
-    const c = this.entityCells(id)!;
+    const c = this.entityCells(id);
+    if (!c) return false;
     const placed = this.state.placeables.find((p) => p.id === id);
     const origin = { x: c.x, y: c.y, rot: placed?.rot ?? 0 };
     this.drag = { id, x: c.x, y: c.y, valid: true, grab: g.p.clone().sub(cellCenter(c.x, c.y, c.fp)), origin };
     this.ui.closeContext();
     return true;
+  }
+
+  /** Il dito è partito sul punto di partenza del disegno (la sua casella, quelle accanto o pochi pixel da lì)? */
+  private nearHandle(x: number, y: number, cell: { x: number; y: number }, handle: { x: number; y: number }) {
+    if (Math.max(Math.abs(cell.x - handle.x), Math.abs(cell.y - handle.y)) <= 1) return true;
+    const at = cellCenter(handle.x, handle.y, [1, 1]);
+    const p = this.project(at.setY(this.world.heightAt(at.x, at.z)));
+    return !!p && Math.hypot(p.x - x, p.y - y) <= HANDLE_PX;
   }
 
   private onDragMove(x: number, y: number, dx: number, dy: number, owned: boolean) {
@@ -1828,8 +1939,9 @@ export class Game {
       return;
     }
     if (!owned || !this.drag) {
-      if ((!this.toolControlsActive() || this.toolMode === 'pan') && (dx || dy)) {
-        this.dismissContextForNavigation();
+      // fuori dall'elemento attivo il dito sposta la vista, in ogni modalità (il menù dell'oggetto resta)
+      if (dx || dy) {
+        if (!this.toolControlsActive()) this.dismissContextForNavigation();
         this.rig.panPixels(dx, dy);
       }
       return;
@@ -1851,11 +1963,15 @@ export class Game {
     this.refreshKeeperArea();
   }
 
-  private onDragEnd(_x: number, _y: number, owned: boolean) {
+  private onDragEnd(_x: number, _y: number, owned: boolean, suspended = false) {
     const tr = this.placement?.trace;
     if (owned && tr?.live) {
-      // alzando il dito il tratto resta (un tratto di una cella sola è il dito che si posa per il pizzico)
-      if (tr.live.length > 1) { this.rememberTrace(tr); tr.segs.push(tr.live); }
+      // alzando il dito il tratto resta e si può cominciarne un altro dalla sua fine; se arriva un secondo
+      // dito (pinch o pan) il disegno si ferma lì, e un tratto appena cominciato non si posa
+      const keep = suspended ? tr.live.length > 2 : tr.live.length > 0;
+      if (keep) { this.rememberTrace(tr); tr.segs.push(tr.live); }
+      const end = keep ? tr.live.at(-1) : null;
+      if (end) tr.handle = { x: end.x, y: end.y };
       tr.live = null;
       tr.draw = null;
       this.refreshPlacement();
@@ -1894,7 +2010,7 @@ export class Game {
   }
 
   private steerFromKeys(dt: number) {
-    if (this.toolControlsActive() && this.toolMode === 'work') return;
+    if (this.drag || this.placement?.trace?.draw) return; // mentre si sposta o si disegna, la tastiera aspetta
     const keys = this.input.keys;
     let fx = 0, fz = 0;
     if (keys.has('w') || keys.has('arrowup')) fz -= 1;
@@ -2351,6 +2467,7 @@ export class Game {
   /** Al posto della partita, il cortile (la partita vera resta da parte, intatta). */
   async enterYard(yard: SaveData) {
     if (!this.realState) this.realState = this.state;
+    document.body.classList.add('yard-play'); // nel cortile niente HUD in alto: il consiglio prende il suo posto
     setSaveInstead(this.realState);
     if (this.editMode) this.setEditMode(false);
     this.clearRoamers();
@@ -2388,6 +2505,7 @@ export class Game {
     progress(0.04);
     await nextPaint();
     this.realState = null;
+    document.body.classList.remove('yard-play');
     setSaveInstead(null);
     this.clearRoamers();
     if (this.editMode) this.setEditMode(false);

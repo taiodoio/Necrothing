@@ -90,6 +90,8 @@ export default {
   'game.place.busy': 'Spazio occupato: scegli un punto libero.',
   // in Modifica: l’oggetto trascinato su uno spazio occupato torna dov’era
   'game.move.busy': 'Spazio occupato: torna al suo posto.',
+  'game.edit.locked': 'Prima conferma o annulla la modifica di {what}.',
+  'game.edit.lockedThis': 'questo oggetto',
   // conferma della posizione di una tomba o di un oggetto
   'game.place.confirmed': 'Posizionato. Riposi in pace.',
   // {item}: nome dell’oggetto della Bottega

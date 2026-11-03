@@ -226,6 +226,12 @@ body.ob-open .ob-coach { display: none; }
 /* ancorato in alto: esce sempre di un terzo, anche quando il consiglio è lungo */
 .ob-coach .ob-bust.small { position: absolute; left: 6px; top: 0; width: 84px; height: 74px; margin: 0; }
 .ob-coach .ob-bust.small img { height: 116px; }
+/* nel cortile l'HUD in alto non c'è (nessun passo lo spiega; torna nel cimitero): il consiglio sale al suo posto,
+   col mezzobusto dentro il riquadro (sopra non c'è più spazio per farlo sporgere) */
+body.yard-play .hud-top { visibility: hidden; }
+body.yard-play .ob-coach { top: calc(8px + var(--safe-t)); }
+body.yard-play .ob-coach .ob-bust.small { top: 4px; height: 80px; overflow: hidden; border-radius: 12px 12px 0 0; }
+body.yard-play .ob-coach .ob-bust.small img { height: 92px; bottom: 0; }
 .ob-coach-body p { margin: 0; font-size: 15px; font-weight: 700; line-height: 1.35; }
 .ob-coach-foot { display: flex; justify-content: space-between; align-items: center; gap: 8px; margin-top: 8px; }
 .ob-progress { font-size: 12px; font-weight: 800; color: var(--muted); }
@@ -239,9 +245,10 @@ body.ob-open .ob-coach { display: none; }
 .ob-beam {
   position: fixed; z-index: 19; left: 0; top: 0; width: 300vmax; height: 300vmax; margin: -150vmax 0 0 -150vmax; pointer-events: none; visibility: hidden; will-change: translate, scale;
   --rx: 84px; --ry: 84px; --dim: 0.7;
+  /* niente velo scuro attorno e la scena resta com'è: si guida col bagliore caldo sul bersaglio, che pulsa,
+     e col cerchio; fuori dal passo i tocchi non arrivano al gioco (onboarding.ts: allowsYardScene) */
   background:
-    radial-gradient(ellipse var(--rx) var(--ry) at 50% 50%, rgba(255, 214, 150, 0.3) 0%, rgba(255, 214, 150, 0.12) 30%, rgba(255, 214, 150, 0) 52%),
-    radial-gradient(ellipse var(--rx) var(--ry) at 50% 50%, rgba(6, 4, 10, 0) 0%, rgba(6, 4, 10, 0) 52%, rgba(6, 4, 10, var(--dim)) 86%);
+    radial-gradient(ellipse var(--rx) var(--ry) at 50% 50%, rgba(255, 214, 150, 0.3) 0%, rgba(255, 214, 150, 0.12) 30%, rgba(255, 214, 150, 0) 52%);
   animation: obBeam 1.5s ease-in-out infinite alternate;
 }
 @keyframes obBeam { from { scale: 1; } to { scale: 1.06; } }

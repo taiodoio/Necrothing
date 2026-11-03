@@ -37,6 +37,9 @@ const ICONS: Record<string, Spec> = {
   tag: ['M2.6 11.4V2.6h8.8l10 10-8.8 8.8z' + C(7.2, 7.2, 1.8), null, 'evenodd'],
   calendar: [R(3, 4.4, 18, 17) + R(5.4, 10.2, 3.2, 3) + R(10.4, 10.2, 3.2, 3) + R(15.4, 10.2, 3.2, 3) + R(5.4, 15, 3.2, 3) + R(10.4, 15, 3.2, 3) + R(3, 4.4, 18, 0), null, 'evenodd', '<path d="M7.6 2v4.4M16.4 2v4.4" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>'],
   skull: ['M12 2.2a8.4 8.4 0 0 0-8.4 8.4c0 3 1.4 4.9 3.2 6V21h2.6v-2.2h1.4V21h2.4v-2.2h1.4V21h2.6v-4.4c1.8-1.1 3.2-3 3.2-6A8.4 8.4 0 0 0 12 2.2z' + C(8.6, 11, 2) + C(15.4, 11, 2) + 'M12 13.4l1.2 2.4h-2.4z', null, 'evenodd'],
+  // passi della sepoltura: foto (macchina fotografica), epitaffio (penna d'oca)
+  camera: ['M2.6 7.2h4.2l1.8-2.6h6.8l1.8 2.6h4.2V20H2.6z' + C(12, 13.2, 4.4) + C(12, 13.2, 2.4) + C(18.4, 9.8, 0.9), null, 'evenodd'],
+  quill: ['M21.2 2.2c-7.4.4-12.6 4.6-14.4 11.4l-1.2 4.2 1.6.8 1.6-3c4.6-.8 8.4-3.4 10.4-7.6l-3 .2 3.4-2.6c.6-1.1 1.2-2.2 1.6-3.4z', null, 'nonzero', '<path d="M3 21.6l4.4-4.6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>'],
   tomb: ['M5.6 20V9.4a6.4 6.4 0 0 1 12.8 0V20z' + 'M10.9 6.4h2.2v2.4h2.4V11h-2.4v5.2h-2.2V11H8.5V8.8h2.4z' + R(2.6, 20, 18.8, 2.2), null, 'evenodd'],
   hammer: ['M2.6 3.8h11.6l4.6 2.5-4.6 2.5H2.6z' + R(7, 8.8, 3.2, 13), null, 'nonzero', '', 'rotate(-35 12 12)'],
   bulb: ['M12 1.8a7 7 0 0 0-4.2 12.6V17h8.4v-2.6A7 7 0 0 0 12 1.8z' + R(8.4, 18.2, 7.2, 1.6) + R(9.6, 20.6, 4.8, 1.6)],

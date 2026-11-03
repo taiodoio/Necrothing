@@ -1413,8 +1413,8 @@ export default {
   "onboarding.yard.flowers": "现在干净了，给它放些花吧。墓穴如果长期无人打理就会损坏，修复需要消耗鬼火。",
   "onboarding.yard.light": "灯笼可以开关。点击这个灯笼把它点亮。",
   "onboarding.yard.shop": "打开商店，买一盏灯笼。需要用鬼火支付。",
-  "onboarding.yard.place": "买好了！将灯笼移到喜欢的位置，点击对勾放置。购买后尚未放置的物品会留在菜单的背包中，也可以在那里转卖。",
-  "onboarding.yard.edit": "打开菜单并选择编辑，将灯笼拖到喜欢的位置。完成后点击对勾。",
+  "onboarding.yard.place": "买好了！把灯笼放到小路旁亮起的位置：点那里或拖过去，然后点击对勾放置。购买后尚未放置的物品会留在菜单的背包中，也可以在那里转卖。",
+  "onboarding.yard.edit": "打开菜单并选择编辑：在这里可以移动、旋转和收起已放置的东西。",
   "onboarding.yard.ghost": "有访客来了。点击幽灵，它会告诉你一件事，还会留下一份礼物。",
   "onboarding.yard.sheet": "每座墓都有自己的档案。点击墓碑，再点击放大镜打开。",
   "onboarding.yard.sheetOpen": "这里保存着它的故事与回忆。在“更多”中，你可以选择迁出墓穴，或将它托付给纪念之树。完成后关闭档案。",
@@ -1612,5 +1612,12 @@ export default {
   "guide.xp.text": "守墓人的经验：每次照料和相遇都会带来一些。它们不会被花掉，而是提升你的等级。",
   "guide.prestige.text": "它反映墓园此刻的样子：坟墓、鲜花和装饰会让它上升，疏于照料则会下降。声望越高，围栏越大。",
   "player.info.more": "点按了解详情",
-  "ctx.talk": "交谈"
+  "ctx.talk": "交谈",
+  "onboarding.yard.editPan": "编辑有两种模式。选「地图」时拖动的是视图，不会拿起任何东西：点它。",
+  "onboarding.yard.editWork": "现在手指移动的是视图。选「移动」则可以拿起物品：点它。",
+  "onboarding.yard.editDrag": "现在把灯笼拖到喜欢的位置。完成后点击对勾。",
+  "burial.leave.title": "取消这次埋葬？",
+  "burial.leave.text": "你写的内容和照片都会丢失。",
+  "burial.leave.ok": "取消埋葬",
+  "burial.leave.cancel": "继续"
 } satisfies Record<string, string>;

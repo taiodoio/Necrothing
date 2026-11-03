@@ -1413,8 +1413,8 @@ export default {
   "onboarding.yard.flowers": "이제 깨끗해졌어요. 꽃을 놓아 주세요. 무덤을 오래 방치하면 망가지고, 수리에는 도깨비불이 필요해요.",
   "onboarding.yard.light": "등불은 켜고 끌 수 있어요. 이 등불을 터치해 불을 밝혀 보세요.",
   "onboarding.yard.shop": "상점을 열어 등불을 사 보세요. 도깨비불로 살 수 있어요.",
-  "onboarding.yard.place": "잘했어요! 등불을 원하는 곳으로 옮기고 체크 표시를 눌러 배치하세요. 구매 후 배치하지 않은 물건은 메뉴의 보관함에 남으며 거기서 판매할 수도 있어요.",
-  "onboarding.yard.edit": "메뉴에서 편집을 선택하고 등불을 원하는 곳으로 드래그하세요. 끝나면 체크 표시를 누르세요.",
+  "onboarding.yard.place": "잘했어요! 길 옆 빛나는 자리로 옮기세요. 그곳을 누르거나 끌어다 놓고 체크 표시를 눌러 배치하세요. 구매 후 배치하지 않은 물건은 메뉴의 보관함에 남으며 거기서 판매할 수도 있어요.",
+  "onboarding.yard.edit": "메뉴에서 편집을 선택하세요. 배치한 것을 옮기고, 돌리고, 보관할 수 있어요.",
   "onboarding.yard.ghost": "누군가 찾아왔어요. 유령을 터치해 보세요. 이야기도 들려주고 선물도 남겨 줄 거예요.",
   "onboarding.yard.sheet": "무덤마다 기록이 있어요. 무덤을 터치한 뒤 돋보기로 열어 보세요.",
   "onboarding.yard.sheetOpen": "여기에 이야기와 추억이 담겨 있어요. '더 보기'에서 무덤을 파내거나 나무에 맡길 수 있어요. 끝나면 기록을 닫으세요.",
@@ -1612,5 +1612,12 @@ export default {
   "guide.xp.text": "묘지기의 경험치예요. 돌볼 때와 만날 때마다 조금씩 얻어요. 쓰는 게 아니라 등급을 올려 줘요.",
   "guide.prestige.text": "지금 묘지의 모습을 보여 줘요. 무덤, 꽃, 장식으로 오르고, 돌보지 않으면 내려가요. 명성이 높을수록 울타리가 넓어져요.",
   "player.info.more": "눌러서 알아보기",
-  "ctx.talk": "말 걸기"
+  "ctx.talk": "말 걸기",
+  "onboarding.yard.editPan": "편집에는 두 가지 모드가 있어요. 「지도」에서는 아무것도 집지 않고 화면을 끌어요. 눌러 보세요.",
+  "onboarding.yard.editWork": "이제 손가락으로 화면이 움직여요. 「이동」에서는 물건을 집을 수 있어요. 눌러 보세요.",
+  "onboarding.yard.editDrag": "이제 등불을 원하는 곳으로 끌어다 놓으세요. 끝나면 체크 표시를 누르세요.",
+  "burial.leave.title": "매장을 취소할까요?",
+  "burial.leave.text": "작성한 내용과 사진이 사라져요.",
+  "burial.leave.ok": "매장 취소",
+  "burial.leave.cancel": "계속하기"
 } satisfies Record<string, string>;

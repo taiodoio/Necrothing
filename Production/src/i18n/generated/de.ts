@@ -1413,8 +1413,8 @@ export default {
   "onboarding.yard.flowers": "Jetzt ist es sauber. Bring Blumen mit. Bleibt ein Grab zu lange ungepflegt, geht es kaputt – und die Reparatur kostet Irrlichter.",
   "onboarding.yard.light": "Laternen lassen sich ein- und ausschalten. Tippe auf diese, um sie anzuzünden.",
   "onboarding.yard.shop": "Öffne den Laden und kaufe eine Laterne. Bezahlt wird mit Irrlichtern.",
-  "onboarding.yard.place": "Geschafft! Verschiebe die Laterne an den gewünschten Ort und tippe auf den Haken. Gekaufte, nicht platzierte Gegenstände bleiben im Inventar im Menü und können dort verkauft werden.",
-  "onboarding.yard.edit": "Öffne das Menü und wähle Bearbeiten. Ziehe die Laterne an den gewünschten Ort und tippe auf den Haken.",
+  "onboarding.yard.place": "Geschafft! Bring sie an die beleuchtete Stelle neben dem Weg: Tippe dort hin oder ziehe sie, dann tippe auf den Haken. Gekaufte, nicht platzierte Gegenstände bleiben im Inventar im Menü und können dort verkauft werden.",
+  "onboarding.yard.edit": "Öffne das Menü und wähle Bearbeiten: Dort verschiebst, drehst und verstaust du, was du platziert hast.",
   "onboarding.yard.ghost": "Jemand ist zu Besuch gekommen. Tippe auf den Geist: Er erzählt dir etwas und hinterlässt ein Geschenk.",
   "onboarding.yard.sheet": "Jedes Grab hat einen eigenen Eintrag. Tippe auf ein Grab und öffne ihn über die Lupe.",
   "onboarding.yard.sheetOpen": "Hier findest du seine Geschichte und Erinnerungen. Unter „Mehr“ kannst du das Grab exhumieren oder dem Baum anvertrauen. Schließe den Eintrag, wenn du fertig bist.",
@@ -1612,5 +1612,12 @@ export default {
   "guide.xp.text": "Die Erfahrung des Hüters: Jede Pflege und jede Begegnung bringt ein paar. Sie werden nicht ausgegeben: Sie lassen dich im Rang steigen.",
   "guide.prestige.text": "Es zeigt, wie der Friedhof gerade aussieht: Es steigt mit Gräbern, Blumen und Dekorationen und sinkt, wenn du ihn vernachlässigst. Mit mehr Prestige wird der Zaun größer.",
   "player.info.more": "Tippe, um mehr zu erfahren",
-  "ctx.talk": "Sprechen"
+  "ctx.talk": "Sprechen",
+  "onboarding.yard.editPan": "Bearbeiten hat zwei Modi. Mit „Karte“ ziehst du die Ansicht, ohne etwas aufzuheben: Tippe darauf.",
+  "onboarding.yard.editWork": "Jetzt bewegt dein Finger die Ansicht. Mit „Bewegen“ hebst du dagegen Gegenstände auf: Tippe darauf.",
+  "onboarding.yard.editDrag": "Ziehe die Laterne jetzt an den gewünschten Ort. Wenn du fertig bist, tippe auf den Haken.",
+  "burial.leave.title": "Bestattung abbrechen?",
+  "burial.leave.text": "Was du geschrieben hast und das Foto gehen verloren.",
+  "burial.leave.ok": "Bestattung abbrechen",
+  "burial.leave.cancel": "Weitermachen"
 } satisfies Record<string, string>;

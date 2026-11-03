@@ -395,8 +395,9 @@ export class UI {
     const top = this.ctxAnchor ? this.ctxAnchor() : this.game.world.entityTop(this.ctxId!);
     const p = top ? this.game.project(top) : null;
     const el = $('#ctx');
-    // appena sopra il bordo in alto (zoom molto vicino, edificio alto) il menù resta, agganciato sotto la barra; sparisce solo se l'oggetto è davvero fuori
-    if (!p || p.x < 0 || p.x > window.innerWidth || p.y < -window.innerHeight * 0.3 || p.y > window.innerHeight) { el.style.visibility = 'hidden'; return; }
+    // appena fuori dal bordo (zoom molto vicino, edificio alto) il menù resta, agganciato al bordo; sparisce solo se l'oggetto è davvero lontano
+    const W = window.innerWidth, H = window.innerHeight;
+    if (!p || p.x < -W * 0.3 || p.x > W * 1.3 || p.y < -H * 0.3 || p.y > H) { el.style.visibility = 'hidden'; return; }
     el.style.visibility = 'visible';
     const w = el.offsetWidth || 200;
     const x = Math.max(w / 2 + 8, Math.min(window.innerWidth - w / 2 - 8, p.x));

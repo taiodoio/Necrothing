@@ -1413,8 +1413,8 @@ export default {
   "onboarding.yard.flowers": "La voilà propre. Apporte-lui des fleurs. Si une tombe reste trop longtemps négligée, elle se brise, et la réparer coûte des feux follets.",
   "onboarding.yard.light": "On peut allumer et éteindre les lanternes. Touche celle-ci pour l'allumer.",
   "onboarding.yard.shop": "Ouvre la Boutique et achète une lanterne. Tu paieras avec des feux follets.",
-  "onboarding.yard.place": "C’est fait ! Déplace la lanterne où tu veux et touche la coche pour la placer. Les objets achetés mais non placés restent dans l’Inventaire du menu, où tu peux aussi les revendre.",
-  "onboarding.yard.edit": "Ouvre le menu et choisis Modifier, puis fais glisser la lanterne. Une fois terminé, touche la coche.",
+  "onboarding.yard.place": "C’est fait ! Porte-la à l’endroit éclairé, près du chemin : touche-le ou fais-la glisser, puis touche la coche pour la placer. Les objets achetés mais non placés restent dans l’Inventaire du menu, où tu peux aussi les revendre.",
+  "onboarding.yard.edit": "Ouvre le menu et choisis Modifier : tu y déplaces, tournes et ranges ce que tu as placé.",
   "onboarding.yard.ghost": "Quelqu'un est venu te rendre visite. Touche le fantôme : il te racontera quelque chose et te laissera un cadeau.",
   "onboarding.yard.sheet": "Chaque tombe a sa fiche. Touche une tombe, puis ouvre sa fiche avec la loupe.",
   "onboarding.yard.sheetOpen": "Tu trouveras ici son histoire et ses souvenirs. Dans « Autre », tu peux exhumer la tombe ou la confier à l'arbre. Ferme la fiche quand tu as terminé.",
@@ -1612,5 +1612,12 @@ export default {
   "guide.xp.text": "L’expérience du Gardien : chaque soin et chaque rencontre en rapporte un peu. Ils ne se dépensent pas : ils font monter de rang.",
   "guide.prestige.text": "Il dit à quoi ressemble le cimetière en ce moment : il monte avec les tombes, les fleurs et les décorations, et baisse si tu le négliges. Plus de prestige agrandit l’enclos.",
   "player.info.more": "Touche pour savoir ce que c’est",
-  "ctx.talk": "Parler"
+  "ctx.talk": "Parler",
+  "onboarding.yard.editPan": "Modifier a deux modes. Avec « Carte », tu fais glisser la vue sans rien prendre : touche-le.",
+  "onboarding.yard.editWork": "Maintenant ton doigt déplace la vue. Avec « Déplacer », en revanche, tu prends les objets : touche-le.",
+  "onboarding.yard.editDrag": "Fais maintenant glisser la lanterne où tu veux. Quand tu as fini, touche la coche.",
+  "burial.leave.title": "Annuler l’enterrement ?",
+  "burial.leave.text": "Ce que tu as écrit et la photo seront perdus.",
+  "burial.leave.ok": "Annuler l’enterrement",
+  "burial.leave.cancel": "Continuer"
 } satisfies Record<string, string>;

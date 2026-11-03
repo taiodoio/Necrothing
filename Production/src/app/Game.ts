@@ -2467,6 +2467,7 @@ export class Game {
   /** Al posto della partita, il cortile (la partita vera resta da parte, intatta). */
   async enterYard(yard: SaveData) {
     if (!this.realState) this.realState = this.state;
+    document.body.classList.add('yard-play'); // nel cortile niente HUD in alto: il consiglio prende il suo posto
     setSaveInstead(this.realState);
     if (this.editMode) this.setEditMode(false);
     this.clearRoamers();
@@ -2504,6 +2505,7 @@ export class Game {
     progress(0.04);
     await nextPaint();
     this.realState = null;
+    document.body.classList.remove('yard-play');
     setSaveInstead(null);
     this.clearRoamers();
     if (this.editMode) this.setEditMode(false);

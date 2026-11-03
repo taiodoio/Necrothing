@@ -453,7 +453,6 @@ export class Onboarding {
       t('onboarding.tutorial.progress', { n: this.o.step + 1, total: YARD_STEPS.length }),
       this.yardSkipButton());
     this.mark(this.targetsOf(step));
-    this.game.world.setFade(this.keepOf(step));
     const look: Partial<Record<YardStep, string>> = { clean: YARD_GRAVE, flowers: YARD_GRAVE, light: YARD_LANTERN, ghost: YARD_GRAVE, sheet: YARD_GRAVE, shop: this.shopId() ?? '' };
     if (look[step]) this.game.focusEntity(look[step]!);
   }
@@ -479,7 +478,6 @@ export class Onboarding {
 
   private dropCoach() {
     window.clearTimeout(this.doneTimer);
-    if (this.game.inYard) this.game.world.setFade(null);
     this.coach?.remove(); this.coach = null;
     $('#game').classList.remove('has-coach');
     this.clearMarks();
@@ -494,23 +492,6 @@ export class Onboarding {
     this.tap = h('div', { class: 'ob-tap', 'aria-hidden': 'true' }, h('i'), h('i'));
     this.haloKey = '';
     document.body.append(this.halo, this.tap);
-  }
-
-  /**
-   * Cosa resta pieno nella scena durante un passo (il resto è semitrasparente): la tomba da curare,
-   * la lanterna da accendere, la Bottega, la lanterna da spostare in Modifica. Dove si tocca il prato,
-   * un fuoco fatuo, il fantasma o la lanterna in mano (non sono oggetti posati) gli oggetti sono tutti velati.
-   */
-  private keepOf(step: YardStep): Set<string> {
-    const g = this.game;
-    const lamp = [...g.state.placeables].reverse().find((p) => p.type === YARD_GIFT.item && p.id !== YARD_LANTERN);
-    switch (step) {
-      case 'clean': case 'flowers': case 'sheet': return new Set([YARD_GRAVE]);
-      case 'light': return new Set([YARD_LANTERN]);
-      case 'shop': return new Set(this.shopId() ? [this.shopId()!] : []);
-      case 'edit': return new Set(lamp ? [lamp.id] : []);
-      default: return new Set();
-    }
   }
 
   /** La lanterna da posare è nel punto illuminato (non in un posto a caso)? */

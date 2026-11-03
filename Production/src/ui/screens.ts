@@ -684,38 +684,18 @@ const statRow = (ic: string, label: string, value: string, extra?: HTMLElement |
   h('div', { class: `pl-stat${long ? ' long' : ''}` }, icon(ic, 26), h('div', { class: 'pl-stat-text' }, h('span', {}, label), h('b', {}, value), extra ?? null));
 
 /** Un dato in breve, in una riga di quattro: icona, valore grande e, sotto, cosa è; il titolo lo dice per intero. */
-const statChip = (ic: string, value: string, label: string, title: string, extra?: HTMLElement | null, onclick?: () => void) =>
-  h('button', { class: 'pl-chip', title, 'aria-label': title, onclick }, icon(ic, 30), h('b', {}, value), h('small', {}, label), extra ?? null);
+/** Un dato in breve, in una riga di quattro: icona, valore grande e, sotto, cosa è; la «i» in alto a destra apre cosa vuol dire. */
+const statChip = (ic: string, value: string, label: string, title: string, extra: HTMLElement | null, topic: InfoTopic) =>
+  h('button', { class: 'pl-chip', title, 'aria-label': `${title}. ${t('player.info.more')}`, onclick: () => openStatInfo(topic, ic) },
+    h('span', { class: 'pl-info', 'aria-hidden': 'true' }, 'i'), // i18n-ok: simbolo dell'informazione
+    icon(ic, 30), h('b', {}, value), h('small', {}, label), extra);
 
-type GuideTopic = 'wisps' | 'xp' | 'rank' | 'prestige' | 'ach';
+type InfoTopic = 'wisps' | 'xp' | 'rank' | 'prestige';
 
-/**
- * «Come si cresce»: cosa sono fuochi fatui, punti Necro, rango, prestigio e
- * traguardi, in una finestra sola; si apre toccando un tassello (quella voce
- * in evidenza) o il link sotto i tasselli.
- */
-function openGrowthGuide(s: SaveData, focus: GuideTopic | null, fence: string) {
-  const rank = rankForXp(s.player.xp), next = nextRank(s.player.xp), lang = currentLang();
-  const rows: Array<[GuideTopic, string, string | null]> = [
-    ['wisps', 'wisp', null],
-    ['xp', 'xp', null],
-    ['rank', 'rank', next ? t('guide.rank.next', { level: rank.level, name: rank.name, xp: next.minXp.toLocaleString(lang) }) : t('guide.rank.max', { name: rank.name })],
-    ['prestige', 'prestige', fence],
-    ['ach', 'trophy', null],
-  ];
-  // la scala: i gradini già fatti, quello di adesso (in evidenza) e i prossimi, con quanto serve
-  const ladder = (title: string, steps: Array<{ label: string; need: string; done: boolean; now: boolean }>) =>
-    h('div', { class: 'guide-sub' }, h('span', { class: 'guide-sub-title' }, title),
-      h('ol', { class: 'guide-ladder' }, ...steps.map((st) => h('li', { class: st.now ? 'now' : st.done ? 'done' : '' }, h('span', {}, st.label), h('small', {}, st.done ? icon('check', 14) : null, st.need)))));
-  const extra: Partial<Record<GuideTopic, HTMLElement>> = {
-    rank: ladder(t('guide.rank.ladder'), RANKS.map((r) => ({ label: r.name, need: t('guide.rank.need', { xp: r.minXp.toLocaleString(lang) }), done: rank.level > r.level, now: rank.level === r.level }))),
-    prestige: ladder(t('guide.prestige.areas'), EXPANSION.map((e, i) => ({ label: t('guide.prestige.area', { label: e.label, size: e.size }), need: t('guide.prestige.need', { n: e.minPrestige }), done: s.world.unlockedLevel > i, now: s.world.unlockedLevel === i }))),
-  };
-  const list = h('div', { class: 'guide-list' }, ...rows.map(([id, ic, now]) =>
-    h('div', { class: `guide-row${id === focus ? ' focus' : ''}` }, icon(ic, 30),
-      h('div', {}, h('b', {}, t(`guide.${id}.title`)), h('p', {}, t(`guide.${id}.text`)), now ? h('p', { class: 'guide-now' }, now) : null, extra[id] ?? null))));
-  openModal(h('div', { class: 'info-modal guide-modal' }, h('h2', {}, t('guide.title')), list), { label: t('guide.title') });
-  if (focus) requestAnimationFrame(() => list.querySelector('.focus')?.scrollIntoView({ block: 'nearest' }));
+/** Cosa vuol dire un dato del Custode (fuochi fatui, punti Necro, rango, prestigio): due righe in una finestra. */
+function openStatInfo(topic: InfoTopic, ic: string) {
+  const title = t(`guide.${topic}.title`);
+  openModal(h('div', { class: 'info-modal stat-info' }, h('h2', {}, icon(ic, 30), title), h('p', {}, t(`guide.${topic}.text`))), { label: title });
 }
 
 /**
@@ -770,17 +750,15 @@ function keeperTab(ui: UI, openLook: () => void): HTMLElement {
     : exp.next ? t('player.fence.next', { label: exp.label, size: exp.size, prestige: exp.next.minPrestige, n: exp.toNext })
       : t('player.fence.value', { label: exp.label, size: exp.size });
   const xp = next ? `${p.xp.toLocaleString(lang)} / ${next.minXp.toLocaleString(lang)}` : p.xp.toLocaleString(lang);
-  const guide = (topic: GuideTopic | null) => openGrowthGuide(s, topic, fence);
   return h('div', {},
     h('div', { class: 'pl-name-row' }, name, pen),
     h('button', { class: 'big-btn pl-look', onclick: openLook }, icon('shirt', 22), t('player.customize')),
     h('div', { class: 'pl-chips' },
-      statChip('rank', String(rank.level), rank.name, `${t('player.rank')}: ${t('player.rank.value', { level: rank.level, name: rank.name })}`, null, () => guide('rank')),
+      statChip('rank', String(rank.level), rank.name, `${t('player.rank')}: ${t('player.rank.value', { level: rank.level, name: rank.name })}`, null, 'rank'),
       statChip('xp', p.xp.toLocaleString(lang), t('player.xp'), `${t('player.xp')}: ${xp}`,
-        h('div', { class: 'xp-bar pl-bar' }, h('i', { style: `width:${Math.round(rankProgress(p.xp) * 100)}%` })), () => guide('xp')),
-      statChip('wisp', p.wisps.toLocaleString(lang), t('player.wisps'), `${t('player.wisps')}: ${p.wisps.toLocaleString(lang)}`, null, () => guide('wisps')),
-      statChip('prestige', String(computePrestige(s)), t('player.prestige'), `${t('player.prestige')}: ${computePrestige(s)}`, null, () => guide('prestige'))),
-    h('button', { class: 'pl-guide', onclick: () => guide(null) }, icon('book', 20), t('guide.open')),
+        h('div', { class: 'xp-bar pl-bar' }, h('i', { style: `width:${Math.round(rankProgress(p.xp) * 100)}%` })), 'xp'),
+      statChip('wisp', p.wisps.toLocaleString(lang), t('player.wisps'), `${t('player.wisps')}: ${p.wisps.toLocaleString(lang)}`, null, 'wisps'),
+      statChip('prestige', String(computePrestige(s)), t('player.prestige'), `${t('player.prestige')}: ${computePrestige(s)}`, null, 'prestige')),
     h('div', { class: 'section-title' }, t('player.section.cemetery')),
     h('div', { class: 'pl-stats' },
       statRow('enclosure', t('player.fence'), fence, null, true),

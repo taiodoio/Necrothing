@@ -206,26 +206,10 @@
 .ui-next .ach-tier.tier-bronze { background: rgba(200, 138, 84, 0.2); color: #d39a66; }
 .ui-next .ach-bar { display: block; height: 5px; margin-top: 6px; }
 
-/* Tasselli del Custode: si toccano per aprire «Come si cresce» */
-.ui-next button.pl-chip { border: 0; color: inherit; font: inherit; cursor: pointer; }
+/* Tasselli del Custode: la «i» in alto a destra (e tutto il tassello) apre cosa vuol dire quel dato */
+.ui-next button.pl-chip { position: relative; border: 0; color: inherit; font: inherit; cursor: pointer; }
 .ui-next button.pl-chip:active { transform: translateY(1px); }
-.ui-next .pl-guide { display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%; margin: -4px 0 12px; padding: 8px; border: 0; border-radius: 12px; background: transparent; color: var(--gold-bright); font: 700 14px/1.2 var(--ui, inherit); cursor: pointer; }
-.ui-next .guide-modal { max-height: min(76vh, 640px); overflow-y: auto; }
-/* il titolo resta in alto mentre si scorre, con lo spazio per la X: le voci ci passano sotto */
-.ui-next .guide-modal h2 { position: sticky; top: 0; z-index: 1; margin: 0; padding: 2px 48px 10px 0; background: var(--panel); }
-.ui-next .guide-list { display: grid; gap: 8px; }
-.ui-next .guide-row { display: grid; grid-template-columns: 30px 1fr; gap: 12px; align-items: start; padding: 12px; border-radius: 14px; background: var(--panel-2); border: 1.5px solid transparent; }
-.ui-next .guide-row.focus { border-color: var(--gold); }
-.ui-next .guide-row b { display: block; color: var(--paper); font-size: 16px; margin-bottom: 2px; }
-.ui-next .guide-row p { margin: 0; color: var(--muted); font-size: 14px; line-height: 1.4; }
-.ui-next .guide-row p.guide-now { margin-top: 6px; color: var(--gold-bright); font-weight: 700; font-size: 13px; }
-.ui-next .guide-sub { margin-top: 10px; }
-.ui-next .guide-sub-title { display: block; margin-bottom: 6px; color: var(--paper); font-size: 13px; font-weight: 800; }
-.ui-next .guide-ladder { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; }
-.ui-next .guide-ladder li { display: flex; justify-content: space-between; gap: 8px; padding: 6px 10px; border-radius: 10px; background: var(--track); color: var(--muted); font-size: 13px; }
-.ui-next .guide-ladder li small { font-size: 12px; white-space: nowrap; }
-.ui-next .guide-ladder li.done { color: var(--paper); }
-.ui-next .guide-ladder li.now { background: rgba(244, 213, 138, 0.14); color: var(--gold-bright); font-weight: 800; box-shadow: inset 0 0 0 1.5px var(--gold); }
-.ui-next .guide-ladder li small { display: inline-flex; align-items: center; gap: 4px; }
-/* la X resta sopra il titolo fisso della guida */
-.ui-next .modal-close { z-index: 3; }
+.ui-next .pl-info { position: absolute; top: 5px; right: 5px; width: 16px; height: 16px; border-radius: 50%; display: grid; place-items: center;
+  border: 1.5px solid var(--muted); color: var(--muted); font: italic 800 10px/1 Georgia, 'Times New Roman', serif; }
+.ui-next .stat-info h2 { display: flex; align-items: center; gap: 10px; padding-right: 44px; }
+.ui-next .stat-info p { color: var(--muted); font-size: 15px; }

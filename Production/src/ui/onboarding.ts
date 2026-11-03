@@ -20,7 +20,7 @@ import { checkName, NAME_MAX } from '../game/playerName.ts';
 import { currentStep, yardFinished, yardSignal, YARD_STEPS, type OnboardingStage, type OnboardingState, type YardSignal, type YardStep } from '../game/onboarding.ts';
 import { personalGraves } from '../game/rules.ts';
 import { markTip, nextTip } from '../game/tips.ts';
-import { applyYardGift, buildYard, YARD_GIFT, YARD_GRAVE, YARD_LANTERN, YARD_PLACE_SPOT } from '../game/yard.ts';
+import { applyYardGift, buildYard, YARD_GIFT, YARD_GRAVE, YARD_LANTERN } from '../game/yard.ts';
 import { t, tList } from '../i18n/index.ts';
 import { cellCenter } from '../view/WorldView.ts';
 import { rotatedFootprint } from '../game/catalog.ts';
@@ -60,6 +60,9 @@ const loadingContent = (key: string, determinate = false) => {
 };
 
 /** Le fasi a schermo pieno, sullo sfondo del percorso (passando dall'una all'altra lo sfondo resta; il cortile si prepara sotto). */
+/** Dall'Inventario, nel menu, fino a «Inserisci» sulla lanterna comprata. */
+const INVENTORY_PATH = `.drawer .card[data-item="${YARD_GIFT.item}"], .drawer .drawer-foot .big-btn:not(.ghost), #fab, #bubble .slot[data-act="inventory"]`; // i18n-ok: selettori CSS
+
 const SOLID: readonly OnboardingStage[] = ['welcome', 'name', 'intro', 'yard'];
 /** Le schede dell'introduzione: l'immagine (il fuoco fatuo e il fantasma sono quelli della scena) e la chiave del testo. */
 const INTRO: Array<[() => string, number, string]> = [
@@ -168,10 +171,13 @@ export class Onboarding {
     else if (step === 'flowers') allowed = ctx('flowers', YARD_GRAVE);
     else if (step === 'light') allowed = ctx('light', YARD_LANTERN);
     else if (step === 'sheet') allowed = ctx('detail', YARD_GRAVE);
-    else if (step === 'shop') allowed = ctx('shop', this.shopId()) || matches(`.drawer .card[data-item="${YARD_GIFT.item}"], .dialog .shop-detail .row .big-btn:not(.ghost)`);
+    // la Bottega: comprarla e poi «Inserisci ora» (o, comprata e chiusa la Bottega, dall'Inventario)
+    else if (step === 'shop') allowed = ctx('shop', this.shopId()) || matches(`.drawer .card[data-item="${YARD_GIFT.item}"], .dialog .shop-detail .row .big-btn:not(.ghost)`)
+      || (this.bought() && matches(INVENTORY_PATH));
+    // posarla dove si vuole: niente punto obbligato (la spunta è spenta se il posto è occupato)
     else if (step === 'place') allowed = g.placement
-      ? matches('.place-ui [data-tool="undo"], #ctx [data-ctx="rotate"]') || (this.placeAtSpot() && matches('.place-ui [data-tool="confirm"]'))
-      : matches(`.dialog .shop-detail .row .big-btn:not(.ghost), .drawer .card[data-item="${YARD_GIFT.item}"], .drawer .drawer-foot .big-btn:not(.ghost), #fab, #bubble .slot[data-act="inventory"]`);
+      ? matches('.place-ui [data-tool="undo"], .place-ui [data-tool="confirm"], #ctx [data-ctx="rotate"]')
+      : matches(`.dialog .shop-detail .row .big-btn:not(.ghost), ${INVENTORY_PATH}`);
     else if (step === 'edit') allowed = g.editMode
       ? (g.editLocked() ? matches('.place-ui [data-tool="cancel"], .place-ui [data-tool="confirm"]')
         : matches('.place-ui [data-tool="undo"]') || (this.moved && matches('.place-ui [data-tool="done"]')))
@@ -494,11 +500,8 @@ export class Onboarding {
     document.body.append(this.halo, this.tap);
   }
 
-  /** La lanterna da posare è nel punto illuminato (non in un posto a caso)? */
-  private placeAtSpot(): boolean {
-    const p = this.game.placement;
-    return !!p && p.x === YARD_PLACE_SPOT.x && p.y === YARD_PLACE_SPOT.y;
-  }
+  /** La lanterna è comprata (è nell'Inventario, non ancora sulla mappa)? */
+  private bought(): boolean { return (this.game.state.inventory[YARD_GIFT.item] ?? 0) > 0; }
 
   /** Cambia la scritta del consiglio in corso (senza rifarlo: resta al suo posto). */
   private retext(text: string) {
@@ -509,12 +512,16 @@ export class Onboarding {
   }
 
   /**
-   * Il passo di Modifica, un gesto alla volta: tocca la lanterna per prenderla (o tienila premuta),
+   * La scritta del consiglio segue quel che succede dentro il passo. Bottega: compra, poi «Inserisci ora»
+   * (o dall'Inventario). Modifica, un gesto alla volta: tocca la lanterna per prenderla (o tienila premuta),
    * trascinala, conferma; poi la spunta per uscire. Con «Annulla» la lanterna torna com'era e si riprende.
    */
-  private followEdit() {
-    if (this.step !== 'edit') return;
+  private followStep() {
     const g = this.game;
+    // la Bottega, comprata: ora sulla mappa («Inserisci ora», o dall'Inventario se la Bottega è chiusa)
+    if (this.step === 'shop') { this.retext(t(!this.bought() ? 'onboarding.yard.shop' : document.querySelector('.dialog .shop-detail') ? 'onboarding.yard.shopPlace' : 'onboarding.yard.fromInventory')); return; }
+    if (this.step === 'place') { this.retext(t(g.placement ? 'onboarding.yard.place' : 'onboarding.yard.fromInventory')); return; }
+    if (this.step !== 'edit') return;
     if (!g.editMode) { this.retext(t('onboarding.yard.edit')); return; }
     if (this.moved && !g.canUndoTool()) this.moved = false; // annullata: la lanterna è tornata dov'era
     const locked = !!g.editLocked();
@@ -536,23 +543,26 @@ export class Onboarding {
     const card = (id: string) => `.drawer:not([hidden]) .card[data-item="${id}"]`;
     // il pulsante pieno del modale della Bottega: «Compra», poi «Posala»
     const shopCta = '.dialog .shop-detail .row .big-btn:not(.ghost)';
+    // la lanterna comprata dall'Inventario: il menu, l'Inventario, la carta, «Inserisci»
+    const fromInventory = ['.drawer:not([hidden]) .drawer-foot .big-btn:not(.ghost)', card(YARD_GIFT.item), '#bubble.open .slot[data-act="inventory"]', '#fab'];
     switch (step) {
       case 'walk': return () => [point(23, 20, 0.25, 0)];
       case 'wisp': return () => { const w = g.state.world.looseWisps[0]; return w ? [point(w.x, w.y, 1.1, 0.4)] : []; };
       case 'clean': return () => [ctx('clean'), entity(YARD_GRAVE)];
       case 'flowers': return () => [ctx('flowers'), entity(YARD_GRAVE)];
       case 'light': return () => [ctx('light'), entity(YARD_LANTERN)];
-      case 'shop': return () => [shopCta, card(YARD_GIFT.item), ctx('shop'), ...(this.shopId() ? [entity(this.shopId()!)] : [])];
+      // comprata, il passo finisce quando è sulla mappa: «Inserisci ora» (o dall'Inventario, se la Bottega è chiusa)
+      case 'shop': return () => this.bought() ? [shopCta, ...fromInventory]
+        : [shopCta, card(YARD_GIFT.item), ctx('shop'), ...(this.shopId() ? [entity(this.shopId()!)] : [])];
       case 'place': return () => {
-        // prima l'occhio di bue sul punto dove posarla (accanto al sentiero, non a caso); arrivata lì, sulla spunta
+        // il cerchio sulla lanterna finché non la si trascina in un posto libero; poi sulla spunta (va bene qualsiasi posto)
         const p = g.placement;
         if (p) {
-          if (this.placeAtSpot()) return ['.place-ui [data-tool="confirm"]'];
-          // la luce prende il punto d'arrivo e anche la lanterna da portarci (non resta al buio); il tocco va sul punto
+          if (p.history?.length && p.valid) return ['.place-ui [data-tool="confirm"]'];
           const lamp = () => cellCenter(p.x, p.y, rotatedFootprint(p.type ?? '', p.rot));
-          return [{ ...point(YARD_PLACE_SPOT.x, YARD_PLACE_SPOT.y, 0.9, 0), also: () => [lamp().setY(0.9), lamp().setY(0)] }];
+          return [{ at: () => lamp().setY(0.9), base: () => lamp().setY(0) }];
         }
-        return [shopCta, '.drawer:not([hidden]) .drawer-foot .big-btn:not(.ghost)', card(YARD_GIFT.item), '#bubble.open .slot[data-act="inventory"]', '#fab'];
+        return [shopCta, ...fromInventory];
       };
       case 'edit': return () => {
         // la prima volta Modifica si presenta con una scheda: «Inizia»
@@ -801,7 +811,7 @@ export class Onboarding {
     const halo = this.halo, tap = this.tap;
     if (!halo || !tap || !this.targets) return;
     this.keepGhost();
-    this.followEdit();
+    this.followStep();
     const covered = drawerOpen() || !!document.querySelector('.dialog-scrim');
     let r: { x: number; y: number; w: number; h: number } | null = null;
     // dove comincia (in alto) quel che va toccato nella scena o nel menù dell'oggetto

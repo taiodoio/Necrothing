@@ -17,6 +17,11 @@ export interface InputHandlers {
   dragMove(x: number, y: number, dx: number, dy: number, owned: boolean): void;
   /** `suspended`: è arrivato un secondo dito (pinch o pan a due dita) e il gesto si ferma lì. */
   dragEnd(x: number, y: number, owned: boolean, suspended?: boolean): void;
+  /**
+   * La pressione lunga in corso, per l'anello che si riempie sotto il dito: `start` (un dito giù),
+   * `fire` (350 ms fermi: preso), `cancel` (il dito si è mosso o alzato prima, o è arrivato un secondo dito).
+   */
+  hold?(phase: 'start' | 'fire' | 'cancel', x: number, y: number): void;
   zoom(factor: number): void;
   key(key: string, down: boolean): void;
 }
@@ -64,13 +69,17 @@ export class Input {
   }
 
   private clearLong() {
-    if (this.longTimer) { clearTimeout(this.longTimer); this.longTimer = null; }
+    if (!this.longTimer) return;
+    clearTimeout(this.longTimer);
+    this.longTimer = null;
+    this.h.hold?.('cancel', this.start.x, this.start.y);
   }
 
   private longPress = () => {
     this.longTimer = null;
-    if (this.pointers.size !== 1 || this.dragging || this.multi) return;
-    if (!this.h.dragStart(this.start.x, this.start.y, true)) return;
+    const ok = this.pointers.size === 1 && !this.dragging && !this.multi && this.h.dragStart(this.start.x, this.start.y, true);
+    this.h.hold?.(ok ? 'fire' : 'cancel', this.start.x, this.start.y);
+    if (!ok) return;
     // da qui il dito sposta (o disegna) senza doversi alzare
     this.dragging = this.owned = this.longOwned = true;
     globalThis.navigator?.vibrate?.(12);
@@ -89,7 +98,7 @@ export class Input {
       this.longOwned = false;
       this.clearLong();
       // il mouse non ha la pressione lunga col tasto destro & co.: solo il principale
-      if (e.button === 0 || e.pointerType !== 'mouse') this.longTimer = setTimeout(this.longPress, LONG_PRESS_MS);
+      if (e.button === 0 || e.pointerType !== 'mouse') { this.longTimer = setTimeout(this.longPress, LONG_PRESS_MS); this.h.hold?.('start', e.clientX, e.clientY); }
     } else if (this.pointers.size === 2) {
       // il secondo dito sospende quello che si stava facendo: per riprendere serve un gesto nuovo
       this.multi = true;

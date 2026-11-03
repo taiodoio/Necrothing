@@ -17,10 +17,11 @@ export type YardStep = (typeof YARD_STEPS)[number];
 /** Cosa succede nel gioco (lo segnalano Game e le schermate). */
 export type YardSignal =
   | 'walked' | 'wispCollected' | 'graveCleaned' | 'flowersBrought' | 'lightToggled'
-  | 'itemBought' | 'itemPlaced' | 'editDone' | 'presenceMet' | 'graveOpened';
+  | 'itemBought' | 'placementStarted' | 'itemPlaced' | 'editDone' | 'presenceMet' | 'graveOpened';
 const COMPLETES: Record<YardStep, YardSignal> = {
   walk: 'walked', wisp: 'wispCollected', clean: 'graveCleaned', flowers: 'flowersBrought', light: 'lightToggled',
-  shop: 'itemBought', place: 'itemPlaced', edit: 'editDone', ghost: 'presenceMet', sheet: 'graveOpened',
+  // la Bottega finisce quando la lanterna è sulla mappa («Inserisci ora»), non appena comprata
+  shop: 'placementStarted', place: 'itemPlaced', edit: 'editDone', ghost: 'presenceMet', sheet: 'graveOpened',
 };
 
 /** I consigli al momento giusto: ognuno una volta sola (game/tips.ts). */

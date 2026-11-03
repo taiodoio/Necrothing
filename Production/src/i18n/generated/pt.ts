@@ -1412,8 +1412,8 @@ export default {
   "onboarding.yard.clean": "Esta campa está descuidada. Toca-lhe e escolhe a vassoura.",
   "onboarding.yard.flowers": "Agora está limpa. Leva-lhe flores. Se uma campa ficar muito tempo descuidada, acaba por se partir e a reparação custa fogos-fátuos.",
   "onboarding.yard.light": "Podes acender e apagar as lanternas. Toca nesta para a acender.",
-  "onboarding.yard.shop": "Toca na Loja e compra uma lanterna. Paga-se com fogos-fátuos.",
-  "onboarding.yard.place": "Feito! Leva-a ao ponto iluminado junto ao caminho: arrasta-a com o dedo (se arrastares fora da lanterna, moves a vista), depois toca no visto para a colocar. O que comprares e não colocares fica no Inventário do menu, onde também o podes vender.",
+  "onboarding.yard.shop": "Toca na Loja e compra uma lanterna (paga-se com fogos-fátuos).",
+  "onboarding.yard.place": "Arrasta-a para onde quiseres e depois toca no visto.",
   "onboarding.yard.edit": "Abre o menu e escolhe Editar: aí moves, rodas e guardas o que colocaste.",
   "onboarding.yard.ghost": "Alguém veio visitar-te. Toca no fantasma: vai contar-te algo e deixar-te um presente.",
   "onboarding.yard.sheet": "Cada campa tem a sua ficha. Toca numa campa e abre-a com a lupa.",
@@ -1603,7 +1603,7 @@ export default {
   "guide.prestige.text": "Diz como está o cemitério agora: sobe com campas, flores e decorações, e desce se o descuidares. Com mais prestígio a vedação alarga-se.",
   "player.info.more": "Toca para saber o que é",
   "ctx.talk": "Falar",
-  "onboarding.yard.editDrag": "Agora arrasta-a para onde quiseres: se o dedo chegar à margem, a vista desliza sozinha.",
+  "onboarding.yard.editDrag": "Arrasta-a para onde quiseres.",
   "burial.leave.title": "Cancelar o enterro?",
   "burial.leave.text": "O que escreveste e a foto vão perder-se.",
   "burial.leave.ok": "Cancelar o enterro",
@@ -1614,7 +1614,9 @@ export default {
   "hud.edit.done": "Sair de Editar",
   "game.edit.locked": "Primeiro confirma ou cancela a alteração de {what}.",
   "game.edit.lockedThis": "este objeto",
-  "onboarding.yard.editPick": "Toca na lanterna para a pegar, ou mantém-na premida para a arrastar logo. Se arrastares noutro sítio, só moves a vista.",
-  "onboarding.yard.editConfirm": "Boa! Toca no visto para confirmar (a seta repõe-na como estava).",
-  "onboarding.yard.editExit": "Agora toca outra vez no visto para sair de Editar."
+  "onboarding.yard.editPick": "Toca na lanterna para a pegar e depois arrasta-a (ou mantém-na premida).",
+  "onboarding.yard.editConfirm": "Toca no visto para confirmar.",
+  "onboarding.yard.editExit": "Toca outra vez no visto para sair de Editar.",
+  "onboarding.yard.shopPlace": "Agora toca em «Colocar agora»: a lanterna aparece no pátio.",
+  "onboarding.yard.fromInventory": "A lanterna está no Inventário: abre o menu, escolhe Inventário e toca em «Colocar»."
 } satisfies Record<string, string>;

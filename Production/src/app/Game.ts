@@ -25,6 +25,7 @@ import { placeableKey, placeableSeed, seedCount } from '../render/keys.ts';
 import type { PVis } from '../render/types.ts';
 import { UI } from '../ui/UI.ts';
 import { confirmDialog, drawerOpen, floater, keepFieldVisible, toast, uiBlocking } from '../ui/dom.ts';
+import { PressRing } from '../ui/pressRing.ts';
 import { celebrateAchievement, celebrateLooks, celebrateRank } from '../ui/celebrate.ts';
 import { openCustomize } from '../ui/customize.ts';
 import { openLetterRead, openLetterWrite } from '../ui/letter.ts';
@@ -88,6 +89,8 @@ const AUTO_PAN_EDGE = 52, AUTO_PAN_SPEED = 560;
 const AUTO_PAN_DELAY = 0.25, AUTO_PAN_RAMP = 0.5;
 /** Quanto vicino (px sullo schermo) al punto di partenza deve cominciare il trascinamento per disegnare. */
 const HANDLE_PX = 44;
+/** Di quanto si alza l'oggetto mentre lo si tiene (unità del mondo: una casella = 1). */
+const HELD_LIFT = 0.22;
 
 function isTextEntry(target: EventTarget | null): boolean {
   if (target instanceof HTMLTextAreaElement || target instanceof HTMLSelectElement) return true;
@@ -158,6 +161,8 @@ export class Game {
   private readonly walkMark = new WalkTarget();
   /** Il punto di partenza del disegno (stradine, recinti, muretti). */
   private readonly handleMark = new WalkTarget();
+  /** L'anello dorato della pressione lunga. */
+  private pressRing!: PressRing;
   /** Da quanto (s) il dito che sposta o disegna è nella fascia del bordo. */
   private edgeTime = 0;
 
@@ -210,11 +215,13 @@ export class Game {
     this.rig.follow = this.actors.avatar.pos;
     this.rig.snap();
     this.ui = new UI(this);
+    this.pressRing = new PressRing(document.getElementById('game') ?? document.body);
     this.input = new Input(canvas, {
       tap: (x, y) => this.onTap(x, y),
       dragStart: (x, y, long) => this.onDragStart(x, y, long),
       dragMove: (x, y, dx, dy, owned) => this.onDragMove(x, y, dx, dy, owned),
       dragEnd: (x, y, owned, suspended) => this.onDragEnd(x, y, owned, suspended),
+      hold: (phase, x, y) => this.onHold(phase, x, y),
       // pan e zoom ci sono sempre, anche mentre si disegna, si posa o si modifica (il menù dell'oggetto resta)
       zoom: (f) => { if (!this.toolControlsActive()) this.dismissContextForNavigation(); this.rig.zoomBy(f); },
       key: (k, down) => this.onKey(k, down),
@@ -1002,6 +1009,7 @@ export class Game {
     this.rig.follow = null;
     this.rig.jumpTo(cellCenter(spot.x, spot.y, fp));
     this.refreshPlacement();
+    signalOnboarding('placementStarted'); // nel cortile: la lanterna comprata è sulla mappa
   }
 
   private startTrace(type: string) {
@@ -1887,8 +1895,8 @@ export class Game {
     if (this.placement) {
       const fp = this.placementFp();
       const p = this.placement;
-      const inside = g.cell.x >= p.x - 1 && g.cell.x <= p.x + fp[0] && g.cell.y >= p.y - 1 && g.cell.y <= p.y + fp[1];
-      if (inside) this.drag = { id: '__placement', x: p.x, y: p.y, valid: p.valid, grab: g.p.clone().sub(cellCenter(p.x, p.y, fp)), origin: { x: p.x, y: p.y, rot: p.rot } };
+      const inside = this.onPlacement(g.cell);
+      if (inside) { this.drag = { id: '__placement', x: p.x, y: p.y, valid: p.valid, grab: g.p.clone().sub(cellCenter(p.x, p.y, fp)), origin: { x: p.x, y: p.y, rot: p.rot } }; this.liftHeld(true); this.refreshPlacement(); }
       return inside;
     }
     if (!this.editMode) return false;
@@ -1897,9 +1905,7 @@ export class Game {
     let id: string | null = null;
     if (locked) {
       // preso: lo si sposta trascinandolo (anche dal terreno sotto di lui); fuori da lui si sposta la vista
-      const c = this.entityCells(locked);
-      const onIt = hit?.entityId === locked || (!!c && g.cell.x >= c.x && g.cell.x < c.x + c.fp[0] && g.cell.y >= c.y && g.cell.y < c.y + c.fp[1]);
-      if (onIt) id = locked;
+      if (this.onLocked(locked, hit, g.cell)) id = locked;
       else if (long && hit?.entityId) { this.lockedToast(); return false; }
     } else if (long && hit?.entityId) {
       // pressione lunga su un oggetto: lo si prende e lo si sposta subito
@@ -1915,8 +1921,50 @@ export class Game {
     const placed = this.state.placeables.find((p) => p.id === id);
     const origin = { x: c.x, y: c.y, rot: placed?.rot ?? 0 };
     this.drag = { id, x: c.x, y: c.y, valid: true, grab: g.p.clone().sub(cellCenter(c.x, c.y, c.fp)), origin };
+    this.liftHeld(true);
+    this.world.previewMove(id, c.x, c.y, true); // si alza subito, anche prima di muovere il dito
     this.ui.closeContext();
     return true;
+  }
+
+  /** La casella è sull'oggetto che si sta posando (con un margine di una casella attorno)? */
+  private onPlacement(cell: { x: number; y: number }) {
+    const p = this.placement!, fp = this.placementFp();
+    return cell.x >= p.x - 1 && cell.x <= p.x + fp[0] && cell.y >= p.y - 1 && cell.y <= p.y + fp[1];
+  }
+
+  /** In Modifica: il dito è sull'oggetto preso (il modello o il terreno sotto di lui)? */
+  private onLocked(id: string, hit: ReturnType<Game['pick']>, cell: { x: number; y: number }) {
+    const c = this.entityCells(id);
+    return hit?.entityId === id || (!!c && cell.x >= c.x && cell.x < c.x + c.fp[0] && cell.y >= c.y && cell.y < c.y + c.fp[1]);
+  }
+
+  /**
+   * Tenendo premuto qui, la pressione lunga prenderebbe qualcosa? (Le stesse regole di onDragStart,
+   * senza fare niente: decide se far comparire l'anello dorato sotto il dito.)
+   */
+  private holdTarget(x: number, y: number): boolean {
+    if (!this.toolControlsActive() || uiBlocking() || drawerOpen()) return false;
+    const hit = this.pick(x, y);
+    if (this.inYard && !this.ui.onboarding.allowsYardScene(hit, 'hold')) return false;
+    const g = this.groundCell(x, y);
+    if (!g) return false;
+    if (this.placement?.trace) return true;
+    if (this.placement) return this.onPlacement(g.cell);
+    const locked = this.editLocked();
+    if (locked) return this.onLocked(locked, hit, g.cell) && !this.riteIds?.includes(locked);
+    return !!hit?.entityId && !this.riteIds?.includes(hit.entityId);
+  }
+
+  private onHold(phase: 'start' | 'fire' | 'cancel', x: number, y: number) {
+    if (phase === 'start') { if (this.holdTarget(x, y)) this.pressRing.start(x, y); }
+    else if (phase === 'fire') this.pressRing.fire();
+    else this.pressRing.cancel();
+  }
+
+  /** Mentre lo si tiene, l'oggetto preso si alza un poco (come preso in mano); lasciandolo torna giù. */
+  private liftHeld(on: boolean) {
+    this.world.setLift(on ? HELD_LIFT : 0);
   }
 
   /** Il dito è partito sul punto di partenza del disegno (la sua casella, quelle accanto o pochi pixel da lì)? */
@@ -1979,12 +2027,15 @@ export class Game {
     }
     const d = this.drag;
     this.drag = null;
+    if (d) this.liftHeld(false);
     if (!owned || !d) return;
     if (d.id === '__placement') {
+      this.refreshPlacement(); // torna giù
       const p = this.placement;
       if (p?.kind === 'item' && d.origin && (p.x !== d.origin.x || p.y !== d.origin.y)) { p.history?.push(d.origin); this.ui.refreshPlacementBar(); }
       return;
     }
+    this.world.previewMove(d.id, d.x, d.y, d.valid); // torna giù (lift a zero)
     this.world.endPreview();
     if (d.valid) {
       if (d.origin && (d.origin.x !== d.x || d.origin.y !== d.y) && this.act((s) => R.moveEntity(s, d.id, d.x, d.y))) {

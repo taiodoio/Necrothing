@@ -309,3 +309,12 @@
 .ui-next.ui-play .drawer[data-kind="burial"] .edit-tabs::-webkit-scrollbar { display: none; }
 .ui-next.ui-play .drawer[data-kind="burial"] .edit-tabs .chip { flex: 1 0 auto; justify-content: center; padding-left: 9px; padding-right: 9px; font-size: 13px; }
 .ui-next.ui-play .drawer[data-kind="burial"] .edit-note { display: flex; align-items: center; gap: 6px; margin: 6px 0 0; font-size: 13px; }
+/* passi della sepoltura con l'icona sopra ogni tratto: grigia finché non ci si arriva, accesa man mano */
+.ui-next .steps.with-icons { gap: 6px; }
+.ui-next .steps.with-icons .step { flex: 1; display: grid; justify-items: center; gap: 6px; color: #6a6276; transition: color 0.25s; }
+.ui-next .steps.with-icons .step i { width: 100%; }
+.ui-next .steps.with-icons .step.done { color: #c9b07a; }
+.ui-next .steps.with-icons .step.now { color: var(--gold-bright); }
+.ui-next .steps.with-icons .step.now .mono { filter: drop-shadow(0 0 6px rgba(244, 213, 138, 0.45)); }
+/* modifica della tomba: le cinque schede in parti uguali, senza scorrere */
+.ui-next.ui-play .drawer[data-kind="burial"] .tabs.edit-tabs { grid-auto-columns: minmax(0, 1fr); overflow: visible; }

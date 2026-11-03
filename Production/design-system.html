@@ -322,10 +322,11 @@
             </div>
           </div>
           <div class="ds-example">
-            <p class="ds-label">Quantità, passi, cursore</p>
+            <p class="ds-label">Quantità, passi della sepoltura (con le icone), cursore</p>
             <div class="ds-live col">
               <div class="qty"><button>−</button><b>2</b><button>+</button></div>
-              <div class="steps"><i class="on"></i><i class="on"></i><i class="on"></i><i></i><i></i><i></i></div>
+              <!-- sepoltura: l'icona del passo sopra ogni tratto, grigia finché non ci si arriva, dorata accesa sul passo di adesso; le stesse icone fanno da schede nella Modifica tomba -->
+              <div class="steps with-icons"><span class="step done"><i data-mono="tag" data-size="20"></i><i class="on"></i></span><span class="step done"><i data-mono="camera" data-size="20"></i><i class="on"></i></span><span class="step now"><i data-mono="calendar" data-size="20"></i><i class="on"></i></span><span class="step "><i data-mono="quill" data-size="20"></i><i class=""></i></span><span class="step "><i data-mono="tomb" data-size="20"></i><i class=""></i></span><span class="step "><i data-mono="shovel" data-size="20"></i><i class=""></i></span></div>
               <input type="range" class="terrain-slider" min="0" max="100" value="40" style="--open: 40%" />
             </div>
           </div>

@@ -130,10 +130,12 @@ export function openBurial(ui: UI, initial?: R.BurialDraft, startStep = 0, editI
     const errors = R.validateDraft(d, now);
     $('#drawer').dataset.burialStep = String(step);
     // in modifica, al posto dei puntini, le parti da toccare direttamente (il riepilogo non serve)
-    const EDIT_TABS: Array<[number, string]> = [[0, t('burial.edit.tab.name')], [1, t('burial.edit.tab.photo')], [2, t('burial.edit.tab.dates')], [3, t('burial.edit.tab.epitaph')], [4, t('burial.edit.tab.stone')]];
+    // le stesse icone: sopra i passi della sepoltura (si accendono man mano) e sulle schede della modifica
+    const EDIT_TABS: Array<[number, string, string]> = [[0, t('burial.edit.tab.name'), 'tag'], [1, t('burial.edit.tab.photo'), 'camera'], [2, t('burial.edit.tab.dates'), 'calendar'], [3, t('burial.edit.tab.epitaph'), 'quill'], [4, t('burial.edit.tab.stone'), 'tomb']];
+    const STEP_ICONS = [...EDIT_TABS.map(([, , ic]) => ic), 'shovel'];
     const progress = edit
-      ? h('div', { class: 'chips edit-tabs', role: 'tablist' }, ...EDIT_TABS.map(([n, label]) => h('button', { class: `chip ${n === step ? 'active' : ''}`, role: 'tab', 'aria-selected': String(n === step), onclick: () => { step = n; render(); } }, label)))
-      : h('div', { class: 'steps' }, ...Array.from({ length: total }, (_, i) => h('i', { class: i <= step ? 'on' : '' })));
+      ? h('div', { class: 'tabs edit-tabs', role: 'tablist' }, ...EDIT_TABS.map(([n, label, ic]) => h('button', { class: `tab ${n === step ? 'active' : ''}`, role: 'tab', 'aria-selected': String(n === step), onclick: () => { step = n; render(); } }, tabGlyph(ic), label)))
+      : h('div', { class: 'steps with-icons' }, ...Array.from({ length: total }, (_, i) => h('span', { class: `step ${i < step ? 'done' : i === step ? 'now' : ''}` }, monoIcon(STEP_ICONS[i], 20), h('i', { class: i <= step ? 'on' : '' }))));
     const body = h('div', { class: `burial-step burial-step-${step}` }, progress);
     // i campi di testo cambiano senza ridisegnare il passo: «Salva» si aggiorna a ogni tasto
     if (edit) { body.addEventListener('input', () => queueMicrotask(syncSave)); body.addEventListener('change', () => queueMicrotask(syncSave)); }

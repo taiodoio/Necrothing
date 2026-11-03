@@ -1618,5 +1618,9 @@ export default {
   "onboarding.yard.editConfirm": "Tippe auf den Haken, um zu bestätigen.",
   "onboarding.yard.editExit": "Tippe noch einmal auf den Haken, um Bearbeiten zu beenden.",
   "onboarding.yard.shopPlace": "Tippe jetzt auf „Jetzt platzieren“: Die Laterne erscheint im Hof.",
-  "onboarding.yard.fromInventory": "Die Laterne ist im Inventar: Öffne das Menü, wähle Inventar und tippe auf „Platzieren“."
+  "onboarding.yard.fromInventory": "Die Laterne ist im Inventar: Öffne das Menü, wähle Inventar und tippe auf „Platzieren“.",
+  "celebrate.rank.textMany": "Du bist {k} Ränge aufgestiegen, bis Rang {n}. Der Friedhof kennt dich jetzt etwas besser.",
+  "celebrate.more": "Außerdem",
+  "celebrate.moreN#one": "und ein weiterer Erfolg",
+  "celebrate.moreN#other": "und {n} weitere Erfolge"
 } satisfies Record<string, string>;

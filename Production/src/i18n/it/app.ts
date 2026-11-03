@@ -46,6 +46,7 @@ export default {
   // {n}: il numero del rango
   'celebrate.rank.text': 'Sei salito al rango {n}. Il cimitero ti riconosce un po’ di più.',
   // {what}: «12 oggetti in Bottega e 2 lapidi»
+  'celebrate.rank.textMany': 'Sei salito di {k} ranghi, fino al {n}. Il cimitero ti riconosce un po’ di più.',
   'celebrate.rank.unlocks': 'Si sbloccano {what}.',
   'celebrate.rank.items#one': '{n} oggetto in Bottega',
   'celebrate.rank.items#other': '{n} oggetti in Bottega',
@@ -54,6 +55,10 @@ export default {
   'celebrate.rank.and': ' e ',
   // breve: chiude la celebrazione
   'celebrate.ok': 'Evviva!',
+  // le altre cose arrivate insieme nella stessa celebrazione
+  'celebrate.more': 'Anche',
+  'celebrate.moreN#one': 'e un altro traguardo',
+  'celebrate.moreN#other': 'e altri {n} traguardi',
   'celebrate.look.kicker': 'Nuovo aspetto',
   'celebrate.look.npc.witch_corner': 'La strega ti ha regalato un cappello come il suo: dice che porta fortuna ai custodi.',
   'celebrate.look.npc.gardener_corner': 'Il giardiniere ti ha regalato un cappello di paglia come il suo, per le giornate di sole (rare).',

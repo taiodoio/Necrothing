@@ -1658,5 +1658,9 @@ export default {
   "onboarding.yard.editConfirm": "Tap the checkmark to confirm.",
   "onboarding.yard.editExit": "Tap the checkmark again to leave Edit.",
   "onboarding.yard.shopPlace": "Now tap “Place Now”: the lantern appears in the yard.",
-  "onboarding.yard.fromInventory": "The lantern is in your Inventory: open the menu, choose Inventory and tap “Place”."
+  "onboarding.yard.fromInventory": "The lantern is in your Inventory: open the menu, choose Inventory and tap “Place”.",
+  "celebrate.rank.textMany": "You've climbed {k} ranks, up to rank {n}. The cemetery knows you a little better now.",
+  "celebrate.more": "Also",
+  "celebrate.moreN#one": "and one more achievement",
+  "celebrate.moreN#other": "and {n} more achievements"
 } satisfies Record<string, string>;

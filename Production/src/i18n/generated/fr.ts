@@ -1618,5 +1618,9 @@ export default {
   "onboarding.yard.editConfirm": "Touche la coche pour confirmer.",
   "onboarding.yard.editExit": "Touche encore la coche pour quitter Modifier.",
   "onboarding.yard.shopPlace": "Touche maintenant « Placer maintenant » : la lanterne apparaît dans la cour.",
-  "onboarding.yard.fromInventory": "La lanterne est dans l’Inventaire : ouvre le menu, choisis Inventaire et touche « Placer »."
+  "onboarding.yard.fromInventory": "La lanterne est dans l’Inventaire : ouvre le menu, choisis Inventaire et touche « Placer ».",
+  "celebrate.rank.textMany": "Tu as gagné {k} rangs, jusqu’au rang {n}. Le cimetière te reconnaît un peu mieux.",
+  "celebrate.more": "Et aussi",
+  "celebrate.moreN#one": "et un autre succès",
+  "celebrate.moreN#other": "et {n} autres succès"
 } satisfies Record<string, string>;

@@ -1413,8 +1413,8 @@ export default {
   "onboarding.yard.flowers": "現在乾淨了，為它放些花吧。墓穴如果長期無人打理就會損壞，修復需要消耗鬼火。",
   "onboarding.yard.light": "燈籠可以開關。點擊這盞燈籠把它點亮。",
   "onboarding.yard.shop": "打開商店，買一盞燈籠。需要用鬼火支付。",
-  "onboarding.yard.place": "買好了！將燈籠移到喜歡的位置，點擊勾號放置。購買後尚未放置的物品會留在選單的背包中，也可以在那裡轉賣。",
-  "onboarding.yard.edit": "開啟選單並選擇編輯，將燈籠拖到喜歡的位置。完成後點擊勾號。",
+  "onboarding.yard.place": "買好了！把燈籠放到小路旁亮起的位置：點那裡或拖過去，然後點擊勾號放置。購買後尚未放置的物品會留在選單的背包中，也可以在那裡轉賣。",
+  "onboarding.yard.edit": "開啟選單並選擇編輯：在這裡可以移動、旋轉和收起已放置的東西。",
   "onboarding.yard.ghost": "有訪客來了。點擊幽靈，它會告訴你一件事，還會留下一份禮物。",
   "onboarding.yard.sheet": "每座墓都有自己的檔案。點擊墓碑，再點擊放大鏡開啟。",
   "onboarding.yard.sheetOpen": "這裡保存著它的故事與回憶。在「更多」中，你可以選擇遷出墓穴，或將它託付給紀念之樹。完成後關閉檔案。",
@@ -1612,5 +1612,12 @@ export default {
   "guide.xp.text": "守墓人的經驗：每次照料和相遇都會帶來一些。它們不會被花掉，而是提升你的等級。",
   "guide.prestige.text": "它反映墓園此刻的樣子：墳墓、鮮花和裝飾會讓它上升，疏於照料則會下降。聲望越高，圍欄越大。",
   "player.info.more": "點按了解詳情",
-  "ctx.talk": "交談"
+  "ctx.talk": "交談",
+  "onboarding.yard.editPan": "編輯有兩種模式。選「地圖」時拖動的是視圖，不會拿起任何東西：點它。",
+  "onboarding.yard.editWork": "現在手指移動的是視圖。選「移動」則可以拿起物品：點它。",
+  "onboarding.yard.editDrag": "現在把燈籠拖到喜歡的位置。完成後點擊勾號。",
+  "burial.leave.title": "取消這次埋葬？",
+  "burial.leave.text": "你寫的內容和照片都會遺失。",
+  "burial.leave.ok": "取消埋葬",
+  "burial.leave.cancel": "繼續"
 } satisfies Record<string, string>;

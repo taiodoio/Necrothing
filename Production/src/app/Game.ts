@@ -104,6 +104,14 @@ export class Game {
   selection: Selection = null;
   /** Interfaccia nuova: il menù dell'oggetto toccato compare solo quando il Custode ci è arrivato. */
   ctxReady = true;
+  /**
+   * Con un oggetto selezionato la vista inquadra il punto fra il Custode e
+   * l'oggetto (non il solo Custode): a zoom massimo la vista è larga tre
+   * caselle e, centrata sul Custode, la cima dell'oggetto (dove sta il menù)
+   * finiva fuori dal bordo e il menù spariva.
+   */
+  private readonly framePoint = new THREE.Vector3();
+  private frame: { id: string; at: THREE.Vector3 } | null = null;
   editMode = false;
   placement: Placement | null = null;
   /** Tomba affidata e albero mentre il corteo del rito è in scena: non si spostano né si tolgono. */
@@ -353,6 +361,7 @@ export class Game {
       this.world.watch(this.actors.avatar.pos);
       this.world.update(dt, t);
       this.mist?.update(dt, (this.scene.fog as THREE.Fog).color);
+      this.updateFrame();
       this.rig.update(dt);
       const radius = this.rig.groundRadius();
       this.atmosphere.focus(this.rig.target, radius, this.rig.distance);
@@ -1205,8 +1214,21 @@ export class Game {
     const going = this.actors.walkNextTo(c.x, c.y, c.fp, arrived);
     if (!going) arrived(); // non ci si arriva: il menù compare subito
     else if (later && !this.ctxReady) this.markWalk();
-    this.rig.follow = this.actors.avatar.pos;
+    this.frame = { id, at: cellCenter(c.x, c.y, c.fp) };
+    this.rig.follow = this.framePoint;
+    this.updateFrame();
     this.roomForMenu(id);
+  }
+
+  /** Il punto che la vista segue mentre un oggetto è selezionato; senza selezione torna a seguire il Custode. */
+  private updateFrame() {
+    const f = this.frame;
+    if (!f) return;
+    if (this.rig.follow !== this.framePoint && this.rig.follow) { this.frame = null; return; } // qualcun altro ha preso la vista
+    if (this.selection?.id !== f.id) { this.frame = null; if (this.rig.follow === this.framePoint) this.rig.follow = this.actors.avatar.pos; return; }
+    // mentre il Custode cammina la vista segue lui; arrivato (menù aperto) inquadra lui e l'oggetto
+    if (this.ctxReady) this.framePoint.lerpVectors(this.actors.avatar.pos, f.at, 0.5);
+    else this.framePoint.copy(this.actors.avatar.pos);
   }
 
   /**

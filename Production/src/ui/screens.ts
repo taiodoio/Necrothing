@@ -107,6 +107,8 @@ export function openBurial(ui: UI, initial?: R.BurialDraft, startStep = 0, editI
   const now = game.now();
   const d: R.BurialDraft = initial ? { ...initial } : R.emptyDraft(now);
   if (!initial || edit) burialPhoto = new BurialPhoto();
+  // una sepoltura vera comincia: via il banner del primo obiettivo (toccarlo adesso la annullerebbe)
+  if (!edit) ui.onboarding.burialStarted();
   const photo = burialPhoto;
   let step = startStep;
   const total = 6;
@@ -263,13 +265,15 @@ export function openBurial(ui: UI, initial?: R.BurialDraft, startStep = 0, editI
       // nel riepilogo la cartolina si può già mandare, prima di scegliere il posto
       setDrawerFooter(h('div', { style: 'display:grid;gap:6px' },
         h('div', { class: 'row' }, back, h('button', { class: 'big-btn ghost', onclick: () => void openPostcard(postcardData({ ...d, graveType: d.graveType! }, photo.url(), ui)) }, t('burial.postcard'))),
-        h('button', { class: 'big-btn', disabled: !stepValid(), onclick: async () => { d.photoId = await photo.store(); closeDrawer(); game.startGravePlacement(d); } }, t('burial.choosePlace'))));
+        h('button', { class: 'big-btn', disabled: !stepValid(), onclick: async () => { d.photoId = await photo.store(); closeDrawer(true); game.startGravePlacement(d); } }, t('burial.choosePlace'))));
     }
   };
   openDrawer(edit ? t('burial.edit.title') : t('burial.title'), h('div'), {
     full: true, kind: 'burial',
     // chiudendo con modifiche non salvate si chiede prima
-    beforeClose: edit ? () => (changed() ? confirmDialog({ title: t('burial.edit.leave.title'), message: t('burial.edit.leave.text'), ok: t('burial.edit.leave.ok'), cancel: t('burial.edit.leave.cancel'), danger: true }) : true) : undefined,
+    beforeClose: edit ? () => (changed() ? confirmDialog({ title: t('burial.edit.leave.title'), message: t('burial.edit.leave.text'), ok: t('burial.edit.leave.ok'), cancel: t('burial.edit.leave.cancel'), danger: true }) : true)
+      // una sepoltura cominciata (un nome, un passo avanti, una foto): prima di perderla si chiede
+      : () => (step > 0 || d.name.trim() || photo.has ? confirmDialog({ title: t('burial.leave.title'), message: t('burial.leave.text'), ok: t('burial.leave.ok'), cancel: t('burial.leave.cancel'), danger: true }) : true),
   });
   render();
 }

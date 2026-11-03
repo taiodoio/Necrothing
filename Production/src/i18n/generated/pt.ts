@@ -1413,8 +1413,8 @@ export default {
   "onboarding.yard.flowers": "Agora está limpa. Leva-lhe flores. Se uma campa ficar muito tempo descuidada, acaba por se partir e a reparação custa fogos-fátuos.",
   "onboarding.yard.light": "Podes acender e apagar as lanternas. Toca nesta para a acender.",
   "onboarding.yard.shop": "Toca na Loja e compra uma lanterna. Paga-se com fogos-fátuos.",
-  "onboarding.yard.place": "Feito! Move a lanterna para onde quiseres e toca no visto para a colocar. O que comprares e não colocares fica no Inventário do menu, onde também o podes vender.",
-  "onboarding.yard.edit": "Abre o menu e escolhe Editar, depois arrasta a lanterna para onde quiseres. Ao terminar, toca no visto.",
+  "onboarding.yard.place": "Feito! Leva-a ao ponto iluminado junto ao caminho: toca lá ou arrasta-a, depois toca no visto para a colocar. O que comprares e não colocares fica no Inventário do menu, onde também o podes vender.",
+  "onboarding.yard.edit": "Abre o menu e escolhe Editar: aí moves, rodas e guardas o que colocaste.",
   "onboarding.yard.ghost": "Alguém veio visitar-te. Toca no fantasma: vai contar-te algo e deixar-te um presente.",
   "onboarding.yard.sheet": "Cada campa tem a sua ficha. Toca numa campa e abre-a com a lupa.",
   "onboarding.yard.sheetOpen": "Aqui encontras a sua história e as suas memórias. Em «Mais» podes exumar a campa ou confiá-la à árvore. Fecha a ficha quando terminares.",
@@ -1612,5 +1612,12 @@ export default {
   "guide.xp.text": "A experiência do Guardião: cada cuidado e cada encontro dá alguns. Não se gastam: fazem subir de patente.",
   "guide.prestige.text": "Diz como está o cemitério agora: sobe com campas, flores e decorações, e desce se o descuidares. Com mais prestígio a vedação alarga-se.",
   "player.info.more": "Toca para saber o que é",
-  "ctx.talk": "Falar"
+  "ctx.talk": "Falar",
+  "onboarding.yard.editPan": "Editar tem dois modos. Com «Mapa» arrastas a vista sem pegar em nada: toca nele.",
+  "onboarding.yard.editWork": "Agora o dedo move a vista. Com «Mover», pelo contrário, pegas nos objetos: toca nele.",
+  "onboarding.yard.editDrag": "Agora arrasta a lanterna para onde quiseres. Quando terminares, toca no visto.",
+  "burial.leave.title": "Cancelar o enterro?",
+  "burial.leave.text": "O que escreveste e a foto vão perder-se.",
+  "burial.leave.ok": "Cancelar o enterro",
+  "burial.leave.cancel": "Continuar"
 } satisfies Record<string, string>;

@@ -1413,8 +1413,8 @@ export default {
   "onboarding.yard.flowers": "Ya está limpia. Llévale flores. Si descuidas una tumba demasiado tiempo, se romperá y repararla costará fuegos fatuos.",
   "onboarding.yard.light": "Puedes encender y apagar las linternas. Toca esta para encenderla.",
   "onboarding.yard.shop": "Toca la Tienda y compra una linterna. Se paga con fuegos fatuos.",
-  "onboarding.yard.place": "¡Listo! Mueve la linterna donde quieras y toca la marca para colocarla. Lo que compres y no coloques queda en el Inventario del menú, donde también puedes venderlo.",
-  "onboarding.yard.edit": "Abre el menú y elige Editar; arrastra la linterna donde quieras. Al terminar, toca la marca.",
+  "onboarding.yard.place": "¡Listo! Llévala al punto iluminado junto al sendero: toca allí o arrástrala, y luego toca la marca para colocarla. Lo que compres y no coloques queda en el Inventario del menú, donde también puedes venderlo.",
+  "onboarding.yard.edit": "Abre el menú y elige Editar: ahí mueves, giras y guardas lo que has colocado.",
   "onboarding.yard.ghost": "Alguien ha venido a visitarte. Toca al fantasma: te contará algo y te dejará un regalo.",
   "onboarding.yard.sheet": "Cada tumba tiene su ficha. Toca una tumba y ábrela con la lupa.",
   "onboarding.yard.sheetOpen": "Aquí están su historia y sus recuerdos. En «Más» puedes exhumar la tumba o confiarla al árbol. Cierra la ficha cuando termines.",
@@ -1612,5 +1612,12 @@ export default {
   "guide.xp.text": "La experiencia del Guardián: cada cuidado y cada encuentro da algunos. No se gastan: hacen subir de rango.",
   "guide.prestige.text": "Dice cómo está el cementerio ahora: sube con tumbas, flores y decoraciones, y baja si lo descuidas. Con más prestigio el recinto se amplía.",
   "player.info.more": "Toca para saber qué es",
-  "ctx.talk": "Hablar"
+  "ctx.talk": "Hablar",
+  "onboarding.yard.editPan": "Editar tiene dos modos. Con «Mapa» arrastras la vista sin coger nada: tócalo.",
+  "onboarding.yard.editWork": "Ahora el dedo mueve la vista. Con «Mover», en cambio, coges los objetos: tócalo.",
+  "onboarding.yard.editDrag": "Ahora arrastra la linterna donde quieras. Cuando termines, toca la marca.",
+  "burial.leave.title": "¿Cancelar el entierro?",
+  "burial.leave.text": "Lo que has escrito y la foto se perderán.",
+  "burial.leave.ok": "Cancelar el entierro",
+  "burial.leave.cancel": "Continuar"
 } satisfies Record<string, string>;

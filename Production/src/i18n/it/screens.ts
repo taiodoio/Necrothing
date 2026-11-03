@@ -15,6 +15,10 @@ export default {
   'burial.edit.leave.text': 'Le modifiche a questa tomba andranno perse.',
   'burial.edit.leave.ok': 'Esci senza salvare',
   'burial.edit.leave.cancel': 'Continua a modificare',
+  'burial.leave.title': 'Annullare la sepoltura?',
+  'burial.leave.text': 'Quello che hai scritto e la foto andranno persi.',
+  'burial.leave.ok': 'Annulla la sepoltura',
+  'burial.leave.cancel': 'Continua',
   'burial.title': 'Seppellisci',
   // epitaffi suggeriti (pulsanti sotto il campo), voci separate da «|»
   'burial.epitaph.suggestions': 'Ha dato tutto. Anche la garanzia.|Riposa in pezzi.|Non era rotto: era stanco.|Qui giace, finalmente scollegato.|Ci mancherai, più o meno.|Sei stato utile. A volte.',

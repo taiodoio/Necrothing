@@ -1413,8 +1413,8 @@ export default {
   "onboarding.yard.flowers": "Now it's clean. Bring it some flowers. Leave a grave neglected for too long and it'll break; repairs cost wisps.",
   "onboarding.yard.light": "Lanterns can be switched on and off. Tap this one to light it.",
   "onboarding.yard.shop": "Tap the Shop and buy a lantern. You'll pay with wisps.",
-  "onboarding.yard.place": "Done! Move the lantern wherever you like and tap the checkmark to place it. Anything you buy but do not place stays in the Inventory in the menu, where you can also sell it.",
-  "onboarding.yard.edit": "Open the menu and choose Edit, then drag the lantern wherever you like. When finished, tap the checkmark.",
+  "onboarding.yard.place": "Done! Bring it to the lit spot next to the path: tap there or drag it, then tap the checkmark to place it. Anything you buy but do not place stays in the Inventory in the menu, where you can also sell it.",
+  "onboarding.yard.edit": "Open the menu and choose Edit: there you move, rotate and store what you have placed.",
   "onboarding.yard.ghost": "Someone has come to visit. Tap the ghost: they'll tell you something and leave you a gift.",
   "onboarding.yard.sheet": "Every grave has its own record. Tap a grave and open it with the magnifying glass.",
   "onboarding.yard.sheetOpen": "Here you'll find its story and memories. Under “More”, you can exhume it or entrust it to the tree. Close the record when you're done.",
@@ -1652,5 +1652,12 @@ export default {
   "guide.xp.text": "The Keeper’s experience: every bit of care and every encounter brings a few. They are not spent: they raise your rank.",
   "guide.prestige.text": "It tells how the cemetery looks right now: it rises with graves, flowers and decorations, and drops if you neglect it. More prestige makes the fence grow.",
   "player.info.more": "Tap to learn what it is",
-  "ctx.talk": "Talk"
+  "ctx.talk": "Talk",
+  "onboarding.yard.editPan": "Edit has two modes. With “Map” you drag the view without picking anything up: tap it.",
+  "onboarding.yard.editWork": "Now your finger moves the view. With “Move”, instead, you pick up objects: tap it.",
+  "onboarding.yard.editDrag": "Now drag the lantern wherever you like. When you are done, tap the checkmark.",
+  "burial.leave.title": "Cancel the burial?",
+  "burial.leave.text": "What you wrote and the photo will be lost.",
+  "burial.leave.ok": "Cancel the burial",
+  "burial.leave.cancel": "Keep going"
 } satisfies Record<string, string>;

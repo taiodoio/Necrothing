@@ -20,7 +20,7 @@ import { checkName, NAME_MAX } from '../game/playerName.ts';
 import { currentStep, yardFinished, yardSignal, YARD_STEPS, type OnboardingStage, type OnboardingState, type YardSignal, type YardStep } from '../game/onboarding.ts';
 import { personalGraves } from '../game/rules.ts';
 import { markTip, nextTip } from '../game/tips.ts';
-import { applyYardGift, buildYard, YARD_GIFT, YARD_GRAVE, YARD_LANTERN } from '../game/yard.ts';
+import { applyYardGift, buildYard, YARD_GIFT, YARD_GRAVE, YARD_LANTERN, YARD_PLACE_SPOT } from '../game/yard.ts';
 import { t, tList } from '../i18n/index.ts';
 import { cellCenter } from '../view/WorldView.ts';
 import { rotatedFootprint } from '../game/catalog.ts';
@@ -91,7 +91,8 @@ export class Onboarding {
   /** In Modifica la lanterna è stata spostata: ora si tocca «Fine». */
   private moved = false;
   /** Passo «posa la lanterna»: dove stava all'inizio (finché non la sposti, l'occhio di bue resta su di lei). */
-  private placeFrom: { x: number; y: number } | null = null;
+  /** In Modifica, prima di spostare la lanterna: l'interruttore Mappa / Sposta, un tocco per parte. */
+  private editTour: 'pan' | 'work' | 'done' = 'pan';
   /** Il bersaglio nella scena era fuori dallo schermo e la camera ci è già andata (una volta per passo). */
   private framed = false;
   /** I bersagli dentro un pannello già fatti scorrere in vista. */
@@ -137,6 +138,7 @@ export class Onboarding {
     if (step === 'edit') {
       if (!g.editMode) return false;
       if (g.toolMode === 'pan' && gesture === 'drag') return true;
+      if (this.editTour !== 'done') return false; // prima l'interruttore
       const lamp = [...g.state.placeables].reverse().find((p) => p.type === YARD_GIFT.item);
       return !!lamp && hit?.entityId === lamp.id;
     }
@@ -165,10 +167,11 @@ export class Onboarding {
     else if (step === 'sheet') allowed = ctx('detail', YARD_GRAVE);
     else if (step === 'shop') allowed = ctx('shop', this.shopId()) || matches(`.drawer .card[data-item="${YARD_GIFT.item}"], .dialog .shop-detail .row .big-btn:not(.ghost)`);
     else if (step === 'place') allowed = g.placement
-      ? matches('.place-ui [data-tool="pan"], .place-ui [data-tool="work"], .place-ui [data-tool="undo"], #ctx [data-ctx="rotate"]') || (this.placeMoved() && matches('.place-ui [data-tool="confirm"]'))
+      ? matches('.place-ui [data-tool="pan"], .place-ui [data-tool="work"], .place-ui [data-tool="undo"], #ctx [data-ctx="rotate"]') || (this.placeAtSpot() && matches('.place-ui [data-tool="confirm"]'))
       : matches(`.dialog .shop-detail .row .big-btn:not(.ghost), .drawer .card[data-item="${YARD_GIFT.item}"], .drawer .drawer-foot .big-btn:not(.ghost), #fab, #bubble .slot[data-act="inventory"]`);
     else if (step === 'edit') allowed = g.editMode
-      ? matches('.place-ui [data-tool="pan"], .place-ui [data-tool="work"], .place-ui [data-tool="undo"]') || (this.moved && matches('.place-ui [data-tool="confirm"]'))
+      ? (this.editTour === 'pan' ? matches('.place-ui [data-tool="pan"]') : this.editTour === 'work' ? matches('.place-ui [data-tool="work"]')
+        : matches('.place-ui [data-tool="pan"], .place-ui [data-tool="work"], .place-ui [data-tool="undo"]') || (this.moved && matches('.place-ui [data-tool="confirm"]')))
       : matches('#fab, #bubble .slot[data-act="edit"], #drawer .drawer-foot .big-btn');
     else if (!step && yardFinished(this.o)) allowed = matches('#drawer-close, .cel-card .big-btn');
     if (!allowed) {
@@ -441,7 +444,7 @@ export class Onboarding {
     if (!step) { if (yardFinished(this.o)) this.waitThenFinale(); return; }
     this.step = step;
     this.moved = false;
-    this.placeFrom = null;
+    this.editTour = 'pan';
     this.ghostId = null;
     this.framed = false;
     this.coachBox(null, t(`onboarding.yard.${step}`),
@@ -489,12 +492,28 @@ export class Onboarding {
     document.body.append(this.halo, this.tap);
   }
 
-  /** La lanterna da posare è già stata spostata dal punto dove è comparsa? */
-  private placeMoved(): boolean {
+  /** La lanterna da posare è nel punto illuminato (non in un posto a caso)? */
+  private placeAtSpot(): boolean {
     const p = this.game.placement;
-    if (!p) return false;
-    this.placeFrom ??= { x: p.x, y: p.y };
-    return p.x !== this.placeFrom.x || p.y !== this.placeFrom.y;
+    return !!p && p.x === YARD_PLACE_SPOT.x && p.y === YARD_PLACE_SPOT.y;
+  }
+
+  /** Cambia la scritta del consiglio in corso (senza rifarlo: resta al suo posto). */
+  private retext(text: string) {
+    const para = this.coach?.querySelector('.ob-coach-body > p');
+    if (!para || para.textContent === text) return;
+    para.textContent = text;
+    $('#game').style.setProperty('--coach-h', `${this.coach!.offsetHeight}px`); // i18n-ok: stile
+  }
+
+  /** Il giro dell'interruttore in Modifica: «Mappa» toccato, poi «Sposta»; poi si trascina la lanterna. */
+  private followEditTour() {
+    if (this.step !== 'edit') return;
+    const g = this.game;
+    if (!g.editMode) { this.retext(t('onboarding.yard.edit')); return; }
+    if (this.editTour === 'pan' && g.toolMode === 'pan') this.editTour = 'work';
+    else if (this.editTour === 'work' && g.toolMode === 'work') this.editTour = 'done';
+    this.retext(t(this.editTour === 'pan' ? 'onboarding.yard.editPan' : this.editTour === 'work' ? 'onboarding.yard.editWork' : 'onboarding.yard.editDrag'));
   }
 
   private shopId() { return this.game.state.placeables.find((p) => p.type === 'shop')?.id ?? null; }
@@ -520,17 +539,17 @@ export class Onboarding {
       case 'light': return () => [ctx('light'), entity(YARD_LANTERN)];
       case 'shop': return () => [shopCta, card(YARD_GIFT.item), ctx('shop'), ...(this.shopId() ? [entity(this.shopId()!)] : [])];
       case 'place': return () => {
-        // prima l'occhio di bue sulla lanterna da spostare; spostata, sulla spunta
+        // prima l'occhio di bue sul punto dove posarla (accanto al sentiero, non a caso); arrivata lì, sulla spunta
         const p = g.placement;
-        if (p) return this.placeMoved() ? ['.place-ui [data-tool="confirm"]'] : [{
-          at: () => cellCenter(p.x, p.y, rotatedFootprint(p.type ?? '', p.rot)).setY(0.9),
-          base: () => cellCenter(p.x, p.y, rotatedFootprint(p.type ?? '', p.rot)).setY(0),
-        }];
+        if (p) return this.placeAtSpot() ? ['.place-ui [data-tool="confirm"]'] : [point(YARD_PLACE_SPOT.x, YARD_PLACE_SPOT.y, 0.9, 0)];
         return [shopCta, '.drawer:not([hidden]) .drawer-foot .big-btn:not(.ghost)', card(YARD_GIFT.item), '#bubble.open .slot[data-act="inventory"]', '#fab'];
       };
       case 'edit': return () => {
         // la prima volta Modifica si presenta con una scheda: «Inizia»
         if (!g.editMode) return ['#drawer:not([hidden]) .drawer-foot .big-btn', '#bubble.open .slot[data-act="edit"]', '#fab'];
+        // prima l'interruttore: «Mappa» (la vista si sposta col dito), poi «Sposta» (si prendono gli oggetti)
+        if (this.editTour === 'pan') return ['.place-ui [data-tool="pan"]'];
+        if (this.editTour === 'work') return ['.place-ui [data-tool="work"]'];
         if (this.moved) return ['.place-ui [data-tool="confirm"]'];
         // la lanterna appena posata (o quella del cortile)
         const lamp = [...g.state.placeables].reverse().find((p) => p.type === YARD_GIFT.item);
@@ -705,6 +724,17 @@ export class Onboarding {
     this.dropCoach();
   }
 
+  /**
+   * Comincia una sepoltura: via il banner del primo obiettivo (e il suo occhio di bue).
+   * Toccandolo durante la sepoltura se ne apriva un'altra e questa si annullava; se la
+   * prima sepoltura non si conclude, il banner torna alla prossima apertura del gioco.
+   */
+  burialStarted() {
+    window.clearTimeout(this.goalTimer);
+    this.goalShown = true;
+    if (this.coach && !this.step && !this.graveCoach) this.dropCoach();
+  }
+
   /** La prima sepoltura è fatta (Game): via il primo obiettivo, se è ancora in vista. */
   goalReached() {
     window.clearTimeout(this.goalTimer);
@@ -762,6 +792,7 @@ export class Onboarding {
     const halo = this.halo, tap = this.tap;
     if (!halo || !tap || !this.targets) return;
     this.keepGhost();
+    this.followEditTour();
     const covered = drawerOpen() || !!document.querySelector('.dialog-scrim');
     let r: { x: number; y: number; w: number; h: number } | null = null;
     // dove comincia (in alto) quel che va toccato nella scena o nel menù dell'oggetto

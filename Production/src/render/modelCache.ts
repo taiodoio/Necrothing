@@ -17,18 +17,18 @@ const ghost = new THREE.MeshBasicMaterial({ vertexColors: true, transparent: tru
  * glow e ghost sono condivisi (l'Atmosfera ne regola l'intensità per fase).
  */
 export const LOWPOLY_MATERIALS: MaterialSet = {
-  solid: new THREE.MeshStandardMaterial({ vertexColors: true, flatShading: true, roughness: 0.9, metalness: 0 }),
+  solid: withLightMap(new THREE.MeshStandardMaterial({ vertexColors: true, flatShading: true, roughness: 0.9, metalness: 0 })),
   glow,
-  water: new THREE.MeshStandardMaterial({ vertexColors: true, flatShading: true, roughness: 0.25, metalness: 0.1, transparent: true, opacity: 0.86 }),
+  water: withLightMap(new THREE.MeshStandardMaterial({ vertexColors: true, flatShading: true, roughness: 0.25, metalness: 0.1, transparent: true, opacity: 0.86 })),
   ghost,
   /** Occhi dei personaggi: lucidi, con il riflesso della luce. */
-  gloss: new THREE.MeshStandardMaterial({ vertexColors: true, flatShading: true, roughness: 0.18, metalness: 0.05 }),
-  selected: new THREE.MeshStandardMaterial({ vertexColors: true, flatShading: true, roughness: 0.85, metalness: 0, emissive: new THREE.Color('#5a4120'), emissiveIntensity: 0.45 }),
-  invalid: new THREE.MeshStandardMaterial({ vertexColors: true, flatShading: true, roughness: 0.85, metalness: 0, emissive: new THREE.Color('#7a1f1f'), emissiveIntensity: 0.9 }),
+  gloss: withLightMap(new THREE.MeshStandardMaterial({ vertexColors: true, flatShading: true, roughness: 0.18, metalness: 0.05 })),
+  selected: withLightMap(new THREE.MeshStandardMaterial({ vertexColors: true, flatShading: true, roughness: 0.85, metalness: 0, emissive: new THREE.Color('#5a4120'), emissiveIntensity: 0.45 })),
+  invalid: withLightMap(new THREE.MeshStandardMaterial({ vertexColors: true, flatShading: true, roughness: 0.85, metalness: 0, emissive: new THREE.Color('#7a1f1f'), emissiveIntensity: 0.9 })),
 };
 
 /** Terreno low-poly: shading morbido (normali per vertice), così il suolo resta calmo. */
-export const LOWPOLY_TERRAIN = new THREE.MeshStandardMaterial({ vertexColors: true, flatShading: false, roughness: 0.95, metalness: 0 });
+export const LOWPOLY_TERRAIN = withLightMap(new THREE.MeshStandardMaterial({ vertexColors: true, flatShading: false, roughness: 0.95, metalness: 0 }));
 
 /**
  * Materiali leggeri (telefoni deboli): Lambert al posto del PBR, stesso

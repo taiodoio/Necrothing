@@ -184,12 +184,10 @@ export default {
   // livello scelto da Auto: {tier} livello attuale, {top} il più alto, {step}/{steps} gradino di risoluzione
   'game.debug.auto': 'auto · {tier} (max {top}) · gradino {step}/{steps}',
   // {extras}: «materiale semplice» e «mondo leggero», se ci sono
-  'game.debug.quality': 'qualità {level} · dpr {dpr} · tetto {cap}/{max} FPS · ombre {shadows} · luci {lights}{extras}',
+  'game.debug.quality': 'qualità {level} · dpr {dpr} · tetto {cap}/{max} FPS · ombre {shadows}{extras}',
   'game.debug.shadowsOff': 'no',
   'game.debug.shadowsStill': 'ferme',
   'game.debug.shadowsLive': 'vive',
-  'game.debug.lightsFake': 'finte',
-  'game.debug.lightsReal': 'vere',
   'game.debug.liteMaterials': ' · materiale semplice',
   'game.debug.liteWorld': ' · mondo leggero',
 

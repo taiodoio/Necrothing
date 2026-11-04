@@ -312,7 +312,7 @@ test('nebbia del bosco: più fitta all\'alba e di notte, col meteo nebbioso entr
   assert.ok(mist.group.children[0].material.uniforms.uOpacity.value < before, 'di giorno si dirada, gradualmente');
 });
 
-test('atmosfera: cambi di fase graduali e luci del pool che si accendono in dissolvenza', async () => {
+test('atmosfera: cambi di fase graduali; le sorgenti hanno l’alone ma nessuna luce vera', async () => {
   // canvas minimo per lo sfondo a gradiente (in node non c'è il DOM)
   globalThis.document ??= { createElement: () => ({ width: 0, height: 0, getContext: () => ({ createLinearGradient: () => ({ addColorStop() {} }), createRadialGradient: () => ({ addColorStop() {} }), fillRect() {}, fillStyle: '' }) }) };
   const { Atmosphere } = await import('../src/view/Atmosphere.ts');
@@ -326,34 +326,17 @@ test('atmosfera: cambi di fase graduali e luci del pool che si accendono in diss
   assert.ok(atm.hemi.intensity < dayHemi && atm.hemi.intensity > 1.06, `passaggio graduale (${atm.hemi.intensity})`);
   for (let i = 0; i < 200; i++) atm.update(0.05, 0.2 + i * 0.05, new THREE.Camera());
   assert.ok(Math.abs(atm.hemi.intensity - 1.05) < 0.01, 'arriva alla notte');
-  // una sorgente vicina: la sua luce cresce in qualche decimo di secondo, non di colpo
+  // le sorgenti non sono luci vere (la resa non cambia spostando la vista): nessuna PointLight in scena;
+  // l'alone segue l'interruttore della sorgente
   atm.focus(new THREE.Vector3(), 10);
-  atm.addAnchor(new THREE.Vector3(1, 1, 1), { pos: [0, 0, 0], color: '#ffaa55', intensity: 1, range: 4, flicker: 0, halo: 1 });
-  atm.update(0.35, 20, new THREE.Camera());
-  const light = scene.getObjectsByProperty('type', 'PointLight').find((l) => l.intensity > 0);
-  assert.ok(light, 'luce assegnata');
-  const first = light.intensity;
-  atm.update(0.3, 20.3, new THREE.Camera());
-  assert.ok(light.intensity > first, 'si accende in dissolvenza');
-  // il pool pieno: ogni sorgente ha la sua luce accesa
-  const src = [];
-  for (let i = 0; i < 12; i++) src.push({ pos: new THREE.Vector3((i % 4) - 1.5, 1, Math.floor(i / 4) - 1), a: { pos: [0, 0, 0], color: '#ffaa55', intensity: 1, range: 4, flicker: 0, halo: 1 } });
-  let handles = src.map((q) => atm.addAnchor(q.pos, q.a));
-  let tt = 21;
-  for (let i = 0; i < 40; i++) atm.update(0.05, (tt += 0.05), new THREE.Camera());
-  const lit = () => scene.getObjectsByProperty('type', 'PointLight').reduce((a, l) => a + l.intensity, 0);
-  const full = lit();
-  // la scena si risincronizza (azione, fuoco fatuo…): aggiornate sul posto le luci non calano
-  src.forEach((q, i) => atm.updateAnchor(handles[i], q.pos, q.a));
-  let low = full;
-  for (let i = 0; i < 40; i++) { atm.update(0.05, (tt += 0.05), new THREE.Camera()); low = Math.min(low, lit()); }
-  assert.ok(low > full * 0.97, `aggiornando non si spengono (${(low / full).toFixed(2)})`);
-  // oggetti rifatti con un modello nuovo nello stesso punto: la luce passa alla sorgente nuova senza buio
-  handles.forEach((h) => atm.removeAnchor(h));
-  handles = src.map((q) => atm.addAnchor(q.pos, q.a));
-  low = full;
-  for (let i = 0; i < 40; i++) { atm.update(0.05, (tt += 0.05), new THREE.Camera()); low = Math.min(low, lit()); }
-  assert.ok(low > full * 0.9, `rifatte, restano accese (${(low / full).toFixed(2)})`);
+  const h = atm.addAnchor(new THREE.Vector3(1, 1, 1), { pos: [0, 0, 0], color: '#ffaa55', intensity: 1, range: 4, flicker: 0, halo: 1 });
+  for (let i = 0; i < 10; i++) atm.update(0.05, 20 + i * 0.05, new THREE.Camera());
+  assert.equal(scene.getObjectsByProperty('type', 'PointLight').length, 0, 'niente luci vere');
+  const sprite = atm.anchors.get(h.id).sprite;
+  assert.ok(sprite.visible && sprite.material.opacity > 0, 'di notte l’alone è acceso');
+  atm.setAnchorOn(h, false);
+  atm.update(0.05, 21, new THREE.Camera());
+  assert.equal(sprite.material.opacity, 0, 'spenta: niente alone');
 });
 
 test('Custode personalizzabile: aspetto validato, chiave stabile, rig con tutte le parti e la lanterna', async () => {
@@ -711,7 +694,7 @@ test('qualità Auto: livello dal dispositivo, risoluzione dentro al livello, sce
   assert.deepEqual(Object.values(PROFILES).map((p) => p.shadows), ['off', 'still', 'live']);
   assert.deepEqual(Object.values(PROFILES).map((p) => p.fps), [30, 30, 60]);
   for (const p of Object.values(PROFILES)) for (let i = 1; i < p.dpr.length; i++) assert.ok(p.dpr[i] > p.dpr[i - 1]);
-  assert.ok(PROFILES.low.lite && PROFILES.low.fakeLights && PROFILES.medium.fakeLights && !PROFILES.high.fakeLights);
+  assert.ok(PROFILES.low.lite && PROFILES.low.liteMaterials && PROFILES.medium.liteMaterials && !PROFILES.high.liteMaterials);
 
   const run = (g, fps, seconds, target) => { const out = []; for (let t = 0; t < seconds; t += 1 / fps) { const d = g.frame(1 / fps, typeof target === 'function' ? target(g) : target); if (d) out.push(d); } return out; };
   // La stima sceglie subito il gradino massimo della fascia; un profilo già ridotto può risalire.
@@ -785,23 +768,19 @@ test('qualità Auto: livello dal dispositivo, risoluzione dentro al livello, sce
   assert.deepEqual(run(h, 60, 6, 60), ['step']);
 });
 
-test('qualità Auto: le luci in più escono proprio dalla scena (lo shader non le calcola), e tornano per i livelli manuali', async () => {
+test('qualità: in nessun livello ci sono luci vere (le sorgenti stanno nella mappa di luce); ombre ridimensionabili', async () => {
   globalThis.document ??= { createElement: () => ({ width: 0, height: 0, getContext: () => ({ createLinearGradient: () => ({ addColorStop() {} }), createRadialGradient: () => ({ addColorStop() {} }), fillRect() {}, fillStyle: '' }) }) };
   const { Atmosphere } = await import('../src/view/Atmosphere.ts');
-  const scene = new THREE.Scene();
-  const atm = new Atmosphere(scene, 'high');
-  const lights = () => scene.getObjectsByProperty('type', 'PointLight').length;
-  assert.equal(lights(), 10);
-  atm.setLightBudget(4);
-  assert.equal(lights(), 4);
-  atm.focus(new THREE.Vector3(), 10);
-  for (let i = 0; i < 8; i++) atm.addAnchor(new THREE.Vector3(i - 4, 1, 0), { pos: [0, 0, 0], color: '#ffaa55', intensity: 1, range: 4, flicker: 0, halo: 1 });
-  for (let i = 0; i < 20; i++) atm.update(0.05, i * 0.05, new THREE.Camera());
-  assert.equal(scene.getObjectsByProperty('type', 'PointLight').filter((l) => l.intensity > 0).length, 4);
-  atm.setLightBudget(null);
-  assert.equal(lights(), 10);
-  atm.setShadowSize(1024);
-  assert.equal(atm.sun.shadow.mapSize.x, 1024);
+  for (const q of ['low', 'medium', 'high']) {
+    const scene = new THREE.Scene();
+    const atm = new Atmosphere(scene, q);
+    atm.focus(new THREE.Vector3(), 10);
+    for (let i = 0; i < 12; i++) atm.addAnchor(new THREE.Vector3(i - 6, 1, 0), { pos: [0, 0, 0], color: '#ffaa55', intensity: 1, range: 4, flicker: 0, halo: 1 });
+    for (let i = 0; i < 10; i++) atm.update(0.05, i * 0.05, new THREE.Camera());
+    assert.equal(scene.getObjectsByProperty('type', 'PointLight').length, 0, q);
+    atm.setShadowSize(1024);
+    assert.equal(atm.sun.shadow.mapSize.x, 1024);
+  }
 });
 
 test('qualità Auto, fase 2: oggetti fermi fusi per zona (stesso disegno, meno mesh) che si ricompongono quando serve', async () => {

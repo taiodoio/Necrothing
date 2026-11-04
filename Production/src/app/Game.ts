@@ -2289,8 +2289,6 @@ export class Game {
     this.renderer.shadowMap.needsUpdate = true;
     this.world.lite = p.lite;
     this.world.setMergeStatic(true); // oggetti fermi fusi per zona: stesso aspetto, meno draw call
-    this.atmosphere.setFakeLights(p.fakeLights);
-    if (!p.fakeLights) this.atmosphere.setLightBudget(null);
     this.actors.setPresenceTier(p.presences);
     this.actors.syncPresences(this.state, this.now());
     this.applyQuality(p.bake, false);
@@ -2382,7 +2380,7 @@ export class Game {
     const level = a ? t('game.debug.auto', { tier: QUALITY_LABELS[a.tier], top: QUALITY_LABELS[a.top], step: a.step + 1, steps: p.dpr.length }) : QUALITY_LABELS[this.level()];
     const shadows = p.shadows === 'off' ? t('game.debug.shadowsOff') : p.shadows === 'still' ? t('game.debug.shadowsStill') : t('game.debug.shadowsLive');
     const extras = `${p.liteMaterials ? t('game.debug.liteMaterials') : ''}${p.lite ? t('game.debug.liteWorld') : ''}`;
-    return t('game.debug.quality', { level, dpr: this.renderer.getPixelRatio(), cap: this.currentCap(performance.now()), max: this.frameCap, shadows, lights: p.fakeLights ? t('game.debug.lightsFake') : t('game.debug.lightsReal'), extras });
+    return t('game.debug.quality', { level, dpr: this.renderer.getPixelRatio(), cap: this.currentCap(performance.now()), max: this.frameCap, shadows, extras });
   }
 
   /** La vista può scorrere sul recinto e su una fascia di bosco, mai oltre il terreno. */

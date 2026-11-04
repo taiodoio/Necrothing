@@ -450,13 +450,13 @@ votive_candle: votiveCandle,
         <p class="sub">Lo stesso modello deve stare bene a tutti e tre i livelli. Ecco cosa cambia (letto da <code>app/AutoQuality.ts</code>):</p>
         <div class="ds-scroll">
           <table class="ds-table" id="quality-table">
-            <thead><tr><th>Livello</th><th>Materiali leggeri</th><th>Luci finte</th><th>Ombre</th><th>Scena alleggerita</th><th>Presenze</th><th>FPS</th></tr></thead>
+            <thead><tr><th>Livello</th><th>Materiali leggeri</th><th>Ombre</th><th>Scena alleggerita</th><th>Presenze</th><th>FPS</th></tr></thead>
             <tbody></tbody>
           </table>
         </div>
         <ul style="margin-top: 14px">
           <li><b>Materiali leggeri</b>: Lambert al posto del PBR. Il modello non deve contare sulla lucentezza; la forma si legge dalle facce.</li>
-          <li><b>Luci finte</b>: niente PointLight, solo aloni e il bucket <code>glow</code>. Un oggetto acceso deve sembrare acceso anche così.</li>
+          <li><b>Luci</b>: a ogni livello niente PointLight. Le fonti accese si dipingono nella mappa di luce (<code>render/lightMap.ts</code>), che illumina terreno, pareti e personaggi attorno, più aloni e il bucket <code>glow</code>. La resa è uguale ovunque nella vista.</li>
           <li><b>Ombre</b>: <code>live</code> si aggiornano sempre, <code>still</code> solo quando la scena cambia, <code>off</code> mai. Gli oggetti non devono servirsi dell'ombra per farsi capire.</li>
         </ul>
       </section>

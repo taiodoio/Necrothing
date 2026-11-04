@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="theme-color" content="#1e2823">
+  <title>Le cripte · Necrothing</title>
+  <style>/* INLINE_STYLES */</style>
+</head>
+<body>
+  <header class="masthead">
+    <a class="wordmark" href="#" aria-label="Necrothing, torna al quartiere">NECROTHING<span>LABORATORIO DEL CIMITERO</span></a>
+    <div class="edition">STUDI DI ARCHITETTURA FUNERARIA<span>N° 01 / LE CRIPTE</span></div>
+  </header>
+  <main>
+    <section class="intro">
+      <div><p class="eyebrow">CINQUE FAMIGLIE. UN PICCOLO QUARTIERE MACABRO.</p><h1>Il vicinato dell’aldilà<span>.</span></h1></div>
+      <p class="intro-copy">Una lavanderia, un giardino, una piccola sala prove.<br>Cinque cortili, cinque modi di trascorrere l’eternità.</p>
+    </section>
+    <div class="workbench">
+      <aside class="catalogue" aria-label="Famiglie di cripte">
+        <div class="aside-heading">L’ABECEDARIO DEI DEFUNTI<span>05</span></div>
+        <nav id="families"></nav>
+        <div class="module-note"><span class="module-symbol" aria-hidden="true">⊞</span><div>Una cripta,<br>il suo piccolo cortile.<small>Lotto 4 × 5 celle · fronte +Z<br>Recinti e cancelli raccordabili</small></div></div>
+      </aside>
+      <section class="viewer" aria-label="Visualizzatore Three.js">
+        <div class="toolbar">
+          <div class="segmented views" aria-label="Vista"><button data-mode="neighbourhood" aria-pressed="true">Quartiere</button><button data-mode="architecture" aria-pressed="false">Forme</button><button data-mode="single" aria-pressed="false">Modello</button><button data-mode="comparison" aria-pressed="false">Confronto</button></div>
+          <div class="toolbar-right"><div class="segmented states" aria-label="Stato del modello"><button data-state="clean" aria-pressed="true">Integra</button><button data-state="dirty" aria-pressed="false">Sporca</button><button data-state="broken" aria-pressed="false">Rotta</button></div><button id="light" class="light-button" aria-pressed="false" title="Passa alla luce notturna">☼ <span>Giorno</span></button></div>
+        </div>
+        <div class="variantbar" aria-label="Varianti della cripta">
+          <span>VARIANTE</span><div class="segmented variant-buttons"><button data-variant="1" aria-pressed="true">1</button><button data-variant="2" aria-pressed="false">2</button><button data-variant="3" aria-pressed="false">3</button></div>
+          <button class="compare-variants" data-mode="variants" aria-pressed="false">Confronta le 3 varianti <span>↗</span></button>
+        </div>
+        <div id="stage">
+          <canvas id="canvas" aria-label="Scena tridimensionale interattiva delle cripte">Il visualizzatore richiede un browser con WebGL.</canvas>
+          <div class="stage-caption"><span class="live-dot"></span><span id="scene-name">Il quartiere delle cinque cripte</span></div>
+          <div class="orientation" aria-hidden="true">N <span>↗</span></div>
+          <div id="labels" aria-hidden="true"></div>
+          <div class="stage-controls"><button id="home" title="Ripristina la vista" aria-label="Ripristina la vista">↖</button><button id="rotate" title="Ruota la cripta selezionata di 90 gradi" aria-label="Ruota la cripta di 90 gradi">↻</button><button id="zoom-in" aria-label="Avvicina">＋</button><button id="zoom-out" aria-label="Allontana">−</button></div>
+          <p class="gesture-note">Trascina per ruotare · scorri per avvicinarti</p>
+          <div id="loading">Stiamo aprendo i cancelli…</div>
+          <div id="error" role="alert" hidden>Il browser non ha potuto aprire la scena 3D. Prova un browser aggiornato con WebGL attivo.</div>
+          <div id="capture-heading"><span>NECROTHING / STUDI DI CRIPTE</span><h2></h2><p></p></div>
+        </div>
+        <footer class="viewer-footer"><div><span id="selected-index" class="selection-number">01</span><div><h2 id="selected-name">Cripta degli Zombie</h2><p id="selected-signature"></p></div></div><button id="download" class="export-button">Esporta GLB <span>↗</span></button></footer>
+      </section>
+    </div>
+    <section class="notes"><p id="description"></p><p><span>COME INVECCHIANO</span>Integra: cripta e cortile curati. Sporca: erbacce, umidità e oggetti logori. Rotta: recinti crollati, strumenti danneggiati, vasca svuotata, cristalli caduti e luci spente.</p><p><span>UN’ATTIVITÀ PER OGNI FAMIGLIA</span>Lavanderia fangosa, giardino del ricordo, palco d’ossa, orto spontaneo e cerchio rituale: ogni cortile ha una disposizione e una vita proprie.</p></section>
+    <p class="page-foot">MODELLI PROCEDURALI ORIGINALI · THREE.JS · PALETTE NECROTHING <span>Una soglia per ogni genere di riposo.</span></p>
+  </main>
+  <div id="status" role="status" aria-live="polite"></div>
+  <script>/* INLINE_SCRIPT */</script>
+</body>
+</html>

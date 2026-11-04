@@ -1,0 +1,1802 @@
+{
+  "result": "passed",
+  "revision": 7,
+  "checks": [
+    "45 family/variant/state combinations with finite geometry",
+    "4 × 5 footprint including courtyard in all states",
+    "Distinct architecture heights",
+    "Five-building architecture comparison",
+    "Courtyard inventory in every family",
+    "Broken lights off",
+    "Actual isolated WebGL colour-pass triangles",
+    "At most two actual colour-pass draw calls per lot",
+    "Family/state/variant/view controls",
+    "90° rotation",
+    "Day/night",
+    "GLB binary header and variant metadata",
+    "GLB download",
+    "390px mobile viewport without overflow",
+    "Standalone file without network requests"
+  ],
+  "colorPassMeasurements": [
+    {
+      "type": "zombie",
+      "state": "clean",
+      "variant": 1,
+      "drawCalls": 2,
+      "triangles": 4458,
+      "geometryTriangles": 4458
+    },
+    {
+      "type": "zombie",
+      "state": "dirty",
+      "variant": 1,
+      "drawCalls": 2,
+      "triangles": 6206,
+      "geometryTriangles": 6206
+    },
+    {
+      "type": "zombie",
+      "state": "broken",
+      "variant": 1,
+      "drawCalls": 1,
+      "triangles": 6410,
+      "geometryTriangles": 6410
+    },
+    {
+      "type": "zombie",
+      "state": "clean",
+      "variant": 2,
+      "drawCalls": 2,
+      "triangles": 4674,
+      "geometryTriangles": 4674
+    },
+    {
+      "type": "zombie",
+      "state": "dirty",
+      "variant": 2,
+      "drawCalls": 2,
+      "triangles": 6422,
+      "geometryTriangles": 6422
+    },
+    {
+      "type": "zombie",
+      "state": "broken",
+      "variant": 2,
+      "drawCalls": 1,
+      "triangles": 6638,
+      "geometryTriangles": 6638
+    },
+    {
+      "type": "zombie",
+      "state": "clean",
+      "variant": 3,
+      "drawCalls": 2,
+      "triangles": 4750,
+      "geometryTriangles": 4750
+    },
+    {
+      "type": "zombie",
+      "state": "dirty",
+      "variant": 3,
+      "drawCalls": 2,
+      "triangles": 6498,
+      "geometryTriangles": 6498
+    },
+    {
+      "type": "zombie",
+      "state": "broken",
+      "variant": 3,
+      "drawCalls": 1,
+      "triangles": 6702,
+      "geometryTriangles": 6702
+    },
+    {
+      "type": "ghost",
+      "state": "clean",
+      "variant": 1,
+      "drawCalls": 2,
+      "triangles": 3453,
+      "geometryTriangles": 3453
+    },
+    {
+      "type": "ghost",
+      "state": "dirty",
+      "variant": 1,
+      "drawCalls": 2,
+      "triangles": 5201,
+      "geometryTriangles": 5201
+    },
+    {
+      "type": "ghost",
+      "state": "broken",
+      "variant": 1,
+      "drawCalls": 1,
+      "triangles": 5285,
+      "geometryTriangles": 5285
+    },
+    {
+      "type": "ghost",
+      "state": "clean",
+      "variant": 2,
+      "drawCalls": 2,
+      "triangles": 3617,
+      "geometryTriangles": 3617
+    },
+    {
+      "type": "ghost",
+      "state": "dirty",
+      "variant": 2,
+      "drawCalls": 2,
+      "triangles": 5365,
+      "geometryTriangles": 5365
+    },
+    {
+      "type": "ghost",
+      "state": "broken",
+      "variant": 2,
+      "drawCalls": 1,
+      "triangles": 5381,
+      "geometryTriangles": 5381
+    },
+    {
+      "type": "ghost",
+      "state": "clean",
+      "variant": 3,
+      "drawCalls": 2,
+      "triangles": 3765,
+      "geometryTriangles": 3765
+    },
+    {
+      "type": "ghost",
+      "state": "dirty",
+      "variant": 3,
+      "drawCalls": 2,
+      "triangles": 5513,
+      "geometryTriangles": 5513
+    },
+    {
+      "type": "ghost",
+      "state": "broken",
+      "variant": 3,
+      "drawCalls": 1,
+      "triangles": 5561,
+      "geometryTriangles": 5561
+    },
+    {
+      "type": "skeleton",
+      "state": "clean",
+      "variant": 1,
+      "drawCalls": 2,
+      "triangles": 6198,
+      "geometryTriangles": 6198
+    },
+    {
+      "type": "skeleton",
+      "state": "dirty",
+      "variant": 1,
+      "drawCalls": 2,
+      "triangles": 7906,
+      "geometryTriangles": 7906
+    },
+    {
+      "type": "skeleton",
+      "state": "broken",
+      "variant": 1,
+      "drawCalls": 1,
+      "triangles": 7890,
+      "geometryTriangles": 7890
+    },
+    {
+      "type": "skeleton",
+      "state": "clean",
+      "variant": 2,
+      "drawCalls": 2,
+      "triangles": 6070,
+      "geometryTriangles": 6070
+    },
+    {
+      "type": "skeleton",
+      "state": "dirty",
+      "variant": 2,
+      "drawCalls": 2,
+      "triangles": 7778,
+      "geometryTriangles": 7778
+    },
+    {
+      "type": "skeleton",
+      "state": "broken",
+      "variant": 2,
+      "drawCalls": 1,
+      "triangles": 7790,
+      "geometryTriangles": 7790
+    },
+    {
+      "type": "skeleton",
+      "state": "clean",
+      "variant": 3,
+      "drawCalls": 2,
+      "triangles": 6340,
+      "geometryTriangles": 6340
+    },
+    {
+      "type": "skeleton",
+      "state": "dirty",
+      "variant": 3,
+      "drawCalls": 2,
+      "triangles": 8048,
+      "geometryTriangles": 8048
+    },
+    {
+      "type": "skeleton",
+      "state": "broken",
+      "variant": 3,
+      "drawCalls": 1,
+      "triangles": 8020,
+      "geometryTriangles": 8020
+    },
+    {
+      "type": "nature",
+      "state": "clean",
+      "variant": 1,
+      "drawCalls": 2,
+      "triangles": 4952,
+      "geometryTriangles": 4952
+    },
+    {
+      "type": "nature",
+      "state": "dirty",
+      "variant": 1,
+      "drawCalls": 2,
+      "triangles": 6740,
+      "geometryTriangles": 6740
+    },
+    {
+      "type": "nature",
+      "state": "broken",
+      "variant": 1,
+      "drawCalls": 1,
+      "triangles": 6692,
+      "geometryTriangles": 6692
+    },
+    {
+      "type": "nature",
+      "state": "clean",
+      "variant": 2,
+      "drawCalls": 2,
+      "triangles": 5324,
+      "geometryTriangles": 5324
+    },
+    {
+      "type": "nature",
+      "state": "dirty",
+      "variant": 2,
+      "drawCalls": 2,
+      "triangles": 7112,
+      "geometryTriangles": 7112
+    },
+    {
+      "type": "nature",
+      "state": "broken",
+      "variant": 2,
+      "drawCalls": 1,
+      "triangles": 7012,
+      "geometryTriangles": 7012
+    },
+    {
+      "type": "nature",
+      "state": "clean",
+      "variant": 3,
+      "drawCalls": 2,
+      "triangles": 5452,
+      "geometryTriangles": 5452
+    },
+    {
+      "type": "nature",
+      "state": "dirty",
+      "variant": 3,
+      "drawCalls": 2,
+      "triangles": 7240,
+      "geometryTriangles": 7240
+    },
+    {
+      "type": "nature",
+      "state": "broken",
+      "variant": 3,
+      "drawCalls": 1,
+      "triangles": 7060,
+      "geometryTriangles": 7060
+    },
+    {
+      "type": "supernatural",
+      "state": "clean",
+      "variant": 1,
+      "drawCalls": 2,
+      "triangles": 3366,
+      "geometryTriangles": 3366
+    },
+    {
+      "type": "supernatural",
+      "state": "dirty",
+      "variant": 1,
+      "drawCalls": 2,
+      "triangles": 5074,
+      "geometryTriangles": 5074
+    },
+    {
+      "type": "supernatural",
+      "state": "broken",
+      "variant": 1,
+      "drawCalls": 1,
+      "triangles": 4978,
+      "geometryTriangles": 4978
+    },
+    {
+      "type": "supernatural",
+      "state": "clean",
+      "variant": 2,
+      "drawCalls": 2,
+      "triangles": 3218,
+      "geometryTriangles": 3218
+    },
+    {
+      "type": "supernatural",
+      "state": "dirty",
+      "variant": 2,
+      "drawCalls": 2,
+      "triangles": 4926,
+      "geometryTriangles": 4926
+    },
+    {
+      "type": "supernatural",
+      "state": "broken",
+      "variant": 2,
+      "drawCalls": 1,
+      "triangles": 4906,
+      "geometryTriangles": 4906
+    },
+    {
+      "type": "supernatural",
+      "state": "clean",
+      "variant": 3,
+      "drawCalls": 2,
+      "triangles": 3310,
+      "geometryTriangles": 3310
+    },
+    {
+      "type": "supernatural",
+      "state": "dirty",
+      "variant": 3,
+      "drawCalls": 2,
+      "triangles": 5018,
+      "geometryTriangles": 5018
+    },
+    {
+      "type": "supernatural",
+      "state": "broken",
+      "variant": 3,
+      "drawCalls": 1,
+      "triangles": 4906,
+      "geometryTriangles": 4906
+    }
+  ],
+  "models": [
+    {
+      "type": "zombie",
+      "state": "clean",
+      "variant": 1,
+      "variantName": "Casetta storta",
+      "triangles": 4458,
+      "meshes": 2,
+      "bounds": {
+        "min": [
+          -1.9857361316680908,
+          -0.2239028960466385,
+          -2.485450267791748
+        ],
+        "max": [
+          1.9849900007247925,
+          2.161107063293457,
+          2.483823776245117
+        ]
+      },
+      "architecture": "crooked-cottage",
+      "architectureName": "Casetta col tetto storto",
+      "courtyardObjects": [
+        "patched-laundry",
+        "wash-tub-and-washboard",
+        "soil-wheelbarrow",
+        "muddy-boots",
+        "shovel",
+        "mud-patches"
+      ],
+      "courtyardLayout": "muddy-laundry"
+    },
+    {
+      "type": "zombie",
+      "state": "dirty",
+      "variant": 1,
+      "variantName": "Casetta storta",
+      "triangles": 6206,
+      "meshes": 2,
+      "bounds": {
+        "min": [
+          -1.9857361316680908,
+          -0.2239028960466385,
+          -2.485450267791748
+        ],
+        "max": [
+          1.9849900007247925,
+          2.161107063293457,
+          2.483823776245117
+        ]
+      },
+      "architecture": "crooked-cottage",
+      "architectureName": "Casetta col tetto storto",
+      "courtyardObjects": [
+        "patched-laundry",
+        "wash-tub-and-washboard",
+        "soil-wheelbarrow",
+        "muddy-boots",
+        "shovel",
+        "mud-patches"
+      ],
+      "courtyardLayout": "muddy-laundry"
+    },
+    {
+      "type": "zombie",
+      "state": "broken",
+      "variant": 1,
+      "variantName": "Casetta storta",
+      "triangles": 6410,
+      "meshes": 1,
+      "bounds": {
+        "min": [
+          -1.9857361316680908,
+          -0.2239028960466385,
+          -2.485450267791748
+        ],
+        "max": [
+          1.9849900007247925,
+          2.161107063293457,
+          2.483823776245117
+        ]
+      },
+      "architecture": "crooked-cottage",
+      "architectureName": "Casetta col tetto storto",
+      "courtyardObjects": [
+        "patched-laundry",
+        "wash-tub-and-washboard",
+        "soil-wheelbarrow",
+        "muddy-boots",
+        "shovel",
+        "mud-patches"
+      ],
+      "courtyardLayout": "muddy-laundry"
+    },
+    {
+      "type": "zombie",
+      "state": "clean",
+      "variant": 2,
+      "variantName": "Portico e comignolo",
+      "triangles": 4674,
+      "meshes": 2,
+      "bounds": {
+        "min": [
+          -1.984566569328308,
+          -0.22397483885288239,
+          -2.484095335006714
+        ],
+        "max": [
+          1.9859951734542847,
+          2.2792270183563232,
+          2.4857466220855713
+        ]
+      },
+      "architecture": "crooked-cottage",
+      "architectureName": "Casetta col tetto storto",
+      "courtyardObjects": [
+        "patched-laundry",
+        "wash-tub-and-washboard",
+        "soil-wheelbarrow",
+        "muddy-boots",
+        "shovel",
+        "mud-patches",
+        "variant-2-detail"
+      ],
+      "courtyardLayout": "muddy-laundry"
+    },
+    {
+      "type": "zombie",
+      "state": "dirty",
+      "variant": 2,
+      "variantName": "Portico e comignolo",
+      "triangles": 6422,
+      "meshes": 2,
+      "bounds": {
+        "min": [
+          -1.984566569328308,
+          -0.22397483885288239,
+          -2.484095335006714
+        ],
+        "max": [
+          1.9859951734542847,
+          2.2792270183563232,
+          2.4857466220855713
+        ]
+      },
+      "architecture": "crooked-cottage",
+      "architectureName": "Casetta col tetto storto",
+      "courtyardObjects": [
+        "patched-laundry",
+        "wash-tub-and-washboard",
+        "soil-wheelbarrow",
+        "muddy-boots",
+        "shovel",
+        "mud-patches",
+        "variant-2-detail"
+      ],
+      "courtyardLayout": "muddy-laundry"
+    },
+    {
+      "type": "zombie",
+      "state": "broken",
+      "variant": 2,
+      "variantName": "Portico e comignolo",
+      "triangles": 6638,
+      "meshes": 1,
+      "bounds": {
+        "min": [
+          -1.984566569328308,
+          -0.22397483885288239,
+          -2.484095335006714
+        ],
+        "max": [
+          1.9859951734542847,
+          2.2792270183563232,
+          2.4857466220855713
+        ]
+      },
+      "architecture": "crooked-cottage",
+      "architectureName": "Casetta col tetto storto",
+      "courtyardObjects": [
+        "patched-laundry",
+        "wash-tub-and-washboard",
+        "soil-wheelbarrow",
+        "muddy-boots",
+        "shovel",
+        "mud-patches",
+        "variant-2-detail"
+      ],
+      "courtyardLayout": "muddy-laundry"
+    },
+    {
+      "type": "zombie",
+      "state": "clean",
+      "variant": 3,
+      "variantName": "Ala laterale",
+      "triangles": 4750,
+      "meshes": 2,
+      "bounds": {
+        "min": [
+          -1.985455870628357,
+          -0.2229413092136383,
+          -2.4838547706604004
+        ],
+        "max": [
+          1.9832868576049805,
+          2.562875986099243,
+          2.4859607219696045
+        ]
+      },
+      "architecture": "crooked-cottage",
+      "architectureName": "Casetta col tetto storto",
+      "courtyardObjects": [
+        "patched-laundry",
+        "wash-tub-and-washboard",
+        "soil-wheelbarrow",
+        "muddy-boots",
+        "shovel",
+        "mud-patches",
+        "variant-3-detail"
+      ],
+      "courtyardLayout": "muddy-laundry"
+    },
+    {
+      "type": "zombie",
+      "state": "dirty",
+      "variant": 3,
+      "variantName": "Ala laterale",
+      "triangles": 6498,
+      "meshes": 2,
+      "bounds": {
+        "min": [
+          -1.985455870628357,
+          -0.2229413092136383,
+          -2.4838547706604004
+        ],
+        "max": [
+          1.9832868576049805,
+          2.562875986099243,
+          2.4859607219696045
+        ]
+      },
+      "architecture": "crooked-cottage",
+      "architectureName": "Casetta col tetto storto",
+      "courtyardObjects": [
+        "patched-laundry",
+        "wash-tub-and-washboard",
+        "soil-wheelbarrow",
+        "muddy-boots",
+        "shovel",
+        "mud-patches",
+        "variant-3-detail"
+      ],
+      "courtyardLayout": "muddy-laundry"
+    },
+    {
+      "type": "zombie",
+      "state": "broken",
+      "variant": 3,
+      "variantName": "Ala laterale",
+      "triangles": 6702,
+      "meshes": 1,
+      "bounds": {
+        "min": [
+          -1.985455870628357,
+          -0.2229413092136383,
+          -2.4838547706604004
+        ],
+        "max": [
+          1.9832868576049805,
+          2.562875986099243,
+          2.4859607219696045
+        ]
+      },
+      "architecture": "crooked-cottage",
+      "architectureName": "Casetta col tetto storto",
+      "courtyardObjects": [
+        "patched-laundry",
+        "wash-tub-and-washboard",
+        "soil-wheelbarrow",
+        "muddy-boots",
+        "shovel",
+        "mud-patches",
+        "variant-3-detail"
+      ],
+      "courtyardLayout": "muddy-laundry"
+    },
+    {
+      "type": "ghost",
+      "state": "clean",
+      "variant": 1,
+      "variantName": "Cubo lunare",
+      "triangles": 3453,
+      "meshes": 2,
+      "bounds": {
+        "min": [
+          -1.9851975440979004,
+          -0.2225400060415268,
+          -2.481538772583008
+        ],
+        "max": [
+          1.980461835861206,
+          2.015489101409912,
+          2.4851443767547607
+        ]
+      },
+      "architecture": "terraced-cube",
+      "architectureName": "Cubo terrazzato",
+      "courtyardObjects": [
+        "round-moon-pool",
+        "curved-stone-bench",
+        "silver-chime-tree",
+        "white-moon-flowers",
+        "candle-cluster"
+      ],
+      "courtyardLayout": "moon-memorial-garden"
+    },
+    {
+      "type": "ghost",
+      "state": "dirty",
+      "variant": 1,
+      "variantName": "Cubo lunare",
+      "triangles": 5201,
+      "meshes": 2,
+      "bounds": {
+        "min": [
+          -1.9851975440979004,
+          -0.2225400060415268,
+          -2.481538772583008
+        ],
+        "max": [
+          1.980461835861206,
+          2.015489101409912,
+          2.4851443767547607
+        ]
+      },
+      "architecture": "terraced-cube",
+      "architectureName": "Cubo terrazzato",
+      "courtyardObjects": [
+        "round-moon-pool",
+        "curved-stone-bench",
+        "silver-chime-tree",
+        "white-moon-flowers",
+        "candle-cluster"
+      ],
+      "courtyardLayout": "moon-memorial-garden"
+    },
+    {
+      "type": "ghost",
+      "state": "broken",
+      "variant": 1,
+      "variantName": "Cubo lunare",
+      "triangles": 5285,
+      "meshes": 1,
+      "bounds": {
+        "min": [
+          -1.9851975440979004,
+          -0.2225400060415268,
+          -2.481538772583008
+        ],
+        "max": [
+          1.980461835861206,
+          2.015489101409912,
+          2.4851443767547607
+        ]
+      },
+      "architecture": "terraced-cube",
+      "architectureName": "Cubo terrazzato",
+      "courtyardObjects": [
+        "round-moon-pool",
+        "curved-stone-bench",
+        "silver-chime-tree",
+        "white-moon-flowers",
+        "candle-cluster"
+      ],
+      "courtyardLayout": "moon-memorial-garden"
+    },
+    {
+      "type": "ghost",
+      "state": "clean",
+      "variant": 2,
+      "variantName": "Torre del ricordo",
+      "triangles": 3617,
+      "meshes": 2,
+      "bounds": {
+        "min": [
+          -1.985592007637024,
+          -0.22408150136470795,
+          -2.4859745502471924
+        ],
+        "max": [
+          1.9829519987106323,
+          2.5170083045959473,
+          2.485576868057251
+        ]
+      },
+      "architecture": "terraced-cube",
+      "architectureName": "Cubo terrazzato",
+      "courtyardObjects": [
+        "round-moon-pool",
+        "curved-stone-bench",
+        "silver-chime-tree",
+        "white-moon-flowers",
+        "candle-cluster",
+        "variant-2-detail"
+      ],
+      "courtyardLayout": "moon-memorial-garden"
+    },
+    {
+      "type": "ghost",
+      "state": "dirty",
+      "variant": 2,
+      "variantName": "Torre del ricordo",
+      "triangles": 5365,
+      "meshes": 2,
+      "bounds": {
+        "min": [
+          -1.985592007637024,
+          -0.22408150136470795,
+          -2.4859745502471924
+        ],
+        "max": [
+          1.9829519987106323,
+          2.5170083045959473,
+          2.485576868057251
+        ]
+      },
+      "architecture": "terraced-cube",
+      "architectureName": "Cubo terrazzato",
+      "courtyardObjects": [
+        "round-moon-pool",
+        "curved-stone-bench",
+        "silver-chime-tree",
+        "white-moon-flowers",
+        "candle-cluster",
+        "variant-2-detail"
+      ],
+      "courtyardLayout": "moon-memorial-garden"
+    },
+    {
+      "type": "ghost",
+      "state": "broken",
+      "variant": 2,
+      "variantName": "Torre del ricordo",
+      "triangles": 5381,
+      "meshes": 1,
+      "bounds": {
+        "min": [
+          -1.985592007637024,
+          -0.22408150136470795,
+          -2.4859745502471924
+        ],
+        "max": [
+          1.9829519987106323,
+          2.1719818115234375,
+          2.485576868057251
+        ]
+      },
+      "architecture": "terraced-cube",
+      "architectureName": "Cubo terrazzato",
+      "courtyardObjects": [
+        "round-moon-pool",
+        "curved-stone-bench",
+        "silver-chime-tree",
+        "white-moon-flowers",
+        "candle-cluster",
+        "variant-2-detail"
+      ],
+      "courtyardLayout": "moon-memorial-garden"
+    },
+    {
+      "type": "ghost",
+      "state": "clean",
+      "variant": 3,
+      "variantName": "Loggia degli spiriti",
+      "triangles": 3765,
+      "meshes": 2,
+      "bounds": {
+        "min": [
+          -1.9845613241195679,
+          -0.22276084125041962,
+          -2.4841434955596924
+        ],
+        "max": [
+          1.9854638576507568,
+          1.9703600406646729,
+          2.48461651802063
+        ]
+      },
+      "architecture": "terraced-cube",
+      "architectureName": "Cubo terrazzato",
+      "courtyardObjects": [
+        "round-moon-pool",
+        "curved-stone-bench",
+        "silver-chime-tree",
+        "white-moon-flowers",
+        "candle-cluster",
+        "variant-3-detail"
+      ],
+      "courtyardLayout": "moon-memorial-garden"
+    },
+    {
+      "type": "ghost",
+      "state": "dirty",
+      "variant": 3,
+      "variantName": "Loggia degli spiriti",
+      "triangles": 5513,
+      "meshes": 2,
+      "bounds": {
+        "min": [
+          -1.9845613241195679,
+          -0.22276084125041962,
+          -2.4841434955596924
+        ],
+        "max": [
+          1.9854638576507568,
+          1.9703600406646729,
+          2.48461651802063
+        ]
+      },
+      "architecture": "terraced-cube",
+      "architectureName": "Cubo terrazzato",
+      "courtyardObjects": [
+        "round-moon-pool",
+        "curved-stone-bench",
+        "silver-chime-tree",
+        "white-moon-flowers",
+        "candle-cluster",
+        "variant-3-detail"
+      ],
+      "courtyardLayout": "moon-memorial-garden"
+    },
+    {
+      "type": "ghost",
+      "state": "broken",
+      "variant": 3,
+      "variantName": "Loggia degli spiriti",
+      "triangles": 5561,
+      "meshes": 1,
+      "bounds": {
+        "min": [
+          -1.9845613241195679,
+          -0.22276084125041962,
+          -2.4841434955596924
+        ],
+        "max": [
+          1.9854638576507568,
+          1.8137712478637695,
+          2.48461651802063
+        ]
+      },
+      "architecture": "terraced-cube",
+      "architectureName": "Cubo terrazzato",
+      "courtyardObjects": [
+        "round-moon-pool",
+        "curved-stone-bench",
+        "silver-chime-tree",
+        "white-moon-flowers",
+        "candle-cluster",
+        "variant-3-detail"
+      ],
+      "courtyardLayout": "moon-memorial-garden"
+    },
+    {
+      "type": "skeleton",
+      "state": "clean",
+      "variant": 1,
+      "variantName": "Campanile aperto",
+      "triangles": 6198,
+      "meshes": 2,
+      "bounds": {
+        "min": [
+          -1.9851934909820557,
+          -0.2235102504491806,
+          -2.4845046997070312
+        ],
+        "max": [
+          1.9854207038879395,
+          2.8956844806671143,
+          2.495978593826294
+        ]
+      },
+      "architecture": "ossuary-bell-tower",
+      "architectureName": "Torre-ossario",
+      "courtyardObjects": [
+        "bone-marimba",
+        "ossuary-drum-kit",
+        "brass-cymbal",
+        "sheet-music-stand",
+        "checkerboard-stage",
+        "spare-bone-crate"
+      ],
+      "courtyardLayout": "bone-music-stage"
+    },
+    {
+      "type": "skeleton",
+      "state": "dirty",
+      "variant": 1,
+      "variantName": "Campanile aperto",
+      "triangles": 7906,
+      "meshes": 2,
+      "bounds": {
+        "min": [
+          -1.9851934909820557,
+          -0.2235102504491806,
+          -2.4845046997070312
+        ],
+        "max": [
+          1.9854207038879395,
+          2.8956844806671143,
+          2.495978593826294
+        ]
+      },
+      "architecture": "ossuary-bell-tower",
+      "architectureName": "Torre-ossario",
+      "courtyardObjects": [
+        "bone-marimba",
+        "ossuary-drum-kit",
+        "brass-cymbal",
+        "sheet-music-stand",
+        "checkerboard-stage",
+        "spare-bone-crate"
+      ],
+      "courtyardLayout": "bone-music-stage"
+    },
+    {
+      "type": "skeleton",
+      "state": "broken",
+      "variant": 1,
+      "variantName": "Campanile aperto",
+      "triangles": 7890,
+      "meshes": 1,
+      "bounds": {
+        "min": [
+          -1.9851934909820557,
+          -0.2235102504491806,
+          -2.4845046997070312
+        ],
+        "max": [
+          1.9854207038879395,
+          2.8956844806671143,
+          2.495978593826294
+        ]
+      },
+      "architecture": "ossuary-bell-tower",
+      "architectureName": "Torre-ossario",
+      "courtyardObjects": [
+        "bone-marimba",
+        "ossuary-drum-kit",
+        "brass-cymbal",
+        "sheet-music-stand",
+        "checkerboard-stage",
+        "spare-bone-crate"
+      ],
+      "courtyardLayout": "bone-music-stage"
+    },
+    {
+      "type": "skeleton",
+      "state": "clean",
+      "variant": 2,
+      "variantName": "Tetto a timpano",
+      "triangles": 6070,
+      "meshes": 2,
+      "bounds": {
+        "min": [
+          -1.9852392673492432,
+          -0.2230662852525711,
+          -2.4857702255249023
+        ],
+        "max": [
+          1.9852908849716187,
+          3.0033133029937744,
+          2.4884166717529297
+        ]
+      },
+      "architecture": "ossuary-bell-tower",
+      "architectureName": "Torre-ossario",
+      "courtyardObjects": [
+        "bone-marimba",
+        "ossuary-drum-kit",
+        "brass-cymbal",
+        "sheet-music-stand",
+        "checkerboard-stage",
+        "spare-bone-crate",
+        "variant-2-detail"
+      ],
+      "courtyardLayout": "bone-music-stage"
+    },
+    {
+      "type": "skeleton",
+      "state": "dirty",
+      "variant": 2,
+      "variantName": "Tetto a timpano",
+      "triangles": 7778,
+      "meshes": 2,
+      "bounds": {
+        "min": [
+          -1.9852392673492432,
+          -0.2230662852525711,
+          -2.4857702255249023
+        ],
+        "max": [
+          1.9852908849716187,
+          3.0033133029937744,
+          2.4884166717529297
+        ]
+      },
+      "architecture": "ossuary-bell-tower",
+      "architectureName": "Torre-ossario",
+      "courtyardObjects": [
+        "bone-marimba",
+        "ossuary-drum-kit",
+        "brass-cymbal",
+        "sheet-music-stand",
+        "checkerboard-stage",
+        "spare-bone-crate",
+        "variant-2-detail"
+      ],
+      "courtyardLayout": "bone-music-stage"
+    },
+    {
+      "type": "skeleton",
+      "state": "broken",
+      "variant": 2,
+      "variantName": "Tetto a timpano",
+      "triangles": 7790,
+      "meshes": 1,
+      "bounds": {
+        "min": [
+          -1.9852392673492432,
+          -0.2230662852525711,
+          -2.4857702255249023
+        ],
+        "max": [
+          1.9852908849716187,
+          2.8962831497192383,
+          2.4884166717529297
+        ]
+      },
+      "architecture": "ossuary-bell-tower",
+      "architectureName": "Torre-ossario",
+      "courtyardObjects": [
+        "bone-marimba",
+        "ossuary-drum-kit",
+        "brass-cymbal",
+        "sheet-music-stand",
+        "checkerboard-stage",
+        "spare-bone-crate",
+        "variant-2-detail"
+      ],
+      "courtyardLayout": "bone-music-stage"
+    },
+    {
+      "type": "skeleton",
+      "state": "clean",
+      "variant": 3,
+      "variantName": "Torre merlata",
+      "triangles": 6340,
+      "meshes": 2,
+      "bounds": {
+        "min": [
+          -1.9858611822128296,
+          -0.22383593022823334,
+          -2.4856760501861572
+        ],
+        "max": [
+          1.985592246055603,
+          2.9034297466278076,
+          2.49166202545166
+        ]
+      },
+      "architecture": "ossuary-bell-tower",
+      "architectureName": "Torre-ossario",
+      "courtyardObjects": [
+        "bone-marimba",
+        "ossuary-drum-kit",
+        "brass-cymbal",
+        "sheet-music-stand",
+        "checkerboard-stage",
+        "spare-bone-crate",
+        "variant-3-detail"
+      ],
+      "courtyardLayout": "bone-music-stage"
+    },
+    {
+      "type": "skeleton",
+      "state": "dirty",
+      "variant": 3,
+      "variantName": "Torre merlata",
+      "triangles": 8048,
+      "meshes": 2,
+      "bounds": {
+        "min": [
+          -1.9858611822128296,
+          -0.22383593022823334,
+          -2.4856760501861572
+        ],
+        "max": [
+          1.985592246055603,
+          2.9034297466278076,
+          2.49166202545166
+        ]
+      },
+      "architecture": "ossuary-bell-tower",
+      "architectureName": "Torre-ossario",
+      "courtyardObjects": [
+        "bone-marimba",
+        "ossuary-drum-kit",
+        "brass-cymbal",
+        "sheet-music-stand",
+        "checkerboard-stage",
+        "spare-bone-crate",
+        "variant-3-detail"
+      ],
+      "courtyardLayout": "bone-music-stage"
+    },
+    {
+      "type": "skeleton",
+      "state": "broken",
+      "variant": 3,
+      "variantName": "Torre merlata",
+      "triangles": 8020,
+      "meshes": 1,
+      "bounds": {
+        "min": [
+          -1.9858611822128296,
+          -0.22383593022823334,
+          -2.4856760501861572
+        ],
+        "max": [
+          1.985592246055603,
+          2.9034297466278076,
+          2.49166202545166
+        ]
+      },
+      "architecture": "ossuary-bell-tower",
+      "architectureName": "Torre-ossario",
+      "courtyardObjects": [
+        "bone-marimba",
+        "ossuary-drum-kit",
+        "brass-cymbal",
+        "sheet-music-stand",
+        "checkerboard-stage",
+        "spare-bone-crate",
+        "variant-3-detail"
+      ],
+      "courtyardLayout": "bone-music-stage"
+    },
+    {
+      "type": "nature",
+      "state": "clean",
+      "variant": 1,
+      "variantName": "Dolmen frondoso",
+      "triangles": 4952,
+      "meshes": 2,
+      "bounds": {
+        "min": [
+          -1.9843370914459229,
+          -0.22396127879619598,
+          -2.484020471572876
+        ],
+        "max": [
+          1.985647201538086,
+          2.1722676753997803,
+          2.484196186065674
+        ]
+      },
+      "architecture": "open-asymmetric-dolmen",
+      "architectureName": "Dolmen basso e aperto",
+      "courtyardObjects": [
+        "asymmetric-vegetable-bed",
+        "large-mushroom-circle",
+        "hollow-tree-stump",
+        "woven-beehive",
+        "living-twig-trellis",
+        "watering-can"
+      ],
+      "courtyardLayout": "wild-forager-garden"
+    },
+    {
+      "type": "nature",
+      "state": "dirty",
+      "variant": 1,
+      "variantName": "Dolmen frondoso",
+      "triangles": 6740,
+      "meshes": 2,
+      "bounds": {
+        "min": [
+          -1.9843370914459229,
+          -0.22396127879619598,
+          -2.484020471572876
+        ],
+        "max": [
+          1.985647201538086,
+          2.1722676753997803,
+          2.484196186065674
+        ]
+      },
+      "architecture": "open-asymmetric-dolmen",
+      "architectureName": "Dolmen basso e aperto",
+      "courtyardObjects": [
+        "asymmetric-vegetable-bed",
+        "large-mushroom-circle",
+        "hollow-tree-stump",
+        "woven-beehive",
+        "living-twig-trellis",
+        "watering-can"
+      ],
+      "courtyardLayout": "wild-forager-garden"
+    },
+    {
+      "type": "nature",
+      "state": "broken",
+      "variant": 1,
+      "variantName": "Dolmen frondoso",
+      "triangles": 6692,
+      "meshes": 1,
+      "bounds": {
+        "min": [
+          -1.9843370914459229,
+          -0.22396127879619598,
+          -2.484020471572876
+        ],
+        "max": [
+          1.985647201538086,
+          1.9712796211242676,
+          2.484196186065674
+        ]
+      },
+      "architecture": "open-asymmetric-dolmen",
+      "architectureName": "Dolmen basso e aperto",
+      "courtyardObjects": [
+        "asymmetric-vegetable-bed",
+        "large-mushroom-circle",
+        "hollow-tree-stump",
+        "woven-beehive",
+        "living-twig-trellis",
+        "watering-can"
+      ],
+      "courtyardLayout": "wild-forager-garden"
+    },
+    {
+      "type": "nature",
+      "state": "clean",
+      "variant": 2,
+      "variantName": "Arco di pietra",
+      "triangles": 5324,
+      "meshes": 2,
+      "bounds": {
+        "min": [
+          -1.9850622415542603,
+          -0.22112496197223663,
+          -2.48555064201355
+        ],
+        "max": [
+          1.9824765920639038,
+          2.4232869148254395,
+          2.48503041267395
+        ]
+      },
+      "architecture": "open-asymmetric-dolmen",
+      "architectureName": "Dolmen basso e aperto",
+      "courtyardObjects": [
+        "asymmetric-vegetable-bed",
+        "large-mushroom-circle",
+        "hollow-tree-stump",
+        "woven-beehive",
+        "living-twig-trellis",
+        "watering-can",
+        "variant-2-detail"
+      ],
+      "courtyardLayout": "wild-forager-garden"
+    },
+    {
+      "type": "nature",
+      "state": "dirty",
+      "variant": 2,
+      "variantName": "Arco di pietra",
+      "triangles": 7112,
+      "meshes": 2,
+      "bounds": {
+        "min": [
+          -1.9850622415542603,
+          -0.22112496197223663,
+          -2.48555064201355
+        ],
+        "max": [
+          1.9824765920639038,
+          2.4232869148254395,
+          2.48503041267395
+        ]
+      },
+      "architecture": "open-asymmetric-dolmen",
+      "architectureName": "Dolmen basso e aperto",
+      "courtyardObjects": [
+        "asymmetric-vegetable-bed",
+        "large-mushroom-circle",
+        "hollow-tree-stump",
+        "woven-beehive",
+        "living-twig-trellis",
+        "watering-can",
+        "variant-2-detail"
+      ],
+      "courtyardLayout": "wild-forager-garden"
+    },
+    {
+      "type": "nature",
+      "state": "broken",
+      "variant": 2,
+      "variantName": "Arco di pietra",
+      "triangles": 7012,
+      "meshes": 1,
+      "bounds": {
+        "min": [
+          -1.9850622415542603,
+          -0.22112496197223663,
+          -2.48555064201355
+        ],
+        "max": [
+          1.9824765920639038,
+          1.974984049797058,
+          2.48503041267395
+        ]
+      },
+      "architecture": "open-asymmetric-dolmen",
+      "architectureName": "Dolmen basso e aperto",
+      "courtyardObjects": [
+        "asymmetric-vegetable-bed",
+        "large-mushroom-circle",
+        "hollow-tree-stump",
+        "woven-beehive",
+        "living-twig-trellis",
+        "watering-can",
+        "variant-2-detail"
+      ],
+      "courtyardLayout": "wild-forager-garden"
+    },
+    {
+      "type": "nature",
+      "state": "clean",
+      "variant": 3,
+      "variantName": "Dolmen dei funghi",
+      "triangles": 5452,
+      "meshes": 2,
+      "bounds": {
+        "min": [
+          -1.9851866960525513,
+          -0.22184209525585175,
+          -2.4858391284942627
+        ],
+        "max": [
+          1.984860897064209,
+          2.253679037094116,
+          2.485450029373169
+        ]
+      },
+      "architecture": "open-asymmetric-dolmen",
+      "architectureName": "Dolmen basso e aperto",
+      "courtyardObjects": [
+        "asymmetric-vegetable-bed",
+        "large-mushroom-circle",
+        "hollow-tree-stump",
+        "woven-beehive",
+        "living-twig-trellis",
+        "watering-can",
+        "variant-3-detail"
+      ],
+      "courtyardLayout": "wild-forager-garden"
+    },
+    {
+      "type": "nature",
+      "state": "dirty",
+      "variant": 3,
+      "variantName": "Dolmen dei funghi",
+      "triangles": 7240,
+      "meshes": 2,
+      "bounds": {
+        "min": [
+          -1.9851866960525513,
+          -0.22184209525585175,
+          -2.4858391284942627
+        ],
+        "max": [
+          1.984860897064209,
+          2.253679037094116,
+          2.485450029373169
+        ]
+      },
+      "architecture": "open-asymmetric-dolmen",
+      "architectureName": "Dolmen basso e aperto",
+      "courtyardObjects": [
+        "asymmetric-vegetable-bed",
+        "large-mushroom-circle",
+        "hollow-tree-stump",
+        "woven-beehive",
+        "living-twig-trellis",
+        "watering-can",
+        "variant-3-detail"
+      ],
+      "courtyardLayout": "wild-forager-garden"
+    },
+    {
+      "type": "nature",
+      "state": "broken",
+      "variant": 3,
+      "variantName": "Dolmen dei funghi",
+      "triangles": 7060,
+      "meshes": 1,
+      "bounds": {
+        "min": [
+          -1.9851866960525513,
+          -0.22184209525585175,
+          -2.4858391284942627
+        ],
+        "max": [
+          1.984860897064209,
+          1.9706093072891235,
+          2.485450029373169
+        ]
+      },
+      "architecture": "open-asymmetric-dolmen",
+      "architectureName": "Dolmen basso e aperto",
+      "courtyardObjects": [
+        "asymmetric-vegetable-bed",
+        "large-mushroom-circle",
+        "hollow-tree-stump",
+        "woven-beehive",
+        "living-twig-trellis",
+        "watering-can",
+        "variant-3-detail"
+      ],
+      "courtyardLayout": "wild-forager-garden"
+    },
+    {
+      "type": "supernatural",
+      "state": "clean",
+      "variant": 1,
+      "variantName": "Reliquiario a punta",
+      "triangles": 3366,
+      "meshes": 2,
+      "bounds": {
+        "min": [
+          -1.9859533309936523,
+          -0.22372934222221375,
+          -2.4831295013427734
+        ],
+        "max": [
+          1.9839448928833008,
+          2.7481801509857178,
+          2.4844133853912354
+        ]
+      },
+      "architecture": "pointed-octagonal-shrine",
+      "architectureName": "Ottagono a punta",
+      "courtyardObjects": [
+        "large-ritual-circle",
+        "floating-central-crystal",
+        "three-rune-menhirs",
+        "cauldron",
+        "spellbook-lectern",
+        "potion-bottles"
+      ],
+      "courtyardLayout": "central-ritual-court"
+    },
+    {
+      "type": "supernatural",
+      "state": "dirty",
+      "variant": 1,
+      "variantName": "Reliquiario a punta",
+      "triangles": 5074,
+      "meshes": 2,
+      "bounds": {
+        "min": [
+          -1.9859533309936523,
+          -0.22372934222221375,
+          -2.4831295013427734
+        ],
+        "max": [
+          1.9839448928833008,
+          2.7481801509857178,
+          2.4844133853912354
+        ]
+      },
+      "architecture": "pointed-octagonal-shrine",
+      "architectureName": "Ottagono a punta",
+      "courtyardObjects": [
+        "large-ritual-circle",
+        "floating-central-crystal",
+        "three-rune-menhirs",
+        "cauldron",
+        "spellbook-lectern",
+        "potion-bottles"
+      ],
+      "courtyardLayout": "central-ritual-court"
+    },
+    {
+      "type": "supernatural",
+      "state": "broken",
+      "variant": 1,
+      "variantName": "Reliquiario a punta",
+      "triangles": 4978,
+      "meshes": 1,
+      "bounds": {
+        "min": [
+          -1.9859533309936523,
+          -0.22372934222221375,
+          -2.4831295013427734
+        ],
+        "max": [
+          1.9839448928833008,
+          2.7481801509857178,
+          2.4844133853912354
+        ]
+      },
+      "architecture": "pointed-octagonal-shrine",
+      "architectureName": "Ottagono a punta",
+      "courtyardObjects": [
+        "large-ritual-circle",
+        "floating-central-crystal",
+        "three-rune-menhirs",
+        "cauldron",
+        "spellbook-lectern",
+        "potion-bottles"
+      ],
+      "courtyardLayout": "central-ritual-court"
+    },
+    {
+      "type": "supernatural",
+      "state": "clean",
+      "variant": 2,
+      "variantName": "Tempio a gradoni",
+      "triangles": 3218,
+      "meshes": 2,
+      "bounds": {
+        "min": [
+          -1.9847370386123657,
+          -0.22383926808834076,
+          -2.4859256744384766
+        ],
+        "max": [
+          1.9826170206069946,
+          2.6646060943603516,
+          2.4859039783477783
+        ]
+      },
+      "architecture": "pointed-octagonal-shrine",
+      "architectureName": "Ottagono a punta",
+      "courtyardObjects": [
+        "large-ritual-circle",
+        "floating-central-crystal",
+        "three-rune-menhirs",
+        "cauldron",
+        "spellbook-lectern",
+        "potion-bottles",
+        "variant-2-detail"
+      ],
+      "courtyardLayout": "central-ritual-court"
+    },
+    {
+      "type": "supernatural",
+      "state": "dirty",
+      "variant": 2,
+      "variantName": "Tempio a gradoni",
+      "triangles": 4926,
+      "meshes": 2,
+      "bounds": {
+        "min": [
+          -1.9847370386123657,
+          -0.22383926808834076,
+          -2.4859256744384766
+        ],
+        "max": [
+          1.9826170206069946,
+          2.6646060943603516,
+          2.4859039783477783
+        ]
+      },
+      "architecture": "pointed-octagonal-shrine",
+      "architectureName": "Ottagono a punta",
+      "courtyardObjects": [
+        "large-ritual-circle",
+        "floating-central-crystal",
+        "three-rune-menhirs",
+        "cauldron",
+        "spellbook-lectern",
+        "potion-bottles",
+        "variant-2-detail"
+      ],
+      "courtyardLayout": "central-ritual-court"
+    },
+    {
+      "type": "supernatural",
+      "state": "broken",
+      "variant": 2,
+      "variantName": "Tempio a gradoni",
+      "triangles": 4906,
+      "meshes": 1,
+      "bounds": {
+        "min": [
+          -1.9847370386123657,
+          -0.22383926808834076,
+          -2.4859256744384766
+        ],
+        "max": [
+          1.9826170206069946,
+          2.6646060943603516,
+          2.4859039783477783
+        ]
+      },
+      "architecture": "pointed-octagonal-shrine",
+      "architectureName": "Ottagono a punta",
+      "courtyardObjects": [
+        "large-ritual-circle",
+        "floating-central-crystal",
+        "three-rune-menhirs",
+        "cauldron",
+        "spellbook-lectern",
+        "potion-bottles",
+        "variant-2-detail"
+      ],
+      "courtyardLayout": "central-ritual-court"
+    },
+    {
+      "type": "supernatural",
+      "state": "clean",
+      "variant": 3,
+      "variantName": "Guglie rituali",
+      "triangles": 3310,
+      "meshes": 2,
+      "bounds": {
+        "min": [
+          -1.984560489654541,
+          -0.2233780026435852,
+          -2.4836878776550293
+        ],
+        "max": [
+          1.983219027519226,
+          2.8087849617004395,
+          2.485755681991577
+        ]
+      },
+      "architecture": "pointed-octagonal-shrine",
+      "architectureName": "Ottagono a punta",
+      "courtyardObjects": [
+        "large-ritual-circle",
+        "floating-central-crystal",
+        "three-rune-menhirs",
+        "cauldron",
+        "spellbook-lectern",
+        "potion-bottles",
+        "variant-3-detail"
+      ],
+      "courtyardLayout": "central-ritual-court"
+    },
+    {
+      "type": "supernatural",
+      "state": "dirty",
+      "variant": 3,
+      "variantName": "Guglie rituali",
+      "triangles": 5018,
+      "meshes": 2,
+      "bounds": {
+        "min": [
+          -1.984560489654541,
+          -0.2233780026435852,
+          -2.4836878776550293
+        ],
+        "max": [
+          1.983219027519226,
+          2.8087849617004395,
+          2.485755681991577
+        ]
+      },
+      "architecture": "pointed-octagonal-shrine",
+      "architectureName": "Ottagono a punta",
+      "courtyardObjects": [
+        "large-ritual-circle",
+        "floating-central-crystal",
+        "three-rune-menhirs",
+        "cauldron",
+        "spellbook-lectern",
+        "potion-bottles",
+        "variant-3-detail"
+      ],
+      "courtyardLayout": "central-ritual-court"
+    },
+    {
+      "type": "supernatural",
+      "state": "broken",
+      "variant": 3,
+      "variantName": "Guglie rituali",
+      "triangles": 4906,
+      "meshes": 1,
+      "bounds": {
+        "min": [
+          -1.984560489654541,
+          -0.2233780026435852,
+          -2.4836878776550293
+        ],
+        "max": [
+          1.983219027519226,
+          2.8087849617004395,
+          2.485755681991577
+        ]
+      },
+      "architecture": "pointed-octagonal-shrine",
+      "architectureName": "Ottagono a punta",
+      "courtyardObjects": [
+        "large-ritual-circle",
+        "floating-central-crystal",
+        "three-rune-menhirs",
+        "cauldron",
+        "spellbook-lectern",
+        "potion-bottles",
+        "variant-3-detail"
+      ],
+      "courtyardLayout": "central-ritual-court"
+    }
+  ],
+  "pageErrors": []
+}

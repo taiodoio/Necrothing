@@ -1,0 +1,6434 @@
+{
+  "capturedAt": "2026-11-04T15:48:28.395Z",
+  "scope": "Static generated geometry. Counts are triangles, not quads. Prototype full includes its ground, fence and courtyard props; buildingOnly excludes those. Production resolveLowpoly includes the standard weathering layer.",
+  "drawCallScope": "Estimated base colour pass draws, counting transparent DoubleSide materials twice. Excludes shadows, environment and extra game effects; not an FPS benchmark.",
+  "models": [
+    {
+      "id": "zombie",
+      "name": "Cripta degli Zombie",
+      "variant": 1,
+      "variantName": "Casetta storta",
+      "state": "clean",
+      "footprint": [
+        4,
+        5
+      ],
+      "full": {
+        "triangles": 4458,
+        "vertices": 13374,
+        "bufferBytes": 481464,
+        "meshes": 2,
+        "baseColorPassDraws": 2,
+        "submittedTriangles": 4458,
+        "sections": {
+          "merged": {
+            "triangles": 4458,
+            "parts": 2
+          }
+        }
+      },
+      "building": {
+        "triangles": 1740,
+        "vertices": 5220,
+        "bufferBytes": 187920,
+        "meshes": 2,
+        "baseColorPassDraws": 2,
+        "submittedTriangles": 1740,
+        "sections": {
+          "merged": {
+            "triangles": 1740,
+            "parts": 2
+          }
+        }
+      },
+      "sections": {
+        "ground": {
+          "triangles": 668,
+          "parts": 34
+        },
+        "building": {
+          "triangles": 1740,
+          "parts": 84
+        },
+        "fence": {
+          "triangles": 984,
+          "parts": 66
+        },
+        "props": {
+          "triangles": 1066,
+          "parts": 49
+        }
+      },
+      "sourceParts": 233,
+      "expensiveParts": [
+        {
+          "name": "courtyard_wash_basin",
+          "section": "props",
+          "triangles": 126
+        },
+        {
+          "name": "courtyard_mud_patch",
+          "section": "ground",
+          "triangles": 80
+        },
+        {
+          "name": "courtyard_mud_patch",
+          "section": "ground",
+          "triangles": 80
+        },
+        {
+          "name": "courtyard_mud_patch",
+          "section": "ground",
+          "triangles": 80
+        },
+        {
+          "name": "courtyard_tub_iron_hoop",
+          "section": "props",
+          "triangles": 60
+        },
+        {
+          "name": "courtyard_tub_iron_hoop",
+          "section": "props",
+          "triangles": 60
+        },
+        {
+          "name": "courtyard_wheelbarrow_wheel",
+          "section": "props",
+          "triangles": 60
+        },
+        {
+          "name": "chain_link",
+          "section": "building",
+          "triangles": 48
+        },
+        {
+          "name": "chain_link",
+          "section": "building",
+          "triangles": 48
+        },
+        {
+          "name": "chain_link",
+          "section": "building",
+          "triangles": 48
+        },
+        {
+          "name": "chain_link",
+          "section": "building",
+          "triangles": 48
+        },
+        {
+          "name": "chain_link",
+          "section": "building",
+          "triangles": 48
+        }
+      ]
+    },
+    {
+      "id": "zombie",
+      "name": "Cripta degli Zombie",
+      "variant": 1,
+      "variantName": "Casetta storta",
+      "state": "dirty",
+      "footprint": [
+        4,
+        5
+      ],
+      "full": {
+        "triangles": 6206,
+        "vertices": 18618,
+        "bufferBytes": 670248,
+        "meshes": 2,
+        "baseColorPassDraws": 2,
+        "submittedTriangles": 6206,
+        "sections": {
+          "merged": {
+            "triangles": 6206,
+            "parts": 2
+          }
+        }
+      },
+      "building": {
+        "triangles": 3092,
+        "vertices": 9276,
+        "bufferBytes": 333936,
+        "meshes": 2,
+        "baseColorPassDraws": 2,
+        "submittedTriangles": 3092,
+        "sections": {
+          "merged": {
+            "triangles": 3092,
+            "parts": 2
+          }
+        }
+      },
+      "sections": {
+        "ground": {
+          "triangles": 668,
+          "parts": 34
+        },
+        "building": {
+          "triangles": 1740,
+          "parts": 84
+        },
+        "weather": {
+          "triangles": 1748,
+          "parts": 187
+        },
+        "fence": {
+          "triangles": 984,
+          "parts": 66
+        },
+        "props": {
+          "triangles": 1066,
+          "parts": 49
+        }
+      },
+      "sourceParts": 420,
+      "expensiveParts": [
+        {
+          "name": "courtyard_wash_basin",
+          "section": "props",
+          "triangles": 126
+        },
+        {
+          "name": "courtyard_mud_patch",
+          "section": "ground",
+          "triangles": 80
+        },
+        {
+          "name": "courtyard_mud_patch",
+          "section": "ground",
+          "triangles": 80
+        },
+        {
+          "name": "courtyard_mud_patch",
+          "section": "ground",
+          "triangles": 80
+        },
+        {
+          "name": "courtyard_tub_iron_hoop",
+          "section": "props",
+          "triangles": 60
+        },
+        {
+          "name": "courtyard_tub_iron_hoop",
+          "section": "props",
+          "triangles": 60
+        },
+        {
+          "name": "courtyard_wheelbarrow_wheel",
+          "section": "props",
+          "triangles": 60
+        },
+        {
+          "name": "chain_link",
+          "section": "building",
+          "triangles": 48
+        },
+        {
+          "name": "chain_link",
+          "section": "building",
+          "triangles": 48
+        },
+        {
+          "name": "chain_link",
+          "section": "building",
+          "triangles": 48
+        },
+        {
+          "name": "chain_link",
+          "section": "building",
+          "triangles": 48
+        },
+        {
+          "name": "chain_link",
+          "section": "building",
+          "triangles": 48
+        }
+      ]
+    },
+    {
+      "id": "zombie",
+      "name": "Cripta degli Zombie",
+      "variant": 1,
+      "variantName": "Casetta storta",
+      "state": "broken",
+      "footprint": [
+        4,
+        5
+      ],
+      "full": {
+        "triangles": 6410,
+        "vertices": 19230,
+        "bufferBytes": 692280,
+        "meshes": 1,
+        "baseColorPassDraws": 1,
+        "submittedTriangles": 6410,
+        "sections": {
+          "merged": {
+            "triangles": 6410,
+            "parts": 1
+          }
+        }
+      },
+      "building": {
+        "triangles": 3356,
+        "vertices": 10068,
+        "bufferBytes": 362448,
+        "meshes": 1,
+        "baseColorPassDraws": 1,
+        "submittedTriangles": 3356,
+        "sections": {
+          "merged": {
+            "triangles": 3356,
+            "parts": 1
+          }
+        }
+      },
+      "sections": {
+        "ground": {
+          "triangles": 668,
+          "parts": 34
+        },
+        "building": {
+          "triangles": 1696,
+          "parts": 83
+        },
+        "weather": {
+          "triangles": 2056,
+          "parts": 204
+        },
+        "fence": {
+          "triangles": 928,
+          "parts": 63
+        },
+        "props": {
+          "triangles": 1062,
+          "parts": 49
+        }
+      },
+      "sourceParts": 433,
+      "expensiveParts": [
+        {
+          "name": "courtyard_wash_basin",
+          "section": "props",
+          "triangles": 126
+        },
+        {
+          "name": "courtyard_mud_patch",
+          "section": "ground",
+          "triangles": 80
+        },
+        {
+          "name": "courtyard_mud_patch",
+          "section": "ground",
+          "triangles": 80
+        },
+        {
+          "name": "courtyard_mud_patch",
+          "section": "ground",
+          "triangles": 80
+        },
+        {
+          "name": "courtyard_tub_iron_hoop",
+          "section": "props",
+          "triangles": 60
+        },
+        {
+          "name": "courtyard_tub_iron_hoop",
+          "section": "props",
+          "triangles": 60
+        },
+        {
+          "name": "courtyard_wheelbarrow_wheel",
+          "section": "props",
+          "triangles": 60
+        },
+        {
+          "name": "chain_link",
+          "section": "building",
+          "triangles": 48
+        },
+        {
+          "name": "chain_link",
+          "section": "building",
+          "triangles": 48
+        },
+        {
+          "name": "chain_link",
+          "section": "building",
+          "triangles": 48
+        },
+        {
+          "name": "chain_link",
+          "section": "building",
+          "triangles": 48
+        },
+        {
+          "name": "chain_link",
+          "section": "building",
+          "triangles": 48
+        }
+      ]
+    },
+    {
+      "id": "zombie",
+      "name": "Cripta degli Zombie",
+      "variant": 2,
+      "variantName": "Portico e comignolo",
+      "state": "clean",
+      "footprint": [
+        4,
+        5
+      ],
+      "full": {
+        "triangles": 4674,
+        "vertices": 14022,
+        "bufferBytes": 504792,
+        "meshes": 2,
+        "baseColorPassDraws": 2,
+        "submittedTriangles": 4674,
+        "sections": {
+          "merged": {
+            "triangles": 4674,
+            "parts": 2
+          }
+        }
+      },
+      "building": {
+        "triangles": 1848,
+        "vertices": 5544,
+        "bufferBytes": 199584,
+        "meshes": 2,
+        "baseColorPassDraws": 2,
+        "submittedTriangles": 1848,
+        "sections": {
+          "merged": {
+            "triangles": 1848,
+            "parts": 2
+          }
+        }
+      },
+      "sections": {
+        "ground": {
+          "triangles": 740,
+          "parts": 46
+        },
+        "building": {
+          "triangles": 1848,
+          "parts": 93
+        },
+        "fence": {
+          "triangles": 984,
+          "parts": 66
+        },
+        "props": {
+          "triangles": 1102,
+          "parts": 52
+        }
+      },
+      "sourceParts": 257,
+      "expensiveParts": [
+        {
+          "name": "courtyard_wash_basin",
+          "section": "props",
+          "triangles": 126
+        },
+        {
+          "name": "courtyard_mud_patch",
+          "section": "ground",
+          "triangles": 80
+        },
+        {
+          "name": "courtyard_mud_patch",
+          "section": "ground",
+          "triangles": 80
+        },
+        {
+          "name": "courtyard_mud_patch",
+          "section": "ground",
+          "triangles": 80
+        },
+        {
+          "name": "courtyard_tub_iron_hoop",
+          "section": "props",
+          "triangles": 60
+        },
+        {
+          "name": "courtyard_tub_iron_hoop",
+          "section": "props",
+          "triangles": 60
+        },
+        {
+          "name": "courtyard_wheelbarrow_wheel",
+          "section": "props",
+          "triangles": 60
+        },
+        {
+          "name": "chain_link",
+          "section": "building",
+          "triangles": 48
+        },
+        {
+          "name": "chain_link",
+          "section": "building",
+          "triangles": 48
+        },
+        {
+          "name": "chain_link",
+          "section": "building",
+          "triangles": 48
+        },
+        {
+          "name": "chain_link",
+          "section": "building",
+          "triangles": 48
+        },
+        {
+          "name": "chain_link",
+          "section": "building",
+          "triangles": 48
+        }
+      ]
+    },
+    {
+      "id": "zombie",
+      "name": "Cripta degli Zombie",
+      "variant": 2,
+      "variantName": "Portico e comignolo",
+      "state": "dirty",
+      "footprint": [
+        4,
+        5
+      ],
+      "full": {
+        "triangles": 6422,
+        "vertices": 19266,
+        "bufferBytes": 693576,
+        "meshes": 2,
+        "baseColorPassDraws": 2,
+        "submittedTriangles": 6422,
+        "sections": {
+          "merged": {
+            "triangles": 6422,
+            "parts": 2
+          }
+        }
+      },
+      "building": {
+        "triangles": 3200,
+        "vertices": 9600,
+        "bufferBytes": 345600,
+        "meshes": 2,
+        "baseColorPassDraws": 2,
+        "submittedTriangles": 3200,
+        "sections": {
+          "merged": {
+            "triangles": 3200,
+            "parts": 2
+          }
+        }
+      },
+      "sections": {
+        "ground": {
+          "triangles": 740,
+          "parts": 46
+        },
+        "building": {
+          "triangles": 1848,
+          "parts": 93
+        },
+        "weather": {
+          "triangles": 1748,
+          "parts": 187
+        },
+        "fence": {
+          "triangles": 984,
+          "parts": 66
+        },
+        "props": {
+          "triangles": 1102,
+          "parts": 52
+        }
+      },
+      "sourceParts": 444,
+      "expensiveParts": [
+        {
+          "name": "courtyard_wash_basin",
+          "section": "props",
+          "triangles": 126
+        },
+        {
+          "name": "courtyard_mud_patch",
+          "section": "ground",
+          "triangles": 80
+        },
+        {
+          "name": "courtyard_mud_patch",
+          "section": "ground",
+          "triangles": 80
+        },
+        {
+          "name": "courtyard_mud_patch",
+          "section": "ground",
+          "triangles": 80
+        },
+        {
+          "name": "courtyard_tub_iron_hoop",
+          "section": "props",
+          "triangles": 60
+        },
+        {
+          "name": "courtyard_tub_iron_hoop",
+          "section": "props",
+          "triangles": 60
+        },
+        {
+          "name": "courtyard_wheelbarrow_wheel",
+          "section": "props",
+          "triangles": 60
+        },
+        {
+          "name": "chain_link",
+          "section": "building",
+          "triangles": 48
+        },
+        {
+          "name": "chain_link",
+          "section": "building",
+          "triangles": 48
+        },
+        {
+          "name": "chain_link",
+          "section": "building",
+          "triangles": 48
+        },
+        {
+          "name": "chain_link",
+          "section": "building",
+          "triangles": 48
+        },
+        {
+          "name": "chain_link",
+          "section": "building",
+          "triangles": 48
+        }
+      ]
+    },
+    {
+      "id": "zombie",
+      "name": "Cripta degli Zombie",
+      "variant": 2,
+      "variantName": "Portico e comignolo",
+      "state": "broken",
+      "footprint": [
+        4,
+        5
+      ],
+      "full": {
+        "triangles": 6638,
+        "vertices": 19914,
+        "bufferBytes": 716904,
+        "meshes": 1,
+        "baseColorPassDraws": 1,
+        "submittedTriangles": 6638,
+        "sections": {
+          "merged": {
+            "triangles": 6638,
+            "parts": 1
+          }
+        }
+      },
+      "building": {
+        "triangles": 3476,
+        "vertices": 10428,
+        "bufferBytes": 375408,
+        "meshes": 1,
+        "baseColorPassDraws": 1,
+        "submittedTriangles": 3476,
+        "sections": {
+          "merged": {
+            "triangles": 3476,
+            "parts": 1
+          }
+        }
+      },
+      "sections": {
+        "ground": {
+          "triangles": 740,
+          "parts": 46
+        },
+        "building": {
+          "triangles": 1816,
+          "parts": 93
+        },
+        "weather": {
+          "triangles": 2056,
+          "parts": 204
+        },
+        "fence": {
+          "triangles": 928,
+          "parts": 63
+        },
+        "props": {
+          "triangles": 1098,
+          "parts": 52
+        }
+      },
+      "sourceParts": 458,
+      "expensiveParts": [
+        {
+          "name": "courtyard_wash_basin",
+          "section": "props",
+          "triangles": 126
+        },
+        {
+          "name": "courtyard_mud_patch",
+          "section": "ground",
+          "triangles": 80
+        },
+        {
+          "name": "courtyard_mud_patch",
+          "section": "ground",
+          "triangles": 80
+        },
+        {
+          "name": "courtyard_mud_patch",
+          "section": "ground",
+          "triangles": 80
+        },
+        {
+          "name": "courtyard_tub_iron_hoop",
+          "section": "props",
+          "triangles": 60
+        },
+        {
+          "name": "courtyard_tub_iron_hoop",
+          "section": "props",
+          "triangles": 60
+        },
+        {
+          "name": "courtyard_wheelbarrow_wheel",
+          "section": "props",
+          "triangles": 60
+        },
+        {
+          "name": "chain_link",
+          "section": "building",
+          "triangles": 48
+        },
+        {
+          "name": "chain_link",
+          "section": "building",
+          "triangles": 48
+        },
+        {
+          "name": "chain_link",
+          "section": "building",
+          "triangles": 48
+        },
+        {
+          "name": "chain_link",
+          "section": "building",
+          "triangles": 48
+        },
+        {
+          "name": "chain_link",
+          "section": "building",
+          "triangles": 48
+        }
+      ]
+    },
+    {
+      "id": "zombie",
+      "name": "Cripta degli Zombie",
+      "variant": 3,
+      "variantName": "Ala laterale",
+      "state": "clean",
+      "footprint": [
+        4,
+        5
+      ],
+      "full": {
+        "triangles": 4750,
+        "vertices": 14250,
+        "bufferBytes": 513000,
+        "meshes": 2,
+        "baseColorPassDraws": 2,
+        "submittedTriangles": 4750,
+        "sections": {
+          "merged": {
+            "triangles": 4750,
+            "parts": 2
+          }
+        }
+      },
+      "building": {
+        "triangles": 1936,
+        "vertices": 5808,
+        "bufferBytes": 209088,
+        "meshes": 2,
+        "baseColorPassDraws": 2,
+        "submittedTriangles": 1936,
+        "sections": {
+          "merged": {
+            "triangles": 1936,
+            "parts": 2
+          }
+        }
+      },
+      "sections": {
+        "ground": {
+          "triangles": 716,
+          "parts": 42
+        },
+        "building": {
+          "triangles": 1936,
+          "parts": 95
+        },
+        "fence": {
+          "triangles": 984,
+          "parts": 66
+        },
+        "props": {
+          "triangles": 1114,
+          "parts": 53
+        }
+      },
+      "sourceParts": 256,
+      "expensiveParts": [
+        {
+          "name": "courtyard_wash_basin",
+          "section": "props",
+          "triangles": 126
+        },
+        {
+          "name": "courtyard_mud_patch",
+          "section": "ground",
+          "triangles": 80
+        },
+        {
+          "name": "courtyard_mud_patch",
+          "section": "ground",
+          "triangles": 80
+        },
+        {
+          "name": "courtyard_mud_patch",
+          "section": "ground",
+          "triangles": 80
+        },
+        {
+          "name": "courtyard_tub_iron_hoop",
+          "section": "props",
+          "triangles": 60
+        },
+        {
+          "name": "courtyard_tub_iron_hoop",
+          "section": "props",
+          "triangles": 60
+        },
+        {
+          "name": "courtyard_wheelbarrow_wheel",
+          "section": "props",
+          "triangles": 60
+        },
+        {
+          "name": "chain_link",
+          "section": "building",
+          "triangles": 48
+        },
+        {
+          "name": "chain_link",
+          "section": "building",
+          "triangles": 48
+        },
+        {
+          "name": "chain_link",
+          "section": "building",
+          "triangles": 48
+        },
+        {
+          "name": "chain_link",
+          "section": "building",
+          "triangles": 48
+        },
+        {
+          "name": "chain_link",
+          "section": "building",
+          "triangles": 48
+        }
+      ]
+    },
+    {
+      "id": "zombie",
+      "name": "Cripta degli Zombie",
+      "variant": 3,
+      "variantName": "Ala laterale",
+      "state": "dirty",
+      "footprint": [
+        4,
+        5
+      ],
+      "full": {
+        "triangles": 6498,
+        "vertices": 19494,
+        "bufferBytes": 701784,
+        "meshes": 2,
+        "baseColorPassDraws": 2,
+        "submittedTriangles": 6498,
+        "sections": {
+          "merged": {
+            "triangles": 6498,
+            "parts": 2
+          }
+        }
+      },
+      "building": {
+        "triangles": 3288,
+        "vertices": 9864,
+        "bufferBytes": 355104,
+        "meshes": 2,
+        "baseColorPassDraws": 2,
+        "submittedTriangles": 3288,
+        "sections": {
+          "merged": {
+            "triangles": 3288,
+            "parts": 2
+          }
+        }
+      },
+      "sections": {
+        "ground": {
+          "triangles": 716,
+          "parts": 42
+        },
+        "building": {
+          "triangles": 1936,
+          "parts": 95
+        },
+        "weather": {
+          "triangles": 1748,
+          "parts": 187
+        },
+        "fence": {
+          "triangles": 984,
+          "parts": 66
+        },
+        "props": {
+          "triangles": 1114,
+          "parts": 53
+        }
+      },
+      "sourceParts": 443,
+      "expensiveParts": [
+        {
+          "name": "courtyard_wash_basin",
+          "section": "props",
+          "triangles": 126
+        },
+        {
+          "name": "courtyard_mud_patch",
+          "section": "ground",
+          "triangles": 80
+        },
+        {
+          "name": "courtyard_mud_patch",
+          "section": "ground",
+          "triangles": 80
+        },
+        {
+          "name": "courtyard_mud_patch",
+          "section": "ground",
+          "triangles": 80
+        },
+        {
+          "name": "courtyard_tub_iron_hoop",
+          "section": "props",
+          "triangles": 60
+        },
+        {
+          "name": "courtyard_tub_iron_hoop",
+          "section": "props",
+          "triangles": 60
+        },
+        {
+          "name": "courtyard_wheelbarrow_wheel",
+          "section": "props",
+          "triangles": 60
+        },
+        {
+          "name": "chain_link",
+          "section": "building",
+          "triangles": 48
+        },
+        {
+          "name": "chain_link",
+          "section": "building",
+          "triangles": 48
+        },
+        {
+          "name": "chain_link",
+          "section": "building",
+          "triangles": 48
+        },
+        {
+          "name": "chain_link",
+          "section": "building",
+          "triangles": 48
+        },
+        {
+          "name": "chain_link",
+          "section": "building",
+          "triangles": 48
+        }
+      ]
+    },
+    {
+      "id": "zombie",
+      "name": "Cripta degli Zombie",
+      "variant": 3,
+      "variantName": "Ala laterale",
+      "state": "broken",
+      "footprint": [
+        4,
+        5
+      ],
+      "full": {
+        "triangles": 6702,
+        "vertices": 20106,
+        "bufferBytes": 723816,
+        "meshes": 1,
+        "baseColorPassDraws": 1,
+        "submittedTriangles": 6702,
+        "sections": {
+          "merged": {
+            "triangles": 6702,
+            "parts": 1
+          }
+        }
+      },
+      "building": {
+        "triangles": 3552,
+        "vertices": 10656,
+        "bufferBytes": 383616,
+        "meshes": 1,
+        "baseColorPassDraws": 1,
+        "submittedTriangles": 3552,
+        "sections": {
+          "merged": {
+            "triangles": 3552,
+            "parts": 1
+          }
+        }
+      },
+      "sections": {
+        "ground": {
+          "triangles": 716,
+          "parts": 42
+        },
+        "building": {
+          "triangles": 1892,
+          "parts": 94
+        },
+        "weather": {
+          "triangles": 2056,
+          "parts": 204
+        },
+        "fence": {
+          "triangles": 928,
+          "parts": 63
+        },
+        "props": {
+          "triangles": 1110,
+          "parts": 53
+        }
+      },
+      "sourceParts": 456,
+      "expensiveParts": [
+        {
+          "name": "courtyard_wash_basin",
+          "section": "props",
+          "triangles": 126
+        },
+        {
+          "name": "courtyard_mud_patch",
+          "section": "ground",
+          "triangles": 80
+        },
+        {
+          "name": "courtyard_mud_patch",
+          "section": "ground",
+          "triangles": 80
+        },
+        {
+          "name": "courtyard_mud_patch",
+          "section": "ground",
+          "triangles": 80
+        },
+        {
+          "name": "courtyard_tub_iron_hoop",
+          "section": "props",
+          "triangles": 60
+        },
+        {
+          "name": "courtyard_tub_iron_hoop",
+          "section": "props",
+          "triangles": 60
+        },
+        {
+          "name": "courtyard_wheelbarrow_wheel",
+          "section": "props",
+          "triangles": 60
+        },
+        {
+          "name": "chain_link",
+          "section": "building",
+          "triangles": 48
+        },
+        {
+          "name": "chain_link",
+          "section": "building",
+          "triangles": 48
+        },
+        {
+          "name": "chain_link",
+          "section": "building",
+          "triangles": 48
+        },
+        {
+          "name": "chain_link",
+          "section": "building",
+          "triangles": 48
+        },
+        {
+          "name": "chain_link",
+          "section": "building",
+          "triangles": 48
+        }
+      ]
+    },
+    {
+      "id": "ghost",
+      "name": "Cripta dei Fantasmi",
+      "variant": 1,
+      "variantName": "Cubo lunare",
+      "state": "clean",
+      "footprint": [
+        4,
+        5
+      ],
+      "full": {
+        "triangles": 3453,
+        "vertices": 10359,
+        "bufferBytes": 372924,
+        "meshes": 2,
+        "baseColorPassDraws": 2,
+        "submittedTriangles": 3453,
+        "sections": {
+          "merged": {
+            "triangles": 3453,
+            "parts": 2
+          }
+        }
+      },
+      "building": {
+        "triangles": 944,
+        "vertices": 2832,
+        "bufferBytes": 101952,
+        "meshes": 2,
+        "baseColorPassDraws": 2,
+        "submittedTriangles": 944,
+        "sections": {
+          "merged": {
+            "triangles": 944,
+            "parts": 2
+          }
+        }
+      },
+      "sections": {
+        "ground": {
+          "triangles": 472,
+          "parts": 42
+        },
+        "building": {
+          "triangles": 944,
+          "parts": 45
+        },
+        "fence": {
+          "triangles": 1048,
+          "parts": 78
+        },
+        "props": {
+          "triangles": 989,
+          "parts": 43
+        }
+      },
+      "sourceParts": 208,
+      "expensiveParts": [
+        {
+          "name": "courtyard_moon_reflection_pool",
+          "section": "props",
+          "triangles": 192
+        },
+        {
+          "name": "crescent",
+          "section": "building",
+          "triangles": 72
+        },
+        {
+          "name": "courtyard_still_pool_water",
+          "section": "props",
+          "triangles": 64
+        },
+        {
+          "name": "moon_halo",
+          "section": "building",
+          "triangles": 60
+        },
+        {
+          "name": "courtyard_chime_crown",
+          "section": "props",
+          "triangles": 60
+        },
+        {
+          "name": "stone_door_handle",
+          "section": "building",
+          "triangles": 48
+        },
+        {
+          "name": "stone_door_handle",
+          "section": "building",
+          "triangles": 48
+        },
+        {
+          "name": "earth_module",
+          "section": "ground",
+          "triangles": 28
+        },
+        {
+          "name": "grass_module",
+          "section": "ground",
+          "triangles": 28
+        },
+        {
+          "name": "entrance_step",
+          "section": "building",
+          "triangles": 28
+        },
+        {
+          "name": "entrance_step",
+          "section": "building",
+          "triangles": 28
+        },
+        {
+          "name": "entrance_step",
+          "section": "building",
+          "triangles": 28
+        }
+      ]
+    },
+    {
+      "id": "ghost",
+      "name": "Cripta dei Fantasmi",
+      "variant": 1,
+      "variantName": "Cubo lunare",
+      "state": "dirty",
+      "footprint": [
+        4,
+        5
+      ],
+      "full": {
+        "triangles": 5201,
+        "vertices": 15603,
+        "bufferBytes": 561708,
+        "meshes": 2,
+        "baseColorPassDraws": 2,
+        "submittedTriangles": 5201,
+        "sections": {
+          "merged": {
+            "triangles": 5201,
+            "parts": 2
+          }
+        }
+      },
+      "building": {
+        "triangles": 2296,
+        "vertices": 6888,
+        "bufferBytes": 247968,
+        "meshes": 2,
+        "baseColorPassDraws": 2,
+        "submittedTriangles": 2296,
+        "sections": {
+          "merged": {
+            "triangles": 2296,
+            "parts": 2
+          }
+        }
+      },
+      "sections": {
+        "ground": {
+          "triangles": 472,
+          "parts": 42
+        },
+        "building": {
+          "triangles": 944,
+          "parts": 45
+        },
+        "weather": {
+          "triangles": 1748,
+          "parts": 187
+        },
+        "fence": {
+          "triangles": 1048,
+          "parts": 78
+        },
+        "props": {
+          "triangles": 989,
+          "parts": 43
+        }
+      },
+      "sourceParts": 395,
+      "expensiveParts": [
+        {
+          "name": "courtyard_moon_reflection_pool",
+          "section": "props",
+          "triangles": 192
+        },
+        {
+          "name": "crescent",
+          "section": "building",
+          "triangles": 72
+        },
+        {
+          "name": "courtyard_still_pool_water",
+          "section": "props",
+          "triangles": 64
+        },
+        {
+          "name": "moon_halo",
+          "section": "building",
+          "triangles": 60
+        },
+        {
+          "name": "courtyard_chime_crown",
+          "section": "props",
+          "triangles": 60
+        },
+        {
+          "name": "stone_door_handle",
+          "section": "building",
+          "triangles": 48
+        },
+        {
+          "name": "stone_door_handle",
+          "section": "building",
+          "triangles": 48
+        },
+        {
+          "name": "earth_module",
+          "section": "ground",
+          "triangles": 28
+        },
+        {
+          "name": "grass_module",
+          "section": "ground",
+          "triangles": 28
+        },
+        {
+          "name": "entrance_step",
+          "section": "building",
+          "triangles": 28
+        },
+        {
+          "name": "entrance_step",
+          "section": "building",
+          "triangles": 28
+        },
+        {
+          "name": "entrance_step",
+          "section": "building",
+          "triangles": 28
+        }
+      ]
+    },
+    {
+      "id": "ghost",
+      "name": "Cripta dei Fantasmi",
+      "variant": 1,
+      "variantName": "Cubo lunare",
+      "state": "broken",
+      "footprint": [
+        4,
+        5
+      ],
+      "full": {
+        "triangles": 5285,
+        "vertices": 15855,
+        "bufferBytes": 570780,
+        "meshes": 1,
+        "baseColorPassDraws": 1,
+        "submittedTriangles": 5285,
+        "sections": {
+          "merged": {
+            "triangles": 5285,
+            "parts": 1
+          }
+        }
+      },
+      "building": {
+        "triangles": 2536,
+        "vertices": 7608,
+        "bufferBytes": 273888,
+        "meshes": 1,
+        "baseColorPassDraws": 1,
+        "submittedTriangles": 2536,
+        "sections": {
+          "merged": {
+            "triangles": 2536,
+            "parts": 1
+          }
+        }
+      },
+      "sections": {
+        "ground": {
+          "triangles": 472,
+          "parts": 42
+        },
+        "building": {
+          "triangles": 876,
+          "parts": 42
+        },
+        "weather": {
+          "triangles": 2056,
+          "parts": 204
+        },
+        "fence": {
+          "triangles": 976,
+          "parts": 73
+        },
+        "props": {
+          "triangles": 905,
+          "parts": 40
+        }
+      },
+      "sourceParts": 401,
+      "expensiveParts": [
+        {
+          "name": "courtyard_moon_reflection_pool",
+          "section": "props",
+          "triangles": 192
+        },
+        {
+          "name": "crescent",
+          "section": "building",
+          "triangles": 72
+        },
+        {
+          "name": "courtyard_still_pool_water",
+          "section": "props",
+          "triangles": 64
+        },
+        {
+          "name": "moon_halo",
+          "section": "building",
+          "triangles": 60
+        },
+        {
+          "name": "courtyard_chime_crown",
+          "section": "props",
+          "triangles": 60
+        },
+        {
+          "name": "stone_door_handle",
+          "section": "building",
+          "triangles": 48
+        },
+        {
+          "name": "stone_door_handle",
+          "section": "building",
+          "triangles": 48
+        },
+        {
+          "name": "earth_module",
+          "section": "ground",
+          "triangles": 28
+        },
+        {
+          "name": "grass_module",
+          "section": "ground",
+          "triangles": 28
+        },
+        {
+          "name": "entrance_step",
+          "section": "building",
+          "triangles": 28
+        },
+        {
+          "name": "entrance_step",
+          "section": "building",
+          "triangles": 28
+        },
+        {
+          "name": "entrance_step",
+          "section": "building",
+          "triangles": 28
+        }
+      ]
+    },
+    {
+      "id": "ghost",
+      "name": "Cripta dei Fantasmi",
+      "variant": 2,
+      "variantName": "Torre del ricordo",
+      "state": "clean",
+      "footprint": [
+        4,
+        5
+      ],
+      "full": {
+        "triangles": 3617,
+        "vertices": 10851,
+        "bufferBytes": 390636,
+        "meshes": 2,
+        "baseColorPassDraws": 2,
+        "submittedTriangles": 3617,
+        "sections": {
+          "merged": {
+            "triangles": 3617,
+            "parts": 2
+          }
+        }
+      },
+      "building": {
+        "triangles": 1084,
+        "vertices": 3252,
+        "bufferBytes": 117072,
+        "meshes": 2,
+        "baseColorPassDraws": 2,
+        "submittedTriangles": 1084,
+        "sections": {
+          "merged": {
+            "triangles": 1084,
+            "parts": 2
+          }
+        }
+      },
+      "sections": {
+        "ground": {
+          "triangles": 424,
+          "parts": 34
+        },
+        "building": {
+          "triangles": 1084,
+          "parts": 51
+        },
+        "fence": {
+          "triangles": 1048,
+          "parts": 78
+        },
+        "props": {
+          "triangles": 1061,
+          "parts": 46
+        }
+      },
+      "sourceParts": 209,
+      "expensiveParts": [
+        {
+          "name": "courtyard_moon_reflection_pool",
+          "section": "props",
+          "triangles": 192
+        },
+        {
+          "name": "courtyard_still_pool_water",
+          "section": "props",
+          "triangles": 64
+        },
+        {
+          "name": "variant_moon_medallion",
+          "section": "building",
+          "triangles": 60
+        },
+        {
+          "name": "spectral_tower_halo",
+          "section": "building",
+          "triangles": 60
+        },
+        {
+          "name": "courtyard_chime_crown",
+          "section": "props",
+          "triangles": 60
+        },
+        {
+          "name": "stone_door_handle",
+          "section": "building",
+          "triangles": 48
+        },
+        {
+          "name": "stone_door_handle",
+          "section": "building",
+          "triangles": 48
+        },
+        {
+          "name": "spectral_tower",
+          "section": "building",
+          "triangles": 32
+        },
+        {
+          "name": "spectral_tower_cap",
+          "section": "building",
+          "triangles": 32
+        },
+        {
+          "name": "earth_module",
+          "section": "ground",
+          "triangles": 28
+        },
+        {
+          "name": "grass_module",
+          "section": "ground",
+          "triangles": 28
+        },
+        {
+          "name": "entrance_step",
+          "section": "building",
+          "triangles": 28
+        }
+      ]
+    },
+    {
+      "id": "ghost",
+      "name": "Cripta dei Fantasmi",
+      "variant": 2,
+      "variantName": "Torre del ricordo",
+      "state": "dirty",
+      "footprint": [
+        4,
+        5
+      ],
+      "full": {
+        "triangles": 5365,
+        "vertices": 16095,
+        "bufferBytes": 579420,
+        "meshes": 2,
+        "baseColorPassDraws": 2,
+        "submittedTriangles": 5365,
+        "sections": {
+          "merged": {
+            "triangles": 5365,
+            "parts": 2
+          }
+        }
+      },
+      "building": {
+        "triangles": 2436,
+        "vertices": 7308,
+        "bufferBytes": 263088,
+        "meshes": 2,
+        "baseColorPassDraws": 2,
+        "submittedTriangles": 2436,
+        "sections": {
+          "merged": {
+            "triangles": 2436,
+            "parts": 2
+          }
+        }
+      },
+      "sections": {
+        "ground": {
+          "triangles": 424,
+          "parts": 34
+        },
+        "building": {
+          "triangles": 1084,
+          "parts": 51
+        },
+        "weather": {
+          "triangles": 1748,
+          "parts": 187
+        },
+        "fence": {
+          "triangles": 1048,
+          "parts": 78
+        },
+        "props": {
+          "triangles": 1061,
+          "parts": 46
+        }
+      },
+      "sourceParts": 396,
+      "expensiveParts": [
+        {
+          "name": "courtyard_moon_reflection_pool",
+          "section": "props",
+          "triangles": 192
+        },
+        {
+          "name": "courtyard_still_pool_water",
+          "section": "props",
+          "triangles": 64
+        },
+        {
+          "name": "variant_moon_medallion",
+          "section": "building",
+          "triangles": 60
+        },
+        {
+          "name": "spectral_tower_halo",
+          "section": "building",
+          "triangles": 60
+        },
+        {
+          "name": "courtyard_chime_crown",
+          "section": "props",
+          "triangles": 60
+        },
+        {
+          "name": "stone_door_handle",
+          "section": "building",
+          "triangles": 48
+        },
+        {
+          "name": "stone_door_handle",
+          "section": "building",
+          "triangles": 48
+        },
+        {
+          "name": "spectral_tower",
+          "section": "building",
+          "triangles": 32
+        },
+        {
+          "name": "spectral_tower_cap",
+          "section": "building",
+          "triangles": 32
+        },
+        {
+          "name": "earth_module",
+          "section": "ground",
+          "triangles": 28
+        },
+        {
+          "name": "grass_module",
+          "section": "ground",
+          "triangles": 28
+        },
+        {
+          "name": "entrance_step",
+          "section": "building",
+          "triangles": 28
+        }
+      ]
+    },
+    {
+      "id": "ghost",
+      "name": "Cripta dei Fantasmi",
+      "variant": 2,
+      "variantName": "Torre del ricordo",
+      "state": "broken",
+      "footprint": [
+        4,
+        5
+      ],
+      "full": {
+        "triangles": 5381,
+        "vertices": 16143,
+        "bufferBytes": 581148,
+        "meshes": 1,
+        "baseColorPassDraws": 1,
+        "submittedTriangles": 5381,
+        "sections": {
+          "merged": {
+            "triangles": 5381,
+            "parts": 1
+          }
+        }
+      },
+      "building": {
+        "triangles": 2616,
+        "vertices": 7848,
+        "bufferBytes": 282528,
+        "meshes": 1,
+        "baseColorPassDraws": 1,
+        "submittedTriangles": 2616,
+        "sections": {
+          "merged": {
+            "triangles": 2616,
+            "parts": 1
+          }
+        }
+      },
+      "sections": {
+        "ground": {
+          "triangles": 424,
+          "parts": 34
+        },
+        "building": {
+          "triangles": 956,
+          "parts": 47
+        },
+        "weather": {
+          "triangles": 2056,
+          "parts": 204
+        },
+        "fence": {
+          "triangles": 976,
+          "parts": 73
+        },
+        "props": {
+          "triangles": 969,
+          "parts": 43
+        }
+      },
+      "sourceParts": 401,
+      "expensiveParts": [
+        {
+          "name": "courtyard_moon_reflection_pool",
+          "section": "props",
+          "triangles": 192
+        },
+        {
+          "name": "courtyard_still_pool_water",
+          "section": "props",
+          "triangles": 64
+        },
+        {
+          "name": "variant_moon_medallion",
+          "section": "building",
+          "triangles": 60
+        },
+        {
+          "name": "courtyard_chime_crown",
+          "section": "props",
+          "triangles": 60
+        },
+        {
+          "name": "stone_door_handle",
+          "section": "building",
+          "triangles": 48
+        },
+        {
+          "name": "stone_door_handle",
+          "section": "building",
+          "triangles": 48
+        },
+        {
+          "name": "spectral_tower",
+          "section": "building",
+          "triangles": 32
+        },
+        {
+          "name": "spectral_tower_cap",
+          "section": "building",
+          "triangles": 32
+        },
+        {
+          "name": "earth_module",
+          "section": "ground",
+          "triangles": 28
+        },
+        {
+          "name": "grass_module",
+          "section": "ground",
+          "triangles": 28
+        },
+        {
+          "name": "entrance_step",
+          "section": "building",
+          "triangles": 28
+        },
+        {
+          "name": "entrance_step",
+          "section": "building",
+          "triangles": 28
+        }
+      ]
+    },
+    {
+      "id": "ghost",
+      "name": "Cripta dei Fantasmi",
+      "variant": 3,
+      "variantName": "Loggia degli spiriti",
+      "state": "clean",
+      "footprint": [
+        4,
+        5
+      ],
+      "full": {
+        "triangles": 3765,
+        "vertices": 11295,
+        "bufferBytes": 406620,
+        "meshes": 2,
+        "baseColorPassDraws": 2,
+        "submittedTriangles": 3765,
+        "sections": {
+          "merged": {
+            "triangles": 3765,
+            "parts": 2
+          }
+        }
+      },
+      "building": {
+        "triangles": 1204,
+        "vertices": 3612,
+        "bufferBytes": 130032,
+        "meshes": 2,
+        "baseColorPassDraws": 2,
+        "submittedTriangles": 1204,
+        "sections": {
+          "merged": {
+            "triangles": 1204,
+            "parts": 2
+          }
+        }
+      },
+      "sections": {
+        "ground": {
+          "triangles": 448,
+          "parts": 38
+        },
+        "building": {
+          "triangles": 1204,
+          "parts": 60
+        },
+        "fence": {
+          "triangles": 1048,
+          "parts": 78
+        },
+        "props": {
+          "triangles": 1065,
+          "parts": 45
+        }
+      },
+      "sourceParts": 221,
+      "expensiveParts": [
+        {
+          "name": "courtyard_moon_reflection_pool",
+          "section": "props",
+          "triangles": 192
+        },
+        {
+          "name": "courtyard_still_pool_water",
+          "section": "props",
+          "triangles": 64
+        },
+        {
+          "name": "courtyard_chime_crown",
+          "section": "props",
+          "triangles": 60
+        },
+        {
+          "name": "stone_door_handle",
+          "section": "building",
+          "triangles": 48
+        },
+        {
+          "name": "stone_door_handle",
+          "section": "building",
+          "triangles": 48
+        },
+        {
+          "name": "courtyard_variant_memorial_moon",
+          "section": "props",
+          "triangles": 48
+        },
+        {
+          "name": "variant_moon_brazier_base",
+          "section": "building",
+          "triangles": 32
+        },
+        {
+          "name": "variant_moon_brazier_bowl",
+          "section": "building",
+          "triangles": 32
+        },
+        {
+          "name": "earth_module",
+          "section": "ground",
+          "triangles": 28
+        },
+        {
+          "name": "grass_module",
+          "section": "ground",
+          "triangles": 28
+        },
+        {
+          "name": "entrance_step",
+          "section": "building",
+          "triangles": 28
+        },
+        {
+          "name": "entrance_step",
+          "section": "building",
+          "triangles": 28
+        }
+      ]
+    },
+    {
+      "id": "ghost",
+      "name": "Cripta dei Fantasmi",
+      "variant": 3,
+      "variantName": "Loggia degli spiriti",
+      "state": "dirty",
+      "footprint": [
+        4,
+        5
+      ],
+      "full": {
+        "triangles": 5513,
+        "vertices": 16539,
+        "bufferBytes": 595404,
+        "meshes": 2,
+        "baseColorPassDraws": 2,
+        "submittedTriangles": 5513,
+        "sections": {
+          "merged": {
+            "triangles": 5513,
+            "parts": 2
+          }
+        }
+      },
+      "building": {
+        "triangles": 2556,
+        "vertices": 7668,
+        "bufferBytes": 276048,
+        "meshes": 2,
+        "baseColorPassDraws": 2,
+        "submittedTriangles": 2556,
+        "sections": {
+          "merged": {
+            "triangles": 2556,
+            "parts": 2
+          }
+        }
+      },
+      "sections": {
+        "ground": {
+          "triangles": 448,
+          "parts": 38
+        },
+        "building": {
+          "triangles": 1204,
+          "parts": 60
+        },
+        "weather": {
+          "triangles": 1748,
+          "parts": 187
+        },
+        "fence": {
+          "triangles": 1048,
+          "parts": 78
+        },
+        "props": {
+          "triangles": 1065,
+          "parts": 45
+        }
+      },
+      "sourceParts": 408,
+      "expensiveParts": [
+        {
+          "name": "courtyard_moon_reflection_pool",
+          "section": "props",
+          "triangles": 192
+        },
+        {
+          "name": "courtyard_still_pool_water",
+          "section": "props",
+          "triangles": 64
+        },
+        {
+          "name": "courtyard_chime_crown",
+          "section": "props",
+          "triangles": 60
+        },
+        {
+          "name": "stone_door_handle",
+          "section": "building",
+          "triangles": 48
+        },
+        {
+          "name": "stone_door_handle",
+          "section": "building",
+          "triangles": 48
+        },
+        {
+          "name": "courtyard_variant_memorial_moon",
+          "section": "props",
+          "triangles": 48
+        },
+        {
+          "name": "variant_moon_brazier_base",
+          "section": "building",
+          "triangles": 32
+        },
+        {
+          "name": "variant_moon_brazier_bowl",
+          "section": "building",
+          "triangles": 32
+        },
+        {
+          "name": "earth_module",
+          "section": "ground",
+          "triangles": 28
+        },
+        {
+          "name": "grass_module",
+          "section": "ground",
+          "triangles": 28
+        },
+        {
+          "name": "entrance_step",
+          "section": "building",
+          "triangles": 28
+        },
+        {
+          "name": "entrance_step",
+          "section": "building",
+          "triangles": 28
+        }
+      ]
+    },
+    {
+      "id": "ghost",
+      "name": "Cripta dei Fantasmi",
+      "variant": 3,
+      "variantName": "Loggia degli spiriti",
+      "state": "broken",
+      "footprint": [
+        4,
+        5
+      ],
+      "full": {
+        "triangles": 5561,
+        "vertices": 16683,
+        "bufferBytes": 600588,
+        "meshes": 1,
+        "baseColorPassDraws": 1,
+        "submittedTriangles": 5561,
+        "sections": {
+          "merged": {
+            "triangles": 5561,
+            "parts": 1
+          }
+        }
+      },
+      "building": {
+        "triangles": 2760,
+        "vertices": 8280,
+        "bufferBytes": 298080,
+        "meshes": 1,
+        "baseColorPassDraws": 1,
+        "submittedTriangles": 2760,
+        "sections": {
+          "merged": {
+            "triangles": 2760,
+            "parts": 1
+          }
+        }
+      },
+      "sections": {
+        "ground": {
+          "triangles": 448,
+          "parts": 38
+        },
+        "building": {
+          "triangles": 1100,
+          "parts": 56
+        },
+        "weather": {
+          "triangles": 2056,
+          "parts": 204
+        },
+        "fence": {
+          "triangles": 976,
+          "parts": 73
+        },
+        "props": {
+          "triangles": 981,
+          "parts": 42
+        }
+      },
+      "sourceParts": 413,
+      "expensiveParts": [
+        {
+          "name": "courtyard_moon_reflection_pool",
+          "section": "props",
+          "triangles": 192
+        },
+        {
+          "name": "courtyard_still_pool_water",
+          "section": "props",
+          "triangles": 64
+        },
+        {
+          "name": "courtyard_chime_crown",
+          "section": "props",
+          "triangles": 60
+        },
+        {
+          "name": "stone_door_handle",
+          "section": "building",
+          "triangles": 48
+        },
+        {
+          "name": "stone_door_handle",
+          "section": "building",
+          "triangles": 48
+        },
+        {
+          "name": "courtyard_variant_memorial_moon",
+          "section": "props",
+          "triangles": 48
+        },
+        {
+          "name": "variant_moon_brazier_base",
+          "section": "building",
+          "triangles": 32
+        },
+        {
+          "name": "variant_moon_brazier_bowl",
+          "section": "building",
+          "triangles": 32
+        },
+        {
+          "name": "earth_module",
+          "section": "ground",
+          "triangles": 28
+        },
+        {
+          "name": "grass_module",
+          "section": "ground",
+          "triangles": 28
+        },
+        {
+          "name": "entrance_step",
+          "section": "building",
+          "triangles": 28
+        },
+        {
+          "name": "entrance_step",
+          "section": "building",
+          "triangles": 28
+        }
+      ]
+    },
+    {
+      "id": "skeleton",
+      "name": "Cripta degli Scheletri",
+      "variant": 1,
+      "variantName": "Campanile aperto",
+      "state": "clean",
+      "footprint": [
+        4,
+        5
+      ],
+      "full": {
+        "triangles": 6198,
+        "vertices": 18594,
+        "bufferBytes": 669384,
+        "meshes": 2,
+        "baseColorPassDraws": 2,
+        "submittedTriangles": 6198,
+        "sections": {
+          "merged": {
+            "triangles": 6198,
+            "parts": 2
+          }
+        }
+      },
+      "building": {
+        "triangles": 2174,
+        "vertices": 6522,
+        "bufferBytes": 234792,
+        "meshes": 2,
+        "baseColorPassDraws": 2,
+        "submittedTriangles": 2174,
+        "sections": {
+          "merged": {
+            "triangles": 2174,
+            "parts": 2
+          }
+        }
+      },
+      "sections": {
+        "ground": {
+          "triangles": 696,
+          "parts": 50
+        },
+        "building": {
+          "triangles": 2174,
+          "parts": 115
+        },
+        "fence": {
+          "triangles": 1456,
+          "parts": 90
+        },
+        "props": {
+          "triangles": 1872,
+          "parts": 81
+        }
+      },
+      "sourceParts": 336,
+      "expensiveParts": [
+        {
+          "name": "ossuary_bell",
+          "section": "building",
+          "triangles": 90
+        },
+        {
+          "name": "skull",
+          "section": "building",
+          "triangles": 80
+        },
+        {
+          "name": "courtyard_drum_iron_rim",
+          "section": "props",
+          "triangles": 60
+        },
+        {
+          "name": "courtyard_drum_iron_rim",
+          "section": "props",
+          "triangles": 60
+        },
+        {
+          "name": "courtyard_drum_iron_rim",
+          "section": "props",
+          "triangles": 60
+        },
+        {
+          "name": "courtyard_drum_iron_rim",
+          "section": "props",
+          "triangles": 60
+        },
+        {
+          "name": "courtyard_drum_iron_rim",
+          "section": "props",
+          "triangles": 60
+        },
+        {
+          "name": "courtyard_drum_iron_rim",
+          "section": "props",
+          "triangles": 60
+        },
+        {
+          "name": "courtyard_brass_cymbal",
+          "section": "props",
+          "triangles": 48
+        },
+        {
+          "name": "courtyard_ossuary_drum_shell",
+          "section": "props",
+          "triangles": 40
+        },
+        {
+          "name": "courtyard_drum_skin",
+          "section": "props",
+          "triangles": 40
+        },
+        {
+          "name": "courtyard_ossuary_drum_shell",
+          "section": "props",
+          "triangles": 40
+        }
+      ]
+    },
+    {
+      "id": "skeleton",
+      "name": "Cripta degli Scheletri",
+      "variant": 1,
+      "variantName": "Campanile aperto",
+      "state": "dirty",
+      "footprint": [
+        4,
+        5
+      ],
+      "full": {
+        "triangles": 7906,
+        "vertices": 23718,
+        "bufferBytes": 853848,
+        "meshes": 2,
+        "baseColorPassDraws": 2,
+        "submittedTriangles": 7906,
+        "sections": {
+          "merged": {
+            "triangles": 7906,
+            "parts": 2
+          }
+        }
+      },
+      "building": {
+        "triangles": 3486,
+        "vertices": 10458,
+        "bufferBytes": 376488,
+        "meshes": 2,
+        "baseColorPassDraws": 2,
+        "submittedTriangles": 3486,
+        "sections": {
+          "merged": {
+            "triangles": 3486,
+            "parts": 2
+          }
+        }
+      },
+      "sections": {
+        "ground": {
+          "triangles": 696,
+          "parts": 50
+        },
+        "building": {
+          "triangles": 2174,
+          "parts": 115
+        },
+        "weather": {
+          "triangles": 1708,
+          "parts": 185
+        },
+        "fence": {
+          "triangles": 1456,
+          "parts": 90
+        },
+        "props": {
+          "triangles": 1872,
+          "parts": 81
+        }
+      },
+      "sourceParts": 521,
+      "expensiveParts": [
+        {
+          "name": "ossuary_bell",
+          "section": "building",
+          "triangles": 90
+        },
+        {
+          "name": "skull",
+          "section": "building",
+          "triangles": 80
+        },
+        {
+          "name": "courtyard_drum_iron_rim",
+          "section": "props",
+          "triangles": 60
+        },
+        {
+          "name": "courtyard_drum_iron_rim",
+          "section": "props",
+          "triangles": 60
+        },
+        {
+          "name": "courtyard_drum_iron_rim",
+          "section": "props",
+          "triangles": 60
+        },
+        {
+          "name": "courtyard_drum_iron_rim",
+          "section": "props",
+          "triangles": 60
+        },
+        {
+          "name": "courtyard_drum_iron_rim",
+          "section": "props",
+          "triangles": 60
+        },
+        {
+          "name": "courtyard_drum_iron_rim",
+          "section": "props",
+          "triangles": 60
+        },
+        {
+          "name": "courtyard_brass_cymbal",
+          "section": "props",
+          "triangles": 48
+        },
+        {
+          "name": "courtyard_ossuary_drum_shell",
+          "section": "props",
+          "triangles": 40
+        },
+        {
+          "name": "courtyard_drum_skin",
+          "section": "props",
+          "triangles": 40
+        },
+        {
+          "name": "courtyard_ossuary_drum_shell",
+          "section": "props",
+          "triangles": 40
+        }
+      ]
+    },
+    {
+      "id": "skeleton",
+      "name": "Cripta degli Scheletri",
+      "variant": 1,
+      "variantName": "Campanile aperto",
+      "state": "broken",
+      "footprint": [
+        4,
+        5
+      ],
+      "full": {
+        "triangles": 7890,
+        "vertices": 23670,
+        "bufferBytes": 852120,
+        "meshes": 1,
+        "baseColorPassDraws": 1,
+        "submittedTriangles": 7890,
+        "sections": {
+          "merged": {
+            "triangles": 7890,
+            "parts": 1
+          }
+        }
+      },
+      "building": {
+        "triangles": 3726,
+        "vertices": 11178,
+        "bufferBytes": 402408,
+        "meshes": 1,
+        "baseColorPassDraws": 1,
+        "submittedTriangles": 3726,
+        "sections": {
+          "merged": {
+            "triangles": 3726,
+            "parts": 1
+          }
+        }
+      },
+      "sections": {
+        "ground": {
+          "triangles": 668,
+          "parts": 49
+        },
+        "building": {
+          "triangles": 2106,
+          "parts": 110
+        },
+        "weather": {
+          "triangles": 2016,
+          "parts": 202
+        },
+        "fence": {
+          "triangles": 1344,
+          "parts": 85
+        },
+        "props": {
+          "triangles": 1756,
+          "parts": 74
+        }
+      },
+      "sourceParts": 520,
+      "expensiveParts": [
+        {
+          "name": "ossuary_bell",
+          "section": "building",
+          "triangles": 90
+        },
+        {
+          "name": "skull",
+          "section": "building",
+          "triangles": 80
+        },
+        {
+          "name": "skull",
+          "section": "building",
+          "triangles": 80
+        },
+        {
+          "name": "courtyard_drum_iron_rim",
+          "section": "props",
+          "triangles": 60
+        },
+        {
+          "name": "courtyard_drum_iron_rim",
+          "section": "props",
+          "triangles": 60
+        },
+        {
+          "name": "courtyard_drum_iron_rim",
+          "section": "props",
+          "triangles": 60
+        },
+        {
+          "name": "courtyard_drum_iron_rim",
+          "section": "props",
+          "triangles": 60
+        },
+        {
+          "name": "courtyard_drum_iron_rim",
+          "section": "props",
+          "triangles": 60
+        },
+        {
+          "name": "courtyard_drum_iron_rim",
+          "section": "props",
+          "triangles": 60
+        },
+        {
+          "name": "courtyard_brass_cymbal",
+          "section": "props",
+          "triangles": 48
+        },
+        {
+          "name": "courtyard_ossuary_drum_shell",
+          "section": "props",
+          "triangles": 40
+        },
+        {
+          "name": "courtyard_drum_skin",
+          "section": "props",
+          "triangles": 40
+        }
+      ]
+    },
+    {
+      "id": "skeleton",
+      "name": "Cripta degli Scheletri",
+      "variant": 2,
+      "variantName": "Tetto a timpano",
+      "state": "clean",
+      "footprint": [
+        4,
+        5
+      ],
+      "full": {
+        "triangles": 6070,
+        "vertices": 18210,
+        "bufferBytes": 655560,
+        "meshes": 2,
+        "baseColorPassDraws": 2,
+        "submittedTriangles": 6070,
+        "sections": {
+          "merged": {
+            "triangles": 6070,
+            "parts": 2
+          }
+        }
+      },
+      "building": {
+        "triangles": 2086,
+        "vertices": 6258,
+        "bufferBytes": 225288,
+        "meshes": 2,
+        "baseColorPassDraws": 2,
+        "submittedTriangles": 2086,
+        "sections": {
+          "merged": {
+            "triangles": 2086,
+            "parts": 2
+          }
+        }
+      },
+      "sections": {
+        "ground": {
+          "triangles": 600,
+          "parts": 34
+        },
+        "building": {
+          "triangles": 2086,
+          "parts": 113
+        },
+        "fence": {
+          "triangles": 1456,
+          "parts": 90
+        },
+        "props": {
+          "triangles": 1928,
+          "parts": 83
+        }
+      },
+      "sourceParts": 320,
+      "expensiveParts": [
+        {
+          "name": "ossuary_bell",
+          "section": "building",
+          "triangles": 90
+        },
+        {
+          "name": "skull",
+          "section": "building",
+          "triangles": 80
+        },
+        {
+          "name": "courtyard_drum_iron_rim",
+          "section": "props",
+          "triangles": 60
+        },
+        {
+          "name": "courtyard_drum_iron_rim",
+          "section": "props",
+          "triangles": 60
+        },
+        {
+          "name": "courtyard_drum_iron_rim",
+          "section": "props",
+          "triangles": 60
+        },
+        {
+          "name": "courtyard_drum_iron_rim",
+          "section": "props",
+          "triangles": 60
+        },
+        {
+          "name": "courtyard_drum_iron_rim",
+          "section": "props",
+          "triangles": 60
+        },
+        {
+          "name": "courtyard_drum_iron_rim",
+          "section": "props",
+          "triangles": 60
+        },
+        {
+          "name": "courtyard_brass_cymbal",
+          "section": "props",
+          "triangles": 48
+        },
+        {
+          "name": "courtyard_ossuary_drum_shell",
+          "section": "props",
+          "triangles": 40
+        },
+        {
+          "name": "courtyard_drum_skin",
+          "section": "props",
+          "triangles": 40
+        },
+        {
+          "name": "courtyard_ossuary_drum_shell",
+          "section": "props",
+          "triangles": 40
+        }
+      ]
+    },
+    {
+      "id": "skeleton",
+      "name": "Cripta degli Scheletri",
+      "variant": 2,
+      "variantName": "Tetto a timpano",
+      "state": "dirty",
+      "footprint": [
+        4,
+        5
+      ],
+      "full": {
+        "triangles": 7778,
+        "vertices": 23334,
+        "bufferBytes": 840024,
+        "meshes": 2,
+        "baseColorPassDraws": 2,
+        "submittedTriangles": 7778,
+        "sections": {
+          "merged": {
+            "triangles": 7778,
+            "parts": 2
+          }
+        }
+      },
+      "building": {
+        "triangles": 3398,
+        "vertices": 10194,
+        "bufferBytes": 366984,
+        "meshes": 2,
+        "baseColorPassDraws": 2,
+        "submittedTriangles": 3398,
+        "sections": {
+          "merged": {
+            "triangles": 3398,
+            "parts": 2
+          }
+        }
+      },
+      "sections": {
+        "ground": {
+          "triangles": 600,
+          "parts": 34
+        },
+        "building": {
+          "triangles": 2086,
+          "parts": 113
+        },
+        "weather": {
+          "triangles": 1708,
+          "parts": 185
+        },
+        "fence": {
+          "triangles": 1456,
+          "parts": 90
+        },
+        "props": {
+          "triangles": 1928,
+          "parts": 83
+        }
+      },
+      "sourceParts": 505,
+      "expensiveParts": [
+        {
+          "name": "ossuary_bell",
+          "section": "building",
+          "triangles": 90
+        },
+        {
+          "name": "skull",
+          "section": "building",
+          "triangles": 80
+        },
+        {
+          "name": "courtyard_drum_iron_rim",
+          "section": "props",
+          "triangles": 60
+        },
+        {
+          "name": "courtyard_drum_iron_rim",
+          "section": "props",
+          "triangles": 60
+        },
+        {
+          "name": "courtyard_drum_iron_rim",
+          "section": "props",
+          "triangles": 60
+        },
+        {
+          "name": "courtyard_drum_iron_rim",
+          "section": "props",
+          "triangles": 60
+        },
+        {
+          "name": "courtyard_drum_iron_rim",
+          "section": "props",
+          "triangles": 60
+        },
+        {
+          "name": "courtyard_drum_iron_rim",
+          "section": "props",
+          "triangles": 60
+        },
+        {
+          "name": "courtyard_brass_cymbal",
+          "section": "props",
+          "triangles": 48
+        },
+        {
+          "name": "courtyard_ossuary_drum_shell",
+          "section": "props",
+          "triangles": 40
+        },
+        {
+          "name": "courtyard_drum_skin",
+          "section": "props",
+          "triangles": 40
+        },
+        {
+          "name": "courtyard_ossuary_drum_shell",
+          "section": "props",
+          "triangles": 40
+        }
+      ]
+    },
+    {
+      "id": "skeleton",
+      "name": "Cripta degli Scheletri",
+      "variant": 2,
+      "variantName": "Tetto a timpano",
+      "state": "broken",
+      "footprint": [
+        4,
+        5
+      ],
+      "full": {
+        "triangles": 7790,
+        "vertices": 23370,
+        "bufferBytes": 841320,
+        "meshes": 1,
+        "baseColorPassDraws": 1,
+        "submittedTriangles": 7790,
+        "sections": {
+          "merged": {
+            "triangles": 7790,
+            "parts": 1
+          }
+        }
+      },
+      "building": {
+        "triangles": 3666,
+        "vertices": 10998,
+        "bufferBytes": 395928,
+        "meshes": 1,
+        "baseColorPassDraws": 1,
+        "submittedTriangles": 3666,
+        "sections": {
+          "merged": {
+            "triangles": 3666,
+            "parts": 1
+          }
+        }
+      },
+      "sections": {
+        "ground": {
+          "triangles": 572,
+          "parts": 33
+        },
+        "building": {
+          "triangles": 2046,
+          "parts": 109
+        },
+        "weather": {
+          "triangles": 2016,
+          "parts": 202
+        },
+        "fence": {
+          "triangles": 1344,
+          "parts": 85
+        },
+        "props": {
+          "triangles": 1812,
+          "parts": 76
+        }
+      },
+      "sourceParts": 505,
+      "expensiveParts": [
+        {
+          "name": "ossuary_bell",
+          "section": "building",
+          "triangles": 90
+        },
+        {
+          "name": "skull",
+          "section": "building",
+          "triangles": 80
+        },
+        {
+          "name": "skull",
+          "section": "building",
+          "triangles": 80
+        },
+        {
+          "name": "courtyard_drum_iron_rim",
+          "section": "props",
+          "triangles": 60
+        },
+        {
+          "name": "courtyard_drum_iron_rim",
+          "section": "props",
+          "triangles": 60
+        },
+        {
+          "name": "courtyard_drum_iron_rim",
+          "section": "props",
+          "triangles": 60
+        },
+        {
+          "name": "courtyard_drum_iron_rim",
+          "section": "props",
+          "triangles": 60
+        },
+        {
+          "name": "courtyard_drum_iron_rim",
+          "section": "props",
+          "triangles": 60
+        },
+        {
+          "name": "courtyard_drum_iron_rim",
+          "section": "props",
+          "triangles": 60
+        },
+        {
+          "name": "courtyard_brass_cymbal",
+          "section": "props",
+          "triangles": 48
+        },
+        {
+          "name": "courtyard_ossuary_drum_shell",
+          "section": "props",
+          "triangles": 40
+        },
+        {
+          "name": "courtyard_drum_skin",
+          "section": "props",
+          "triangles": 40
+        }
+      ]
+    },
+    {
+      "id": "skeleton",
+      "name": "Cripta degli Scheletri",
+      "variant": 3,
+      "variantName": "Torre merlata",
+      "state": "clean",
+      "footprint": [
+        4,
+        5
+      ],
+      "full": {
+        "triangles": 6340,
+        "vertices": 19020,
+        "bufferBytes": 684720,
+        "meshes": 2,
+        "baseColorPassDraws": 2,
+        "submittedTriangles": 6340,
+        "sections": {
+          "merged": {
+            "triangles": 6340,
+            "parts": 2
+          }
+        }
+      },
+      "building": {
+        "triangles": 2236,
+        "vertices": 6708,
+        "bufferBytes": 241488,
+        "meshes": 2,
+        "baseColorPassDraws": 2,
+        "submittedTriangles": 2236,
+        "sections": {
+          "merged": {
+            "triangles": 2236,
+            "parts": 2
+          }
+        }
+      },
+      "sections": {
+        "ground": {
+          "triangles": 720,
+          "parts": 54
+        },
+        "building": {
+          "triangles": 2236,
+          "parts": 119
+        },
+        "fence": {
+          "triangles": 1456,
+          "parts": 90
+        },
+        "props": {
+          "triangles": 1928,
+          "parts": 83
+        }
+      },
+      "sourceParts": 346,
+      "expensiveParts": [
+        {
+          "name": "skull",
+          "section": "building",
+          "triangles": 80
+        },
+        {
+          "name": "variant_small_bell",
+          "section": "building",
+          "triangles": 70
+        },
+        {
+          "name": "variant_small_bell",
+          "section": "building",
+          "triangles": 70
+        },
+        {
+          "name": "courtyard_drum_iron_rim",
+          "section": "props",
+          "triangles": 60
+        },
+        {
+          "name": "courtyard_drum_iron_rim",
+          "section": "props",
+          "triangles": 60
+        },
+        {
+          "name": "courtyard_drum_iron_rim",
+          "section": "props",
+          "triangles": 60
+        },
+        {
+          "name": "courtyard_drum_iron_rim",
+          "section": "props",
+          "triangles": 60
+        },
+        {
+          "name": "courtyard_drum_iron_rim",
+          "section": "props",
+          "triangles": 60
+        },
+        {
+          "name": "courtyard_drum_iron_rim",
+          "section": "props",
+          "triangles": 60
+        },
+        {
+          "name": "courtyard_brass_cymbal",
+          "section": "props",
+          "triangles": 48
+        },
+        {
+          "name": "courtyard_ossuary_drum_shell",
+          "section": "props",
+          "triangles": 40
+        },
+        {
+          "name": "courtyard_drum_skin",
+          "section": "props",
+          "triangles": 40
+        }
+      ]
+    },
+    {
+      "id": "skeleton",
+      "name": "Cripta degli Scheletri",
+      "variant": 3,
+      "variantName": "Torre merlata",
+      "state": "dirty",
+      "footprint": [
+        4,
+        5
+      ],
+      "full": {
+        "triangles": 8048,
+        "vertices": 24144,
+        "bufferBytes": 869184,
+        "meshes": 2,
+        "baseColorPassDraws": 2,
+        "submittedTriangles": 8048,
+        "sections": {
+          "merged": {
+            "triangles": 8048,
+            "parts": 2
+          }
+        }
+      },
+      "building": {
+        "triangles": 3548,
+        "vertices": 10644,
+        "bufferBytes": 383184,
+        "meshes": 2,
+        "baseColorPassDraws": 2,
+        "submittedTriangles": 3548,
+        "sections": {
+          "merged": {
+            "triangles": 3548,
+            "parts": 2
+          }
+        }
+      },
+      "sections": {
+        "ground": {
+          "triangles": 720,
+          "parts": 54
+        },
+        "building": {
+          "triangles": 2236,
+          "parts": 119
+        },
+        "weather": {
+          "triangles": 1708,
+          "parts": 185
+        },
+        "fence": {
+          "triangles": 1456,
+          "parts": 90
+        },
+        "props": {
+          "triangles": 1928,
+          "parts": 83
+        }
+      },
+      "sourceParts": 531,
+      "expensiveParts": [
+        {
+          "name": "skull",
+          "section": "building",
+          "triangles": 80
+        },
+        {
+          "name": "variant_small_bell",
+          "section": "building",
+          "triangles": 70
+        },
+        {
+          "name": "variant_small_bell",
+          "section": "building",
+          "triangles": 70
+        },
+        {
+          "name": "courtyard_drum_iron_rim",
+          "section": "props",
+          "triangles": 60
+        },
+        {
+          "name": "courtyard_drum_iron_rim",
+          "section": "props",
+          "triangles": 60
+        },
+        {
+          "name": "courtyard_drum_iron_rim",
+          "section": "props",
+          "triangles": 60
+        },
+        {
+          "name": "courtyard_drum_iron_rim",
+          "section": "props",
+          "triangles": 60
+        },
+        {
+          "name": "courtyard_drum_iron_rim",
+          "section": "props",
+          "triangles": 60
+        },
+        {
+          "name": "courtyard_drum_iron_rim",
+          "section": "props",
+          "triangles": 60
+        },
+        {
+          "name": "courtyard_brass_cymbal",
+          "section": "props",
+          "triangles": 48
+        },
+        {
+          "name": "courtyard_ossuary_drum_shell",
+          "section": "props",
+          "triangles": 40
+        },
+        {
+          "name": "courtyard_drum_skin",
+          "section": "props",
+          "triangles": 40
+        }
+      ]
+    },
+    {
+      "id": "skeleton",
+      "name": "Cripta degli Scheletri",
+      "variant": 3,
+      "variantName": "Torre merlata",
+      "state": "broken",
+      "footprint": [
+        4,
+        5
+      ],
+      "full": {
+        "triangles": 8020,
+        "vertices": 24060,
+        "bufferBytes": 866160,
+        "meshes": 1,
+        "baseColorPassDraws": 1,
+        "submittedTriangles": 8020,
+        "sections": {
+          "merged": {
+            "triangles": 8020,
+            "parts": 1
+          }
+        }
+      },
+      "building": {
+        "triangles": 3776,
+        "vertices": 11328,
+        "bufferBytes": 407808,
+        "meshes": 1,
+        "baseColorPassDraws": 1,
+        "submittedTriangles": 3776,
+        "sections": {
+          "merged": {
+            "triangles": 3776,
+            "parts": 1
+          }
+        }
+      },
+      "sections": {
+        "ground": {
+          "triangles": 692,
+          "parts": 53
+        },
+        "building": {
+          "triangles": 2156,
+          "parts": 113
+        },
+        "weather": {
+          "triangles": 2016,
+          "parts": 202
+        },
+        "fence": {
+          "triangles": 1344,
+          "parts": 85
+        },
+        "props": {
+          "triangles": 1812,
+          "parts": 76
+        }
+      },
+      "sourceParts": 529,
+      "expensiveParts": [
+        {
+          "name": "skull",
+          "section": "building",
+          "triangles": 80
+        },
+        {
+          "name": "skull",
+          "section": "building",
+          "triangles": 80
+        },
+        {
+          "name": "variant_small_bell",
+          "section": "building",
+          "triangles": 70
+        },
+        {
+          "name": "variant_small_bell",
+          "section": "building",
+          "triangles": 70
+        },
+        {
+          "name": "courtyard_drum_iron_rim",
+          "section": "props",
+          "triangles": 60
+        },
+        {
+          "name": "courtyard_drum_iron_rim",
+          "section": "props",
+          "triangles": 60
+        },
+        {
+          "name": "courtyard_drum_iron_rim",
+          "section": "props",
+          "triangles": 60
+        },
+        {
+          "name": "courtyard_drum_iron_rim",
+          "section": "props",
+          "triangles": 60
+        },
+        {
+          "name": "courtyard_drum_iron_rim",
+          "section": "props",
+          "triangles": 60
+        },
+        {
+          "name": "courtyard_drum_iron_rim",
+          "section": "props",
+          "triangles": 60
+        },
+        {
+          "name": "courtyard_brass_cymbal",
+          "section": "props",
+          "triangles": 48
+        },
+        {
+          "name": "courtyard_ossuary_drum_shell",
+          "section": "props",
+          "triangles": 40
+        }
+      ]
+    },
+    {
+      "id": "nature",
+      "name": "Cripta della Natura",
+      "variant": 1,
+      "variantName": "Dolmen frondoso",
+      "state": "clean",
+      "footprint": [
+        4,
+        5
+      ],
+      "full": {
+        "triangles": 4952,
+        "vertices": 14856,
+        "bufferBytes": 534816,
+        "meshes": 2,
+        "baseColorPassDraws": 2,
+        "submittedTriangles": 4952,
+        "sections": {
+          "merged": {
+            "triangles": 4952,
+            "parts": 2
+          }
+        }
+      },
+      "building": {
+        "triangles": 1520,
+        "vertices": 4560,
+        "bufferBytes": 164160,
+        "meshes": 2,
+        "baseColorPassDraws": 2,
+        "submittedTriangles": 1520,
+        "sections": {
+          "merged": {
+            "triangles": 1520,
+            "parts": 2
+          }
+        }
+      },
+      "sections": {
+        "ground": {
+          "triangles": 592,
+          "parts": 40
+        },
+        "building": {
+          "triangles": 1520,
+          "parts": 71
+        },
+        "fence": {
+          "triangles": 1272,
+          "parts": 84
+        },
+        "props": {
+          "triangles": 1568,
+          "parts": 94
+        }
+      },
+      "sourceParts": 289,
+      "expensiveParts": [
+        {
+          "name": "courtyard_watering_can_handle",
+          "section": "props",
+          "triangles": 48
+        },
+        {
+          "name": "courtyard_woven_beehive",
+          "section": "props",
+          "triangles": 40
+        },
+        {
+          "name": "courtyard_woven_beehive",
+          "section": "props",
+          "triangles": 40
+        },
+        {
+          "name": "courtyard_woven_beehive",
+          "section": "props",
+          "triangles": 40
+        },
+        {
+          "name": "courtyard_woven_beehive",
+          "section": "props",
+          "triangles": 40
+        },
+        {
+          "name": "courtyard_woven_beehive",
+          "section": "props",
+          "triangles": 40
+        },
+        {
+          "name": "courtyard_wood_round_step",
+          "section": "ground",
+          "triangles": 36
+        },
+        {
+          "name": "courtyard_wood_round_step",
+          "section": "ground",
+          "triangles": 36
+        },
+        {
+          "name": "courtyard_wood_round_step",
+          "section": "ground",
+          "triangles": 36
+        },
+        {
+          "name": "courtyard_wood_round_step",
+          "section": "ground",
+          "triangles": 36
+        },
+        {
+          "name": "courtyard_wood_round_step",
+          "section": "ground",
+          "triangles": 36
+        },
+        {
+          "name": "courtyard_wood_round_step",
+          "section": "ground",
+          "triangles": 36
+        }
+      ]
+    },
+    {
+      "id": "nature",
+      "name": "Cripta della Natura",
+      "variant": 1,
+      "variantName": "Dolmen frondoso",
+      "state": "dirty",
+      "footprint": [
+        4,
+        5
+      ],
+      "full": {
+        "triangles": 6740,
+        "vertices": 20220,
+        "bufferBytes": 727920,
+        "meshes": 2,
+        "baseColorPassDraws": 2,
+        "submittedTriangles": 6740,
+        "sections": {
+          "merged": {
+            "triangles": 6740,
+            "parts": 2
+          }
+        }
+      },
+      "building": {
+        "triangles": 2912,
+        "vertices": 8736,
+        "bufferBytes": 314496,
+        "meshes": 2,
+        "baseColorPassDraws": 2,
+        "submittedTriangles": 2912,
+        "sections": {
+          "merged": {
+            "triangles": 2912,
+            "parts": 2
+          }
+        }
+      },
+      "sections": {
+        "ground": {
+          "triangles": 592,
+          "parts": 40
+        },
+        "building": {
+          "triangles": 1520,
+          "parts": 71
+        },
+        "weather": {
+          "triangles": 1788,
+          "parts": 191
+        },
+        "fence": {
+          "triangles": 1272,
+          "parts": 84
+        },
+        "props": {
+          "triangles": 1568,
+          "parts": 94
+        }
+      },
+      "sourceParts": 480,
+      "expensiveParts": [
+        {
+          "name": "courtyard_watering_can_handle",
+          "section": "props",
+          "triangles": 48
+        },
+        {
+          "name": "courtyard_woven_beehive",
+          "section": "props",
+          "triangles": 40
+        },
+        {
+          "name": "courtyard_woven_beehive",
+          "section": "props",
+          "triangles": 40
+        },
+        {
+          "name": "courtyard_woven_beehive",
+          "section": "props",
+          "triangles": 40
+        },
+        {
+          "name": "courtyard_woven_beehive",
+          "section": "props",
+          "triangles": 40
+        },
+        {
+          "name": "courtyard_woven_beehive",
+          "section": "props",
+          "triangles": 40
+        },
+        {
+          "name": "courtyard_wood_round_step",
+          "section": "ground",
+          "triangles": 36
+        },
+        {
+          "name": "courtyard_wood_round_step",
+          "section": "ground",
+          "triangles": 36
+        },
+        {
+          "name": "courtyard_wood_round_step",
+          "section": "ground",
+          "triangles": 36
+        },
+        {
+          "name": "courtyard_wood_round_step",
+          "section": "ground",
+          "triangles": 36
+        },
+        {
+          "name": "courtyard_wood_round_step",
+          "section": "ground",
+          "triangles": 36
+        },
+        {
+          "name": "courtyard_wood_round_step",
+          "section": "ground",
+          "triangles": 36
+        }
+      ]
+    },
+    {
+      "id": "nature",
+      "name": "Cripta della Natura",
+      "variant": 1,
+      "variantName": "Dolmen frondoso",
+      "state": "broken",
+      "footprint": [
+        4,
+        5
+      ],
+      "full": {
+        "triangles": 6692,
+        "vertices": 20076,
+        "bufferBytes": 722736,
+        "meshes": 1,
+        "baseColorPassDraws": 1,
+        "submittedTriangles": 6692,
+        "sections": {
+          "merged": {
+            "triangles": 6692,
+            "parts": 1
+          }
+        }
+      },
+      "building": {
+        "triangles": 3012,
+        "vertices": 9036,
+        "bufferBytes": 325296,
+        "meshes": 1,
+        "baseColorPassDraws": 1,
+        "submittedTriangles": 3012,
+        "sections": {
+          "merged": {
+            "triangles": 3012,
+            "parts": 1
+          }
+        }
+      },
+      "sections": {
+        "ground": {
+          "triangles": 592,
+          "parts": 40
+        },
+        "building": {
+          "triangles": 1344,
+          "parts": 60
+        },
+        "weather": {
+          "triangles": 2064,
+          "parts": 206
+        },
+        "fence": {
+          "triangles": 1168,
+          "parts": 78
+        },
+        "props": {
+          "triangles": 1524,
+          "parts": 89
+        }
+      },
+      "sourceParts": 473,
+      "expensiveParts": [
+        {
+          "name": "courtyard_watering_can_handle",
+          "section": "props",
+          "triangles": 48
+        },
+        {
+          "name": "courtyard_woven_beehive",
+          "section": "props",
+          "triangles": 40
+        },
+        {
+          "name": "courtyard_woven_beehive",
+          "section": "props",
+          "triangles": 40
+        },
+        {
+          "name": "courtyard_woven_beehive",
+          "section": "props",
+          "triangles": 40
+        },
+        {
+          "name": "courtyard_woven_beehive",
+          "section": "props",
+          "triangles": 40
+        },
+        {
+          "name": "courtyard_woven_beehive",
+          "section": "props",
+          "triangles": 40
+        },
+        {
+          "name": "courtyard_wood_round_step",
+          "section": "ground",
+          "triangles": 36
+        },
+        {
+          "name": "courtyard_wood_round_step",
+          "section": "ground",
+          "triangles": 36
+        },
+        {
+          "name": "courtyard_wood_round_step",
+          "section": "ground",
+          "triangles": 36
+        },
+        {
+          "name": "courtyard_wood_round_step",
+          "section": "ground",
+          "triangles": 36
+        },
+        {
+          "name": "courtyard_wood_round_step",
+          "section": "ground",
+          "triangles": 36
+        },
+        {
+          "name": "courtyard_wood_round_step",
+          "section": "ground",
+          "triangles": 36
+        }
+      ]
+    },
+    {
+      "id": "nature",
+      "name": "Cripta della Natura",
+      "variant": 2,
+      "variantName": "Arco di pietra",
+      "state": "clean",
+      "footprint": [
+        4,
+        5
+      ],
+      "full": {
+        "triangles": 5324,
+        "vertices": 15972,
+        "bufferBytes": 574992,
+        "meshes": 2,
+        "baseColorPassDraws": 2,
+        "submittedTriangles": 5324,
+        "sections": {
+          "merged": {
+            "triangles": 5324,
+            "parts": 2
+          }
+        }
+      },
+      "building": {
+        "triangles": 1772,
+        "vertices": 5316,
+        "bufferBytes": 191376,
+        "meshes": 2,
+        "baseColorPassDraws": 2,
+        "submittedTriangles": 1772,
+        "sections": {
+          "merged": {
+            "triangles": 1772,
+            "parts": 2
+          }
+        }
+      },
+      "sections": {
+        "ground": {
+          "triangles": 616,
+          "parts": 44
+        },
+        "building": {
+          "triangles": 1772,
+          "parts": 83
+        },
+        "fence": {
+          "triangles": 1272,
+          "parts": 84
+        },
+        "props": {
+          "triangles": 1664,
+          "parts": 98
+        }
+      },
+      "sourceParts": 309,
+      "expensiveParts": [
+        {
+          "name": "courtyard_watering_can_handle",
+          "section": "props",
+          "triangles": 48
+        },
+        {
+          "name": "courtyard_woven_beehive",
+          "section": "props",
+          "triangles": 40
+        },
+        {
+          "name": "courtyard_woven_beehive",
+          "section": "props",
+          "triangles": 40
+        },
+        {
+          "name": "courtyard_woven_beehive",
+          "section": "props",
+          "triangles": 40
+        },
+        {
+          "name": "courtyard_woven_beehive",
+          "section": "props",
+          "triangles": 40
+        },
+        {
+          "name": "courtyard_woven_beehive",
+          "section": "props",
+          "triangles": 40
+        },
+        {
+          "name": "courtyard_wood_round_step",
+          "section": "ground",
+          "triangles": 36
+        },
+        {
+          "name": "courtyard_wood_round_step",
+          "section": "ground",
+          "triangles": 36
+        },
+        {
+          "name": "courtyard_wood_round_step",
+          "section": "ground",
+          "triangles": 36
+        },
+        {
+          "name": "courtyard_wood_round_step",
+          "section": "ground",
+          "triangles": 36
+        },
+        {
+          "name": "courtyard_wood_round_step",
+          "section": "ground",
+          "triangles": 36
+        },
+        {
+          "name": "courtyard_wood_round_step",
+          "section": "ground",
+          "triangles": 36
+        }
+      ]
+    },
+    {
+      "id": "nature",
+      "name": "Cripta della Natura",
+      "variant": 2,
+      "variantName": "Arco di pietra",
+      "state": "dirty",
+      "footprint": [
+        4,
+        5
+      ],
+      "full": {
+        "triangles": 7112,
+        "vertices": 21336,
+        "bufferBytes": 768096,
+        "meshes": 2,
+        "baseColorPassDraws": 2,
+        "submittedTriangles": 7112,
+        "sections": {
+          "merged": {
+            "triangles": 7112,
+            "parts": 2
+          }
+        }
+      },
+      "building": {
+        "triangles": 3164,
+        "vertices": 9492,
+        "bufferBytes": 341712,
+        "meshes": 2,
+        "baseColorPassDraws": 2,
+        "submittedTriangles": 3164,
+        "sections": {
+          "merged": {
+            "triangles": 3164,
+            "parts": 2
+          }
+        }
+      },
+      "sections": {
+        "ground": {
+          "triangles": 616,
+          "parts": 44
+        },
+        "building": {
+          "triangles": 1772,
+          "parts": 83
+        },
+        "weather": {
+          "triangles": 1788,
+          "parts": 191
+        },
+        "fence": {
+          "triangles": 1272,
+          "parts": 84
+        },
+        "props": {
+          "triangles": 1664,
+          "parts": 98
+        }
+      },
+      "sourceParts": 500,
+      "expensiveParts": [
+        {
+          "name": "courtyard_watering_can_handle",
+          "section": "props",
+          "triangles": 48
+        },
+        {
+          "name": "courtyard_woven_beehive",
+          "section": "props",
+          "triangles": 40
+        },
+        {
+          "name": "courtyard_woven_beehive",
+          "section": "props",
+          "triangles": 40
+        },
+        {
+          "name": "courtyard_woven_beehive",
+          "section": "props",
+          "triangles": 40
+        },
+        {
+          "name": "courtyard_woven_beehive",
+          "section": "props",
+          "triangles": 40
+        },
+        {
+          "name": "courtyard_woven_beehive",
+          "section": "props",
+          "triangles": 40
+        },
+        {
+          "name": "courtyard_wood_round_step",
+          "section": "ground",
+          "triangles": 36
+        },
+        {
+          "name": "courtyard_wood_round_step",
+          "section": "ground",
+          "triangles": 36
+        },
+        {
+          "name": "courtyard_wood_round_step",
+          "section": "ground",
+          "triangles": 36
+        },
+        {
+          "name": "courtyard_wood_round_step",
+          "section": "ground",
+          "triangles": 36
+        },
+        {
+          "name": "courtyard_wood_round_step",
+          "section": "ground",
+          "triangles": 36
+        },
+        {
+          "name": "courtyard_wood_round_step",
+          "section": "ground",
+          "triangles": 36
+        }
+      ]
+    },
+    {
+      "id": "nature",
+      "name": "Cripta della Natura",
+      "variant": 2,
+      "variantName": "Arco di pietra",
+      "state": "broken",
+      "footprint": [
+        4,
+        5
+      ],
+      "full": {
+        "triangles": 7012,
+        "vertices": 21036,
+        "bufferBytes": 757296,
+        "meshes": 1,
+        "baseColorPassDraws": 1,
+        "submittedTriangles": 7012,
+        "sections": {
+          "merged": {
+            "triangles": 7012,
+            "parts": 1
+          }
+        }
+      },
+      "building": {
+        "triangles": 3212,
+        "vertices": 9636,
+        "bufferBytes": 346896,
+        "meshes": 1,
+        "baseColorPassDraws": 1,
+        "submittedTriangles": 3212,
+        "sections": {
+          "merged": {
+            "triangles": 3212,
+            "parts": 1
+          }
+        }
+      },
+      "sections": {
+        "ground": {
+          "triangles": 616,
+          "parts": 44
+        },
+        "building": {
+          "triangles": 1544,
+          "parts": 70
+        },
+        "weather": {
+          "triangles": 2064,
+          "parts": 206
+        },
+        "fence": {
+          "triangles": 1168,
+          "parts": 78
+        },
+        "props": {
+          "triangles": 1620,
+          "parts": 93
+        }
+      },
+      "sourceParts": 491,
+      "expensiveParts": [
+        {
+          "name": "courtyard_watering_can_handle",
+          "section": "props",
+          "triangles": 48
+        },
+        {
+          "name": "courtyard_woven_beehive",
+          "section": "props",
+          "triangles": 40
+        },
+        {
+          "name": "courtyard_woven_beehive",
+          "section": "props",
+          "triangles": 40
+        },
+        {
+          "name": "courtyard_woven_beehive",
+          "section": "props",
+          "triangles": 40
+        },
+        {
+          "name": "courtyard_woven_beehive",
+          "section": "props",
+          "triangles": 40
+        },
+        {
+          "name": "courtyard_woven_beehive",
+          "section": "props",
+          "triangles": 40
+        },
+        {
+          "name": "courtyard_wood_round_step",
+          "section": "ground",
+          "triangles": 36
+        },
+        {
+          "name": "courtyard_wood_round_step",
+          "section": "ground",
+          "triangles": 36
+        },
+        {
+          "name": "courtyard_wood_round_step",
+          "section": "ground",
+          "triangles": 36
+        },
+        {
+          "name": "courtyard_wood_round_step",
+          "section": "ground",
+          "triangles": 36
+        },
+        {
+          "name": "courtyard_wood_round_step",
+          "section": "ground",
+          "triangles": 36
+        },
+        {
+          "name": "courtyard_wood_round_step",
+          "section": "ground",
+          "triangles": 36
+        }
+      ]
+    },
+    {
+      "id": "nature",
+      "name": "Cripta della Natura",
+      "variant": 3,
+      "variantName": "Dolmen dei funghi",
+      "state": "clean",
+      "footprint": [
+        4,
+        5
+      ],
+      "full": {
+        "triangles": 5452,
+        "vertices": 16356,
+        "bufferBytes": 588816,
+        "meshes": 2,
+        "baseColorPassDraws": 2,
+        "submittedTriangles": 5452,
+        "sections": {
+          "merged": {
+            "triangles": 5452,
+            "parts": 2
+          }
+        }
+      },
+      "building": {
+        "triangles": 1804,
+        "vertices": 5412,
+        "bufferBytes": 194832,
+        "meshes": 2,
+        "baseColorPassDraws": 2,
+        "submittedTriangles": 1804,
+        "sections": {
+          "merged": {
+            "triangles": 1804,
+            "parts": 2
+          }
+        }
+      },
+      "sections": {
+        "ground": {
+          "triangles": 664,
+          "parts": 52
+        },
+        "building": {
+          "triangles": 1804,
+          "parts": 84
+        },
+        "fence": {
+          "triangles": 1272,
+          "parts": 84
+        },
+        "props": {
+          "triangles": 1712,
+          "parts": 100
+        }
+      },
+      "sourceParts": 320,
+      "expensiveParts": [
+        {
+          "name": "courtyard_watering_can_handle",
+          "section": "props",
+          "triangles": 48
+        },
+        {
+          "name": "courtyard_woven_beehive",
+          "section": "props",
+          "triangles": 40
+        },
+        {
+          "name": "courtyard_woven_beehive",
+          "section": "props",
+          "triangles": 40
+        },
+        {
+          "name": "courtyard_woven_beehive",
+          "section": "props",
+          "triangles": 40
+        },
+        {
+          "name": "courtyard_woven_beehive",
+          "section": "props",
+          "triangles": 40
+        },
+        {
+          "name": "courtyard_woven_beehive",
+          "section": "props",
+          "triangles": 40
+        },
+        {
+          "name": "great_mushroom_cap",
+          "section": "building",
+          "triangles": 36
+        },
+        {
+          "name": "courtyard_wood_round_step",
+          "section": "ground",
+          "triangles": 36
+        },
+        {
+          "name": "courtyard_wood_round_step",
+          "section": "ground",
+          "triangles": 36
+        },
+        {
+          "name": "courtyard_wood_round_step",
+          "section": "ground",
+          "triangles": 36
+        },
+        {
+          "name": "courtyard_wood_round_step",
+          "section": "ground",
+          "triangles": 36
+        },
+        {
+          "name": "courtyard_wood_round_step",
+          "section": "ground",
+          "triangles": 36
+        }
+      ]
+    },
+    {
+      "id": "nature",
+      "name": "Cripta della Natura",
+      "variant": 3,
+      "variantName": "Dolmen dei funghi",
+      "state": "dirty",
+      "footprint": [
+        4,
+        5
+      ],
+      "full": {
+        "triangles": 7240,
+        "vertices": 21720,
+        "bufferBytes": 781920,
+        "meshes": 2,
+        "baseColorPassDraws": 2,
+        "submittedTriangles": 7240,
+        "sections": {
+          "merged": {
+            "triangles": 7240,
+            "parts": 2
+          }
+        }
+      },
+      "building": {
+        "triangles": 3196,
+        "vertices": 9588,
+        "bufferBytes": 345168,
+        "meshes": 2,
+        "baseColorPassDraws": 2,
+        "submittedTriangles": 3196,
+        "sections": {
+          "merged": {
+            "triangles": 3196,
+            "parts": 2
+          }
+        }
+      },
+      "sections": {
+        "ground": {
+          "triangles": 664,
+          "parts": 52
+        },
+        "building": {
+          "triangles": 1804,
+          "parts": 84
+        },
+        "weather": {
+          "triangles": 1788,
+          "parts": 191
+        },
+        "fence": {
+          "triangles": 1272,
+          "parts": 84
+        },
+        "props": {
+          "triangles": 1712,
+          "parts": 100
+        }
+      },
+      "sourceParts": 511,
+      "expensiveParts": [
+        {
+          "name": "courtyard_watering_can_handle",
+          "section": "props",
+          "triangles": 48
+        },
+        {
+          "name": "courtyard_woven_beehive",
+          "section": "props",
+          "triangles": 40
+        },
+        {
+          "name": "courtyard_woven_beehive",
+          "section": "props",
+          "triangles": 40
+        },
+        {
+          "name": "courtyard_woven_beehive",
+          "section": "props",
+          "triangles": 40
+        },
+        {
+          "name": "courtyard_woven_beehive",
+          "section": "props",
+          "triangles": 40
+        },
+        {
+          "name": "courtyard_woven_beehive",
+          "section": "props",
+          "triangles": 40
+        },
+        {
+          "name": "great_mushroom_cap",
+          "section": "building",
+          "triangles": 36
+        },
+        {
+          "name": "courtyard_wood_round_step",
+          "section": "ground",
+          "triangles": 36
+        },
+        {
+          "name": "courtyard_wood_round_step",
+          "section": "ground",
+          "triangles": 36
+        },
+        {
+          "name": "courtyard_wood_round_step",
+          "section": "ground",
+          "triangles": 36
+        },
+        {
+          "name": "courtyard_wood_round_step",
+          "section": "ground",
+          "triangles": 36
+        },
+        {
+          "name": "courtyard_wood_round_step",
+          "section": "ground",
+          "triangles": 36
+        }
+      ]
+    },
+    {
+      "id": "nature",
+      "name": "Cripta della Natura",
+      "variant": 3,
+      "variantName": "Dolmen dei funghi",
+      "state": "broken",
+      "footprint": [
+        4,
+        5
+      ],
+      "full": {
+        "triangles": 7060,
+        "vertices": 21180,
+        "bufferBytes": 762480,
+        "meshes": 1,
+        "baseColorPassDraws": 1,
+        "submittedTriangles": 7060,
+        "sections": {
+          "merged": {
+            "triangles": 7060,
+            "parts": 1
+          }
+        }
+      },
+      "building": {
+        "triangles": 3164,
+        "vertices": 9492,
+        "bufferBytes": 341712,
+        "meshes": 1,
+        "baseColorPassDraws": 1,
+        "submittedTriangles": 3164,
+        "sections": {
+          "merged": {
+            "triangles": 3164,
+            "parts": 1
+          }
+        }
+      },
+      "sections": {
+        "ground": {
+          "triangles": 664,
+          "parts": 52
+        },
+        "building": {
+          "triangles": 1496,
+          "parts": 68
+        },
+        "weather": {
+          "triangles": 2064,
+          "parts": 206
+        },
+        "fence": {
+          "triangles": 1168,
+          "parts": 78
+        },
+        "props": {
+          "triangles": 1668,
+          "parts": 95
+        }
+      },
+      "sourceParts": 499,
+      "expensiveParts": [
+        {
+          "name": "courtyard_watering_can_handle",
+          "section": "props",
+          "triangles": 48
+        },
+        {
+          "name": "courtyard_woven_beehive",
+          "section": "props",
+          "triangles": 40
+        },
+        {
+          "name": "courtyard_woven_beehive",
+          "section": "props",
+          "triangles": 40
+        },
+        {
+          "name": "courtyard_woven_beehive",
+          "section": "props",
+          "triangles": 40
+        },
+        {
+          "name": "courtyard_woven_beehive",
+          "section": "props",
+          "triangles": 40
+        },
+        {
+          "name": "courtyard_woven_beehive",
+          "section": "props",
+          "triangles": 40
+        },
+        {
+          "name": "courtyard_wood_round_step",
+          "section": "ground",
+          "triangles": 36
+        },
+        {
+          "name": "courtyard_wood_round_step",
+          "section": "ground",
+          "triangles": 36
+        },
+        {
+          "name": "courtyard_wood_round_step",
+          "section": "ground",
+          "triangles": 36
+        },
+        {
+          "name": "courtyard_wood_round_step",
+          "section": "ground",
+          "triangles": 36
+        },
+        {
+          "name": "courtyard_wood_round_step",
+          "section": "ground",
+          "triangles": 36
+        },
+        {
+          "name": "courtyard_wood_round_step",
+          "section": "ground",
+          "triangles": 36
+        }
+      ]
+    },
+    {
+      "id": "supernatural",
+      "name": "Cripta Soprannaturale",
+      "variant": 1,
+      "variantName": "Reliquiario a punta",
+      "state": "clean",
+      "footprint": [
+        4,
+        5
+      ],
+      "full": {
+        "triangles": 3366,
+        "vertices": 10098,
+        "bufferBytes": 363528,
+        "meshes": 2,
+        "baseColorPassDraws": 2,
+        "submittedTriangles": 3366,
+        "sections": {
+          "merged": {
+            "triangles": 3366,
+            "parts": 2
+          }
+        }
+      },
+      "building": {
+        "triangles": 1088,
+        "vertices": 3264,
+        "bufferBytes": 117504,
+        "meshes": 2,
+        "baseColorPassDraws": 2,
+        "submittedTriangles": 1088,
+        "sections": {
+          "merged": {
+            "triangles": 1088,
+            "parts": 2
+          }
+        }
+      },
+      "sections": {
+        "ground": {
+          "triangles": 484,
+          "parts": 54
+        },
+        "building": {
+          "triangles": 1088,
+          "parts": 60
+        },
+        "fence": {
+          "triangles": 1120,
+          "parts": 84
+        },
+        "props": {
+          "triangles": 674,
+          "parts": 29
+        }
+      },
+      "sourceParts": 227,
+      "expensiveParts": [
+        {
+          "name": "courtyard_ritual_cauldron",
+          "section": "props",
+          "triangles": 162
+        },
+        {
+          "name": "ritual_ring",
+          "section": "building",
+          "triangles": 60
+        },
+        {
+          "name": "inner_seal",
+          "section": "building",
+          "triangles": 60
+        },
+        {
+          "name": "courtyard_cauldron_brew",
+          "section": "props",
+          "triangles": 36
+        },
+        {
+          "name": "octagonal_foundation",
+          "section": "building",
+          "triangles": 32
+        },
+        {
+          "name": "octagonal_foundation",
+          "section": "building",
+          "triangles": 32
+        },
+        {
+          "name": "eight_sided_reliquary",
+          "section": "building",
+          "triangles": 32
+        },
+        {
+          "name": "spire_collar",
+          "section": "building",
+          "triangles": 32
+        },
+        {
+          "name": "courtyard_central_ward_circle",
+          "section": "ground",
+          "triangles": 32
+        },
+        {
+          "name": "courtyard_central_ward_circle",
+          "section": "ground",
+          "triangles": 32
+        },
+        {
+          "name": "earth_module",
+          "section": "ground",
+          "triangles": 28
+        },
+        {
+          "name": "grass_module",
+          "section": "ground",
+          "triangles": 28
+        }
+      ]
+    },
+    {
+      "id": "supernatural",
+      "name": "Cripta Soprannaturale",
+      "variant": 1,
+      "variantName": "Reliquiario a punta",
+      "state": "dirty",
+      "footprint": [
+        4,
+        5
+      ],
+      "full": {
+        "triangles": 5074,
+        "vertices": 15222,
+        "bufferBytes": 547992,
+        "meshes": 2,
+        "baseColorPassDraws": 2,
+        "submittedTriangles": 5074,
+        "sections": {
+          "merged": {
+            "triangles": 5074,
+            "parts": 2
+          }
+        }
+      },
+      "building": {
+        "triangles": 2400,
+        "vertices": 7200,
+        "bufferBytes": 259200,
+        "meshes": 2,
+        "baseColorPassDraws": 2,
+        "submittedTriangles": 2400,
+        "sections": {
+          "merged": {
+            "triangles": 2400,
+            "parts": 2
+          }
+        }
+      },
+      "sections": {
+        "ground": {
+          "triangles": 484,
+          "parts": 54
+        },
+        "building": {
+          "triangles": 1088,
+          "parts": 60
+        },
+        "weather": {
+          "triangles": 1708,
+          "parts": 185
+        },
+        "fence": {
+          "triangles": 1120,
+          "parts": 84
+        },
+        "props": {
+          "triangles": 674,
+          "parts": 29
+        }
+      },
+      "sourceParts": 412,
+      "expensiveParts": [
+        {
+          "name": "courtyard_ritual_cauldron",
+          "section": "props",
+          "triangles": 162
+        },
+        {
+          "name": "ritual_ring",
+          "section": "building",
+          "triangles": 60
+        },
+        {
+          "name": "inner_seal",
+          "section": "building",
+          "triangles": 60
+        },
+        {
+          "name": "courtyard_cauldron_brew",
+          "section": "props",
+          "triangles": 36
+        },
+        {
+          "name": "octagonal_foundation",
+          "section": "building",
+          "triangles": 32
+        },
+        {
+          "name": "octagonal_foundation",
+          "section": "building",
+          "triangles": 32
+        },
+        {
+          "name": "eight_sided_reliquary",
+          "section": "building",
+          "triangles": 32
+        },
+        {
+          "name": "spire_collar",
+          "section": "building",
+          "triangles": 32
+        },
+        {
+          "name": "courtyard_central_ward_circle",
+          "section": "ground",
+          "triangles": 32
+        },
+        {
+          "name": "courtyard_central_ward_circle",
+          "section": "ground",
+          "triangles": 32
+        },
+        {
+          "name": "earth_module",
+          "section": "ground",
+          "triangles": 28
+        },
+        {
+          "name": "grass_module",
+          "section": "ground",
+          "triangles": 28
+        }
+      ]
+    },
+    {
+      "id": "supernatural",
+      "name": "Cripta Soprannaturale",
+      "variant": 1,
+      "variantName": "Reliquiario a punta",
+      "state": "broken",
+      "footprint": [
+        4,
+        5
+      ],
+      "full": {
+        "triangles": 4978,
+        "vertices": 14934,
+        "bufferBytes": 537624,
+        "meshes": 1,
+        "baseColorPassDraws": 1,
+        "submittedTriangles": 4978,
+        "sections": {
+          "merged": {
+            "triangles": 4978,
+            "parts": 1
+          }
+        }
+      },
+      "building": {
+        "triangles": 2460,
+        "vertices": 7380,
+        "bufferBytes": 265680,
+        "meshes": 1,
+        "baseColorPassDraws": 1,
+        "submittedTriangles": 2460,
+        "sections": {
+          "merged": {
+            "triangles": 2460,
+            "parts": 1
+          }
+        }
+      },
+      "sections": {
+        "ground": {
+          "triangles": 484,
+          "parts": 54
+        },
+        "building": {
+          "triangles": 880,
+          "parts": 47
+        },
+        "weather": {
+          "triangles": 1976,
+          "parts": 200
+        },
+        "fence": {
+          "triangles": 1048,
+          "parts": 79
+        },
+        "props": {
+          "triangles": 590,
+          "parts": 23
+        }
+      },
+      "sourceParts": 403,
+      "expensiveParts": [
+        {
+          "name": "courtyard_ritual_cauldron",
+          "section": "props",
+          "triangles": 162
+        },
+        {
+          "name": "ritual_ring",
+          "section": "building",
+          "triangles": 60
+        },
+        {
+          "name": "inner_seal",
+          "section": "building",
+          "triangles": 60
+        },
+        {
+          "name": "courtyard_cauldron_brew",
+          "section": "props",
+          "triangles": 36
+        },
+        {
+          "name": "octagonal_foundation",
+          "section": "building",
+          "triangles": 32
+        },
+        {
+          "name": "octagonal_foundation",
+          "section": "building",
+          "triangles": 32
+        },
+        {
+          "name": "eight_sided_reliquary",
+          "section": "building",
+          "triangles": 32
+        },
+        {
+          "name": "spire_collar",
+          "section": "building",
+          "triangles": 32
+        },
+        {
+          "name": "courtyard_central_ward_circle",
+          "section": "ground",
+          "triangles": 32
+        },
+        {
+          "name": "courtyard_central_ward_circle",
+          "section": "ground",
+          "triangles": 32
+        },
+        {
+          "name": "earth_module",
+          "section": "ground",
+          "triangles": 28
+        },
+        {
+          "name": "grass_module",
+          "section": "ground",
+          "triangles": 28
+        }
+      ]
+    },
+    {
+      "id": "supernatural",
+      "name": "Cripta Soprannaturale",
+      "variant": 2,
+      "variantName": "Tempio a gradoni",
+      "state": "clean",
+      "footprint": [
+        4,
+        5
+      ],
+      "full": {
+        "triangles": 3218,
+        "vertices": 9654,
+        "bufferBytes": 347544,
+        "meshes": 2,
+        "baseColorPassDraws": 2,
+        "submittedTriangles": 3218,
+        "sections": {
+          "merged": {
+            "triangles": 3218,
+            "parts": 2
+          }
+        }
+      },
+      "building": {
+        "triangles": 916,
+        "vertices": 2748,
+        "bufferBytes": 98928,
+        "meshes": 2,
+        "baseColorPassDraws": 2,
+        "submittedTriangles": 916,
+        "sections": {
+          "merged": {
+            "triangles": 916,
+            "parts": 2
+          }
+        }
+      },
+      "sections": {
+        "ground": {
+          "triangles": 412,
+          "parts": 42
+        },
+        "building": {
+          "triangles": 916,
+          "parts": 43
+        },
+        "fence": {
+          "triangles": 1120,
+          "parts": 84
+        },
+        "props": {
+          "triangles": 770,
+          "parts": 33
+        }
+      },
+      "sourceParts": 202,
+      "expensiveParts": [
+        {
+          "name": "courtyard_ritual_cauldron",
+          "section": "props",
+          "triangles": 162
+        },
+        {
+          "name": "inner_seal",
+          "section": "building",
+          "triangles": 60
+        },
+        {
+          "name": "courtyard_cauldron_brew",
+          "section": "props",
+          "triangles": 36
+        },
+        {
+          "name": "octagonal_foundation",
+          "section": "building",
+          "triangles": 32
+        },
+        {
+          "name": "octagonal_foundation",
+          "section": "building",
+          "triangles": 32
+        },
+        {
+          "name": "eight_sided_reliquary",
+          "section": "building",
+          "triangles": 32
+        },
+        {
+          "name": "spire_collar",
+          "section": "building",
+          "triangles": 32
+        },
+        {
+          "name": "ritual_roof_step",
+          "section": "building",
+          "triangles": 32
+        },
+        {
+          "name": "ritual_roof_step",
+          "section": "building",
+          "triangles": 32
+        },
+        {
+          "name": "ritual_roof_step",
+          "section": "building",
+          "triangles": 32
+        },
+        {
+          "name": "ritual_roof_step",
+          "section": "building",
+          "triangles": 32
+        },
+        {
+          "name": "courtyard_central_ward_circle",
+          "section": "ground",
+          "triangles": 32
+        }
+      ]
+    },
+    {
+      "id": "supernatural",
+      "name": "Cripta Soprannaturale",
+      "variant": 2,
+      "variantName": "Tempio a gradoni",
+      "state": "dirty",
+      "footprint": [
+        4,
+        5
+      ],
+      "full": {
+        "triangles": 4926,
+        "vertices": 14778,
+        "bufferBytes": 532008,
+        "meshes": 2,
+        "baseColorPassDraws": 2,
+        "submittedTriangles": 4926,
+        "sections": {
+          "merged": {
+            "triangles": 4926,
+            "parts": 2
+          }
+        }
+      },
+      "building": {
+        "triangles": 2228,
+        "vertices": 6684,
+        "bufferBytes": 240624,
+        "meshes": 2,
+        "baseColorPassDraws": 2,
+        "submittedTriangles": 2228,
+        "sections": {
+          "merged": {
+            "triangles": 2228,
+            "parts": 2
+          }
+        }
+      },
+      "sections": {
+        "ground": {
+          "triangles": 412,
+          "parts": 42
+        },
+        "building": {
+          "triangles": 916,
+          "parts": 43
+        },
+        "weather": {
+          "triangles": 1708,
+          "parts": 185
+        },
+        "fence": {
+          "triangles": 1120,
+          "parts": 84
+        },
+        "props": {
+          "triangles": 770,
+          "parts": 33
+        }
+      },
+      "sourceParts": 387,
+      "expensiveParts": [
+        {
+          "name": "courtyard_ritual_cauldron",
+          "section": "props",
+          "triangles": 162
+        },
+        {
+          "name": "inner_seal",
+          "section": "building",
+          "triangles": 60
+        },
+        {
+          "name": "courtyard_cauldron_brew",
+          "section": "props",
+          "triangles": 36
+        },
+        {
+          "name": "octagonal_foundation",
+          "section": "building",
+          "triangles": 32
+        },
+        {
+          "name": "octagonal_foundation",
+          "section": "building",
+          "triangles": 32
+        },
+        {
+          "name": "eight_sided_reliquary",
+          "section": "building",
+          "triangles": 32
+        },
+        {
+          "name": "spire_collar",
+          "section": "building",
+          "triangles": 32
+        },
+        {
+          "name": "ritual_roof_step",
+          "section": "building",
+          "triangles": 32
+        },
+        {
+          "name": "ritual_roof_step",
+          "section": "building",
+          "triangles": 32
+        },
+        {
+          "name": "ritual_roof_step",
+          "section": "building",
+          "triangles": 32
+        },
+        {
+          "name": "ritual_roof_step",
+          "section": "building",
+          "triangles": 32
+        },
+        {
+          "name": "courtyard_central_ward_circle",
+          "section": "ground",
+          "triangles": 32
+        }
+      ]
+    },
+    {
+      "id": "supernatural",
+      "name": "Cripta Soprannaturale",
+      "variant": 2,
+      "variantName": "Tempio a gradoni",
+      "state": "broken",
+      "footprint": [
+        4,
+        5
+      ],
+      "full": {
+        "triangles": 4906,
+        "vertices": 14718,
+        "bufferBytes": 529848,
+        "meshes": 1,
+        "baseColorPassDraws": 1,
+        "submittedTriangles": 4906,
+        "sections": {
+          "merged": {
+            "triangles": 4906,
+            "parts": 1
+          }
+        }
+      },
+      "building": {
+        "triangles": 2372,
+        "vertices": 7116,
+        "bufferBytes": 256176,
+        "meshes": 1,
+        "baseColorPassDraws": 1,
+        "submittedTriangles": 2372,
+        "sections": {
+          "merged": {
+            "triangles": 2372,
+            "parts": 1
+          }
+        }
+      },
+      "sections": {
+        "ground": {
+          "triangles": 412,
+          "parts": 42
+        },
+        "building": {
+          "triangles": 792,
+          "parts": 36
+        },
+        "weather": {
+          "triangles": 1976,
+          "parts": 200
+        },
+        "fence": {
+          "triangles": 1048,
+          "parts": 79
+        },
+        "props": {
+          "triangles": 678,
+          "parts": 27
+        }
+      },
+      "sourceParts": 384,
+      "expensiveParts": [
+        {
+          "name": "courtyard_ritual_cauldron",
+          "section": "props",
+          "triangles": 162
+        },
+        {
+          "name": "inner_seal",
+          "section": "building",
+          "triangles": 60
+        },
+        {
+          "name": "courtyard_cauldron_brew",
+          "section": "props",
+          "triangles": 36
+        },
+        {
+          "name": "octagonal_foundation",
+          "section": "building",
+          "triangles": 32
+        },
+        {
+          "name": "octagonal_foundation",
+          "section": "building",
+          "triangles": 32
+        },
+        {
+          "name": "eight_sided_reliquary",
+          "section": "building",
+          "triangles": 32
+        },
+        {
+          "name": "spire_collar",
+          "section": "building",
+          "triangles": 32
+        },
+        {
+          "name": "ritual_roof_step",
+          "section": "building",
+          "triangles": 32
+        },
+        {
+          "name": "ritual_roof_step",
+          "section": "building",
+          "triangles": 32
+        },
+        {
+          "name": "ritual_roof_step",
+          "section": "building",
+          "triangles": 32
+        },
+        {
+          "name": "ritual_roof_step",
+          "section": "building",
+          "triangles": 32
+        },
+        {
+          "name": "courtyard_central_ward_circle",
+          "section": "ground",
+          "triangles": 32
+        }
+      ]
+    },
+    {
+      "id": "supernatural",
+      "name": "Cripta Soprannaturale",
+      "variant": 3,
+      "variantName": "Guglie rituali",
+      "state": "clean",
+      "footprint": [
+        4,
+        5
+      ],
+      "full": {
+        "triangles": 3310,
+        "vertices": 9930,
+        "bufferBytes": 357480,
+        "meshes": 2,
+        "baseColorPassDraws": 2,
+        "submittedTriangles": 3310,
+        "sections": {
+          "merged": {
+            "triangles": 3310,
+            "parts": 2
+          }
+        }
+      },
+      "building": {
+        "triangles": 1120,
+        "vertices": 3360,
+        "bufferBytes": 120960,
+        "meshes": 2,
+        "baseColorPassDraws": 2,
+        "submittedTriangles": 1120,
+        "sections": {
+          "merged": {
+            "triangles": 1120,
+            "parts": 2
+          }
+        }
+      },
+      "sections": {
+        "ground": {
+          "triangles": 364,
+          "parts": 34
+        },
+        "building": {
+          "triangles": 1120,
+          "parts": 66
+        },
+        "fence": {
+          "triangles": 1120,
+          "parts": 84
+        },
+        "props": {
+          "triangles": 706,
+          "parts": 31
+        }
+      },
+      "sourceParts": 215,
+      "expensiveParts": [
+        {
+          "name": "courtyard_ritual_cauldron",
+          "section": "props",
+          "triangles": 162
+        },
+        {
+          "name": "inner_seal",
+          "section": "building",
+          "triangles": 60
+        },
+        {
+          "name": "courtyard_cauldron_brew",
+          "section": "props",
+          "triangles": 36
+        },
+        {
+          "name": "octagonal_foundation",
+          "section": "building",
+          "triangles": 32
+        },
+        {
+          "name": "octagonal_foundation",
+          "section": "building",
+          "triangles": 32
+        },
+        {
+          "name": "eight_sided_reliquary",
+          "section": "building",
+          "triangles": 32
+        },
+        {
+          "name": "spire_collar",
+          "section": "building",
+          "triangles": 32
+        },
+        {
+          "name": "courtyard_central_ward_circle",
+          "section": "ground",
+          "triangles": 32
+        },
+        {
+          "name": "courtyard_central_ward_circle",
+          "section": "ground",
+          "triangles": 32
+        },
+        {
+          "name": "earth_module",
+          "section": "ground",
+          "triangles": 28
+        },
+        {
+          "name": "grass_module",
+          "section": "ground",
+          "triangles": 28
+        },
+        {
+          "name": "entrance_step",
+          "section": "building",
+          "triangles": 28
+        }
+      ]
+    },
+    {
+      "id": "supernatural",
+      "name": "Cripta Soprannaturale",
+      "variant": 3,
+      "variantName": "Guglie rituali",
+      "state": "dirty",
+      "footprint": [
+        4,
+        5
+      ],
+      "full": {
+        "triangles": 5018,
+        "vertices": 15054,
+        "bufferBytes": 541944,
+        "meshes": 2,
+        "baseColorPassDraws": 2,
+        "submittedTriangles": 5018,
+        "sections": {
+          "merged": {
+            "triangles": 5018,
+            "parts": 2
+          }
+        }
+      },
+      "building": {
+        "triangles": 2432,
+        "vertices": 7296,
+        "bufferBytes": 262656,
+        "meshes": 2,
+        "baseColorPassDraws": 2,
+        "submittedTriangles": 2432,
+        "sections": {
+          "merged": {
+            "triangles": 2432,
+            "parts": 2
+          }
+        }
+      },
+      "sections": {
+        "ground": {
+          "triangles": 364,
+          "parts": 34
+        },
+        "building": {
+          "triangles": 1120,
+          "parts": 66
+        },
+        "weather": {
+          "triangles": 1708,
+          "parts": 185
+        },
+        "fence": {
+          "triangles": 1120,
+          "parts": 84
+        },
+        "props": {
+          "triangles": 706,
+          "parts": 31
+        }
+      },
+      "sourceParts": 400,
+      "expensiveParts": [
+        {
+          "name": "courtyard_ritual_cauldron",
+          "section": "props",
+          "triangles": 162
+        },
+        {
+          "name": "inner_seal",
+          "section": "building",
+          "triangles": 60
+        },
+        {
+          "name": "courtyard_cauldron_brew",
+          "section": "props",
+          "triangles": 36
+        },
+        {
+          "name": "octagonal_foundation",
+          "section": "building",
+          "triangles": 32
+        },
+        {
+          "name": "octagonal_foundation",
+          "section": "building",
+          "triangles": 32
+        },
+        {
+          "name": "eight_sided_reliquary",
+          "section": "building",
+          "triangles": 32
+        },
+        {
+          "name": "spire_collar",
+          "section": "building",
+          "triangles": 32
+        },
+        {
+          "name": "courtyard_central_ward_circle",
+          "section": "ground",
+          "triangles": 32
+        },
+        {
+          "name": "courtyard_central_ward_circle",
+          "section": "ground",
+          "triangles": 32
+        },
+        {
+          "name": "earth_module",
+          "section": "ground",
+          "triangles": 28
+        },
+        {
+          "name": "grass_module",
+          "section": "ground",
+          "triangles": 28
+        },
+        {
+          "name": "entrance_step",
+          "section": "building",
+          "triangles": 28
+        }
+      ]
+    },
+    {
+      "id": "supernatural",
+      "name": "Cripta Soprannaturale",
+      "variant": 3,
+      "variantName": "Guglie rituali",
+      "state": "broken",
+      "footprint": [
+        4,
+        5
+      ],
+      "full": {
+        "triangles": 4906,
+        "vertices": 14718,
+        "bufferBytes": 529848,
+        "meshes": 1,
+        "baseColorPassDraws": 1,
+        "submittedTriangles": 4906,
+        "sections": {
+          "merged": {
+            "triangles": 4906,
+            "parts": 1
+          }
+        }
+      },
+      "building": {
+        "triangles": 2476,
+        "vertices": 7428,
+        "bufferBytes": 267408,
+        "meshes": 1,
+        "baseColorPassDraws": 1,
+        "submittedTriangles": 2476,
+        "sections": {
+          "merged": {
+            "triangles": 2476,
+            "parts": 1
+          }
+        }
+      },
+      "sections": {
+        "ground": {
+          "triangles": 364,
+          "parts": 34
+        },
+        "building": {
+          "triangles": 896,
+          "parts": 51
+        },
+        "weather": {
+          "triangles": 1976,
+          "parts": 200
+        },
+        "fence": {
+          "triangles": 1048,
+          "parts": 79
+        },
+        "props": {
+          "triangles": 622,
+          "parts": 25
+        }
+      },
+      "sourceParts": 389,
+      "expensiveParts": [
+        {
+          "name": "courtyard_ritual_cauldron",
+          "section": "props",
+          "triangles": 162
+        },
+        {
+          "name": "inner_seal",
+          "section": "building",
+          "triangles": 60
+        },
+        {
+          "name": "courtyard_cauldron_brew",
+          "section": "props",
+          "triangles": 36
+        },
+        {
+          "name": "octagonal_foundation",
+          "section": "building",
+          "triangles": 32
+        },
+        {
+          "name": "octagonal_foundation",
+          "section": "building",
+          "triangles": 32
+        },
+        {
+          "name": "eight_sided_reliquary",
+          "section": "building",
+          "triangles": 32
+        },
+        {
+          "name": "spire_collar",
+          "section": "building",
+          "triangles": 32
+        },
+        {
+          "name": "courtyard_central_ward_circle",
+          "section": "ground",
+          "triangles": 32
+        },
+        {
+          "name": "courtyard_central_ward_circle",
+          "section": "ground",
+          "triangles": 32
+        },
+        {
+          "name": "earth_module",
+          "section": "ground",
+          "triangles": 28
+        },
+        {
+          "name": "grass_module",
+          "section": "ground",
+          "triangles": 28
+        },
+        {
+          "name": "entrance_step",
+          "section": "building",
+          "triangles": 28
+        }
+      ]
+    }
+  ],
+  "references": [
+    {
+      "id": "shop",
+      "name": "Bottega",
+      "state": "clean",
+      "seed": 0,
+      "variant": 0,
+      "footprint": [
+        3,
+        3
+      ],
+      "triangles": 6089,
+      "vertices": 18267,
+      "bufferBytes": 657612,
+      "baseColorPassDraws": 2
+    },
+    {
+      "id": "shop",
+      "name": "Bottega",
+      "state": "clean",
+      "seed": 1,
+      "variant": 0,
+      "footprint": [
+        3,
+        3
+      ],
+      "triangles": 6197,
+      "vertices": 18591,
+      "bufferBytes": 669276,
+      "baseColorPassDraws": 2
+    },
+    {
+      "id": "shop",
+      "name": "Bottega",
+      "state": "dirty",
+      "seed": 0,
+      "variant": 0,
+      "footprint": [
+        3,
+        3
+      ],
+      "triangles": 8327,
+      "vertices": 24981,
+      "bufferBytes": 899316,
+      "baseColorPassDraws": 2
+    },
+    {
+      "id": "shop",
+      "name": "Bottega",
+      "state": "dirty",
+      "seed": 1,
+      "variant": 0,
+      "footprint": [
+        3,
+        3
+      ],
+      "triangles": 8318,
+      "vertices": 24954,
+      "bufferBytes": 898344,
+      "baseColorPassDraws": 2
+    },
+    {
+      "id": "shop",
+      "name": "Bottega",
+      "state": "broken",
+      "seed": 0,
+      "variant": 0,
+      "footprint": [
+        3,
+        3
+      ],
+      "triangles": 9546,
+      "vertices": 28638,
+      "bufferBytes": 1030968,
+      "baseColorPassDraws": 1
+    },
+    {
+      "id": "shop",
+      "name": "Bottega",
+      "state": "broken",
+      "seed": 1,
+      "variant": 0,
+      "footprint": [
+        3,
+        3
+      ],
+      "triangles": 9537,
+      "vertices": 28611,
+      "bufferBytes": 1029996,
+      "baseColorPassDraws": 1
+    },
+    {
+      "id": "keeper_house",
+      "name": "Casa del Custode",
+      "state": "clean",
+      "seed": 0,
+      "variant": 0,
+      "footprint": [
+        4,
+        4
+      ],
+      "triangles": 4171,
+      "vertices": 12513,
+      "bufferBytes": 450468,
+      "baseColorPassDraws": 2
+    },
+    {
+      "id": "keeper_house",
+      "name": "Casa del Custode",
+      "state": "clean",
+      "seed": 1,
+      "variant": 0,
+      "footprint": [
+        4,
+        4
+      ],
+      "triangles": 4362,
+      "vertices": 13086,
+      "bufferBytes": 471096,
+      "baseColorPassDraws": 2
+    },
+    {
+      "id": "keeper_house",
+      "name": "Casa del Custode",
+      "state": "dirty",
+      "seed": 0,
+      "variant": 0,
+      "footprint": [
+        4,
+        4
+      ],
+      "triangles": 4171,
+      "vertices": 12513,
+      "bufferBytes": 450468,
+      "baseColorPassDraws": 2
+    },
+    {
+      "id": "keeper_house",
+      "name": "Casa del Custode",
+      "state": "dirty",
+      "seed": 1,
+      "variant": 0,
+      "footprint": [
+        4,
+        4
+      ],
+      "triangles": 4362,
+      "vertices": 13086,
+      "bufferBytes": 471096,
+      "baseColorPassDraws": 2
+    },
+    {
+      "id": "keeper_house",
+      "name": "Casa del Custode",
+      "state": "broken",
+      "seed": 0,
+      "variant": 0,
+      "footprint": [
+        4,
+        4
+      ],
+      "triangles": 4171,
+      "vertices": 12513,
+      "bufferBytes": 450468,
+      "baseColorPassDraws": 1
+    },
+    {
+      "id": "keeper_house",
+      "name": "Casa del Custode",
+      "state": "broken",
+      "seed": 1,
+      "variant": 0,
+      "footprint": [
+        4,
+        4
+      ],
+      "triangles": 4362,
+      "vertices": 13086,
+      "bufferBytes": 471096,
+      "baseColorPassDraws": 1
+    },
+    {
+      "id": "gravedigger_house",
+      "name": "Casa del becchino",
+      "state": "clean",
+      "seed": 0,
+      "variant": 0,
+      "footprint": [
+        4,
+        3
+      ],
+      "triangles": 4785,
+      "vertices": 14355,
+      "bufferBytes": 516780,
+      "baseColorPassDraws": 2
+    },
+    {
+      "id": "gravedigger_house",
+      "name": "Casa del becchino",
+      "state": "clean",
+      "seed": 1,
+      "variant": 0,
+      "footprint": [
+        4,
+        3
+      ],
+      "triangles": 4751,
+      "vertices": 14253,
+      "bufferBytes": 513108,
+      "baseColorPassDraws": 2
+    },
+    {
+      "id": "gravedigger_house",
+      "name": "Casa del becchino",
+      "state": "dirty",
+      "seed": 0,
+      "variant": 0,
+      "footprint": [
+        4,
+        3
+      ],
+      "triangles": 7759,
+      "vertices": 23277,
+      "bufferBytes": 837972,
+      "baseColorPassDraws": 2
+    },
+    {
+      "id": "gravedigger_house",
+      "name": "Casa del becchino",
+      "state": "dirty",
+      "seed": 1,
+      "variant": 0,
+      "footprint": [
+        4,
+        3
+      ],
+      "triangles": 7785,
+      "vertices": 23355,
+      "bufferBytes": 840780,
+      "baseColorPassDraws": 2
+    },
+    {
+      "id": "gravedigger_house",
+      "name": "Casa del becchino",
+      "state": "broken",
+      "seed": 0,
+      "variant": 0,
+      "footprint": [
+        4,
+        3
+      ],
+      "triangles": 8885,
+      "vertices": 26655,
+      "bufferBytes": 959580,
+      "baseColorPassDraws": 1
+    },
+    {
+      "id": "gravedigger_house",
+      "name": "Casa del becchino",
+      "state": "broken",
+      "seed": 1,
+      "variant": 0,
+      "footprint": [
+        4,
+        3
+      ],
+      "triangles": 9053,
+      "vertices": 27159,
+      "bufferBytes": 977724,
+      "baseColorPassDraws": 1
+    },
+    {
+      "id": "mausoleum",
+      "name": "Mausoleo",
+      "state": "clean",
+      "seed": 0,
+      "variant": 0,
+      "footprint": [
+        3,
+        3
+      ],
+      "triangles": 5200,
+      "vertices": 15600,
+      "bufferBytes": 561600,
+      "baseColorPassDraws": 2
+    },
+    {
+      "id": "mausoleum",
+      "name": "Mausoleo",
+      "state": "clean",
+      "seed": 1,
+      "variant": 0,
+      "footprint": [
+        3,
+        3
+      ],
+      "triangles": 5196,
+      "vertices": 15588,
+      "bufferBytes": 561168,
+      "baseColorPassDraws": 2
+    },
+    {
+      "id": "mausoleum",
+      "name": "Mausoleo",
+      "state": "dirty",
+      "seed": 0,
+      "variant": 0,
+      "footprint": [
+        3,
+        3
+      ],
+      "triangles": 6633,
+      "vertices": 19899,
+      "bufferBytes": 716364,
+      "baseColorPassDraws": 2
+    },
+    {
+      "id": "mausoleum",
+      "name": "Mausoleo",
+      "state": "dirty",
+      "seed": 1,
+      "variant": 0,
+      "footprint": [
+        3,
+        3
+      ],
+      "triangles": 6691,
+      "vertices": 20073,
+      "bufferBytes": 722628,
+      "baseColorPassDraws": 2
+    },
+    {
+      "id": "mausoleum",
+      "name": "Mausoleo",
+      "state": "broken",
+      "seed": 0,
+      "variant": 0,
+      "footprint": [
+        3,
+        3
+      ],
+      "triangles": 6951,
+      "vertices": 20853,
+      "bufferBytes": 750708,
+      "baseColorPassDraws": 1
+    },
+    {
+      "id": "mausoleum",
+      "name": "Mausoleo",
+      "state": "broken",
+      "seed": 1,
+      "variant": 0,
+      "footprint": [
+        3,
+        3
+      ],
+      "triangles": 7041,
+      "vertices": 21123,
+      "bufferBytes": 760428,
+      "baseColorPassDraws": 1
+    }
+  ],
+  "webglColorPassMeasurements": [
+    {
+      "type": "zombie",
+      "state": "clean",
+      "variant": 1,
+      "drawCalls": 2,
+      "triangles": 4458,
+      "geometryTriangles": 4458
+    },
+    {
+      "type": "zombie",
+      "state": "dirty",
+      "variant": 1,
+      "drawCalls": 2,
+      "triangles": 6206,
+      "geometryTriangles": 6206
+    },
+    {
+      "type": "zombie",
+      "state": "broken",
+      "variant": 1,
+      "drawCalls": 1,
+      "triangles": 6410,
+      "geometryTriangles": 6410
+    },
+    {
+      "type": "zombie",
+      "state": "clean",
+      "variant": 2,
+      "drawCalls": 2,
+      "triangles": 4674,
+      "geometryTriangles": 4674
+    },
+    {
+      "type": "zombie",
+      "state": "dirty",
+      "variant": 2,
+      "drawCalls": 2,
+      "triangles": 6422,
+      "geometryTriangles": 6422
+    },
+    {
+      "type": "zombie",
+      "state": "broken",
+      "variant": 2,
+      "drawCalls": 1,
+      "triangles": 6638,
+      "geometryTriangles": 6638
+    },
+    {
+      "type": "zombie",
+      "state": "clean",
+      "variant": 3,
+      "drawCalls": 2,
+      "triangles": 4750,
+      "geometryTriangles": 4750
+    },
+    {
+      "type": "zombie",
+      "state": "dirty",
+      "variant": 3,
+      "drawCalls": 2,
+      "triangles": 6498,
+      "geometryTriangles": 6498
+    },
+    {
+      "type": "zombie",
+      "state": "broken",
+      "variant": 3,
+      "drawCalls": 1,
+      "triangles": 6702,
+      "geometryTriangles": 6702
+    },
+    {
+      "type": "ghost",
+      "state": "clean",
+      "variant": 1,
+      "drawCalls": 2,
+      "triangles": 3453,
+      "geometryTriangles": 3453
+    },
+    {
+      "type": "ghost",
+      "state": "dirty",
+      "variant": 1,
+      "drawCalls": 2,
+      "triangles": 5201,
+      "geometryTriangles": 5201
+    },
+    {
+      "type": "ghost",
+      "state": "broken",
+      "variant": 1,
+      "drawCalls": 1,
+      "triangles": 5285,
+      "geometryTriangles": 5285
+    },
+    {
+      "type": "ghost",
+      "state": "clean",
+      "variant": 2,
+      "drawCalls": 2,
+      "triangles": 3617,
+      "geometryTriangles": 3617
+    },
+    {
+      "type": "ghost",
+      "state": "dirty",
+      "variant": 2,
+      "drawCalls": 2,
+      "triangles": 5365,
+      "geometryTriangles": 5365
+    },
+    {
+      "type": "ghost",
+      "state": "broken",
+      "variant": 2,
+      "drawCalls": 1,
+      "triangles": 5381,
+      "geometryTriangles": 5381
+    },
+    {
+      "type": "ghost",
+      "state": "clean",
+      "variant": 3,
+      "drawCalls": 2,
+      "triangles": 3765,
+      "geometryTriangles": 3765
+    },
+    {
+      "type": "ghost",
+      "state": "dirty",
+      "variant": 3,
+      "drawCalls": 2,
+      "triangles": 5513,
+      "geometryTriangles": 5513
+    },
+    {
+      "type": "ghost",
+      "state": "broken",
+      "variant": 3,
+      "drawCalls": 1,
+      "triangles": 5561,
+      "geometryTriangles": 5561
+    },
+    {
+      "type": "skeleton",
+      "state": "clean",
+      "variant": 1,
+      "drawCalls": 2,
+      "triangles": 6198,
+      "geometryTriangles": 6198
+    },
+    {
+      "type": "skeleton",
+      "state": "dirty",
+      "variant": 1,
+      "drawCalls": 2,
+      "triangles": 7906,
+      "geometryTriangles": 7906
+    },
+    {
+      "type": "skeleton",
+      "state": "broken",
+      "variant": 1,
+      "drawCalls": 1,
+      "triangles": 7890,
+      "geometryTriangles": 7890
+    },
+    {
+      "type": "skeleton",
+      "state": "clean",
+      "variant": 2,
+      "drawCalls": 2,
+      "triangles": 6070,
+      "geometryTriangles": 6070
+    },
+    {
+      "type": "skeleton",
+      "state": "dirty",
+      "variant": 2,
+      "drawCalls": 2,
+      "triangles": 7778,
+      "geometryTriangles": 7778
+    },
+    {
+      "type": "skeleton",
+      "state": "broken",
+      "variant": 2,
+      "drawCalls": 1,
+      "triangles": 7790,
+      "geometryTriangles": 7790
+    },
+    {
+      "type": "skeleton",
+      "state": "clean",
+      "variant": 3,
+      "drawCalls": 2,
+      "triangles": 6340,
+      "geometryTriangles": 6340
+    },
+    {
+      "type": "skeleton",
+      "state": "dirty",
+      "variant": 3,
+      "drawCalls": 2,
+      "triangles": 8048,
+      "geometryTriangles": 8048
+    },
+    {
+      "type": "skeleton",
+      "state": "broken",
+      "variant": 3,
+      "drawCalls": 1,
+      "triangles": 8020,
+      "geometryTriangles": 8020
+    },
+    {
+      "type": "nature",
+      "state": "clean",
+      "variant": 1,
+      "drawCalls": 2,
+      "triangles": 4952,
+      "geometryTriangles": 4952
+    },
+    {
+      "type": "nature",
+      "state": "dirty",
+      "variant": 1,
+      "drawCalls": 2,
+      "triangles": 6740,
+      "geometryTriangles": 6740
+    },
+    {
+      "type": "nature",
+      "state": "broken",
+      "variant": 1,
+      "drawCalls": 1,
+      "triangles": 6692,
+      "geometryTriangles": 6692
+    },
+    {
+      "type": "nature",
+      "state": "clean",
+      "variant": 2,
+      "drawCalls": 2,
+      "triangles": 5324,
+      "geometryTriangles": 5324
+    },
+    {
+      "type": "nature",
+      "state": "dirty",
+      "variant": 2,
+      "drawCalls": 2,
+      "triangles": 7112,
+      "geometryTriangles": 7112
+    },
+    {
+      "type": "nature",
+      "state": "broken",
+      "variant": 2,
+      "drawCalls": 1,
+      "triangles": 7012,
+      "geometryTriangles": 7012
+    },
+    {
+      "type": "nature",
+      "state": "clean",
+      "variant": 3,
+      "drawCalls": 2,
+      "triangles": 5452,
+      "geometryTriangles": 5452
+    },
+    {
+      "type": "nature",
+      "state": "dirty",
+      "variant": 3,
+      "drawCalls": 2,
+      "triangles": 7240,
+      "geometryTriangles": 7240
+    },
+    {
+      "type": "nature",
+      "state": "broken",
+      "variant": 3,
+      "drawCalls": 1,
+      "triangles": 7060,
+      "geometryTriangles": 7060
+    },
+    {
+      "type": "supernatural",
+      "state": "clean",
+      "variant": 1,
+      "drawCalls": 2,
+      "triangles": 3366,
+      "geometryTriangles": 3366
+    },
+    {
+      "type": "supernatural",
+      "state": "dirty",
+      "variant": 1,
+      "drawCalls": 2,
+      "triangles": 5074,
+      "geometryTriangles": 5074
+    },
+    {
+      "type": "supernatural",
+      "state": "broken",
+      "variant": 1,
+      "drawCalls": 1,
+      "triangles": 4978,
+      "geometryTriangles": 4978
+    },
+    {
+      "type": "supernatural",
+      "state": "clean",
+      "variant": 2,
+      "drawCalls": 2,
+      "triangles": 3218,
+      "geometryTriangles": 3218
+    },
+    {
+      "type": "supernatural",
+      "state": "dirty",
+      "variant": 2,
+      "drawCalls": 2,
+      "triangles": 4926,
+      "geometryTriangles": 4926
+    },
+    {
+      "type": "supernatural",
+      "state": "broken",
+      "variant": 2,
+      "drawCalls": 1,
+      "triangles": 4906,
+      "geometryTriangles": 4906
+    },
+    {
+      "type": "supernatural",
+      "state": "clean",
+      "variant": 3,
+      "drawCalls": 2,
+      "triangles": 3310,
+      "geometryTriangles": 3310
+    },
+    {
+      "type": "supernatural",
+      "state": "dirty",
+      "variant": 3,
+      "drawCalls": 2,
+      "triangles": 5018,
+      "geometryTriangles": 5018
+    },
+    {
+      "type": "supernatural",
+      "state": "broken",
+      "variant": 3,
+      "drawCalls": 1,
+      "triangles": 4906,
+      "geometryTriangles": 4906
+    }
+  ],
+  "baselineCapturedAt": "2026-11-04T15:13:39.574Z",
+  "comparisons": [
+    {
+      "id": "zombie",
+      "name": "Cripta degli Zombie",
+      "state": "clean",
+      "before": 6604,
+      "after": 4458,
+      "reductionPercent": 32.4954572986069,
+      "drawsBefore": 8,
+      "drawsAfter": 2,
+      "bufferBytesBefore": 713232,
+      "bufferBytesAfter": 481464
+    },
+    {
+      "id": "zombie",
+      "name": "Cripta degli Zombie",
+      "state": "dirty",
+      "before": 9680,
+      "after": 6206,
+      "reductionPercent": 35.888429752066116,
+      "drawsBefore": 8,
+      "drawsAfter": 2,
+      "bufferBytesBefore": 1045440,
+      "bufferBytesAfter": 670248
+    },
+    {
+      "id": "zombie",
+      "name": "Cripta degli Zombie",
+      "state": "broken",
+      "before": 9892,
+      "after": 6410,
+      "reductionPercent": 35.20016174686616,
+      "drawsBefore": 1,
+      "drawsAfter": 1,
+      "bufferBytesBefore": 1068336,
+      "bufferBytesAfter": 692280
+    },
+    {
+      "id": "ghost",
+      "name": "Cripta dei Fantasmi",
+      "state": "clean",
+      "before": 6288,
+      "after": 3453,
+      "reductionPercent": 45.085877862595424,
+      "drawsBefore": 10,
+      "drawsAfter": 2,
+      "bufferBytesBefore": 679104,
+      "bufferBytesAfter": 372924
+    },
+    {
+      "id": "ghost",
+      "name": "Cripta dei Fantasmi",
+      "state": "dirty",
+      "before": 9364,
+      "after": 5201,
+      "reductionPercent": 44.457496796240925,
+      "drawsBefore": 10,
+      "drawsAfter": 2,
+      "bufferBytesBefore": 1011312,
+      "bufferBytesAfter": 561708
+    },
+    {
+      "id": "ghost",
+      "name": "Cripta dei Fantasmi",
+      "state": "broken",
+      "before": 9256,
+      "after": 5285,
+      "reductionPercent": 42.9019014693172,
+      "drawsBefore": 1,
+      "drawsAfter": 1,
+      "bufferBytesBefore": 999648,
+      "bufferBytesAfter": 570780
+    },
+    {
+      "id": "skeleton",
+      "name": "Cripta degli Scheletri",
+      "state": "clean",
+      "before": 11474,
+      "after": 6198,
+      "reductionPercent": 45.98222067282551,
+      "drawsBefore": 7,
+      "drawsAfter": 2,
+      "bufferBytesBefore": 1239192,
+      "bufferBytesAfter": 669384
+    },
+    {
+      "id": "skeleton",
+      "name": "Cripta degli Scheletri",
+      "state": "dirty",
+      "before": 14490,
+      "after": 7906,
+      "reductionPercent": 45.43823326432022,
+      "drawsBefore": 7,
+      "drawsAfter": 2,
+      "bufferBytesBefore": 1564920,
+      "bufferBytesAfter": 853848
+    },
+    {
+      "id": "skeleton",
+      "name": "Cripta degli Scheletri",
+      "state": "broken",
+      "before": 14426,
+      "after": 7890,
+      "reductionPercent": 45.30708443088868,
+      "drawsBefore": 1,
+      "drawsAfter": 1,
+      "bufferBytesBefore": 1558008,
+      "bufferBytesAfter": 852120
+    },
+    {
+      "id": "nature",
+      "name": "Cripta della Natura",
+      "state": "clean",
+      "before": 7182,
+      "after": 4952,
+      "reductionPercent": 31.049846839320526,
+      "drawsBefore": 7,
+      "drawsAfter": 2,
+      "bufferBytesBefore": 775656,
+      "bufferBytesAfter": 534816
+    },
+    {
+      "id": "nature",
+      "name": "Cripta della Natura",
+      "state": "dirty",
+      "before": 10282,
+      "after": 6740,
+      "reductionPercent": 34.448550865590356,
+      "drawsBefore": 7,
+      "drawsAfter": 2,
+      "bufferBytesBefore": 1110456,
+      "bufferBytesAfter": 727920
+    },
+    {
+      "id": "nature",
+      "name": "Cripta della Natura",
+      "state": "broken",
+      "before": 10156,
+      "after": 6692,
+      "reductionPercent": 34.107916502560066,
+      "drawsBefore": 1,
+      "drawsAfter": 1,
+      "bufferBytesBefore": 1096848,
+      "bufferBytesAfter": 722736
+    },
+    {
+      "id": "supernatural",
+      "name": "Cripta Soprannaturale",
+      "state": "clean",
+      "before": 5708,
+      "after": 3366,
+      "reductionPercent": 41.03013314646111,
+      "drawsBefore": 8,
+      "drawsAfter": 2,
+      "bufferBytesBefore": 616464,
+      "bufferBytesAfter": 363528
+    },
+    {
+      "id": "supernatural",
+      "name": "Cripta Soprannaturale",
+      "state": "dirty",
+      "before": 8704,
+      "after": 5074,
+      "reductionPercent": 41.704963235294116,
+      "drawsBefore": 8,
+      "drawsAfter": 2,
+      "bufferBytesBefore": 940032,
+      "bufferBytesAfter": 547992
+    },
+    {
+      "id": "supernatural",
+      "name": "Cripta Soprannaturale",
+      "state": "broken",
+      "before": 8460,
+      "after": 4978,
+      "reductionPercent": 41.15839243498818,
+      "drawsBefore": 1,
+      "drawsAfter": 1,
+      "bufferBytesBefore": 913680,
+      "bufferBytesAfter": 537624
+    }
+  ]
+}

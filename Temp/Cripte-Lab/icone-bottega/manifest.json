@@ -1,0 +1,99 @@
+{
+  "width": 320,
+  "height": 320,
+  "format": "webp",
+  "background": "transparent",
+  "state": "clean",
+  "icons": [
+    {
+      "id": "zombie",
+      "name": "Zombie",
+      "variant": 1,
+      "file": "cripta-zombie-v1.webp"
+    },
+    {
+      "id": "zombie",
+      "name": "Zombie",
+      "variant": 2,
+      "file": "cripta-zombie-v2.webp"
+    },
+    {
+      "id": "zombie",
+      "name": "Zombie",
+      "variant": 3,
+      "file": "cripta-zombie-v3.webp"
+    },
+    {
+      "id": "ghost",
+      "name": "Fantasmi",
+      "variant": 1,
+      "file": "cripta-ghost-v1.webp"
+    },
+    {
+      "id": "ghost",
+      "name": "Fantasmi",
+      "variant": 2,
+      "file": "cripta-ghost-v2.webp"
+    },
+    {
+      "id": "ghost",
+      "name": "Fantasmi",
+      "variant": 3,
+      "file": "cripta-ghost-v3.webp"
+    },
+    {
+      "id": "skeleton",
+      "name": "Scheletri",
+      "variant": 1,
+      "file": "cripta-skeleton-v1.webp"
+    },
+    {
+      "id": "skeleton",
+      "name": "Scheletri",
+      "variant": 2,
+      "file": "cripta-skeleton-v2.webp"
+    },
+    {
+      "id": "skeleton",
+      "name": "Scheletri",
+      "variant": 3,
+      "file": "cripta-skeleton-v3.webp"
+    },
+    {
+      "id": "nature",
+      "name": "Natura",
+      "variant": 1,
+      "file": "cripta-nature-v1.webp"
+    },
+    {
+      "id": "nature",
+      "name": "Natura",
+      "variant": 2,
+      "file": "cripta-nature-v2.webp"
+    },
+    {
+      "id": "nature",
+      "name": "Natura",
+      "variant": 3,
+      "file": "cripta-nature-v3.webp"
+    },
+    {
+      "id": "supernatural",
+      "name": "Soprannaturale",
+      "variant": 1,
+      "file": "cripta-supernatural-v1.webp"
+    },
+    {
+      "id": "supernatural",
+      "name": "Soprannaturale",
+      "variant": 2,
+      "file": "cripta-supernatural-v2.webp"
+    },
+    {
+      "id": "supernatural",
+      "name": "Soprannaturale",
+      "variant": 3,
+      "file": "cripta-supernatural-v3.webp"
+    }
+  ]
+}

@@ -1629,8 +1629,8 @@ export default {
   "item.cryptGhost.desc": "一座回忆花园，有月光水池和一条聊天长椅。共有三种设计，犹豫不决的幽灵们抽签决定。",
   "item.cryptSkeleton.label": "骷髅墓室",
   "item.cryptSkeleton.desc": "一间用骨头和木头搭成的排练室，马林巴琴也包含在内。可能有三个版本；你会得到哪个，由鼓手踩着节拍决定。",
-  "item.cryptSupernatural.label": "超自然墓室",
-  "item.cryptSupernatural.desc": "一座仪式庭院，有法印、水晶和大锅。共有三个版本：由彼岸决定，且概不受理投诉。",
   "sim.zombieMud#one": "你不在的时候有只僵尸路过：一块墓碑沾满了泥脚印。",
-  "sim.zombieMud#other": "你不在的时候有僵尸路过：{n} 块墓碑沾满了泥脚印。"
+  "sim.zombieMud#other": "你不在的时候有僵尸路过：{n} 块墓碑沾满了泥脚印。",
+  "item.cryptWitch.label": "女巫墓室",
+  "item.cryptWitch.desc": "女巫的家：帽子形状的屋顶、刻在地上的圆圈，还有花园里咕嘟作响的东西。共有三个版本：由大锅决定，而大锅的决定没得商量。"
 } satisfies Record<string, string>;

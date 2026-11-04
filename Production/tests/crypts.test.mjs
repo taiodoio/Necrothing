@@ -16,7 +16,7 @@ const build = (type, variant, dirty = false, broken = false, lit = true) => reso
 
 test('cripte: cinque voci in Bottega, lotti 4×5 ruotabili, a più versioni, nella Full', () => {
   assert.equal(CRYPT_TYPES.length, 5);
-  assert.deepEqual(CRYPT_FAMILIES, ['zombie', 'ghost', 'skeleton', 'nature', 'supernatural']);
+  assert.deepEqual(CRYPT_FAMILIES, ['zombie', 'ghost', 'skeleton', 'nature', 'witch']);
   for (const type of CRYPT_TYPES) {
     const d = CATALOG[type];
     assert.ok(d, type);
@@ -145,6 +145,21 @@ test('cripte: le superfici aperte (spicchi del tetto, vasca rotta, anelli a met�
   };
   for (let i = 0; i < n; i += 3) assert.ok(nrm(i).dot(nrm(n + i)) < -0.99, 'il gemello guarda dall\'altra parte');
   // il tetto ottagonale rotto (due spicchi mancano): gli altri spicchi hanno anche il rovescio
-  const broken = build('crypt_supernatural', 0, true, true), whole = build('crypt_supernatural', 0);
+  const broken = build('crypt_witch', 0, true, true), whole = build('crypt_witch', 0);
   assert.ok(tris(broken) > 0 && tris(whole) > 0);
+});
+
+test('cripte: ogni versione ha la sua anteprima (Bottega mostra la principale, la scheda di una cripta posata la sua)', async () => {
+  const fs = await import('node:fs');
+  for (const type of CRYPT_TYPES) for (const id of [type, `${type}-v2`, `${type}-v3`]) {
+    assert.ok(fs.existsSync(new URL(`../src/assets/previews/${id}.webp`, import.meta.url)), `manca l'anteprima ${id}`);
+  }
+});
+
+test('cripta della strega: grande calderone (1), calderone piccolo e tavolino (2), tavolo di vasetti e pozioni (3)', () => {
+  const lit = (v) => build('crypt_witch', v);
+  // le tre versioni sono davvero diverse nel giardino, e accese hanno tutte la loro luce verde
+  const sizes = [0, 1, 2].map((v) => tris(lit(v)));
+  assert.equal(new Set(sizes).size, 3);
+  for (let v = 0; v < 3; v++) assert.ok(lit(v).lights.some((l) => l.color === '#9af06a'), `versione ${v + 1}: luce della pozione`);
 });

@@ -1629,8 +1629,8 @@ export default {
   "item.cryptGhost.desc": "Un jardin du souvenir avec un bassin lunaire et un banc pour papoter. Il y a trois plans et les fantômes, indécis, tirent au sort.",
   "item.cryptSkeleton.label": "Crypte des squelettes",
   "item.cryptSkeleton.desc": "Une salle de répétition en os et en bois, marimba comprise. Trois versions sont possibles ; c’est le batteur qui choisit laquelle, en rythme.",
-  "item.cryptSupernatural.label": "Crypte surnaturelle",
-  "item.cryptSupernatural.desc": "Une cour rituelle avec un sceau, un cristal et un chaudron. Il y a trois versions : l’au-delà choisit, et n’accepte aucune réclamation.",
   "sim.zombieMud#one": "Un zombie est passé pendant ton absence : une pierre tombale est couverte d’empreintes de boue.",
-  "sim.zombieMud#other": "Des zombies sont passés pendant ton absence : {n} pierres tombales sont couvertes d’empreintes de boue."
+  "sim.zombieMud#other": "Des zombies sont passés pendant ton absence : {n} pierres tombales sont couvertes d’empreintes de boue.",
+  "item.cryptWitch.label": "Crypte de la sorcière",
+  "item.cryptWitch.desc": "La maison de la sorcière : un toit en forme de chapeau, un cercle gravé et quelque chose qui bouillonne au jardin. Il y a trois versions : le chaudron décide, et on ne discute pas avec le chaudron."
 } satisfies Record<string, string>;

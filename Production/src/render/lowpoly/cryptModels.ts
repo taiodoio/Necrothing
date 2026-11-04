@@ -11,7 +11,7 @@ import { BUILDINGS } from './cryptBuildings.ts';
 import { yard, fence } from './cryptYards.ts';
 import type { CryptCtx } from './cryptKit.ts';
 
-export const CRYPT_FAMILIES = ['zombie', 'ghost', 'skeleton', 'nature', 'supernatural'] as const;
+export const CRYPT_FAMILIES = ['zombie', 'ghost', 'skeleton', 'nature', 'witch'] as const;
 export type CryptFamily = (typeof CRYPT_FAMILIES)[number];
 /** Quante versioni ha ogni famiglia (la numero 0 è la «principale»: quella che si vede in Bottega). */
 export const CRYPT_VARIANTS = 3;
@@ -30,7 +30,7 @@ const LIGHTS: Record<CryptFamily, Array<[number, number, number, string, number,
   ghost: [[0.99, 0.76, 0.55, '#88cbbb', 0.6, 3.3, 0.18, 0.6, 'body'], [-0.56, 0.26, 1.16, '#a0d3c4', 0.48, 2.7, 0.12, 0.45, 'yard']],
   skeleton: [[-1.05, 0.3, 0.95, '#f2ac58', 0.52, 3, 0.25, 0.5, 'body'], [1.05, 0.3, 0.95, '#f2ac58', 0.52, 3, 0.25, 0.5, 'body']],
   nature: [[-0.51, 0.35, 1.11, '#e3bb70', 0.52, 3, 0.25, 0.5, 'body'], [0.51, 0.35, 1.11, '#e3bb70', 0.52, 3, 0.25, 0.5, 'body']],
-  supernatural: [[0, 1.0, 1.18, '#bca1d2', 0.7, 4, 0.16, 0.7, 'yard'], [0, 2.49, -0.35, '#bea3d0', 0.52, 3, 0.12, 0.5, 'body']],
+  witch: [[0, 0.75, 1.18, '#9af06a', 0.7, 4, 0.22, 0.7, 'yard'], [0, 0.6, 0.85, '#b8f08a', 0.45, 2.6, 0.2, 0.45, 'body']],
 };
 
 export function cryptLP(v: PVis): LPModel {

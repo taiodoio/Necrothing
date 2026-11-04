@@ -16,7 +16,7 @@ type Opts = LPOpts & { bevel?: number };
 export interface CryptCtx {
   lp: LP;
   v: PVis;
-  family: 'zombie' | 'ghost' | 'skeleton' | 'nature' | 'supernatural';
+  family: 'zombie' | 'ghost' | 'skeleton' | 'nature' | 'witch';
   variant: 1 | 2 | 3;
   /** Luci accese: non rotta e acceso. */
   lit: boolean;

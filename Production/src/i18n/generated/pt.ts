@@ -1629,8 +1629,8 @@ export default {
   "item.cryptGhost.desc": "Um jardim da memória com lago lunar e um banco para conversar. Há três projetos e os fantasmas, indecisos, tiram à sorte.",
   "item.cryptSkeleton.label": "Cripta dos Esqueletos",
   "item.cryptSkeleton.desc": "Uma sala de ensaio de osso e madeira, marimba incluída. São possíveis três versões; qual te calha decide-o o baterista, a compasso.",
-  "item.cryptSupernatural.label": "Cripta Sobrenatural",
-  "item.cryptSupernatural.desc": "Um pátio ritual com um selo, um cristal e um caldeirão. Há três versões: escolhe o além, e não aceita reclamações.",
   "sim.zombieMud#one": "Um zombie passou enquanto estiveste fora: uma lápide ficou cheia de pegadas de lama.",
-  "sim.zombieMud#other": "Uns zombies passaram enquanto estiveste fora: {n} lápides ficaram cheias de pegadas de lama."
+  "sim.zombieMud#other": "Uns zombies passaram enquanto estiveste fora: {n} lápides ficaram cheias de pegadas de lama.",
+  "item.cryptWitch.label": "Cripta da Bruxa",
+  "item.cryptWitch.desc": "A casa da bruxa: um telhado em forma de chapéu, um círculo gravado e algo a borbulhar no jardim. Há três versões: decide o caldeirão, e com o caldeirão não se discute."
 } satisfies Record<string, string>;

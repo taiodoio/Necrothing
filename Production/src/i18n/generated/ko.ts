@@ -1629,8 +1629,8 @@ export default {
   "item.cryptGhost.desc": "달빛 연못과 수다 떨기 좋은 벤치가 있는 기억의 정원. 설계는 세 가지이고, 우유부단한 유령들이 제비뽑기로 정합니다.",
   "item.cryptSkeleton.label": "해골 납골당",
   "item.cryptSkeleton.desc": "뼈와 나무로 만든 연습실, 마림바 포함. 가능한 버전은 세 가지이고, 어떤 것이 올지는 드러머가 박자에 맞춰 정합니다.",
-  "item.cryptSupernatural.label": "초자연 납골당",
-  "item.cryptSupernatural.desc": "봉인과 수정, 가마솥이 있는 의식의 안뜰. 버전은 세 가지이고, 저승이 고르며 불만은 받지 않습니다.",
   "sim.zombieMud#one": "자리를 비운 사이 좀비가 지나갔어요. 묘비 하나가 진흙 발자국투성이예요.",
-  "sim.zombieMud#other": "자리를 비운 사이 좀비들이 지나갔어요. 묘비 {n}개가 진흙 발자국투성이예요."
+  "sim.zombieMud#other": "자리를 비운 사이 좀비들이 지나갔어요. 묘비 {n}개가 진흙 발자국투성이예요.",
+  "item.cryptWitch.label": "마녀 납골당",
+  "item.cryptWitch.desc": "마녀의 집. 모자 모양 지붕, 새겨진 원, 그리고 정원에서 보글보글 끓는 무언가. 버전은 세 가지이고, 가마솥이 정하니 가마솥과는 다투지 마세요."
 } satisfies Record<string, string>;

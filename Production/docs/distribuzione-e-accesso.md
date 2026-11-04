@@ -176,7 +176,7 @@ Generato dal codice il 27/10/2026.
 | `crypt_nature` | full | 3 | 65 | lotto 4 × 5, tre versioni a caso alla posa |
 | `crypt_ghost` | full | 4 | 75 | lotto 4 × 5, tre versioni a caso alla posa |
 | `crypt_skeleton` | full | 4 | 85 | lotto 4 × 5, tre versioni a caso alla posa |
-| `crypt_supernatural` | full | 5 | 100 | lotto 4 × 5, tre versioni a caso alla posa |
+| `crypt_witch` | full | 5 | 100 | lotto 4 × 5, tre versioni a caso alla posa |
 | `open_grave` | demo | 2 | 12 | — |
 | `wall_stone` | demo | 1 | 3 | — |
 | `fence_wood` | demo | 1 | 2 | — |

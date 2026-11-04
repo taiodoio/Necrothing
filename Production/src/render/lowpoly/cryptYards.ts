@@ -39,11 +39,11 @@ function ground(c: CryptCtx) {
         groundRing(lp, x, 0.067, z, r * 0.57, 0.014, '#746245', 10);
       });
       break;
-    case 'supernatural': {
-      slab(lp, 0, 0.01, 1.18, 1.94, 0.065, 1.91, '#554e62');
-      const ring = emit(c, v.broken ? '#746476' : '#ba9ecd');
+    case 'witch': {
+      slab(lp, 0, 0.01, 1.18, 1.94, 0.065, 1.91, '#4a463f');
+      const ring = emit(c, v.broken ? '#4f5a48' : '#7fcf6a');
       for (const r of [0.69, 0.77]) groundRing(lp, 0, 0.075, 1.18, r, 0.02, ring.color, 16, Math.PI * 2, ring.o);
-      for (const z of [0.21, 2.2, 2.38]) slab(lp, 0, 0.01, z, 0.58, 0.055, 0.19, '#74697e');
+      for (const z of [0.21, 2.2, 2.38]) slab(lp, 0, 0.01, z, 0.58, 0.055, 0.19, '#6f685d');
       break;
     }
   }
@@ -218,41 +218,144 @@ function natureYard(c: CryptCtx) {
   torus(lp, -0.76, 0.18, 1.62, 0.1, 0.016, '#8a9b7b');
 }
 
-function supernaturalYard(c: CryptCtx) {
+const BREW = '#9af06a';
+
+/** Calderone tornito su tre piedi, con la pozione (luminosa se accesa); `s` scala. */
+function cauldron(c: CryptCtx, x: number, z: number, s: number, fire: boolean, pot = true) {
   const { lp, v } = c;
+  const prof0: Array<[number, number]> = [[0, 0], [0.1, 0], [0.27, 0.08], [0.31, 0.29], [0.25, 0.42], [0.2, 0.43], [0.23, 0.35], [0.24, 0.16], [0.1, 0.07], [0, 0.07]];
+  const y0 = fire ? 0.16 : 0.07;
+  if (pot) {
+    turned(lp, x, y0, z, prof0.map(([r, y]) => [r * s, y * s] as [number, number]), 10, '#2f2c2e');
+    for (let i = 0; i < 3; i++) { const a = (i * Math.PI * 2) / 3 + 0.5; beam(lp, [x + Math.cos(a) * 0.2 * s, 0.02, z + Math.sin(a) * 0.2 * s], [x + Math.cos(a) * 0.14 * s, y0 + 0.12 * s, z + Math.sin(a) * 0.14 * s], 0.03, LPC.iron); }
+    const brew = emit(c, v.broken ? '#3f4a38' : BREW);
+    lp.cyl(x, y0 + 0.36 * s, z, 0.205 * s, 0.205 * s, 0.015, 10, brew.color, { ...brew.o, jitter: 0 });
+    if (!v.broken) for (let i = 0; i < 3; i++) flame(c, x + Math.sin(i * 2) * 0.1 * s, y0 + (0.5 + i * 0.12) * s, z + Math.cos(i * 2) * 0.05, '#c8ff9a', (0.035 - i * 0.006) * s);
+  }
+  if (fire) {
+    for (let i = 0; i < 3; i++) { const a = (i * Math.PI * 2) / 3; beam(lp, [x + Math.cos(a) * 0.32, 0.03, z + Math.sin(a) * 0.32], [x - Math.cos(a) * 0.05, 0.08, z - Math.sin(a) * 0.05], 0.04, LPC.woodDark); }
+    if (!v.broken) for (const [dx, dz, r] of [[0, 0, 0.09], [0.08, 0.05, 0.06], [-0.07, 0.04, 0.06]] as const) flame(c, x + dx, 0.1, z + dz, LPC.lantern, r);
+    else lp.blob(x, 0.04, z, 0.2, 0.04, 0.2, LPC.charcoal);
+  }
+}
+
+/** Vasetto col tappo: il contenuto (erbe, o una pozione che brilla) si vede, il vetro è solo l'orlo in alto. */
+function jar(c: CryptCtx, x: number, y: number, z: number, h: number, r: number, fill: string, glow: boolean) {
+  const { lp, v } = c;
+  const f = glow ? emit(c, v.broken ? '#3f4a38' : fill) : { color: fill, o: {} };
+  lp.cyl(x, y, z, r, r * 0.92, h * 0.78, 7, f.color, { ...f.o, jitter: 0, vary: 0.06 });
+  lp.cyl(x, y + h * 0.78, z, r * 0.92, r * 0.75, h * 0.22, 7, '#c9d6d2', { bucket: 'gloss', jitter: 0, ao: 0 });
+  lp.cyl(x, y + h, z, r * 0.6, r * 0.65, 0.025, 6, '#a58c66', { jitter: 0 });
+}
+
+/** Mazzetto d'erbe disteso sul tavolo. */
+function herbBundle(c: CryptCtx, x: number, y: number, z: number, ry: number, color: string) {
+  c.lp.push([x, y, z], ry, 0, Math.PI / 2).cyl(0, -0.08, 0, 0.03, 0.012, 0.16, 5, color, { vary: 0.15, jitter: 0.006 }).pop();
+  c.lp.push([x, y, z], ry, 0, Math.PI / 2).cyl(0, 0.08, 0, 0.008, 0.008, 0.04, 3, '#b4a78a', { jitter: 0 }).pop();
+}
+
+/** Tavolino della strega: piano di legno su quattro gambe storte, con erbe o vasetti e pozioni. */
+function witchTable(c: CryptCtx, x: number, z: number, w: number, d: number, ry: number, kind: 'herbs' | 'potions') {
+  const { lp, v } = c;
+  const H = 0.42;
+  lp.push([x, 0, z], ry);
+  const tilt = v.broken ? 0.18 : 0;
+  lp.push([0, 0, 0], 0, 0, tilt);
+  for (const sx of [-1, 1]) for (const sz of [-1, 1]) {
+    if (v.broken && sx === 1 && sz === 1) continue;
+    beam(lp, [sx * (w / 2 - 0.05), 0, sz * (d / 2 - 0.05)], [sx * (w / 2 - 0.07), H, sz * (d / 2 - 0.06)], 0.025, LPC.woodDark);
+  }
+  lp.box(0, H, 0, w, 0.04, d, '#6b5240', { bevel: 0.01, vary: 0.1 });
+  lp.box(0, H * 0.35, 0, w - 0.1, 0.025, d - 0.1, LPC.woodDark, { jitter: 0.004 }); // ripiano sotto
+  const top = H + 0.04;
+  if (kind === 'herbs') {
+    // mazzetti, un mortaio col pestello, un vasetto e un vaso con le piantine
+    herbBundle(c, -0.14, top + 0.02, -0.06, 0.3, LPC.moss);
+    herbBundle(c, -0.05, top + 0.02, 0.08, -0.4, '#8a6a4a');
+    lp.lathe(0.13, top, -0.03, [[0, 0], [0.06, 0], [0.07, 0.06], [0.055, 0.07], [0, 0.045]], 8, LPC.stoneLight, { jitter: 0 });
+    lp.push([0.15, top + 0.07, -0.03], 0, 0, -0.5).cyl(0, 0, 0, 0.012, 0.016, 0.12, 5, LPC.stone, { jitter: 0 }).pop();
+    if (!v.broken) jar(c, 0.2, top, 0.1, 0.12, 0.04, '#6a7a3a', false);
+    lp.cyl(-0.2, H * 0.35 + 0.025, 0.02, 0.07, 0.05, 0.1, 7, '#9a5a3a', { vary: 0.08 }); // vaso sul ripiano
+    for (let i = 0; i < 4; i++) lp.blob(-0.2 + Math.sin(i * 1.6) * 0.03, H * 0.35 + 0.16, 0.02 + Math.cos(i * 1.6) * 0.03, 0.035, 0.05, 0.035, LPC.mossBright, { jitter: 0.006 });
+  } else {
+    // file di vasetti d'erbe (dietro) e pozioni colorate (davanti), un libro aperto, una candela
+    const herbs = ['#6a7a3a', '#8a6a4a', LPC.moss, '#7d573b'];
+    herbs.forEach((col, i) => { if (!(v.broken && i === 3)) jar(c, -0.3 + i * 0.13, top, -0.1, 0.13 + (i % 2) * 0.03, 0.04, col, false); });
+    const brews = ['#9af06a', '#e06a8a', '#6ac8f0', '#f0c02a'];
+    brews.forEach((col, i) => {
+      if (v.broken && i % 2) return;
+      const px = -0.26 + i * 0.15, pz = 0.09;
+      // ampolla di vetro colorato: la pancia ha il colore della pozione (brilla se accesa), il collo è vetro
+      const g = emit(c, col);
+      lp.lathe(px, top, pz, [[0, 0], [0.05, 0], [0.058, 0.05], [0.03, 0.085], [0, 0.085]], 8, g.color, { ...g.o, jitter: 0 });
+      lp.cyl(px, top + 0.08, pz, 0.016, 0.02, 0.06, 6, '#c9d6d2', { bucket: 'gloss', jitter: 0, ao: 0 });
+      lp.cyl(px, top + 0.14, pz, 0.014, 0.016, 0.025, 5, '#a58c66', { jitter: 0 });
+    });
+    slab(lp, 0.33, top, 0.0, 0.18, 0.025, 0.24, '#bcb096', 0.2);
+    for (let i = 0; i < 3; i++) lp.box(0.33, top + 0.026, -0.06 + i * 0.05, 0.1, 0.004, 0.012, '#696153', { jitter: 0, ao: 0 });
+    for (let i = 0; i < 3; i++) jar(c, -0.25 + i * 0.25, H * 0.35 + 0.025, 0, 0.12, 0.045, ['#7d573b', '#6a7a3a', '#8a6a4a'][i], false); // sul ripiano
+  }
+  lp.pop();
+  lp.pop();
+  if (v.broken && kind === 'potions') for (let i = 0; i < 3; i++) lp.blob(x + 0.2 + i * 0.12, 0.012, z + 0.35, 0.09, 0.008, 0.07, ['#3f4a38', '#4a2f38', '#2f3f4a'][i], { ao: 0 }); // pozioni versate
+}
+
+function witchYard(c: CryptCtx) {
+  const { lp, v } = c;
+  // tre pietre in piedi con le rune verdi
   for (const [x, z, h, angle] of [[-1.3, 0.4, 0.84, -0.1], [1.21, 0.42, 1.03, 0.07], [1.36, 1.89, 0.63, 0.16]] as const) {
     const height = v.broken ? h * 0.65 : h;
-    prof(lp, [[-0.15, 0], [0.17, 0], [0.15, height * 0.8], [0.03, height], [-0.12, height * 0.88]], 0.22, '#5c5269', [x, 0.03, z], [0, angle, v.broken ? 0.19 : 0], { vary: 0.07, ao: 0.25 });
-    const rune = emit(c, v.broken ? '#877387' : '#ba9acd');
+    prof(lp, [[-0.15, 0], [0.17, 0], [0.15, height * 0.8], [0.03, height], [-0.12, height * 0.88]], 0.22, '#5f5a52', [x, 0.03, z], [0, angle, v.broken ? 0.19 : 0], { vary: 0.08, ao: 0.25, topTint: LPC.moss, topAmount: 0.5 });
+    const rune = emit(c, v.broken ? '#4f5a48' : '#7fcf6a');
     prof(lp, [[0, -0.1], [0.065, 0], [0, 0.1], [-0.065, 0]], 0.012, rune.color, [x, height * 0.54, z + 0.13], [0, 0, 0], rune.o);
   }
-  const crystal = new THREE.OctahedronGeometry(0.27);
-  crystal.scale(0.75, 1.65, 0.75);
-  const cr = emit(c, v.broken ? '#76617f' : '#c3a3df');
-  put(lp, crystal, cr.color, [0, v.broken ? 0.2 : 0.99, 1.18], v.broken ? [0.3, 0, 1.2] : [0, 0.3, 0], cr.o);
-  if (!v.broken) {
-    const orb = emit(c, '#a585bd');
-    for (let i = 0; i < 3; i++) { const a = (i * Math.PI * 2) / 3; put(lp, new THREE.OctahedronGeometry(0.06), orb.color, [Math.cos(a) * 0.36, 0.77 + Math.sin(a) * 0.08, 1.18 + Math.sin(a) * 0.29], [0, 0, 0.4], orb.o); }
+  // al centro del cerchio, secondo la versione: il grande calderone sul fuoco (1), un calderone più
+  // piccolo col tavolino delle erbe (2), il tavolo dei vasetti di erbe e delle pozioni (3)
+  if (c.variant === 1) {
+    if (!v.broken) cauldron(c, 0, 1.18, 1.6, true);
+    else {
+      // rovesciato fuori dal cerchio, la pozione versata a terra
+      lp.push([0.55, 0.3, 1.45], 0.4, 0, 1.3);
+      turned(lp, 0, -0.3, 0, [[0, 0], [0.16, 0], [0.43, 0.13], [0.5, 0.46], [0.4, 0.67], [0.32, 0.69], [0.37, 0.56], [0.38, 0.26], [0.16, 0.11], [0, 0.11]], 10, '#2f2c2e');
+      lp.pop();
+      lp.blob(0.85, 0.012, 1.6, 0.35, 0.012, 0.25, '#3f4a38', { ao: 0 });
+      cauldron(c, 0, 1.18, 1, true, false); // il fuoco spento
+    }
+  } else if (c.variant === 2) {
+    if (!v.broken) cauldron(c, -0.18, 1.12, 1.05, true);
+    else cauldron(c, -0.18, 1.12, 1, true, false);
+    witchTable(c, 0.5, 1.45, 0.55, 0.36, -0.5, 'herbs');
+  } else {
+    witchTable(c, 0, 1.2, 0.9, 0.46, -0.25, 'potions');
   }
-  // calderone
-  const x = -1.22, z = 1.84;
-  turned(lp, x, 0.07, z, [[0, 0], [0.1, 0], [0.27, 0.08], [0.31, 0.29], [0.25, 0.42], [0.2, 0.43], [0.23, 0.35], [0.24, 0.16], [0.1, 0.07], [0, 0.07]], 9, '#514653');
-  for (let i = 0; i < 3; i++) { const a = (i * Math.PI * 2) / 3; beam(lp, [x + Math.cos(a) * 0.18, 0.02, z + Math.sin(a) * 0.18], [x + Math.cos(a) * 0.13, 0.19, z + Math.sin(a) * 0.13], 0.027, LPC.iron); }
-  const brew = emit(c, v.broken ? '#4e3f52' : '#b28bca');
-  lp.cyl(x, 0.43, z, 0.204, 0.204, 0.015, 9, brew.color, { ...brew.o, jitter: 0 });
-  if (!v.broken) for (let i = 0; i < 3; i++) flame(c, x + Math.sin(i * 2) * 0.11, 0.59 + i * 0.12, z, '#b993d3', 0.025 - i * 0.004);
+  // scopa appoggiata vicino alla porta
+  lp.push([0.62, 0, 0.32], 0.3, 0, -0.32);
+  beam(lp, [0, 0.12, 0], [0, 1.0, 0], 0.022, LPC.wood);
+  lp.cyl(0, 0, 0, 0.11, 0.04, 0.24, 7, LPC.dry, { vary: 0.12 });
+  lp.cyl(0, 0.2, 0, 0.045, 0.045, 0.03, 7, LPC.woodDark, { jitter: 0 });
+  lp.pop();
+  // rastrelliera delle erbe a seccare
+  const rx = -1.22, rz = 1.84;
+  for (const dx of [-0.32, 0.32]) beam(lp, [rx + dx, 0.02, rz], [rx + dx, 0.82, rz], 0.03, LPC.woodDark);
+  beam(lp, [rx - 0.36, 0.8, rz], [rx + 0.36, 0.8, rz], 0.025, LPC.wood);
+  for (let i = 0; i < 5; i++) {
+    if (v.broken && i % 2) continue;
+    const x = rx - 0.24 + i * 0.12, col = [LPC.moss, LPC.dry, '#6a7a3a', '#8a6a4a', LPC.mossBright][i];
+    beam(lp, [x, 0.8, rz], [x, 0.66, rz], 0.006, '#b4a78a');
+    lp.cyl(x, 0.46, rz, 0.06, 0.02, 0.2, 5, col, { vary: 0.15, jitter: 0.008 });
+  }
   // leggio degli incantesimi
-  prof(lp, [[-0.12, 0], [0.12, 0], [0.09, 0.57], [-0.09, 0.57]], 0.2, '#817181', [-1.25, 0.02, 0.89]);
-  slab(lp, -1.25, 0.58, 0.89, 0.46, 0.07, 0.35, '#9c8a9d', 0.1);
+  prof(lp, [[-0.12, 0], [0.12, 0], [0.09, 0.57], [-0.09, 0.57]], 0.2, '#6b5240', [-1.25, 0.02, 0.89]);
+  slab(lp, -1.25, 0.58, 0.89, 0.46, 0.07, 0.35, '#7d6450', 0.1);
   for (const sx of [-1, 1]) slab(lp, -1.25 + sx * 0.1, 0.66, 0.89, 0.19, 0.035, 0.28, '#bcb096', sx * 0.08);
   for (let i = 0; i < 3; i++) lp.box(-1.27, 0.7, 0.8 + i * 0.07, 0.07, 0.007, 0.025, '#696153', { jitter: 0, ao: 0 });
-  for (const [xx, zz, col] of [[-1.6, 0.51, '#817391'], [1.46, 1.27, '#75928a']] as const) {
+  for (const [xx, zz, col] of [[-1.6, 0.51, '#6a8a5a'], [1.46, 1.27, '#8a5a4a']] as const) {
     lp.cyl(xx, 0.02, zz, 0.06, 0.045, 0.22, 7, col, { jitter: 0.004 });
     lp.cyl(xx, 0.24, zz, 0.028, 0.028, 0.04, 5, '#a58c66', { jitter: 0 });
   }
 }
 
-const YARDS: Record<CryptCtx['family'], (c: CryptCtx) => void> = { zombie: zombieYard, ghost: ghostYard, skeleton: skeletonYard, nature: natureYard, supernatural: supernaturalYard };
+const YARDS: Record<CryptCtx['family'], (c: CryptCtx) => void> = { zombie: zombieYard, ghost: ghostYard, skeleton: skeletonYard, nature: natureYard, witch: witchYard };
 
 /** Piccola aggiunta di ogni versione (2 e 3) nel cortile. */
 function variantProps(c: CryptCtx) {
@@ -276,10 +379,10 @@ function variantProps(c: CryptCtx) {
     case 'nature':
       for (let i = 0; i < (c.variant === 2 ? 2 : 3); i++) mushroom(lp, -1.55 + i * 0.1, 0.02, 0.17, 0.65, c.variant === 2 ? '#a5895c' : '#c0a46f');
       break;
-    case 'supernatural': {
-      lp.cyl(1.53, 0.02, 1.57, 0.1, 0.08, 0.18, 6, '#776a7a', { vary: 0.06 });
-      if (c.variant === 2) votive(c, 1.53, 0.2, 1.57, '#bb96cf');
-      else { const s = emit(c, v.broken ? '#756578' : '#ae95bd'); put(lp, new THREE.OctahedronGeometry(0.095), s.color, [1.53, 0.3, 1.57], [0, 0.2, 0.1], s.o); }
+    case 'witch': {
+      lp.cyl(1.53, 0.02, 1.57, 0.1, 0.08, 0.18, 6, '#6f685d', { vary: 0.06 });
+      if (c.variant === 2) votive(c, 1.53, 0.2, 1.57, '#b8f08a');
+      else { const s = emit(c, v.broken ? '#4f5a48' : BREW); put(lp, new THREE.OctahedronGeometry(0.095), s.color, [1.53, 0.3, 1.57], [0, 0.2, 0.1], s.o); }
       break;
     }
   }
@@ -296,7 +399,7 @@ export function yard(c: CryptCtx) {
 /** Recinto del lotto (4 × 5): palizzata, ossa o ferro secondo la famiglia; il cancello è aperto sul sentiero. */
 export function fence(c: CryptCtx) {
   const { lp, v, family } = c;
-  const wood = family === 'zombie' || family === 'nature', bone = family === 'skeleton', sup = family === 'supernatural';
+  const wood = family === 'zombie' || family === 'nature', bone = family === 'skeleton', sup = family === 'witch';
   const color = wood ? (family === 'nature' ? '#79654a' : '#6f5a42') : bone ? LPC.bone : LPC.iron;
   const segs: Array<[number, number, number, number]> = [[-1.82, -2.27, 1.82, -2.27], [-1.82, -2.27, -1.82, 2.27], [1.82, -2.27, 1.82, 2.27], [-1.82, 2.27, -0.5, 2.27], [0.5, 2.27, 1.82, 2.27]];
   const corners: Array<[number, number]> = [[-1.82, -2.27], [1.82, -2.27], [-1.82, 2.27], [1.82, 2.27], [-0.5, 2.27], [0.5, 2.27]];
@@ -306,8 +409,8 @@ export function fence(c: CryptCtx) {
     if (bone) { if (i >= 2) skull(c, 0, 0.64, 0.01, 0.095); else lp.blob(0, 0.62, 0, 0.075, 0.055, 0.06, LPC.bone); }
     else if (wood) lp.cyl(0, 0.58, 0, 0.08, 0, 0.12, 4, color, { jitter: 0.003 });
     else {
-      if (sup) lp.box(0, -0.0, 0, 0.22, 0.23, 0.22, '#514958', { bevel: 0.015 });
-      lp.blob(0, 0.66, 0, sup ? 0.09 : 0.055, sup ? 0.09 : 0.055, sup ? 0.09 : 0.055, sup ? '#a48aaf' : '#a4afa0', { jitter: 0 });
+      if (sup) lp.box(0, -0.0, 0, 0.22, 0.23, 0.22, '#4a463f', { bevel: 0.015 });
+      lp.blob(0, 0.66, 0, sup ? 0.09 : 0.055, sup ? 0.09 : 0.055, sup ? 0.09 : 0.055, sup ? '#6f7a52' : '#a4afa0', { jitter: 0 });
     }
     lp.pop();
   });
@@ -337,7 +440,7 @@ export function fence(c: CryptCtx) {
         if (i % 2 === 0) lp.blob(x, 0.53, z, 0.045, 0.032, 0.038, LPC.bone, { jitter: 0.004 });
       } else {
         beam(lp, [x, 0.06, z], [x, 0.53, z], 0.014, color);
-        if (i % 2 === 0) lp.push([x, 0.53, z]).cyl(0, 0, 0, 0.03, 0, 0.1, 4, sup ? '#8c778e' : '#778274', { jitter: 0 }).pop();
+        if (i % 2 === 0) lp.push([x, 0.53, z]).cyl(0, 0, 0, 0.03, 0, 0.1, 4, '#778274', { jitter: 0 }).pop();
       }
     }
   });

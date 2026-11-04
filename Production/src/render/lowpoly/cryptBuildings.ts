@@ -368,77 +368,90 @@ function nature(c: CryptCtx) {
   }
 }
 
-// ── Soprannaturale: l'ottagono a punta ───────────────────────────────────
+// ── Strega: la capanna ottagonale col tetto a cappello ───────────────────
 
-function supernatural(c: CryptCtx) {
+/** Verde delle pozioni, lo stesso dell'Angolo della strega. */
+const BREW = '#9af06a';
+const HAT: Record<1 | 2 | 3, string[]> = {
+  1: ['#3b4250', '#363c49', '#3f4654', '#333946'], // ardesia
+  2: ['#4f5e3f', '#495739', '#546443', '#465336'], // muschio
+  3: ['#5a4352', '#53404c', '#5f4757', '#4d3a46'], // prugna
+};
+
+function witch(c: CryptCtx) {
   const { lp, v } = c;
   steps(c, 1.0);
+  // zoccolo in pietra e pareti in legno, con i montanti scuri agli spigoli
   lp.push([0, 0, -0.35], Math.PI / 8);
-  for (const [r, y, h, col] of [[1.1, 0.08, 0.2, '#454251'], [1.02, 0.28, 0.12, '#73697e']] as const) lp.cyl(0, y, 0, r, r, h, 8, col, { vary: 0.06 });
-  lp.cyl(0, 0.38, 0, 0.91, 0.83, 0.96, 8, '#5b5368', { vary: 0.06, ao: 0.25 });
+  for (const [r, y, h, col] of [[1.1, 0.08, 0.2, '#45423d'], [1.02, 0.28, 0.12, '#6f685d']] as const) lp.cyl(0, y, 0, r, r, h, 8, col, { vary: 0.06 });
+  lp.cyl(0, 0.38, 0, 0.91, 0.83, 0.96, 8, '#5d4b3c', { vary: 0.08, ao: 0.25 });
   lp.pop();
-  // otto facce ripide: quelle rotte mancano, e si vede dentro
-  const facets = [pick(c, '#4b465e', '#4a5267', '#605369'), '#534c65', '#4f495f', '#575068'];
-  if (c.variant !== 2) {
-    for (let i = 0; i < 8; i++) {
-      if (v.broken && i < 2) continue;
-      const a = (i / 8) * Math.PI * 2;
-      put(lp, new THREE.CylinderGeometry(0.15, 1.06, 0.83, 1, 1, true, a, Math.PI / 4), facets[i % 4], [0, 1.805, -0.35], [0, 0, 0], { vary: 0.03, jitter: 0.008 }, true);
-      const p: P3 = [Math.sin(a) * 1.07, 1.39, -0.35 + Math.cos(a) * 1.07], q: P3 = [Math.sin(a + Math.PI / 4) * 1.07, 1.39, -0.35 + Math.cos(a + Math.PI / 4) * 1.07];
-      beam(lp, p, q, 0.027, '#9a849e');
-      beam(lp, [Math.sin(a) * 0.15, 2.22, -0.35 + Math.cos(a) * 0.15], p, 0.016, '#93809d');
-    }
-  } else {
-    lp.push([0, 0, -0.35], Math.PI / 8);
-    for (const [r, y, h] of [[1.05, 1.37, 0.18], [0.84, 1.55, 0.18], [0.63, 1.73, 0.18], [0.42, 1.91, 0.22]] as const) lp.cyl(0, y, 0, r, r * 0.93, h, 8, '#696277', { vary: 0.06 });
-    lp.pop();
+  for (let i = 0; i < 8; i++) {
+    const a = (i / 8) * Math.PI * 2;
+    beam(lp, [Math.sin(a) * 0.9, 0.38, -0.35 + Math.cos(a) * 0.9], [Math.sin(a) * 0.82, 1.34, -0.35 + Math.cos(a) * 0.82], 0.035, LPC.woodDark);
   }
-  lp.cyl(0, 2.22, -0.35, 0.16, 0.11, 0.12, 8, '#9b879c', { jitter: 0.004 });
-  const spire = emit(c, v.broken ? '#78677d' : '#bea3d0');
-  put(lp, new THREE.OctahedronGeometry(0.14), spire.color, [0, 2.49, -0.35], [0, 0, 0], spire.o);
-  darkDoor(c, 0.99, 1.08, 0.21, 0.65, '#a27bd0');
+  // il tetto è un cappello da strega: otto spicchi, la fascia con la fibbia, la punta
+  const hat = HAT[c.variant];
+  for (let i = 0; i < 8; i++) {
+    if (v.broken && i < 2) continue;
+    const a = (i / 8) * Math.PI * 2;
+    put(lp, new THREE.CylinderGeometry(0.15, 1.06, 0.83, 1, 1, true, a, Math.PI / 4), hat[i % 4], [0, 1.805, -0.35], [0, 0, 0], { vary: 0.03, jitter: 0.008 }, true);
+    const p: P3 = [Math.sin(a) * 1.07, 1.39, -0.35 + Math.cos(a) * 1.07], q: P3 = [Math.sin(a + Math.PI / 4) * 1.07, 1.39, -0.35 + Math.cos(a + Math.PI / 4) * 1.07];
+    beam(lp, p, q, 0.027, '#6b5240');
+  }
+  if (!v.broken) {
+    lp.push([0, 0, -0.35], Math.PI / 8);
+    turned(lp, 0, 1.49, 0, [[0, 0], [0.98, 0], [0.85, 0.14], [0, 0.14]], 8, '#2b2724', { ao: 0 });
+    lp.pop();
+    block(lp, 0, 1.47, 0.57, 0.2, 0.16, 0.035, LPC.gold, [-0.83, 0, 0], { ao: 0 });
+    block(lp, 0, 1.5, 0.59, 0.1, 0.08, 0.03, '#2b2724', [-0.83, 0, 0], { ao: 0 });
+  }
+  lp.cyl(0, 2.2, -0.35, 0.16, 0.12, 0.08, 8, hat[0], { jitter: 0.004 });
+  if (c.variant === 2) {
+    // punta piegata, che ricade di lato
+    beam(lp, [0, 2.27, -0.35], [0.05, 2.55, -0.33], 0.12, hat[1], 0.07);
+    beam(lp, [0.05, 2.55, -0.33], [0.32, 2.6, -0.3], 0.07, hat[2], 0.02);
+    lp.blob(0.34, 2.58, -0.3, 0.04, 0.04, 0.04, LPC.gold, { jitter: 0 });
+  } else {
+    beam(lp, [0, 2.27, -0.35], [0, v.broken ? 2.45 : 2.7, -0.35], 0.12, hat[1], 0.015);
+    if (c.variant === 3 && !v.broken) flame(c, 0, 2.76, -0.35, BREW, 0.05);
+    if (c.variant === 1 && !v.broken) {
+      // la falce di luna in cima
+      const moon: Array<[number, number]> = [];
+      for (let k = 0; k <= 8; k++) { const t = -Math.PI * 0.6 + (k / 8) * Math.PI * 1.35; moon.push([Math.cos(t) * 0.11, Math.sin(t) * 0.11]); }
+      for (let k = 8; k >= 0; k--) { const t = -Math.PI * 0.64 + (k / 8) * Math.PI * 1.43; moon.push([0.05 + Math.cos(t) * 0.07, Math.sin(t) * 0.09]); }
+      prof(lp, moon, 0.03, LPC.gold, [0, 2.8, -0.35], [0, 0, 0], { ao: 0 });
+    }
+  }
+  darkDoor(c, 0.99, 1.08, 0.21, 0.65, BREW);
   const arc: Array<[number, number]> = [[-0.66, 0.25], [-0.66, 1.05], [-0.4, 1.29], [0.4, 1.29], [0.66, 1.05], [0.66, 0.25]];
   for (let i = 1; i < arc.length; i++) {
     if (v.broken && i === 4) continue;
     const [ax, ay] = arc[i - 1], [bx, by] = arc[i], dx = bx - ax, dy = by - ay, L = Math.hypot(dx, dy), nx = (-dy / L) * 0.105, ny = (dx / L) * 0.105;
-    prof(lp, [[ax + nx, ay + ny], [bx + nx, by + ny], [bx - nx, by - ny], [ax - nx, ay - ny]], 0.27, '#78717e', [0, 0, 0.79], [0, 0, 0], { vary: 0.07 });
+    prof(lp, [[ax + nx, ay + ny], [bx + nx, by + ny], [bx - nx, by - ny], [ax - nx, ay - ny]], 0.27, '#5e4836', [0, 0, 0.79], [0, 0, 0], { vary: 0.1 });
     if (!v.broken) beam(lp, [ax, ay, 0.936], [bx, by, 0.936], 0.014, '#b29b78');
   }
   for (const sx of [-1, 1]) {
-    prof(lp, [[sx * 0.72, 0.3], [sx * 1.1, 0.28], [sx * 1.04, 0.58], [sx * 0.84, 1.2]], 0.24, '#686071', [0, 0, -0.44], [0, 0, 0], { vary: 0.07 });
-    votive(c, sx * 0.98, 0.15, 0.91, '#c098e4');
-    block(lp, sx * 0.93, 0.73, -0.34, 0.06, 0.12, 0.024, v.broken ? '#645968' : '#b5a17b', [0, 0, 0.45]);
+    prof(lp, [[sx * 0.72, 0.3], [sx * 1.1, 0.28], [sx * 1.04, 0.58], [sx * 0.84, 1.2]], 0.24, '#6b655c', [0, 0, -0.44], [0, 0, 0], { vary: 0.07 });
+    votive(c, sx * 0.98, 0.15, 0.91, '#b8f08a');
+    block(lp, sx * 0.93, 0.73, -0.34, 0.06, 0.12, 0.024, v.broken ? '#4f5a48' : '#b5a17b', [0, 0, 0.45]);
   }
-  if (c.variant === 1) torus(lp, 0, 2.49, -0.48, 0.24, 0.026, '#9c8c75', [0, 0, Math.PI / 4], Math.PI * 1.69);
-  if (!v.broken) {
-    const shard = emit(c, '#ba99d1');
-    for (const sx of [-1, 1]) put(lp, new THREE.OctahedronGeometry(0.065), shard.color, [sx * 0.26, 2.28, -0.22], [0, 0.2, sx * 0.5], shard.o);
-  } else {
-    put(lp, new THREE.OctahedronGeometry(0.15), '#75657c', [0.2, 0.14, 1.1], [0.4, 0.4, 0.6]);
-    block(lp, -0.67, 0.03, 0.91, 0.48, 0.14, 0.23, '#4b4654', [0.1, 0.5, -0.1]);
+  if (v.broken) {
+    block(lp, 0.2, 0.03, 1.1, 0.3, 0.12, 0.26, LPC.woodDark, [0.4, 0.4, 0.3]);
+    block(lp, -0.67, 0.03, 0.91, 0.48, 0.14, 0.23, '#45423d', [0.1, 0.5, -0.1]);
   }
-  // il sigillo inciso nella camera
-  const seal = emit(c, v.broken ? '#635871' : '#a08cae');
+  // il sigillo della strega nella camera: cerchio e falce
+  const seal = emit(c, v.broken ? '#4f5a48' : '#7fcf6a');
   torus(lp, 0, 0.82, 0.73, 0.25, 0.016, seal.color, [0, 0, 0], Math.PI * 2, seal.o);
-  const diamond = emit(c, v.broken ? '#635871' : '#bca1d2');
-  prof(lp, [[0, -0.18], [0.11, 0], [0, 0.18], [-0.11, 0]], 0.016, diamond.color, [0, 0.82, 0.75], [0, 0, 0], diamond.o);
+  const mark = emit(c, v.broken ? '#4f5a48' : BREW);
+  prof(lp, [[0, -0.18], [0.11, 0], [0, 0.18], [-0.11, 0]], 0.016, mark.color, [0, 0.82, 0.75], [0, 0, 0], mark.o);
 
-  if (c.variant === 2) {
-    for (const sx of [-1, 1]) {
-      beam(lp, [sx * 0.12, 2.22, -0.4], [sx * 0.33, 2.37, -0.4], 0.044, '#aaa0a3');
-      beam(lp, [sx * 0.33, 2.37, -0.4], [sx * 0.35, 2.66, -0.4], 0.035, '#aaa0a3', 0.009);
-    }
-  } else if (c.variant === 3) {
-    const star: Array<[number, number]> = [[0, 0.23], [0.06, 0.06], [0.23, 0], [0.06, -0.06], [0, -0.23], [-0.06, -0.06], [-0.23, 0], [-0.06, 0.06]];
-    const s = emit(c, v.broken ? '#796b80' : '#c6a9d9');
-    prof(lp, star, 0.045, s.color, [0, 2.58, -0.48], [0, 0, 0], s.o);
-    const cr = emit(c, v.broken ? '#796b80' : '#aa94c6');
-    for (const sx of [-1, 1]) put(lp, new THREE.OctahedronGeometry(0.075), cr.color, [sx * 0.32, 2.31, -0.28], [0, 0, 0], cr.o);
+  if (c.variant === 3) {
     for (const x of [-0.94, 0.94]) {
-      prof(lp, [[x - 0.15, 0.18], [x + 0.15, 0.18], [x + 0.1, 1.43], [x, 1.69], [x - 0.1, 1.43]], 0.23, '#817289', [0, 0, 0.63], [0, 0, 0], { vary: 0.07 });
-      if (!v.broken) { const g = emit(c, '#b49aca'); put(lp, new THREE.OctahedronGeometry(0.09), g.color, [x, 1.7, 0.63], [0, 0, 0], g.o); }
+      prof(lp, [[x - 0.15, 0.18], [x + 0.15, 0.18], [x + 0.1, 1.43], [x, 1.69], [x - 0.1, 1.43]], 0.23, '#6b655c', [0, 0, 0.63], [0, 0, 0], { vary: 0.07 });
+      if (!v.broken) { const g = emit(c, BREW); put(lp, new THREE.OctahedronGeometry(0.09), g.color, [x, 1.7, 0.63], [0, 0, 0], g.o); }
     }
   }
 }
 
-export const BUILDINGS: Record<CryptCtx['family'], (c: CryptCtx) => void> = { zombie, ghost, skeleton, nature, supernatural };
+export const BUILDINGS: Record<CryptCtx['family'], (c: CryptCtx) => void> = { zombie, ghost, skeleton, nature, witch };

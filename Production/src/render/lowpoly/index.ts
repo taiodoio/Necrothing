@@ -140,7 +140,7 @@ export function resolveLowpoly(key: string): Builder | null {
     // chi si sporca e si rompe riceve anche il degrado comune (leggibile su tutti gli oggetti)
     const def = CATALOG[v.type];
     // le cripte hanno il loro degrado (nel generatore): quello comune si sommerebbe
-    return def?.decays && !CRYPT_TYPES.includes(m[1]) ? () => weathered(gen(v), v, def.footprint, def.category) : () => gen(v);
+    return def?.decays ? () => weathered(gen(v), v, def.footprint, def.category) : () => gen(v);
   }
   m = key.match(/^char:([A-Za-z]+:[A-Za-z]+)$/);
   if (m) return LP_CHARACTERS[m[1]] ?? null;

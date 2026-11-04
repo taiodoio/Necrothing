@@ -1,18 +1,19 @@
-// Le cripte (Cripte-Lab): il generatore del laboratorio (crypts.js) tradotto nei
-// gruppi di geometria del gioco. Cinque famiglie, tre varianti ciascuna, tre stati
-// (integra, sporca, rotta): il degrado è già nel generatore, per questo il degrado
-// comune (weathering.ts) non si applica a loro. Ogni lotto è 4 × 5 celle, col suo
-// cortile, l'origine al centro a terra e il fronte verso +Z.
+// Le cinque cripte (Cripte-Lab) come costruzioni del gioco. Cinque famiglie, tre versioni
+// ciascuna, lo stato integra / sporca / rotta come tutte le altre costruzioni: i pezzi
+// che mancano da rotte sono nei generatori (cryptBuildings.ts, cryptYards.ts), lo sporco
+// e le macerie comuni li aggiunge weathering.ts. Ogni lotto è 4 × 5 celle, col suo cortile,
+// l'origine al centro a terra e il fronte verso +Z.
 
-import * as THREE from 'three';
-import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
-import type { LightAnchor, PVis } from '../types.ts';
-import { createCrypt, type CryptState } from './crypts.js';
-import type { LPModel } from './kit.ts';
+import type { PVis } from '../types.ts';
+import { decayLP } from './lights.ts';
+import { LP, type LPModel } from './kit.ts';
+import { BUILDINGS } from './cryptBuildings.ts';
+import { yard, fence } from './cryptYards.ts';
+import type { CryptCtx } from './cryptKit.ts';
 
 export const CRYPT_FAMILIES = ['zombie', 'ghost', 'skeleton', 'nature', 'supernatural'] as const;
 export type CryptFamily = (typeof CRYPT_FAMILIES)[number];
-/** Quante varianti ha ogni famiglia (la numero 0 è la «principale»: quella che si vede in Bottega). */
+/** Quante versioni ha ogni famiglia (la numero 0 è la «principale»: quella che si vede in Bottega). */
 export const CRYPT_VARIANTS = 3;
 /** Ingombro del lotto in celle (cripta e cortile). */
 export const CRYPT_FOOTPRINT: [number, number] = [4, 5];
@@ -20,32 +21,34 @@ export const CRYPT_FOOTPRINT: [number, number] = [4, 5];
 export const CRYPT_TYPES: readonly string[] = CRYPT_FAMILIES.map((f) => `crypt_${f}`);
 export const isCrypt = (type: string) => CRYPT_TYPES.includes(type);
 
-/** Da spenta, la luce resta come forma ma scura (finestre e fiammelle senza luce). */
-const OFF_DIM = 0.3;
+/** Il corpo sta nella metà posteriore del lotto: la metà davanti è il cortile da vivere. */
+const BODY_Z = -0.85;
+
+/** Luci: poche e fisse, una per gruppo di candele (non una per ogni fiammella). */
+const LIGHTS: Record<CryptFamily, Array<[number, number, number, string, number, number, number, number, 'body' | 'yard']>> = {
+  zombie: [[-0.49, 0.32, 1.04, '#a7ca77', 0.52, 3, 0.24, 0.5, 'body'], [0.48, 0.32, 1.04, '#a7ca77', 0.52, 3, 0.24, 0.5, 'body']],
+  ghost: [[0.99, 0.76, 0.55, '#88cbbb', 0.6, 3.3, 0.18, 0.6, 'body'], [-0.56, 0.26, 1.16, '#a0d3c4', 0.48, 2.7, 0.12, 0.45, 'yard']],
+  skeleton: [[-1.05, 0.3, 0.95, '#f2ac58', 0.52, 3, 0.25, 0.5, 'body'], [1.05, 0.3, 0.95, '#f2ac58', 0.52, 3, 0.25, 0.5, 'body']],
+  nature: [[-0.51, 0.35, 1.11, '#e3bb70', 0.52, 3, 0.25, 0.5, 'body'], [0.51, 0.35, 1.11, '#e3bb70', 0.52, 3, 0.25, 0.5, 'body']],
+  supernatural: [[0, 1.0, 1.18, '#bca1d2', 0.7, 4, 0.16, 0.7, 'yard'], [0, 2.49, -0.35, '#bea3d0', 0.52, 3, 0.12, 0.5, 'body']],
+};
 
 export function cryptLP(v: PVis): LPModel {
-  const family = v.type.slice('crypt_'.length);
-  const state: CryptState = v.broken ? 'broken' : v.dirty ? 'dirty' : 'clean';
-  const variant = ((Math.floor(v.variant) % CRYPT_VARIANTS) + CRYPT_VARIANTS) % CRYPT_VARIANTS + 1;
-  const root = createCrypt(family, state, { variant });
-  root.updateMatrixWorld(true);
-  const solid: THREE.BufferGeometry[] = [], glow: THREE.BufferGeometry[] = [];
-  root.traverse((o) => {
-    const m = o as THREE.Mesh;
-    if (!m.isMesh) return;
-    const g = m.geometry.clone().applyMatrix4(m.matrixWorld);
-    m.geometry.dispose();
-    if (!(m.material as THREE.Material).userData.glow) { solid.push(g); return; }
-    if (v.lit) { glow.push(g); return; }
-    // spenta: le stesse forme, scure, tra le superfici normali
-    const col = g.getAttribute('color') as THREE.BufferAttribute;
-    for (let i = 0; i < col.array.length; i++) (col.array as Float32Array)[i] *= OFF_DIM;
-    solid.push(g);
-  });
-  const geometries: LPModel['geometries'] = {};
-  if (solid.length) geometries.solid = mergeGeometries(solid, false);
-  if (glow.length) geometries.glow = mergeGeometries(glow, false);
-  solid.concat(glow).forEach((g) => g.dispose());
-  const lights = v.lit ? ((root.userData.lights ?? []) as LightAnchor[]) : [];
-  return { geometries, lights };
+  const family = v.type.slice('crypt_'.length) as CryptFamily;
+  const variant = ((((Math.floor(v.variant) % CRYPT_VARIANTS) + CRYPT_VARIANTS) % CRYPT_VARIANTS) + 1) as 1 | 2 | 3;
+  const lp = new LP(`lp:${v.type}:${variant}:${v.seed}:${+v.dirty}${+v.broken}`);
+  const c: CryptCtx = { lp, v, family, variant, lit: v.lit && !v.broken };
+  lp.push([0, 0, BODY_Z]);
+  BUILDINGS[family](c);
+  lp.pop();
+  fence(c);
+  yard(c);
+  if (c.lit) {
+    for (const [x, y, z, color, intensity, range, flicker, halo, area] of LIGHTS[family]) {
+      lp.push([0, 0, area === 'body' ? BODY_Z : 0]).light(x, y, z, color, intensity, range, flicker, halo).pop();
+    }
+  }
+  decayLP(lp, v, 3.4, 4.4);
+  return lp.build();
 }
+

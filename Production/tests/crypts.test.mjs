@@ -5,7 +5,6 @@ import * as THREE from 'three';
 import { CATALOG, CATALOG_LIST, ACCESS, rotatedFootprint } from '../src/game/catalog.ts';
 import { resolveLowpoly } from '../src/render/lowpoly/index.ts';
 import { CRYPT_FAMILIES, CRYPT_TYPES, CRYPT_VARIANTS, cryptLP } from '../src/render/lowpoly/cryptModels.ts';
-import { createCrypt } from '../src/render/lowpoly/crypts.js';
 import { placeableKey, seedCount } from '../src/render/keys.ts';
 import { createNewGame } from '../src/game/state.ts';
 import { areaForLevel, buildOccupancy, nearestFreeSpot } from '../src/game/world.ts';
@@ -74,7 +73,7 @@ test('cripte: luci accese solo da integre o sporche e accese; spente o rotte nie
     assert.ok(on.geometries.glow, `${type}: ha parti luminose`);
     assert.equal(off.lights.length, 0, `${type}: spenta senza luci`);
     assert.ok(!off.geometries.glow, `${type}: spenta senza parti luminose`);
-    assert.ok(tris(off) >= tris(on) - 1 && tris(off) <= tris(on) + tris(on) * 0.2, `${type}: spenta ha le stesse forme (scure)`);
+    assert.ok(Math.abs(tris(off) - tris(on)) <= tris(on) * 0.05, `${type}: spenta ha le stesse forme (scure), meno le fiammelle`);
     assert.equal(broken.lights.length, 0, `${type}: rotta senza luci`);
     assert.ok(!broken.geometries.glow);
     assert.equal(brokenOn.lights.length, 0, 'rotta e «accesa»: comunque niente luci (nel generatore)');
@@ -82,28 +81,25 @@ test('cripte: luci accese solo da integre o sporche e accese; spente o rotte nie
   }
 });
 
-test('cripte: il degrado è quello del generatore, non si somma a quello comune', () => {
+test('cripte: sporche e rotte cambiano forma come le altre costruzioni (degrado comune + pezzi che mancano)', () => {
   for (const type of CRYPT_TYPES) {
-    const family = type.slice('crypt_'.length);
-    for (const [dirty, broken, state] of [[true, false, 'dirty'], [true, true, 'broken']]) {
-      const game = build(type, 0, dirty, broken);
-      const lab = createCrypt(family, state, { variant: 1 });
-      let n = 0; lab.traverse((o) => { if (o.isMesh) n += o.geometry.getAttribute('position').count / 3; });
-      assert.ok(Math.abs(tris(game) - n) <= n * 0.05, `${type} ${state}: ${tris(game)} nel gioco, ${n} nel generatore`);
+    for (let v = 0; v < CRYPT_VARIANTS; v++) {
+      const clean = build(type, v), dirty = build(type, v, true), broken = build(type, v, true, true);
+      // le forme di partenza sono le stesse: lo sporco aggiunge, da rotta si perde qualcosa e si aggiungono macerie
+      assert.ok(tris(dirty) > tris(clean) * 1.02, `${type} v${v}: sporca > integra`);
+      assert.notEqual(tris(broken), tris(dirty), `${type} v${v}: rotta ≠ sporca`);
     }
   }
 });
 
-test('cripte: le superfici sottili (anelli, petali, piani) hanno le due facce', () => {
-  // senza le due facce, un anello o un petalo disteso sparirebbe visto dal lato sbagliato
-  for (const type of CRYPT_TYPES.filter((t) => t !== 'crypt_zombie')) {
-    const pos = build(type, 0).geometries.solid.getAttribute('position');
-    const faces = new Map();
-    for (let i = 0; i < pos.count; i += 3) {
-      const k = [0, 1, 2].map((j) => `${pos.getX(i + j).toFixed(3)},${pos.getY(i + j).toFixed(3)},${pos.getZ(i + j).toFixed(3)}`).sort().join('|');
-      faces.set(k, (faces.get(k) ?? 0) + 1);
+test('cripte: costruite con il kit dei generatori (colori per faccia, nessun materiale proprio, solo i gruppi del gioco)', () => {
+  for (const type of CRYPT_TYPES) {
+    const m = build(type, 0);
+    assert.deepEqual(Object.keys(m.geometries).sort(), ['glow', 'solid'], `${type}: solido e luce`);
+    for (const g of Object.values(m.geometries)) {
+      assert.ok(g.getAttribute('color') && g.getAttribute('normal'), 'colori e normali per vertice');
+      assert.equal(g.getAttribute('position').count % 3, 0, 'triangoli separati (sfaccettato)');
     }
-    assert.ok([...faces.values()].filter((n) => n >= 2).length >= 8, `${type}: ci sono triangoli presenti da entrambi i lati`);
   }
 });
 

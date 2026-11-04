@@ -1630,5 +1630,7 @@ export default {
   "item.cryptSkeleton.label": "Skelett-Gruft",
   "item.cryptSkeleton.desc": "Ein Proberaum aus Knochen und Holz, Marimba inklusive. Drei Versionen sind möglich; welche du bekommst, entscheidet der Schlagzeuger, im Takt.",
   "item.cryptSupernatural.label": "Übernatürliche Gruft",
-  "item.cryptSupernatural.desc": "Ein Ritualhof mit Siegel, Kristall und Kessel. Es gibt drei Versionen: Das Jenseits entscheidet und nimmt keine Beschwerden an."
+  "item.cryptSupernatural.desc": "Ein Ritualhof mit Siegel, Kristall und Kessel. Es gibt drei Versionen: Das Jenseits entscheidet und nimmt keine Beschwerden an.",
+  "sim.zombieMud#one": "Während du weg warst, ist ein Zombie vorbeigetorkelt: Ein Grabstein ist voller Schlammspuren.",
+  "sim.zombieMud#other": "Während du weg warst, sind Zombies vorbeigetorkelt: {n} Grabsteine sind voller Schlammspuren."
 } satisfies Record<string, string>;

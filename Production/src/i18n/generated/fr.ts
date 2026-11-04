@@ -1630,5 +1630,7 @@ export default {
   "item.cryptSkeleton.label": "Crypte des squelettes",
   "item.cryptSkeleton.desc": "Une salle de répétition en os et en bois, marimba comprise. Trois versions sont possibles ; c’est le batteur qui choisit laquelle, en rythme.",
   "item.cryptSupernatural.label": "Crypte surnaturelle",
-  "item.cryptSupernatural.desc": "Une cour rituelle avec un sceau, un cristal et un chaudron. Il y a trois versions : l’au-delà choisit, et n’accepte aucune réclamation."
+  "item.cryptSupernatural.desc": "Une cour rituelle avec un sceau, un cristal et un chaudron. Il y a trois versions : l’au-delà choisit, et n’accepte aucune réclamation.",
+  "sim.zombieMud#one": "Un zombie est passé pendant ton absence : une pierre tombale est couverte d’empreintes de boue.",
+  "sim.zombieMud#other": "Des zombies sont passés pendant ton absence : {n} pierres tombales sont couvertes d’empreintes de boue."
 } satisfies Record<string, string>;

@@ -1630,5 +1630,7 @@ export default {
   "item.cryptSkeleton.label": "Cripta de los esqueletos",
   "item.cryptSkeleton.desc": "Una sala de ensayo de hueso y madera, marimba incluida. Son posibles tres versiones; cuál te toca lo decide el batería, a compás.",
   "item.cryptSupernatural.label": "Cripta sobrenatural",
-  "item.cryptSupernatural.desc": "Un patio ritual con un sello, un cristal y un caldero. Hay tres versiones: elige el más allá, y no admite reclamaciones."
+  "item.cryptSupernatural.desc": "Un patio ritual con un sello, un cristal y un caldero. Hay tres versiones: elige el más allá, y no admite reclamaciones.",
+  "sim.zombieMud#one": "Un zombi ha pasado mientras no estabas: una lápida está llena de huellas de barro.",
+  "sim.zombieMud#other": "Unos zombis han pasado mientras no estabas: {n} lápidas están llenas de huellas de barro."
 } satisfies Record<string, string>;

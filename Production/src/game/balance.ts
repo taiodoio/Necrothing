@@ -241,6 +241,14 @@ export const SOUL_BELL = { ghosts: 3 } as const;
  */
 export const ZOMBIE_MUD = { chance: 0.35, protectHours: 6, reach: 1 } as const;
 
+/**
+ * Gli zombie passano anche a gioco chiuso: per ogni giorno di assenza (quelli
+ * che contano, come per il degrado) fanno `visitsPerDay` giri, ciascuno con la
+ * probabilità con cui il cimitero li chiama (`zombieAppeal`); ogni giro è uno
+ * zombie che prova a sporcare una tomba a caso, come dal vivo.
+ */
+export const ZOMBIE_OFFLINE = { visitsPerDay: 4, maxVisits: 10 } as const;
+
 /** Becchino: raggio della vecchia pulizia al tocco; quota delle cose sporche che sistema in ogni giro. */
 export const GRAVEDIGGER = { cleanRadius: 4, roundShare: 0.5 } as const;
 

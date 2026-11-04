@@ -30,7 +30,7 @@ import { CROW_NEST, PET_DENS } from '../render/lowpoly/petHouses.ts';
 import { cellCenter, HALF, worldToCell } from './WorldView.ts';
 import { t } from '../i18n/index.ts';
 
-const LIFESPAN: Record<RoamerKind, number> = { ghost: 26, cat: 32, crow: 22, gravedigger: 34, priest: 36, rat: 15, zombie: 30, postman: 40, hunterA: 60, hunterB: 60 };
+const LIFESPAN: Record<RoamerKind, number> = { ghost: 26, cat: 32, crow: 22, gravedigger: 34, priest: 36, rat: 15, zombie: 120, postman: 40, hunterA: 60, hunterB: 60 };
 const SPEED: Record<RoamerKind, number> = { ghost: 0.9, cat: 1.6, crow: 3.2, gravedigger: 1.1, priest: 0.9, rat: 2.6, zombie: 0.85, postman: 1.5, hunterA: 1.3, hunterB: 1.3 };
 const RIG_FOR: Record<RoamerKind, CharacterKind> = { ghost: 'ghost', cat: 'cat', crow: 'crow', gravedigger: 'gravedigger', priest: 'priest', rat: 'rat', zombie: 'zombie', postman: 'postman', hunterA: 'hunterA', hunterB: 'hunterB' };
 /** Chi fa un giro con delle tappe e poi se ne torna da dove è venuto. */

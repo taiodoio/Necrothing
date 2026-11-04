@@ -1630,5 +1630,7 @@ export default {
   "item.cryptSkeleton.label": "骷髏墓室",
   "item.cryptSkeleton.desc": "一間用骨頭和木頭搭成的排練室，馬林巴琴也包含在內。可能有三個版本；你會得到哪個，由鼓手踩著節拍決定。",
   "item.cryptSupernatural.label": "超自然墓室",
-  "item.cryptSupernatural.desc": "一座儀式庭院，有法印、水晶和大鍋。共有三個版本：由彼岸決定，且概不受理投訴。"
+  "item.cryptSupernatural.desc": "一座儀式庭院，有法印、水晶和大鍋。共有三個版本：由彼岸決定，且概不受理投訴。",
+  "sim.zombieMud#one": "你不在的時候有隻殭屍路過：一塊墓碑沾滿了泥腳印。",
+  "sim.zombieMud#other": "你不在的時候有殭屍路過：{n} 塊墓碑沾滿了泥腳印。"
 } satisfies Record<string, string>;

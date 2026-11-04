@@ -58,6 +58,18 @@ export function countBuildings(state: Pick<SaveData, 'placeables'>): BuildingCou
   return c;
 }
 
+/**
+ * Quanto il cimitero chiama gli zombie: probabilità per ogni giro di spawn
+ * (tombe aperte, bar, orto, food truck; i cacciatori li attirano di più).
+ * Vale sia dal vivo sia per i passaggi a gioco chiuso.
+ */
+export function zombieAppeal(b: BuildingCounts): number {
+  const hunters = b.hunters ? 1 + SPAWN_MODIFIERS.huntersBonus : 1;
+  const w = (SPAWN_MODIFIERS.zombiePerOpenGrave * b.openGraves + SPAWN_MODIFIERS.zombieBar * b.zombieBar + SPAWN_MODIFIERS.zombieFarm * b.brainFarm
+    + SPAWN_MODIFIERS.zombieFoodTruck * b.foodTruck) * hunters;
+  return Math.min(SPAWN_MODIFIERS.zombieChanceMax, w);
+}
+
 export function computeSpawns(
   state: Pick<SaveData, 'graves' | 'placeables'> & Partial<Pick<SaveData, 'entrusted' | 'house'>>,
   isNight: boolean,
@@ -93,9 +105,8 @@ export function computeSpawns(
   }
   if (isNight && rng.chance(SPAWN_CHANCE.ratNight)) out.push({ kind: 'rat' });
   // tombe aperte, bar, orto e food truck chiamano gli zombie
-  const zombie = (SPAWN_MODIFIERS.zombiePerOpenGrave * b.openGraves + SPAWN_MODIFIERS.zombieBar * b.zombieBar + SPAWN_MODIFIERS.zombieFarm * b.brainFarm
-    + SPAWN_MODIFIERS.zombieFoodTruck * b.foodTruck) * hunters;
-  if (zombie > 0 && rng.chance(Math.min(SPAWN_MODIFIERS.zombieChanceMax, zombie))) out.push({ kind: 'zombie' });
+  const zombie = zombieAppeal(b);
+  if (zombie > 0 && rng.chance(zombie)) out.push({ kind: 'zombie' });
   // l'albero ogni tanto lascia uscire il fantasma di uno dei ricordi affidatigli
   const kept = state.entrusted ?? [];
   if (kept.length > 0 && state.placeables.some((p) => p.type === 'memory_tree')) {

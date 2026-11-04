@@ -1411,3 +1411,44 @@ test('traguardi nuovi: corvi, coccole, lettere, tempi visti, attività e fuochi 
   const old = JSON.parse(JSON.stringify(s)); delete old.player.counters.crowWisps; delete old.player.counters.weathersSeen;
   assert.equal(normalizeSave(old).player.counters.crowWisps, 0);
 });
+
+test('zombie: a gioco chiuso passano e sporcano le tombe, se il cimitero li chiama', async () => {
+  const { ZOMBIE_OFFLINE } = await import('../src/game/balance.ts');
+  const { zombieAppeal } = await import('../src/game/spawn.ts');
+  const setup = (seed, withBar) => {
+    const s = createNewGame(NOW, seed);
+    s.graves = s.graves.slice(0, 6).map((g) => ({ ...g, dirty: false, weeds: false, broken: false, hasFlowers: false, flowersAt: null, dirtySince: null, caredAt: NOW.toISOString(), muddy: false }));
+    s.placeables = s.placeables.filter((p) => !['zombie_bar', 'brain_farm', 'food_truck', 'open_grave'].includes(p.type));
+    if (withBar) for (let i = 0; i < 4; i++) s.placeables.push({ id: `zb${i}`, type: 'zombie_bar', x: 2 + i * 5, y: 2, rot: 0, variant: 0, dirty: false, broken: false, lit: true, placedAt: 0, createdAt: NOW.toISOString(), caredAt: NOW.toISOString() });
+    return s;
+  };
+  // nessuno li chiama: nessuno zombie
+  assert.equal(zombieAppeal(countBuildings(setup(1, false))), 0);
+  let muddy = 0, none = 0;
+  for (let seed = 1; seed <= 40; seed++) {
+    const a = setup(seed, false); const ra = runCatchUp(a, later(3));
+    none += ra.zombieMud;
+    const b = setup(seed, true); const rb = runCatchUp(b, later(3));
+    muddy += rb.zombieMud;
+    for (const g of b.graves.filter((x) => x.muddy)) assert.ok(g.dirty, 'una tomba con le impronte è sporca');
+  }
+  assert.equal(none, 0, 'senza richiami niente zombie');
+  assert.ok(muddy > 15, `con quattro bar, in tre giorni, gli zombie sporcano qualche tomba (${muddy} su 40 cimiteri)`);
+  // il tetto: dieci giorni o tre mesi, non più di maxVisits giri
+  const s = setup(7, true); const r = runCatchUp(s, later(90));
+  assert.ok(r.zombieMud <= ZOMBIE_OFFLINE.maxVisits, `al massimo ${ZOMBIE_OFFLINE.maxVisits} passaggi`);
+});
+
+test('zombie: le tombe appena curate (o rotte) restano al riparo anche a gioco chiuso', () => {
+  const s = createNewGame(NOW, 9);
+  s.graves = s.graves.slice(0, 3).map((g) => ({ ...g, dirty: false, weeds: false, broken: false, hasFlowers: false, dirtySince: null, caredAt: NOW.toISOString() }));
+  s.placeables = s.placeables.filter((p) => p.type !== 'zombie_bar');
+  for (let i = 0; i < 4; i++) s.placeables.push({ id: `zb${i}`, type: 'zombie_bar', x: 2 + i * 5, y: 2, rot: 0, variant: 0, dirty: false, broken: false, lit: true, placedAt: 0, createdAt: NOW.toISOString(), caredAt: NOW.toISOString() });
+  s.graves[0].broken = true; s.graves[0].dirty = true; s.graves[0].dirtySince = NOW.toISOString();
+  const was = s.graves[0].dirtySince;
+  // 5 ore dopo la cura: tutte protette (6 ore)
+  s.world.lastSimulationAt = new Date(NOW.getTime() - 1000).toISOString();
+  const r = runCatchUp(s, new Date(NOW.getTime() + 5 * 3_600_000));
+  assert.equal(r.zombieMud, 0);
+  assert.equal(s.graves[0].dirtySince, was);
+});

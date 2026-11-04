@@ -1630,5 +1630,7 @@ export default {
   "item.cryptSkeleton.label": "Cripta dos Esqueletos",
   "item.cryptSkeleton.desc": "Uma sala de ensaio de osso e madeira, marimba incluída. São possíveis três versões; qual te calha decide-o o baterista, a compasso.",
   "item.cryptSupernatural.label": "Cripta Sobrenatural",
-  "item.cryptSupernatural.desc": "Um pátio ritual com um selo, um cristal e um caldeirão. Há três versões: escolhe o além, e não aceita reclamações."
+  "item.cryptSupernatural.desc": "Um pátio ritual com um selo, um cristal e um caldeirão. Há três versões: escolhe o além, e não aceita reclamações.",
+  "sim.zombieMud#one": "Um zombie passou enquanto estiveste fora: uma lápide ficou cheia de pegadas de lama.",
+  "sim.zombieMud#other": "Uns zombies passaram enquanto estiveste fora: {n} lápides ficaram cheias de pegadas de lama."
 } satisfies Record<string, string>;

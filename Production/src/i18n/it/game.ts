@@ -290,6 +290,8 @@ export default {
   'sim.flowersWithered': 'Alcuni fiori sono ormai cenere.',
   'sim.gravesDirty#one': '{n} lapide si è sporcata: serve una pulita.',
   'sim.gravesDirty#other': '{n} lapidi si sono sporcate: serve una pulita.',
+  'sim.zombieMud#one': 'Uno zombie è passato di qui: una lapide è piena di impronte di fango.',
+  'sim.zombieMud#other': 'Degli zombie sono passati di qui: {n} lapidi sono piene di impronte di fango.',
   'sim.itemsDirty': 'Polvere e ragnatele sugli oggetti del cimitero.',
   'sim.wispsAdded': 'Mentre eri via sono comparsi {n} fuochi fatui.',
 

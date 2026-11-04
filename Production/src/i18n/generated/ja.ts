@@ -1630,5 +1630,7 @@ export default {
   "item.cryptSkeleton.label": "ガイコツの地下墓室",
   "item.cryptSkeleton.desc": "骨と木でできたリハーサル室。マリンバ付きです。バージョンは3つ。どれが来るかはドラマーがリズムに乗って決めます。",
   "item.cryptSupernatural.label": "超常の地下墓室",
-  "item.cryptSupernatural.desc": "封印とクリスタルと大釜のある儀式の中庭。バージョンは3つ。あの世が選び、苦情は受け付けません。"
+  "item.cryptSupernatural.desc": "封印とクリスタルと大釜のある儀式の中庭。バージョンは3つ。あの世が選び、苦情は受け付けません。",
+  "sim.zombieMud#one": "留守のあいだにゾンビが通りました。墓石が一基、泥の足跡だらけです。",
+  "sim.zombieMud#other": "留守のあいだにゾンビが通りました。墓石が{n}基、泥の足跡だらけです。"
 } satisfies Record<string, string>;

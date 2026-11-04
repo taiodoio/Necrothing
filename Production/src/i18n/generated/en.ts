@@ -1670,5 +1670,7 @@ export default {
   "item.cryptSkeleton.label": "Skeleton Crypt",
   "item.cryptSkeleton.desc": "A rehearsal room in bone and wood, marimba included. Three versions are possible; the drummer decides which one you get, in time.",
   "item.cryptSupernatural.label": "Supernatural Crypt",
-  "item.cryptSupernatural.desc": "A ritual courtyard with a seal, a crystal and a cauldron. There are three versions: the beyond chooses, and accepts no complaints."
+  "item.cryptSupernatural.desc": "A ritual courtyard with a seal, a crystal and a cauldron. There are three versions: the beyond chooses, and accepts no complaints.",
+  "sim.zombieMud#one": "A zombie shambled through while you were away: one headstone is covered in muddy footprints.",
+  "sim.zombieMud#other": "Zombies shambled through while you were away: {n} headstones are covered in muddy footprints."
 } satisfies Record<string, string>;

@@ -1632,5 +1632,6 @@ export default {
   "sim.zombieMud#one": "Um zombie passou enquanto estiveste fora: uma lápide ficou cheia de pegadas de lama.",
   "sim.zombieMud#other": "Uns zombies passaram enquanto estiveste fora: {n} lápides ficaram cheias de pegadas de lama.",
   "item.cryptWitch.label": "Cripta da Bruxa",
-  "item.cryptWitch.desc": "A casa da bruxa: um telhado em forma de chapéu, um círculo gravado e algo a borbulhar no jardim. Há três versões: decide o caldeirão, e com o caldeirão não se discute."
+  "item.cryptWitch.desc": "A casa da bruxa: um telhado em forma de chapéu, um círculo gravado e algo a borbulhar no jardim. Há três versões: decide o caldeirão, e com o caldeirão não se discute.",
+  "rules.buy.retired": "Já não se vende na Loja."
 } satisfies Record<string, string>;

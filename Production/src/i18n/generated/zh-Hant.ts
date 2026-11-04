@@ -1632,5 +1632,6 @@ export default {
   "sim.zombieMud#one": "你不在的時候有隻殭屍路過：一塊墓碑沾滿了泥腳印。",
   "sim.zombieMud#other": "你不在的時候有殭屍路過：{n} 塊墓碑沾滿了泥腳印。",
   "item.cryptWitch.label": "女巫墓室",
-  "item.cryptWitch.desc": "女巫的家：帽子形狀的屋頂、刻在地上的圓圈，還有花園裡咕嘟作響的東西。共有三個版本：由大鍋決定，而大鍋的決定沒得商量。"
+  "item.cryptWitch.desc": "女巫的家：帽子形狀的屋頂、刻在地上的圓圈，還有花園裡咕嘟作響的東西。共有三個版本：由大鍋決定，而大鍋的決定沒得商量。",
+  "rules.buy.retired": "商店裡已經不賣了。"
 } satisfies Record<string, string>;

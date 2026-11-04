@@ -1632,5 +1632,6 @@ export default {
   "sim.zombieMud#one": "Un zombi ha pasado mientras no estabas: una lápida está llena de huellas de barro.",
   "sim.zombieMud#other": "Unos zombis han pasado mientras no estabas: {n} lápidas están llenas de huellas de barro.",
   "item.cryptWitch.label": "Cripta de la bruja",
-  "item.cryptWitch.desc": "La casa de la bruja: un tejado con forma de sombrero, un círculo grabado y algo que borbotea en el jardín. Hay tres versiones: decide el caldero, y con el caldero no se discute."
+  "item.cryptWitch.desc": "La casa de la bruja: un tejado con forma de sombrero, un círculo grabado y algo que borbotea en el jardín. Hay tres versiones: decide el caldero, y con el caldero no se discute.",
+  "rules.buy.retired": "Ya no se vende en la Tienda."
 } satisfies Record<string, string>;

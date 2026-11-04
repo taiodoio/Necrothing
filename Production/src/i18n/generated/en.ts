@@ -1672,5 +1672,6 @@ export default {
   "sim.zombieMud#one": "A zombie shambled through while you were away: one headstone is covered in muddy footprints.",
   "sim.zombieMud#other": "Zombies shambled through while you were away: {n} headstones are covered in muddy footprints.",
   "item.cryptWitch.label": "Witch's Crypt",
-  "item.cryptWitch.desc": "The witch's house: a hat-shaped roof, a carved circle and something bubbling in the garden. There are three versions: the cauldron decides, and you don't argue with the cauldron."
+  "item.cryptWitch.desc": "The witch's house: a hat-shaped roof, a carved circle and something bubbling in the garden. There are three versions: the cauldron decides, and you don't argue with the cauldron.",
+  "rules.buy.retired": "It's no longer sold at the Shop."
 } satisfies Record<string, string>;

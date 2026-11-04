@@ -446,7 +446,7 @@ export function placedCount(s: SaveData, type: string): number {
   return s.placeables.filter((p) => p.type === type).length;
 }
 
-export type ShopAvailability = 'ok' | 'full' | 'rank' | 'season' | 'feat' | 'owned' | 'graves' | 'funds';
+export type ShopAvailability = 'ok' | 'full' | 'rank' | 'season' | 'feat' | 'owned' | 'graves' | 'funds' | 'retired';
 
 /** Sepolture che contano per gli sblocchi: nel cimitero, affidate all'albero e anche quelle poi riesumate. */
 export function graveTotal(s: SaveData): number {
@@ -514,6 +514,7 @@ export function lookOptionAvailability(s: SaveData, key: keyof CustodeLook, valu
  */
 export function shopAvailability(s: SaveData, type: string, now: Date): ShopAvailability {
   const def = placeableDef(type);
+  if (def.retired) return 'retired';
   if (!hasAccess(def.access)) return 'full';
   // gli stagionali già comprati restano: si comprano solo nella loro stagione
   if (!isSeasonallyAvailable(def, now.getMonth(), now.getDate())) return 'season';
@@ -550,6 +551,7 @@ export function maxBuyable(s: SaveData, type: string): number {
 export function buy(s: SaveData, type: string, qty: number, now: Date): ActionResult {
   const def = placeableDef(type);
   const avail = shopAvailability(s, type, now);
+  if (avail === 'retired') throw new GameError(t('rules.buy.retired'));
   if (avail === 'full') throw new GameError(t('rules.access.full'));
   if (avail === 'season') throw new GameError(t('rules.buy.season'));
   if (avail === 'rank') throw new GameError(t('rules.buy.rank', { rank: def.minRank }));

@@ -14,7 +14,7 @@ const tris = (m) => Object.values(m.geometries).reduce((a, g) => a + g.getAttrib
 const key = (type, variant, dirty, broken, lit = true) => `p:${type}:${variant}:0:${+dirty}${+broken}${+lit}`;
 const build = (type, variant, dirty = false, broken = false, lit = true) => resolveLowpoly(key(type, variant, dirty, broken, lit))();
 
-test('cripte: cinque voci in Bottega, lotti 4×5 non ruotabili, a più versioni, nella Full', () => {
+test('cripte: cinque cripte (quella degli scheletri ritirata dalla Bottega), lotti 4×5 non ruotabili, a più versioni, nella Full', () => {
   assert.equal(CRYPT_TYPES.length, 5);
   assert.deepEqual(CRYPT_FAMILIES, ['zombie', 'ghost', 'skeleton', 'nature', 'witch']);
   for (const type of CRYPT_TYPES) {
@@ -30,6 +30,8 @@ test('cripte: cinque voci in Bottega, lotti 4×5 non ruotabili, a più versioni,
   }
   // le altre varianti non sono voci in Bottega: solo le cinque «principali»
   assert.equal(CATALOG_LIST.filter((d) => d.id.startsWith('crypt_')).length, 5);
+  // la cripta degli scheletri per ora è ritirata: non si compra, ma chi l'ha posata la tiene
+  assert.deepEqual(CATALOG_LIST.filter((d) => d.retired).map((d) => d.id), ['crypt_skeleton']);
   // costi e ranghi: crescono, e stanno nella scala delle costruzioni che ci sono già (Mausoleo 80 al rango 4, Cripta del vampiro 90 al 5)
   const byRank = CRYPT_TYPES.map((t) => CATALOG[t]);
   assert.ok(Math.min(...byRank.map((d) => d.cost)) >= CATALOG.gravedigger_house.cost - 5 && Math.max(...byRank.map((d) => d.cost)) <= CATALOG.vampire_crypt.cost + 15);
@@ -172,4 +174,19 @@ test('cripte: non si girano (per ora): posate restano dritte, e «Ruota» non c\
   const p = R.placeFromInventory(s, 'crypt_witch', spot.x, spot.y, 1, now);
   assert.equal(p.rot, 0, 'anche se si chiede un quarto di giro, resta dritta');
   assert.throws(() => R.rotateEntity(s, p.id), 'in Modifica non si gira');
+});
+
+test('cripta degli scheletri ritirata: non si compra più, ma quella già posata resta e si vede', () => {
+  const now = new Date('2026-11-04T10:00:00Z');
+  const s = createNewGame(now, 13);
+  s.player.xp = 99999; s.player.wisps = 9999;
+  assert.equal(R.shopAvailability(s, 'crypt_skeleton', now), 'retired');
+  assert.throws(() => R.buy(s, 'crypt_skeleton', 1, now));
+  assert.equal(R.shopAvailability(s, 'crypt_ghost', now), 'ok');
+  // chi ce l'ha in inventario la può ancora posare
+  s.placeables = []; s.graves = [];
+  const spot = nearestFreeSpot(24, 22, [4, 5], buildOccupancy(s), areaForLevel(s.world.expansionLevel));
+  s.inventory.crypt_skeleton = 1;
+  const p = R.placeFromInventory(s, 'crypt_skeleton', spot.x, spot.y, 0, now);
+  assert.ok(p && build('crypt_skeleton', p.variant).geometries.solid, 'si disegna ancora');
 });

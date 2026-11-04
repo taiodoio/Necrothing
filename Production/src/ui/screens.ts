@@ -294,7 +294,7 @@ export function openEditIntro(ui: UI) {
 
 // ── Bottega ────────────────────────────────────────────────────────────
 
-const LOCK_LABEL: Record<R.ShopAvailability, string> = { ok: '', full: t('shop.lock.full'), rank: t('shop.lock.rank'), season: t('shop.lock.season'), feat: t('shop.lock.feat'), owned: t('shop.lock.owned'), graves: t('shop.lock.graves'), funds: '' };
+const LOCK_LABEL: Record<R.ShopAvailability, string> = { ok: '', full: t('shop.lock.full'), rank: t('shop.lock.rank'), season: t('shop.lock.season'), feat: t('shop.lock.feat'), owned: t('shop.lock.owned'), graves: t('shop.lock.graves'), funds: '', retired: t('rules.buy.retired') };
 
 /** Etichetta del lucchetto sulla carta della Bottega. */
 function lockText(s: SaveData, d: PlaceableDef, av: R.ShopAvailability): string {
@@ -358,6 +358,7 @@ function buyText(s: SaveData, d: PlaceableDef, av: R.ShopAvailability, qty: numb
     case 'owned': return t('shop.buy.owned');
     case 'feat': { const [n, goal] = R.featProgress(s, d.feat!); return t('shop.buy.feat', { label: d.feat!.label, n, goal }); }
     case 'season': return t('shop.buy.season', { season: seasonLabel(d) });
+    case 'retired': return t('rules.buy.retired');
   }
 }
 
@@ -398,7 +399,7 @@ export function openShop(ui: UI, cat: PlaceableCategory | 'house' = 'light', sel
       setDrawerBody(h('div', {}, tabs,
         houseShopGrid(s, selected, pick)));
     } else {
-      const items = CATALOG_LIST.filter((d) => d.category === cat && !d.permanent);
+      const items = CATALOG_LIST.filter((d) => d.category === cat && !d.permanent && !d.retired);
       const grid = h('div', { class: 'grid' }, ...items.map((d) => {
         const av = R.shopAvailability(s, d.id, now);
         const locked = av === 'full' || av === 'rank' || av === 'season' || av === 'feat' || av === 'graves';

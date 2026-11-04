@@ -1620,5 +1620,15 @@ export default {
   "celebrate.rank.textMany": "ランクが{k}つ上がり、ランク{n}に到達。墓地があなたを少し認めてくれました。",
   "celebrate.more": "ほかにも達成",
   "celebrate.moreN#one": "ほかに実績がひとつ",
-  "celebrate.moreN#other": "ほかに実績が{n}つ"
+  "celebrate.moreN#other": "ほかに実績が{n}つ",
+  "item.cryptZombie.label": "ゾンビの地下墓室",
+  "item.cryptZombie.desc": "衛生に疑問のある洗濯物と、手押し車、傾いたお墓。バージョンは3つ。親方が三面のコインを投げて決めます。",
+  "item.cryptNature.label": "自然の地下墓室",
+  "item.cryptNature.desc": "ドルメンとキノコのある野生の菜園。誰も設計していないので、バージョンはもちろん運任せです。",
+  "item.cryptGhost.label": "幽霊の地下墓室",
+  "item.cryptGhost.desc": "月の池と、おしゃべり用のベンチがある思い出の庭。設計は3つあり、優柔不断な幽霊たちがくじ引きで決めます。",
+  "item.cryptSkeleton.label": "ガイコツの地下墓室",
+  "item.cryptSkeleton.desc": "骨と木でできたリハーサル室。マリンバ付きです。バージョンは3つ。どれが来るかはドラマーがリズムに乗って決めます。",
+  "item.cryptSupernatural.label": "超常の地下墓室",
+  "item.cryptSupernatural.desc": "封印とクリスタルと大釜のある儀式の中庭。バージョンは3つ。あの世が選び、苦情は受け付けません。"
 } satisfies Record<string, string>;

@@ -1660,5 +1660,15 @@ export default {
   "celebrate.rank.textMany": "You've climbed {k} ranks, up to rank {n}. The cemetery knows you a little better now.",
   "celebrate.more": "You also unlocked",
   "celebrate.moreN#one": "and one more achievement",
-  "celebrate.moreN#other": "and {n} more achievements"
+  "celebrate.moreN#other": "and {n} more achievements",
+  "item.cryptZombie.label": "Zombie Crypt",
+  "item.cryptZombie.desc": "Laundry of dubious hygiene, a wheelbarrow and a crooked tomb. There are three versions: the foreman picks one by flipping a three-sided coin.",
+  "item.cryptNature.label": "Nature Crypt",
+  "item.cryptNature.desc": "A wild vegetable patch with a dolmen and mushrooms. Nobody designed it, so naturally chance picks the version.",
+  "item.cryptGhost.label": "Ghost Crypt",
+  "item.cryptGhost.desc": "A memory garden with a moon pond and a bench for chatting. There are three designs and the ghosts, undecided, draw lots.",
+  "item.cryptSkeleton.label": "Skeleton Crypt",
+  "item.cryptSkeleton.desc": "A rehearsal room in bone and wood, marimba included. Three versions are possible; the drummer decides which one you get, in time.",
+  "item.cryptSupernatural.label": "Supernatural Crypt",
+  "item.cryptSupernatural.desc": "A ritual courtyard with a seal, a crystal and a cauldron. There are three versions: the beyond chooses, and accepts no complaints."
 } satisfies Record<string, string>;

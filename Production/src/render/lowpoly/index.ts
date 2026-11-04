@@ -10,6 +10,7 @@ import { lowpolyGrave } from './graves.ts';
 import type { LPModel } from './kit.ts';
 import { angelStatueLP, fencePillarLP, fenceSegmentLP, gateLP, gravediggerHouseLP, housePartLP, keeperHouseLP, mausoleumLP, shopLP, votiveStatueLP, wellLP } from './architecture.ts';
 import { v2Generators } from './v2/npc.ts';
+import { cryptLP, CRYPT_TYPES } from './cryptModels.ts';
 import {
   archLP, bonfireLP, candleTreeLP, fenceIronLP, fenceWoodLP, fountainLP, ghostLanternLP, glowPumpkinLP, hellHoleLP, hillockLP,
   monsterRocksLP, mudLP, npcHomeLP, openCoffinLP, openGraveLP, petHouseLP, shrineLP, skullCandleLP, spectralTreeLP, toxicPuddleLP,
@@ -50,6 +51,8 @@ export const LP_PLACEABLES: Record<string, (v: PVis) => LPModel> = {
   keeper_house: keeperHouseLP,
   gravedigger_house: gravediggerHouseLP,
   mausoleum: mausoleumLP,
+  // le cripte del laboratorio: il generatore ha già sporco e rotto, e legge la variante (0-2)
+  ...Object.fromEntries(CRYPT_TYPES.map((type) => [type, cryptLP])),
   well: wellLP,
   votive_statue: votiveStatueLP,
   angel_statue: angelStatueLP,
@@ -136,7 +139,8 @@ export function resolveLowpoly(key: string): Builder | null {
     const v: PVis = { type: m[1], variant: Number(m[2]), seed: Number(m[3]), dirty: m[4] === '1', broken: m[5] === '1', lit: m[6] === '1', corner: !!m[7] };
     // chi si sporca e si rompe riceve anche il degrado comune (leggibile su tutti gli oggetti)
     const def = CATALOG[v.type];
-    return def?.decays ? () => weathered(gen(v), v, def.footprint, def.category) : () => gen(v);
+    // le cripte hanno il loro degrado (nel generatore): quello comune si sommerebbe
+    return def?.decays && !CRYPT_TYPES.includes(m[1]) ? () => weathered(gen(v), v, def.footprint, def.category) : () => gen(v);
   }
   m = key.match(/^char:([A-Za-z]+:[A-Za-z]+)$/);
   if (m) return LP_CHARACTERS[m[1]] ?? null;

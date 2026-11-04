@@ -5,7 +5,7 @@ import { visualOf } from '../game/catalog.ts';
 import type { PVis } from './types.ts';
 
 /** Quanti semi distinti per tipo (oggetti ripetuti come i sentieri variano). */
-const SEED_VARIANTS: Record<string, number> = { path_stone: 6, path_dirt: 3, tall_grass: 4, wall_stone: 4, fence_wood: 4, fence_iron: 1, dead_tree: 5, bushes: 4 };
+const SEED_VARIANTS: Record<string, number> = { crypt_zombie: 1, crypt_nature: 1, crypt_ghost: 1, crypt_skeleton: 1, crypt_supernatural: 1, path_stone: 6, path_dirt: 3, tall_grass: 4, wall_stone: 4, fence_wood: 4, fence_iron: 1, dead_tree: 5, bushes: 4 };
 
 /** Quanti semi diversi può avere un tipo (per generare in anticipo tutte le sue forme). */
 export function seedCount(type: string): number {

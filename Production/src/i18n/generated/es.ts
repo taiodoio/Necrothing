@@ -1620,5 +1620,15 @@ export default {
   "celebrate.rank.textMany": "Has subido {k} rangos, hasta el rango {n}. El cementerio te reconoce un poco más.",
   "celebrate.more": "También has desbloqueado",
   "celebrate.moreN#one": "y un logro más",
-  "celebrate.moreN#other": "y {n} logros más"
+  "celebrate.moreN#other": "y {n} logros más",
+  "item.cryptZombie.label": "Cripta de los zombis",
+  "item.cryptZombie.desc": "Colada de higiene dudosa, una carretilla y una tumba torcida. Hay tres versiones: el capataz elige lanzando una moneda de tres caras.",
+  "item.cryptNature.label": "Cripta de la naturaleza",
+  "item.cryptNature.desc": "Un huerto silvestre con un dolmen y setas. Nadie lo diseñó, así que, como es natural, la versión la decide el azar.",
+  "item.cryptGhost.label": "Cripta de los fantasmas",
+  "item.cryptGhost.desc": "Un jardín del recuerdo con estanque lunar y un banco para charlar. Hay tres proyectos y los fantasmas, indecisos, echan a suertes.",
+  "item.cryptSkeleton.label": "Cripta de los esqueletos",
+  "item.cryptSkeleton.desc": "Una sala de ensayo de hueso y madera, marimba incluida. Son posibles tres versiones; cuál te toca lo decide el batería, a compás.",
+  "item.cryptSupernatural.label": "Cripta sobrenatural",
+  "item.cryptSupernatural.desc": "Un patio ritual con un sello, un cristal y un caldero. Hay tres versiones: elige el más allá, y no admite reclamaciones."
 } satisfies Record<string, string>;

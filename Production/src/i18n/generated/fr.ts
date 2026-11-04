@@ -1620,5 +1620,15 @@ export default {
   "celebrate.rank.textMany": "Tu as gagné {k} rangs, jusqu’au rang {n}. Le cimetière te reconnaît un peu mieux.",
   "celebrate.more": "Tu as aussi débloqué",
   "celebrate.moreN#one": "et un autre succès",
-  "celebrate.moreN#other": "et {n} autres succès"
+  "celebrate.moreN#other": "et {n} autres succès",
+  "item.cryptZombie.label": "Crypte des zombies",
+  "item.cryptZombie.desc": "Du linge d’une propreté douteuse, une brouette et une tombe de travers. Il en existe trois versions : le chef de chantier tire à pile ou face, sur une pièce à trois faces.",
+  "item.cryptNature.label": "Crypte de la nature",
+  "item.cryptNature.desc": "Un potager sauvage avec un dolmen et des champignons. Personne ne l’a dessiné : c’est donc le hasard qui choisit la version.",
+  "item.cryptGhost.label": "Crypte des fantômes",
+  "item.cryptGhost.desc": "Un jardin du souvenir avec un bassin lunaire et un banc pour papoter. Il y a trois plans et les fantômes, indécis, tirent au sort.",
+  "item.cryptSkeleton.label": "Crypte des squelettes",
+  "item.cryptSkeleton.desc": "Une salle de répétition en os et en bois, marimba comprise. Trois versions sont possibles ; c’est le batteur qui choisit laquelle, en rythme.",
+  "item.cryptSupernatural.label": "Crypte surnaturelle",
+  "item.cryptSupernatural.desc": "Une cour rituelle avec un sceau, un cristal et un chaudron. Il y a trois versions : l’au-delà choisit, et n’accepte aucune réclamation."
 } satisfies Record<string, string>;

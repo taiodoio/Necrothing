@@ -1620,5 +1620,15 @@ export default {
   "celebrate.rank.textMany": "{k}등급을 한 번에 올라 {n}등급이 됐어요. 묘지가 당신을 조금 더 알아봐요.",
   "celebrate.more": "함께 달성했어요",
   "celebrate.moreN#one": "업적 하나 더",
-  "celebrate.moreN#other": "업적 {n}개 더"
+  "celebrate.moreN#other": "업적 {n}개 더",
+  "item.cryptZombie.label": "좀비 납골당",
+  "item.cryptZombie.desc": "위생이 의심스러운 빨래, 손수레, 삐뚤어진 무덤. 버전은 세 가지이고, 현장 감독이 세 면짜리 동전을 던져 고릅니다.",
+  "item.cryptNature.label": "자연 납골당",
+  "item.cryptNature.desc": "고인돌과 버섯이 있는 제멋대로 자란 텃밭. 아무도 설계하지 않았으니, 버전은 당연히 우연이 고릅니다.",
+  "item.cryptGhost.label": "유령 납골당",
+  "item.cryptGhost.desc": "달빛 연못과 수다 떨기 좋은 벤치가 있는 기억의 정원. 설계는 세 가지이고, 우유부단한 유령들이 제비뽑기로 정합니다.",
+  "item.cryptSkeleton.label": "해골 납골당",
+  "item.cryptSkeleton.desc": "뼈와 나무로 만든 연습실, 마림바 포함. 가능한 버전은 세 가지이고, 어떤 것이 올지는 드러머가 박자에 맞춰 정합니다.",
+  "item.cryptSupernatural.label": "초자연 납골당",
+  "item.cryptSupernatural.desc": "봉인과 수정, 가마솥이 있는 의식의 안뜰. 버전은 세 가지이고, 저승이 고르며 불만은 받지 않습니다."
 } satisfies Record<string, string>;

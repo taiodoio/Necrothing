@@ -1620,5 +1620,15 @@ export default {
   "celebrate.rank.textMany": "你连升 {k} 级，到了等级 {n}。墓园又多认识了你一点。",
   "celebrate.more": "你还解锁了",
   "celebrate.moreN#one": "还有一个成就",
-  "celebrate.moreN#other": "还有 {n} 个成就"
+  "celebrate.moreN#other": "还有 {n} 个成就",
+  "item.cryptZombie.label": "僵尸墓室",
+  "item.cryptZombie.desc": "卫生堪忧的洗衣场、一辆手推车和一座歪斜的坟墓。共有三个版本：工头抛一枚三面的硬币来决定。",
+  "item.cryptNature.label": "自然墓室",
+  "item.cryptNature.desc": "一片野生菜园，带着石棚墓和蘑菇。没人设计过它，所以版本自然由运气决定。",
+  "item.cryptGhost.label": "幽灵墓室",
+  "item.cryptGhost.desc": "一座回忆花园，有月光水池和一条聊天长椅。共有三种设计，犹豫不决的幽灵们抽签决定。",
+  "item.cryptSkeleton.label": "骷髅墓室",
+  "item.cryptSkeleton.desc": "一间用骨头和木头搭成的排练室，马林巴琴也包含在内。可能有三个版本；你会得到哪个，由鼓手踩着节拍决定。",
+  "item.cryptSupernatural.label": "超自然墓室",
+  "item.cryptSupernatural.desc": "一座仪式庭院，有法印、水晶和大锅。共有三个版本：由彼岸决定，且概不受理投诉。"
 } satisfies Record<string, string>;

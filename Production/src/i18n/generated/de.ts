@@ -1620,5 +1620,15 @@ export default {
   "celebrate.rank.textMany": "Du bist {k} Ränge aufgestiegen, bis Rang {n}. Der Friedhof kennt dich jetzt etwas besser.",
   "celebrate.more": "Außerdem freigeschaltet",
   "celebrate.moreN#one": "und ein weiterer Erfolg",
-  "celebrate.moreN#other": "und {n} weitere Erfolge"
+  "celebrate.moreN#other": "und {n} weitere Erfolge",
+  "item.cryptZombie.label": "Zombie-Gruft",
+  "item.cryptZombie.desc": "Wäsche von zweifelhafter Hygiene, eine Schubkarre und eine schiefe Gruft. Es gibt drei Versionen: Der Bauleiter wirft dafür eine dreiseitige Münze.",
+  "item.cryptNature.label": "Natur-Gruft",
+  "item.cryptNature.desc": "Ein wilder Gemüsegarten mit Dolmen und Pilzen. Niemand hat ihn geplant, also entscheidet natürlich der Zufall über die Version.",
+  "item.cryptGhost.label": "Geister-Gruft",
+  "item.cryptGhost.desc": "Ein Garten der Erinnerung mit Mondteich und einer Bank zum Plaudern. Es gibt drei Entwürfe, und die Geister, unentschlossen, losen.",
+  "item.cryptSkeleton.label": "Skelett-Gruft",
+  "item.cryptSkeleton.desc": "Ein Proberaum aus Knochen und Holz, Marimba inklusive. Drei Versionen sind möglich; welche du bekommst, entscheidet der Schlagzeuger, im Takt.",
+  "item.cryptSupernatural.label": "Übernatürliche Gruft",
+  "item.cryptSupernatural.desc": "Ein Ritualhof mit Siegel, Kristall und Kessel. Es gibt drei Versionen: Das Jenseits entscheidet und nimmt keine Beschwerden an."
 } satisfies Record<string, string>;

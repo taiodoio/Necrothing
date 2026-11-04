@@ -88,3 +88,11 @@ test('i testi fissi delle tombe e il nome predefinito seguono la lingua, senza t
     values.delete('necro.lang');
   }
 });
+
+test('avvio: prima della lingua si importa solo i18n (i testi fissati all’importazione seguono la lingua)', async () => {
+  const fs = await import('node:fs');
+  const src = fs.readFileSync(new URL('../src/entry.ts', import.meta.url), 'utf8');
+  const statics = [...src.matchAll(/^import\s+(?!type\b)[^;]*?from\s+['"]([^'"]+)['"]/gm)].map((m) => m[1]);
+  assert.deepEqual(statics, ['./i18n/index.ts'], 'catalogo, ranghi e stato vanno importati dopo initI18n()');
+  assert.ok(src.indexOf('await initI18n()') < src.indexOf("import('./app/persistence.ts')"));
+});

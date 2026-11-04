@@ -696,8 +696,9 @@ export function catShelterLP(): LPModel {
   const C = new THREE.Shape(); C.moveTo(-0.22, -0.55); C.lineTo(0.22, -0.55); C.lineTo(0.32, 0.15); C.lineTo(0.22, 0.55); C.lineTo(-0.22, 0.55); C.lineTo(-0.32, 0.15); C.closePath();
   lp.push([0, 0, 0], Math.PI / 2, -Math.PI / 2).plate(C, 0.3, '#5a4030', { vary: 0.08 }).pop();
   lp.push([0, 0.2, 0], Math.PI / 2, -Math.PI / 2, 0, [0.85, 0.9, 1]).plate(C, 0.12, '#2a201a', { ao: 0 }).pop();
-  lp.blob(0, 0.24, 0.05, 0.22, 0.05, 0.38, '#8e3a3a', { jitter: 0.01 });
-  for (let i = 0; i < 4; i++) lp.box(-0.1 + (i % 2) * 0.2, 0.29, -0.2 + Math.floor(i / 2) * 0.35, 0.18, 0.004, 0.16, '#c9b79c', { jitter: 0 });
+  // cuscino sopra il bordo della bara (prima stava sotto e il gatto che dorme spariva nel legno scuro)
+  lp.blob(0, 0.34, 0.02, 0.24, 0.06, 0.4, '#c0505a', { jitter: 0.01 });
+  for (let i = 0; i < 4; i++) lp.box(-0.1 + (i % 2) * 0.2, 0.395, -0.2 + Math.floor(i / 2) * 0.35, 0.17, 0.004, 0.15, '#e6d6b8', { jitter: 0 });
   lp.pop();
   // tiragraffi: croce di legno avvolta nella corda, con il pallino appeso
   lp.push([0.55, 0, -0.55]);
@@ -884,7 +885,7 @@ function calavera(lp: LP, x: number, y: number, z: number, s = 1, yaw = 0) {
 }
 
 /**
- * Altare dei morti (3×2, 2 novembre): tre gradini con le tovaglie
+ * Altare dei morti (2×2, 2 novembre): tre gradini con le tovaglie
  * traforate, arco di canne coperto di cempasúchil, papel picado ritagliato,
  * ritratti, calaveras, pan de muerto, candele a gruppi, vasi di fiori,
  * bicchiere d'acqua, incensiere col fumo di copale, sentiero di petali.
@@ -962,9 +963,9 @@ export function ofrenda2LP(lit = true, lite = true): LPModel {
   for (const [x, y, z, n] of [[-0.85, 0.31, 0.45, 3], [0.05, 0.31, 0.45, 4], [0.85, 0.31, 0.48, 2], [-0.7, 0.61, 0.15, 2], [0.65, 0.61, 0.12, 3], [0.0, 0.91, -0.12, 3]] as const) {
     for (let k = 0; k < n; k++) candle(lp, x + (k - (n - 1) / 2) * 0.06, y, z + (k % 2) * 0.04, lit, 0.06 + r.next() * 0.12, !lite);
   }
-  // sentiero di petali e candele a terra davanti
-  for (let i = 0; i < (lite ? 32 : 70); i++) { const t = r.next(); lp.blob(r.range(-0.25, 0.25) * (1 - t * 0.4), 0.005, 0.6 + t * 0.55, 0.02, 0.005, 0.016, r.pick(['#f0901f', '#f6a92a', '#e07a1a']), { jitter: 0 }); }
-  for (const s of [-1, 1]) candle(lp, s * 0.35, 0, 0.95, lit, 0.1, !lite);
+  // sentiero di petali e candele a terra davanti (dentro l'ingombro: l'altare si può ruotare)
+  for (let i = 0; i < (lite ? 32 : 70); i++) { const t = r.next(); lp.blob(r.range(-0.25, 0.25) * (1 - t * 0.4), 0.005, 0.6 + t * 0.32, 0.02, 0.005, 0.016, r.pick(['#f0901f', '#f6a92a', '#e07a1a']), { jitter: 0 }); }
+  for (const s of [-1, 1]) candle(lp, s * 0.35, 0, 0.84, lit, 0.1, !lite);
   if (lit) { lp.light(0, 0.8, 0.5, LPC.flame, 0.7, 4.5, 0.35, 0.9); lp.light(0, 1.2, -0.1, LPC.flame, 0.4, 3, 0.35, 0.6); }
   // leggero: le candele non hanno ciascuna la sua luce; ne bastano due in più, una per lato
   if (lit && lite) { for (const s of [-1, 1]) lp.light(s * 0.75, 0.6, 0.4, LPC.flame, 0.7, 3.2, 0.4, 0.6); lp.light(0, 0.45, 0.9, LPC.flame, 0.5, 2.6, 0.4, 0.5); }

@@ -4,19 +4,28 @@
 // miniature della Bottega (ui/thumbs, che li ritrae fermi).
 
 import * as THREE from 'three';
+
+/**
+ * Chi parla accanto al suo oggetto: toccandolo si seleziona l'oggetto (menù con
+ * «Parla» e «Dettagli», e in Modifica si sposta e si ripone come gli altri).
+ */
+export const TALKER_OF: Readonly<Record<string, 'hunterA' | 'postman' | 'florist' | 'gardener'>> = {
+  ghost_hunters: 'hunterA', post_office: 'postman', flower_kiosk: 'florist', gardener_corner: 'gardener',
+};
 import type { Placed } from '../game/state.ts';
 import { lookKey, type CustodeLook } from '../game/look.ts';
 import { assemble, handPos, HUMAN_PIVOTS, humanSpec } from '../render/lowpoly/v2/custode.ts';
 import { instrumentLP } from '../render/lowpoly/newItems.ts';
 import { sleepingCatLP } from '../render/lowpoly/newItems2.ts';
 import { rakeLP } from '../render/lowpoly/newItems3.ts';
+import { tacoLP } from '../render/lowpoly/newItems4.ts';
 import { skull } from '../render/lowpoly/extras.ts';
 import { LP, type LPModel } from '../render/lowpoly/kit.ts';
 import { instantiate, LOWPOLY_MATERIALS } from '../render/modelCache.ts';
 import type { CharacterKind, Pose, Rig } from './characters.ts';
 
 export type Instrument = 'guitar' | 'sticks' | 'trumpet';
-export type PropKind = 'mug' | 'hoe' | 'rake' | Instrument;
+export type PropKind = 'mug' | 'hoe' | 'rake' | 'taco' | Instrument;
 export type PresenceRole = 'sit' | 'dance' | 'wander' | 'circle' | 'goalie' | 'still';
 
 /** Quante presenze animano bar e orto: con la fascia del dispositivo (economico, medio, top). */
@@ -96,6 +105,33 @@ export function presenceLayout(p: Pick<Placed, 'type' | 'broken'>, opts: { night
       cast.push({ kind: 'ghost', role: 'goalie', x: -0.6, z: 0, facing: Math.PI / 2 }, { kind: 'ghost', role: 'goalie', x: 0.6, z: 0, facing: -Math.PI / 2 });
       props.push({ kind: 'skullBall', x: 0, y: 0.5, z: 0, yaw: 0, owner: 0 }); // la "palla" è un teschio
       break;
+    case 'food_truck': {
+      if (p.broken) break;
+      const crew = [
+        () => still('work', -0.3, -0.05, 0, 0.3, undefined, 'zombie', 0.6), // il cuoco dietro lo sportello: piccolo quanto basta perché testa e spalle stiano nel vano, sopra il bancone
+        // i clienti ai lati dello sportello (davanti lo coprirebbero), girati verso il furgone
+        () => still('idle', 0.85, 1.05, Math.PI + 0.55, 0, 'taco', undefined, 0.88), // in piedi che addenta un taco
+        () => still('sit', -1.1, 1.0, 0.45, 0, 'taco', undefined, 0.88), // seduto sulla cassa, girato verso di noi: si vede in faccia mentre mangia
+      ];
+      for (const f of crew.slice(0, opts.tier === 'low' ? 2 : 3)) f();
+      break;
+    }
+    case 'ice_cream_cart':
+      if (p.broken) break;
+      still('work', -0.1, -0.55, 0, 0, undefined, 'icecreamGhost', 0.9); // dietro il carretto, pesca il gelato
+      if (opts.tier !== 'low') cast.push({ kind: 'icecreamCustomer', role: 'still', pose: 'idle', x: 0.62, z: 0.8, facing: Math.PI + 0.5, size: 0.8, dim: 0.85 }); // un cliente col cono in mano
+      break;
+    case 'flower_kiosk':
+      if (!p.broken) still('idle', 0.72, 0.5, -0.45, 0, undefined, 'florist');
+      break;
+    case 'post_office':
+      if (!p.broken) still('work', -0.2, 1.15, 0.25, 0, undefined, 'postman'); // davanti alla porta, smista la posta
+      break;
+    case 'ghost_hunters':
+      // accanto all'auto; la sera e la notte escono con la torcia a fare il giro (Game)
+      still('idle', 0.75, 0.55, -0.4, 0, undefined, 'hunterA');
+      still('idle', -0.35, 0.6, 0.45, 0, undefined, 'hunterB');
+      break;
     case 'witch_corner':
       if (!p.broken) still('work', 0.55, -0.15, 0.1, 0, undefined, 'witch'); // accanto al calderone, verso chi guarda: gira la pozione
       break;
@@ -111,7 +147,7 @@ export function presenceLayout(p: Pick<Placed, 'type' | 'broken'>, opts: { night
       break;
     case 'cat_shelter': {
       const roof = still('idle', 0.55, -0.55, 0.5, 1.04, undefined, 'cat');
-      props.push({ kind: 'sleepingCat', x: -0.45, y: 0.29, z: -0.28, yaw: 0.8, owner: roof });
+      props.push({ kind: 'sleepingCat', x: -0.45, y: 0.37, z: -0.3, yaw: 0.8, owner: roof }); // sul cuscino, sopra il bordo della bara
       cast.push({ kind: 'cat', role: 'wander', x: -0.12, z: 0.6, radius: 1.4, speed: 0.5 });
       break;
     }
@@ -203,6 +239,16 @@ function propMesh(kind: 'mug' | 'hoe'): THREE.Group {
   return g;
 }
 
+/** Taco di cervello nella mano destra (spazio del braccio, come il boccale). */
+let tacoModel: LPModel | null = null;
+function tacoMesh(): THREE.Object3D {
+  if (!tacoModel) { const lp = new LP('prop:taco'); tacoLP(lp, 0, 0, 0, 1.1, Math.PI / 2); tacoModel = lp.build(); }
+  const g = lpMesh(tacoModel);
+  g.name = 'prop';
+  g.position.set(0.02, -0.06, 0.4);
+  return g;
+}
+
 // ── Rastrello del giardiniere ───────────────────────────────────────────
 
 /** Pettine a terra davanti e di lato, cima del manico verso il fianco (spazio del corpo del rig v2). */
@@ -251,7 +297,7 @@ function rakePose(rig: Rig, k: number, moving: boolean) {
 /** Gesto dell'oggetto in mano (strumenti, rastrello); boccale e zappa li anima chi li usa. */
 export function propPose(rig: Rig, prop: PropKind, k: number, moving = false) {
   if (prop === 'rake') rakePose(rig, k, moving);
-  else if (prop !== 'mug' && prop !== 'hoe') playPose(rig, prop, k);
+  else if (prop !== 'mug' && prop !== 'hoe' && prop !== 'taco') playPose(rig, prop, k);
 }
 
 /** Materiale dei fantasmi attenuato (uno per intensità, condiviso). */
@@ -269,6 +315,7 @@ export function dimGhosts(root: THREE.Object3D, k: number | undefined) {
 export function attachProp(rig: Rig, prop: PropKind | undefined) {
   if (!prop || !rig.parts.armR) return;
   if (prop === 'mug' || prop === 'hoe') { rig.parts.armR.add(propMesh(prop)); return; }
+  if (prop === 'taco') { rig.parts.armR.add(tacoMesh()); return; }
   if (prop === 'guitar') {
     // la chitarra sta sul petto (parte del corpo), il manico in alto a sinistra
     const g = lpMesh(instrumentLP('guitar'));

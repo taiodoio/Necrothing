@@ -1,8 +1,8 @@
 // Atmosfera: luci per fase del giorno (alba/giorno/crepuscolo/notte), meteo,
-// nebbia, ombre che seguono la camera e un pool limitato di PointLight
-// assegnate dinamicamente alle sorgenti più vicine al centro della vista.
-// Tutte le sorgenti hanno comunque un alone additivo (economico) e le geometrie
-// emissivi, quindi anche con poche luci reali la notte resta calda e leggibile.
+// nebbia e ombre che seguono la camera. Le sorgenti accese (lanterne, lumini,
+// fiamme) non sono luci vere: si dipingono nella mappa di luce (render/lightMap.ts),
+// uguale in tutte le qualità, così la resa non cambia spostando la vista; in più
+// hanno un alone additivo (economico) e le geometrie emissive.
 
 import * as THREE from 'three';
 import type { Quality, Weather } from '../game/state.ts';
@@ -11,6 +11,7 @@ import { lightWorldPos, LOWPOLY_MATERIALS } from '../render/modelCache.ts';
 import type { LightAnchor } from '../render/types.ts';
 import { FireFlicker, seedFromPosition } from './FireFlicker.ts';
 import { radialGlowTexture } from '../render/glowTexture.ts';
+import { LightMapPainter } from '../render/lightMap.ts';
 
 interface Preset {
   top: string; bottom: string; fog: string;
@@ -34,8 +35,6 @@ interface AnchorEntry {
   on: boolean;
   /** Alone attenuato quando ci sono altre sorgenti vicine (dieci candele non fanno dieci aloni pieni). */
   crowd: number;
-  /** Luce reale: quante sorgenti vicine rappresenta (una sola luce per gruppo, un po' più forte). */
-  boost: number;
 }
 
 export interface AnchorHandle { id: number }
@@ -65,21 +64,24 @@ function cloneMix(m: Mix): Mix {
 
 /** Durata indicativa dei passaggi di fase/meteo e delle accensioni delle luci (secondi). */
 const MIX_RATE = 1.3;
-const LIGHT_IN = 0.6, LIGHT_OUT = 0.45;
 /** Sorgenti più vicine di così contano come un gruppo (candele, lumini, fiamme dello stesso oggetto). */
-const CROWD_R = 0.9, CLUSTER_R = 1.3;
+const CROWD_R = 0.9;
+
+/** Luminosità di vetri e fiamme accesi (moltiplica il valore della fase del giorno). */
+export const GLOW_SCALE = 0.62;
+/** Opacità degli aloni, e quanto restano quando la vista è larga. */
+export const HALO_OPACITY = 0.7;
+export const HALO_FAR_MIN = 0.35;
+/** Pozza a terra delle luci finte: raggio (in parte della portata della luce) e quota sopra il terreno. */
+export const POOL_RADIUS = 0.65;
+export const POOL_LIFT = 0.11;
 
 let haloTexture: THREE.Texture | null = null;
-/** Pozza di luce a terra (luci finte): qui il centro pieno va bene, sta sotto ai piedi e non davanti. */
-let poolTexture: THREE.Texture | null = null;
-function getPoolTexture(): THREE.Texture {
-  poolTexture ??= radialGlowTexture([[0, 0.7], [0.2, 0.42], [0.5, 0.13], [1, 0]]);
-  return poolTexture;
-}
 function getHaloTexture(): THREE.Texture {
   // centro tenue e bagliore largo attorno: l'alone sta davanti alla fonte (vedi update), con un
   // centro quasi bianco copriva la lanterna e chi ci stava vicino (il Custode non si vedeva)
-  haloTexture ??= radialGlowTexture([[0, 0.4], [0.2, 0.3], [0.5, 0.1], [1, 0]]);
+  // (più morbido ancora: un bagliore pieno nascondeva la lanterna stessa, e da lontano diventava un pallino)
+  haloTexture ??= radialGlowTexture([[0, 0.2], [0.3, 0.14], [0.65, 0.04], [1, 0]]);
   return haloTexture;
 }
 
@@ -89,7 +91,6 @@ export class Atmosphere {
   readonly hemi = new THREE.HemisphereLight('#ffffff', '#333333', 1);
   readonly ambient = new THREE.AmbientLight('#ffffff', 0.2);
   readonly anchors = new Map<number, AnchorEntry>();
-  private pool: THREE.PointLight[] = [];
   private nextId = 1;
   private preset: Preset = PRESETS.night;
   private cur: Mix | null = null;
@@ -102,13 +103,22 @@ export class Atmosphere {
   private bgTexture: THREE.CanvasTexture;
   private flash = 0;
   private nextFlash = 6;
-  private poolTimer = 0;
   /** Le sorgenti sono cambiate: va ricalcolato quanto sono affollate. */
   private crowdDirty = true;
   private readonly toCamera = new THREE.Vector3();
   private readonly scene: THREE.Scene;
-  /** Luci finte (telefoni deboli): niente luci vere, una pozza di luce dipinta a terra per ogni sorgente. */
-  private fake: THREE.InstancedMesh | null = null;
+  /**
+   * La luce delle sorgenti: ognuna dipinta nella mappa di luce che i materiali leggono (render/lightMap.ts).
+   * In tutte le qualità: con le luci vere (prima in Alta, sulle 10 fonti più vicine al centro) la resa
+   * cambiava spostando la vista, più fredda al centro e calda ai lati.
+   */
+  private readonly fake = new LightMapPainter(512);
+  private fakeStrength = 0;
+  private fakeT = 0;
+  private fakePool = 0;
+  private lastMapTime = -Infinity;
+  private readonly lastMapAt = new THREE.Vector3(Infinity, 0, 0);
+  private viewRadius = 12;
   quality: Quality;
 
   constructor(scene: THREE.Scene, quality: Quality) {
@@ -120,12 +130,6 @@ export class Atmosphere {
     this.sun.shadow.bias = -0.0006;
     this.sun.shadow.normalBias = 0.02;
     this.setQuality(quality);
-    const poolSize = 10;
-    for (let i = 0; i < poolSize; i++) {
-      const l = new THREE.PointLight('#ffb35c', 0, 4, 1.6);
-      this.pool.push(l);
-      this.group.add(l);
-    }
     this.bgCanvas.width = 4;
     this.bgCanvas.height = 256;
     this.bgTexture = new THREE.CanvasTexture(this.bgCanvas);
@@ -142,27 +146,6 @@ export class Atmosphere {
     this.sun.shadow.mapSize.set(size, size);
     this.sun.shadow.map?.dispose();
     this.sun.shadow.map = null as unknown as THREE.WebGLRenderTarget;
-  }
-
-  /** Luci reali nella scena (qualità Auto): le altre non ci sono proprio, così lo shader non le calcola. */
-  private lightBudget: number | null = null;
-
-  /** Numero di luci reali attive per qualità (le altre restano a intensità 0). */
-  private activePool(): number {
-    return this.lightBudget ?? (this.quality === 'low' ? 4 : this.quality === 'medium' ? 7 : 10);
-  }
-
-  /**
-   * Quante luci puntiformi tenere davvero nella scena (null: tutte, come nei
-   * livelli manuali). Cambiarlo ricompila gli shader: si fa di rado.
-   */
-  setLightBudget(n: number | null) {
-    this.lightBudget = n;
-    this.pool.forEach((l, i) => {
-      const keep = n === null || i < n;
-      if (keep && !l.parent) this.group.add(l);
-      if (!keep && l.parent) { this.group.remove(l); l.userData.entry = undefined; l.intensity = 0; }
-    });
   }
 
   /** Lato della mappa delle ombre (qualità Auto: segue il gradino). */
@@ -202,7 +185,8 @@ export class Atmosphere {
     this.sun.color.copy(m.sun);
     this.sun.intensity = m.sunI;
     this.ambient.intensity = m.ambient;
-    (LOWPOLY_MATERIALS.glow as THREE.MeshBasicMaterial).color.setScalar(m.glow);
+    // vetri e fiamme accesi: abbastanza da leggersi come luce, non tanto da diventare macchie bianche
+    (LOWPOLY_MATERIALS.glow as THREE.MeshBasicMaterial).color.setScalar(m.glow * GLOW_SCALE);
     (this.scene.fog as THREE.Fog).color.copy(m.fog);
     this.applyFocus();
   }
@@ -228,6 +212,7 @@ export class Atmosphere {
   /** Centra ombre e nebbia sul punto osservato (raggio = mezza vista). */
   focus(center: THREE.Vector3, radius: number, cameraDistance = 60) {
     this.focusPoint.copy(center);
+    this.viewRadius = radius;
     const cam = this.sun.shadow.camera;
     const r = Math.max(8, radius);
     cam.left = -r; cam.right = r; cam.top = r; cam.bottom = -r;
@@ -247,40 +232,30 @@ export class Atmosphere {
     this.sun.target.updateMatrixWorld();
   }
 
-  /**
-   * Luci finte: le luci vere si tolgono (lo shader non le calcola più) e al
-   * loro posto ogni sorgente accesa ha un alone tondo a terra, additivo, che
-   * tremola con la fiamma. Un'unica mesh per tutte (una sola draw call).
-   */
-  setFakeLights(on: boolean) {
-    if (on === !!this.fake) return;
-    this.setLightBudget(on ? 0 : null);
-    if (!on) { this.group.remove(this.fake!); this.fake!.geometry.dispose(); (this.fake!.material as THREE.Material).dispose(); this.fake = null; return; }
-    const mat = new THREE.MeshBasicMaterial({ map: getPoolTexture(), transparent: true, blending: THREE.AdditiveBlending, depthWrite: false, fog: false });
-    this.fake = new THREE.InstancedMesh(new THREE.PlaneGeometry(2, 2).rotateX(-Math.PI / 2), mat, 512);
-    this.fake.count = 0;
-    this.fake.frustumCulled = false;
-    this.fake.renderOrder = 2;
-    this.group.add(this.fake);
+  private updateFake(t: number, pool: number) {
+    const m = this.fake;
+    const c = new THREE.Color(), lp = new THREE.Vector3();
+    m.begin();
+    this.fakeStrength = pool;
+    if (pool <= 0.01) return;
+    for (const e of this.anchors.values()) {
+      if (!e.on || e.anchor.intensity <= 0.2) continue;
+      const f = e.flicker.value(t);
+      // la quota del modello dell'ancora è l'altezza da terra: il suolo sotto la fonte
+      const ground = e.pos.y - lightWorldPos(e.anchor, lp).y;
+      c.set(e.anchor.color).multiplyScalar(Math.min(1, e.anchor.intensity) * f * e.crowd);
+      m.add(e.pos.x, ground, e.pos.z, e.anchor.range * POOL_RADIUS, c);
+    }
   }
 
-  private updateFake(t: number, pool: number) {
-    const m = this.fake!;
-    const mat4 = new THREE.Matrix4(), q = new THREE.Quaternion(), p = new THREE.Vector3(), sc = new THREE.Vector3(), c = new THREE.Color(), lp = new THREE.Vector3();
-    let i = 0;
-    for (const e of this.anchors.values()) {
-      if (!e.on || e.anchor.intensity <= 0.2 || i >= 512) continue;
-      const f = e.flicker.value(t);
-      const r = e.anchor.range * 0.42;
-      // a terra sotto la sorgente (l'ancora sta in alto sul modello: la sua quota nel modello è l'altezza da terra)
-      p.set(e.pos.x, e.pos.y - lightWorldPos(e.anchor, lp).y + 0.04, e.pos.z);
-      m.setMatrixAt(i, mat4.compose(p, q, sc.set(r, 1, r)));
-      m.setColorAt(i, c.set(e.anchor.color).multiplyScalar(Math.min(1, e.anchor.intensity) * 0.3 * pool * f * e.crowd));
-      i++;
-    }
-    m.count = i;
-    m.instanceMatrix.needsUpdate = true;
-    if (m.instanceColor) m.instanceColor.needsUpdate = true;
+  /** Disegna la mappa di luce (solo con le luci finte), prima della scena. */
+  renderLightMap(renderer: THREE.WebGLRenderer) {
+    // al più 24 volte al secondo (il tremolio non ne chiede di più), subito se la vista si è spostata
+    const now = performance.now(), moved = this.lastMapAt.distanceToSquared(this.focusPoint) > 0.04;
+    if (!moved && now - this.lastMapTime < 1000 / 24) return;
+    this.lastMapTime = now; this.lastMapAt.copy(this.focusPoint);
+    this.updateFake(this.fakeT, this.fakePool);
+    this.fake.render(renderer, this.focusPoint.x, this.focusPoint.z, THREE.MathUtils.clamp(this.viewRadius * 2.6, 24, 96), this.fakeStrength);
   }
 
   addAnchor(pos: THREE.Vector3, anchor: LightAnchor, on = true): AnchorHandle {
@@ -296,7 +271,7 @@ export class Atmosphere {
     sprite.scale.set(s, s, s);
     sprite.renderOrder = 3;
     this.group.add(sprite);
-    this.anchors.set(id, { pos: pos.clone(), anchor, sprite, flicker: new FireFlicker(seedFromPosition(pos.x, pos.y, pos.z), anchor.flicker, 1, anchor.fault ?? 0), on, crowd: 1, boost: 1 });
+    this.anchors.set(id, { pos: pos.clone(), anchor, sprite, flicker: new FireFlicker(seedFromPosition(pos.x, pos.y, pos.z), anchor.flicker, 1, anchor.fault ?? 0), on, crowd: 1 });
     this.crowdDirty = true;
     return { id };
   }
@@ -330,7 +305,6 @@ export class Atmosphere {
     const s = 0.5 + anchor.halo * 1.6;
     e.sprite.scale.set(s, s, s);
     e.anchor = anchor;
-    for (const light of this.pool) if (light.userData.entry === e) { light.color.set(anchor.color); light.distance = anchor.range; }
   }
 
   moveAnchor(h: AnchorHandle, pos: THREE.Vector3) {
@@ -377,84 +351,25 @@ export class Atmosphere {
       this.applyMix();
     }
     const p = this.cur;
+    // Da lontano gli aloni si attenuano (fino a un terzo): con la vista larga sarebbero tanti pallini luminosi.
+    const ortho = camera as THREE.OrthographicCamera;
+    const view = ortho.isOrthographicCamera ? (ortho.top - ortho.bottom) / ortho.zoom : 18;
+    const far = THREE.MathUtils.clamp(1.3 - view / 30, HALO_FAR_MIN, 1);
     // Flicker degli aloni e delle luci.
     for (const e of this.anchors.values()) {
       const f = e.flicker.value(t);
-      (e.sprite.material as THREE.SpriteMaterial).opacity = e.on ? p.halo * Math.min(1, e.anchor.intensity * 1.4) * f * e.crowd : 0;
+      (e.sprite.material as THREE.SpriteMaterial).opacity = e.on ? p.halo * Math.min(1, e.anchor.intensity * 1.4) * f * e.crowd * HALO_OPACITY * far : 0;
       e.sprite.visible = e.on && p.halo > 0.02 && e.anchor.halo > 0.05; // alone 0: luce senza bagliore (riverbero diffuso)
       if (e.sprite.visible) e.sprite.position.copy(e.pos).addScaledVector(this.toCamera, e.sprite.scale.x * 0.3);
     }
-    if (this.fake) this.updateFake(t, p.pool);
-    // Il pool di luci reali segue le sorgenti più vicine al centro della vista.
-    // Assegnazione stabile (una luce resta sulla sua sorgente finché serve) e
-    // dissolvenze in entrata/uscita: niente accensioni di colpo.
-    this.poolTimer -= dt;
-    if (this.poolTimer <= 0) {
-      this.poolTimer = 0.3;
-      const n = this.activePool();
-      // una luce per gruppo di sorgenti vicine (le candele di un oggetto): niente dieci luci sullo stesso
-      // punto, che bruciano i colori e lasciano al buio il resto; il capogruppo è un po' più forte
-      const want: AnchorEntry[] = [];
-      for (const e of [...this.anchors.values()].filter((x) => x.on && x.anchor.intensity > 0.2)
-        .sort((a, b) => a.pos.distanceToSquared(this.focusPoint) - b.pos.distanceToSquared(this.focusPoint))) {
-        const lead = want.find((w) => w.pos.distanceToSquared(e.pos) < CLUSTER_R * CLUSTER_R);
-        if (lead) { lead.boost = Math.min(1.8, lead.boost + 0.2); continue; }
-        if (want.length >= n) continue;
-        e.boost = 1;
-        want.push(e);
-      }
-      const wanted = new Set(want);
-      const assigned = new Set<AnchorEntry>();
-      for (const light of this.pool) {
-        const e = light.userData.entry as AnchorEntry | undefined;
-        if (!e) continue;
-        if (wanted.has(e) && this.anchors.has(this.idOf(e))) { assigned.add(e); light.userData.leaving = false; }
-        else light.userData.leaving = true;
-      }
-      for (const e of want) {
-        if (assigned.has(e)) continue;
-        // la sorgente è stata rifatta nello stesso punto (oggetto con un modello nuovo): la luce passa a lei senza spegnersi
-        const handover = this.pool.find((l) => l.parent && l.userData.leaving && l.userData.entry && !this.anchors.has(this.idOf(l.userData.entry as AnchorEntry)) && (l.userData.entry as AnchorEntry).pos.distanceToSquared(e.pos) < 0.04);
-        if (handover) {
-          handover.userData.entry = e;
-          handover.userData.leaving = false;
-          handover.color.set(e.anchor.color);
-          handover.distance = e.anchor.range;
-          assigned.add(e);
-          continue;
-        }
-        const free = this.pool.find((l) => !l.userData.entry && l.parent);
-        if (!free) break;
-        free.userData.entry = e;
-        free.userData.leaving = false;
-        free.userData.w = 0;
-        free.position.copy(e.pos);
-        free.color.set(e.anchor.color);
-        free.distance = e.anchor.range;
-        assigned.add(e);
-      }
-    }
-    for (const light of this.pool) {
-      const e = light.userData.entry as AnchorEntry | undefined;
-      if (!e || !light.parent) { light.intensity = 0; continue; }
-      let w = (light.userData.w as number | undefined) ?? 1;
-      w = light.userData.leaving ? Math.max(0, w - dt / LIGHT_OUT) : Math.min(1, w + dt / LIGHT_IN);
-      light.userData.w = w;
-      if (light.userData.leaving && w <= 0) { light.userData.entry = undefined; light.intensity = 0; continue; }
-      light.position.copy(e.pos);
-      light.intensity = p.pool * e.anchor.intensity * 4.2 * e.flicker.value(t) * w * e.boost;
-    }
+    // la mappa di luce si riempie solo quando si ridisegna (renderLightMap)
+    this.fakeT = t; this.fakePool = p.pool;
     // Temporale: lampi occasionali (solo col temporale).
     if (this.weather === 'storm') {
       this.nextFlash -= dt;
       if (this.nextFlash <= 0) { this.flash = 1; this.nextFlash = 5 + Math.random() * 9; }
     }
     if (this.flash > 0) this.flash = Math.max(0, this.flash - dt * 3.2);
-  }
-
-  private idOf(e: AnchorEntry): number {
-    for (const [id, x] of this.anchors) if (x === e) return id;
-    return -1;
   }
 
   setAnchorOn(h: AnchorHandle, on: boolean) {

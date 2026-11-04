@@ -10,12 +10,12 @@ import { instantiate, LOWPOLY_MATERIALS } from '../render/modelCache.ts';
 import { HUMAN_PIVOTS, humanSpec, type KPart } from '../render/lowpoly/v2/custode.ts';
 import type { CustodeLook } from '../game/look.ts';
 
-export type ThumbKind = 'head' | 'hair' | 'beard' | 'mustache' | 'glasses' | 'hat' | 'outfit';
+export type ThumbKind = 'head' | 'hair' | 'beard' | 'mustache' | 'glasses' | 'hat' | 'outfit' | 'extra';
 
 const SIZE = 144;
 const NEUTRAL: Partial<CustodeLook> = {
   head: 'human', skin: '#d8c6b2', hair: 'none', hairColor: '#6b4a33', beard: 'none', mustache: 'none', beardColor: '#6b4a33', eyes: '#2f5a32',
-  glasses: 'none', hat: 'none', hatColor: '#4a3326', outfit: 'coat', outfitColor: '#4f5a3e', accentColor: '#d9b48a', sparkle: false, freckles: false, bandaid: false,
+  glasses: 'none', hat: 'none', hatColor: '#4a3326', extra: 'none', outfit: 'coat', outfitColor: '#4f5a3e', accentColor: '#d9b48a', sparkle: false, freckles: false, bandaid: false,
 };
 const HEAD: KPart[] = ['head'];
 const BODY: KPart[] = ['body', 'armL', 'armR', 'legL', 'legR'];
@@ -29,6 +29,7 @@ const KINDS: Record<ThumbKind, { look: (v: string) => Partial<CustodeLook>; bare
   glasses: { look: (v) => ({ glasses: v as CustodeLook['glasses'] }), bare: true, parts: HEAD, yaw: 0.15, zoom: 0.75, dy: -0.05 },
   hat: { look: (v) => ({ hat: v as CustodeLook['hat'] }), bare: true, parts: HEAD, yaw: 0.5 },
   outfit: { look: (v) => ({ outfit: v as CustodeLook['outfit'] }), bare: false, parts: BODY, yaw: 0.5 },
+  extra: { look: (v) => ({ extra: v as CustodeLook['extra'] }), bare: false, parts: HEAD, yaw: 0.5, zoom: 0.62, dy: -0.16, pitch: 0.04 },
 };
 
 let renderer: THREE.WebGLRenderer | null = null;

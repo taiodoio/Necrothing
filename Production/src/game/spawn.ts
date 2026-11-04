@@ -8,11 +8,12 @@ import { t } from '../i18n/index.ts';
 import type { Rng } from './rng.ts';
 import type { SaveData } from './state.ts';
 
-export type RoamerKind = 'ghost' | 'cat' | 'crow' | 'priest' | 'gravedigger' | 'rat' | 'zombie';
+export type RoamerKind = 'ghost' | 'cat' | 'crow' | 'priest' | 'gravedigger' | 'rat' | 'zombie' | 'postman' | 'hunterA' | 'hunterB';
 
 export const ROAMER_LABELS: Record<RoamerKind, string> = {
   ghost: t('npc.ghost.label'), cat: t('npc.cat.label'), crow: t('npc.crow.label'), priest: t('npc.priest.label'),
   gravedigger: t('npc.gravedigger.label'), rat: t('npc.rat.label'), zombie: t('npc.zombie.label'),
+  postman: t('npc.postman.name'), hunterA: t('npc.hunterA.name'), hunterB: t('npc.hunterB.name'),
 };
 
 export interface SpawnRequest {
@@ -33,10 +34,13 @@ export interface BuildingCounts {
   hellCrack: number;
   zombieBar: number;
   brainFarm: number;
+  foodTruck: number;
+  iceCream: number;
+  hunters: number;
 }
 
 export function countBuildings(state: Pick<SaveData, 'placeables'>): BuildingCounts {
-  const c: BuildingCounts = { mausoleum: 0, gravediggerHouse: 0, shrine: 0, openGraves: 0, hellHole: 0, hellCrack: 0, zombieBar: 0, brainFarm: 0 };
+  const c: BuildingCounts = { mausoleum: 0, gravediggerHouse: 0, shrine: 0, openGraves: 0, hellHole: 0, hellCrack: 0, zombieBar: 0, brainFarm: 0, foodTruck: 0, iceCream: 0, hunters: 0 };
   for (const p of state.placeables) {
     if (p.broken) continue; // un edificio rotto non "funziona"
     if (p.type === 'mausoleum') c.mausoleum++;
@@ -46,6 +50,9 @@ export function countBuildings(state: Pick<SaveData, 'placeables'>): BuildingCou
     else if (p.type === 'hell_crack') c.hellCrack++;
     else if (p.type === 'zombie_bar') c.zombieBar++;
     else if (p.type === 'brain_farm') c.brainFarm++;
+    else if (p.type === 'food_truck') c.foodTruck++;
+    else if (p.type === 'ice_cream_cart') c.iceCream++;
+    else if (p.type === 'ghost_hunters') c.hunters++;
     else if (ZOMBIE_ATTRACTORS.has(p.type)) c.openGraves++;
   }
   return c;
@@ -65,11 +72,13 @@ export function computeSpawns(
   // casa del Custode: le zucche sul portico chiamano i fantasmi di notte, la frutta gatti e corvi
   const pumpkins = isNight && housePerk(state, 'pumpkins') ? (now?.getMonth() === 9 ? HOUSE_PERKS.pumpkinsOctoberGhosts : HOUSE_PERKS.pumpkinsNightGhosts) : 1;
   const animals = housePerk(state, 'fruit') ? HOUSE_PERKS.fruitAnimals : 1;
+  // i cacciatori di fantasmi: zombie e fantasmi ne sono attratti
+  const hunters = b.hunters ? 1 + SPAWN_MODIFIERS.huntersBonus : 1;
 
   if (graves.length > 0) {
-    const ghost = ((isNight ? SPAWN_CHANCE.ghostGenericNight : SPAWN_CHANCE.ghostGenericDay) + SPAWN_MODIFIERS.hellHoleGhostBonus * b.hellHole + SPAWN_MODIFIERS.hellCrackGhostBonus * b.hellCrack) * pumpkins;
+    const ghost = ((isNight ? SPAWN_CHANCE.ghostGenericNight : SPAWN_CHANCE.ghostGenericDay) + SPAWN_MODIFIERS.hellHoleGhostBonus * b.hellHole + SPAWN_MODIFIERS.hellCrackGhostBonus * b.hellCrack + SPAWN_MODIFIERS.iceCreamGhostBonus * b.iceCream) * pumpkins * hunters;
     if (rng.chance(ghost * mult)) out.push({ kind: 'ghost', graveId: rng.pick(graves).id });
-    const rare = (isNight ? SPAWN_CHANCE.ghostObjectNight : SPAWN_CHANCE.ghostObjectDay) * pumpkins;
+    const rare = (isNight ? SPAWN_CHANCE.ghostObjectNight : SPAWN_CHANCE.ghostObjectDay) * pumpkins * hunters;
     const own = graves.filter((g) => !g.legacy);
     if (own.length > 0 && rng.chance(rare * mult)) out.push({ kind: 'ghost', graveId: rng.pick(own).id, rare: true });
   }
@@ -83,8 +92,9 @@ export function computeSpawns(
     out.push({ kind: 'gravedigger' });
   }
   if (isNight && rng.chance(SPAWN_CHANCE.ratNight)) out.push({ kind: 'rat' });
-  // tombe aperte, bar e orto chiamano gli zombie
-  const zombie = SPAWN_MODIFIERS.zombiePerOpenGrave * b.openGraves + SPAWN_MODIFIERS.zombieBar * b.zombieBar + SPAWN_MODIFIERS.zombieFarm * b.brainFarm;
+  // tombe aperte, bar, orto e food truck chiamano gli zombie
+  const zombie = (SPAWN_MODIFIERS.zombiePerOpenGrave * b.openGraves + SPAWN_MODIFIERS.zombieBar * b.zombieBar + SPAWN_MODIFIERS.zombieFarm * b.brainFarm
+    + SPAWN_MODIFIERS.zombieFoodTruck * b.foodTruck) * hunters;
   if (zombie > 0 && rng.chance(Math.min(SPAWN_MODIFIERS.zombieChanceMax, zombie))) out.push({ kind: 'zombie' });
   // l'albero ogni tanto lascia uscire il fantasma di uno dei ricordi affidatigli
   const kept = state.entrusted ?? [];

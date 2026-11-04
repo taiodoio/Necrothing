@@ -312,7 +312,7 @@ test('nebbia del bosco: più fitta all\'alba e di notte, col meteo nebbioso entr
   assert.ok(mist.group.children[0].material.uniforms.uOpacity.value < before, 'di giorno si dirada, gradualmente');
 });
 
-test('atmosfera: cambi di fase graduali e luci del pool che si accendono in dissolvenza', async () => {
+test('atmosfera: cambi di fase graduali; le sorgenti hanno l’alone ma nessuna luce vera', async () => {
   // canvas minimo per lo sfondo a gradiente (in node non c'è il DOM)
   globalThis.document ??= { createElement: () => ({ width: 0, height: 0, getContext: () => ({ createLinearGradient: () => ({ addColorStop() {} }), createRadialGradient: () => ({ addColorStop() {} }), fillRect() {}, fillStyle: '' }) }) };
   const { Atmosphere } = await import('../src/view/Atmosphere.ts');
@@ -326,34 +326,17 @@ test('atmosfera: cambi di fase graduali e luci del pool che si accendono in diss
   assert.ok(atm.hemi.intensity < dayHemi && atm.hemi.intensity > 1.06, `passaggio graduale (${atm.hemi.intensity})`);
   for (let i = 0; i < 200; i++) atm.update(0.05, 0.2 + i * 0.05, new THREE.Camera());
   assert.ok(Math.abs(atm.hemi.intensity - 1.05) < 0.01, 'arriva alla notte');
-  // una sorgente vicina: la sua luce cresce in qualche decimo di secondo, non di colpo
+  // le sorgenti non sono luci vere (la resa non cambia spostando la vista): nessuna PointLight in scena;
+  // l'alone segue l'interruttore della sorgente
   atm.focus(new THREE.Vector3(), 10);
-  atm.addAnchor(new THREE.Vector3(1, 1, 1), { pos: [0, 0, 0], color: '#ffaa55', intensity: 1, range: 4, flicker: 0, halo: 1 });
-  atm.update(0.35, 20, new THREE.Camera());
-  const light = scene.getObjectsByProperty('type', 'PointLight').find((l) => l.intensity > 0);
-  assert.ok(light, 'luce assegnata');
-  const first = light.intensity;
-  atm.update(0.3, 20.3, new THREE.Camera());
-  assert.ok(light.intensity > first, 'si accende in dissolvenza');
-  // il pool pieno: ogni sorgente ha la sua luce accesa
-  const src = [];
-  for (let i = 0; i < 12; i++) src.push({ pos: new THREE.Vector3((i % 4) - 1.5, 1, Math.floor(i / 4) - 1), a: { pos: [0, 0, 0], color: '#ffaa55', intensity: 1, range: 4, flicker: 0, halo: 1 } });
-  let handles = src.map((q) => atm.addAnchor(q.pos, q.a));
-  let tt = 21;
-  for (let i = 0; i < 40; i++) atm.update(0.05, (tt += 0.05), new THREE.Camera());
-  const lit = () => scene.getObjectsByProperty('type', 'PointLight').reduce((a, l) => a + l.intensity, 0);
-  const full = lit();
-  // la scena si risincronizza (azione, fuoco fatuo…): aggiornate sul posto le luci non calano
-  src.forEach((q, i) => atm.updateAnchor(handles[i], q.pos, q.a));
-  let low = full;
-  for (let i = 0; i < 40; i++) { atm.update(0.05, (tt += 0.05), new THREE.Camera()); low = Math.min(low, lit()); }
-  assert.ok(low > full * 0.97, `aggiornando non si spengono (${(low / full).toFixed(2)})`);
-  // oggetti rifatti con un modello nuovo nello stesso punto: la luce passa alla sorgente nuova senza buio
-  handles.forEach((h) => atm.removeAnchor(h));
-  handles = src.map((q) => atm.addAnchor(q.pos, q.a));
-  low = full;
-  for (let i = 0; i < 40; i++) { atm.update(0.05, (tt += 0.05), new THREE.Camera()); low = Math.min(low, lit()); }
-  assert.ok(low > full * 0.9, `rifatte, restano accese (${(low / full).toFixed(2)})`);
+  const h = atm.addAnchor(new THREE.Vector3(1, 1, 1), { pos: [0, 0, 0], color: '#ffaa55', intensity: 1, range: 4, flicker: 0, halo: 1 });
+  for (let i = 0; i < 10; i++) atm.update(0.05, 20 + i * 0.05, new THREE.Camera());
+  assert.equal(scene.getObjectsByProperty('type', 'PointLight').length, 0, 'niente luci vere');
+  const sprite = atm.anchors.get(h.id).sprite;
+  assert.ok(sprite.visible && sprite.material.opacity > 0, 'di notte l’alone è acceso');
+  atm.setAnchorOn(h, false);
+  atm.update(0.05, 21, new THREE.Camera());
+  assert.equal(sprite.material.opacity, 0, 'spenta: niente alone');
 });
 
 test('Custode personalizzabile: aspetto validato, chiave stabile, rig con tutte le parti e la lanterna', async () => {
@@ -673,7 +656,29 @@ test('presenze erranti: a frame regolari camminano davvero (prima restavano a gi
 });
 
 test('qualità Auto: livello dal dispositivo, risoluzione dentro al livello, scende presto e sale piano, non ritenta ciò che non regge', async () => {
-  const { detectTier, AutoGovernor, PROFILES, newAutoProfile } = await import('../src/app/AutoQuality.ts');
+  const { detectTier, AutoGovernor, PROFILES, newAutoProfile, START_SETTLE } = await import('../src/app/AutoQuality.ts');
+  // il gioco usa la rete di sicurezza prudente: solo risoluzione, dopo 25 s di gioco attivo e 8 s di fila sotto il ritmo
+  {
+    const { AUTO_POLICY } = await import('../src/app/AutoQuality.ts');
+    assert.equal(AUTO_POLICY.tierDown, false, 'il livello non scende più');
+    assert.ok(AUTO_POLICY.warmup >= 20 && AUTO_POLICY.sustain >= 8);
+    const tick = (g, fps, seconds, held = false) => { const out = []; for (let t = 0; t < seconds; t += 1 / fps) { if (held) g.hold(); else { const d = g.frame(1 / fps, 60); if (d) out.push(d); } } return out; };
+    // da fermo (risparmio batteria) o sotto un menù non si giudica: anche minuti a 15 FPS non cambiano nulla
+    const idle = new AutoGovernor(newAutoProfile('high'), AUTO_POLICY);
+    assert.deepEqual(tick(idle, 15, 120, true), []);
+    assert.equal(idle.step, PROFILES.high.dpr.length - 1);
+    // gioco attivo ma lento: nei primi secondi niente; poi scende solo di risoluzione, mai di livello
+    const slow = new AutoGovernor(newAutoProfile('high'), AUTO_POLICY);
+    assert.deepEqual(tick(slow, 20, START_SETTLE + 20), [], 'prima di 25 s di gioco attivo non si scende');
+    const later = tick(slow, 20, 120);
+    assert.ok(later.length > 0 && later.every((d) => d === 'step'));
+    assert.equal(slow.step, 0);
+    assert.equal(slow.tier, 'high');
+    // un calo breve (5 s) dopo il riscaldamento non basta
+    const brief = new AutoGovernor(newAutoProfile('high'), AUTO_POLICY);
+    tick(brief, 60, START_SETTLE + 30);
+    assert.deepEqual(tick(brief, 20, 5), []);
+  }
   assert.equal(detectTier({ gpu: 'Apple GPU', cores: 6, mobile: true }), 'high');
   assert.equal(detectTier({ gpu: 'Apple GPU', cores: 2, mobile: true }), 'high', 'Safari su iPhone dichiara 2 core: non conta');
   assert.equal(detectTier({ gpu: 'Adreno (TM) 509', mobile: true }), 'low');
@@ -689,14 +694,15 @@ test('qualità Auto: livello dal dispositivo, risoluzione dentro al livello, sce
   assert.deepEqual(Object.values(PROFILES).map((p) => p.shadows), ['off', 'still', 'live']);
   assert.deepEqual(Object.values(PROFILES).map((p) => p.fps), [30, 30, 60]);
   for (const p of Object.values(PROFILES)) for (let i = 1; i < p.dpr.length; i++) assert.ok(p.dpr[i] > p.dpr[i - 1]);
-  assert.ok(PROFILES.low.lite && PROFILES.low.fakeLights && PROFILES.medium.fakeLights && !PROFILES.high.fakeLights);
+  assert.ok(PROFILES.low.lite && PROFILES.low.liteMaterials && PROFILES.medium.liteMaterials && !PROFILES.high.liteMaterials);
 
   const run = (g, fps, seconds, target) => { const out = []; for (let t = 0; t < seconds; t += 1 / fps) { const d = g.frame(1 / fps, typeof target === 'function' ? target(g) : target); if (d) out.push(d); } return out; };
   // La stima sceglie subito il gradino massimo della fascia; un profilo già ridotto può risalire.
   assert.equal(newAutoProfile('high').step, PROFILES.high.dpr.length - 1);
   const g = new AutoGovernor({ ...newAutoProfile('high'), step: 0 });
   assert.equal(g.step, 0);
-  assert.deepEqual(run(g, 60, 11, 60), ['step']);
+  // all'avvio i primi secondi non si giudicano (START_SETTLE), poi otto secondi pieni fanno salire di un gradino
+  assert.deepEqual(run(g, 60, START_SETTLE + 10, 60), ['step']);
   assert.equal(g.step, 1);
   // Calo sostenuto: torna subito al gradino minimo e non riprova quello instabile.
   assert.deepEqual(run(g, 20, 5.5, 60), ['step']);
@@ -707,7 +713,7 @@ test('qualità Auto: livello dal dispositivo, risoluzione dentro al livello, sce
   // Anche se il renderer dichiara una GPU di fascia alta, FPS persistenti sotto
   // il ritmo alla risoluzione minima fanno scendere di profilo senza attendere a lungo.
   const a35 = new AutoGovernor(newAutoProfile('high'));
-  assert.deepEqual(run(a35, 35, 10, 60), ['step', 'step', 'tier']);
+  assert.deepEqual(run(a35, 35, START_SETTLE + 10, 60), ['step', 'step', 'tier']);
   assert.equal(a35.tier, 'medium');
   const b35 = new AutoGovernor({ tier: 'high', step: 0, ceiling: 2, top: 'high' });
   const adapt35 = [];
@@ -715,13 +721,26 @@ test('qualità Auto: livello dal dispositivo, risoluzione dentro al livello, sce
   assert.deepEqual(adapt35.slice(0, 1), ['tier']);
   assert.equal(b35.tier, 'medium');
   // Media regge 30 FPS e può aumentare la risoluzione se resta stabile.
-  const m = new AutoGovernor(newAutoProfile('medium'));
+  const m = new AutoGovernor({ ...newAutoProfile('medium'), step: 0 });
   assert.deepEqual(run(m, 30, 60, 30), ['step']);
+  // la stima parte già dalla risoluzione più alta della fascia: lì non c'è altro da salire
+  assert.deepEqual(run(new AutoGovernor(newAutoProfile('medium')), 30, 60, 30), []);
   // Pause molto lunghe (app in background) non contano; gli scatti sotto 2 s sì.
   const p = new AutoGovernor(newAutoProfile('low'));
   assert.deepEqual(run(p, 0.2, 20, 30), []);
   const stalled = new AutoGovernor(newAutoProfile('high'));
-  assert.ok(run(stalled, 1 / 0.3, 12, 60).includes('tier'), 'i frame visibilmente bloccati riducono Auto');
+  assert.ok(run(stalled, 1 / 0.3, START_SETTLE + 14, 60).includes('tier'), 'i frame visibilmente bloccati riducono Auto');
+  // l'avvio lento (scena e shader che si preparano) non conta: un telefono forte resta in Alta
+  const boot = new AutoGovernor(newAutoProfile('high'));
+  assert.deepEqual(run(boot, 10, START_SETTLE - 0.2, 60), []);
+  assert.deepEqual(run(boot, 60, 30, 60), []);
+  assert.equal(boot.tier, 'high');
+  // uno scatto isolato ogni due secondi (un modello generato, un salvataggio) non fa scendere
+  const hic = new AutoGovernor(newAutoProfile('high'));
+  const hics = [];
+  for (let t = 0; t < 40; t += 1 / 60) { const d = hic.frame(Math.floor(t * 60) % 120 === 0 ? 0.4 : 1 / 60, 60); if (d) hics.push(d); }
+  assert.deepEqual(hics, []);
+  assert.equal(hic.tier, 'high');
   // Alla risoluzione minima e ancora sotto il ritmo, si scende di fascia.
   const f = new AutoGovernor({ tier: 'medium', step: 0, ceiling: 1, top: 'medium' });
   assert.ok(run(f, 12, 12, 30).includes('tier'));
@@ -742,30 +761,26 @@ test('qualità Auto: livello dal dispositivo, risoluzione dentro al livello, sce
   run(l, 30, 300, 30);
   assert.equal(l.tier, 'low');
   // fermo o sotto un menù il gioco rallenta apposta: hold() azzera il giudizio
-  const h = new AutoGovernor(newAutoProfile('high'));
-  run(h, 60, 4, 60);
+  const h = new AutoGovernor({ ...newAutoProfile('high'), step: 0 });
+  run(h, 60, START_SETTLE + 4, 60);
   for (let i = 0; i < 100; i++) h.hold();
   assert.deepEqual(run(h, 60, 6, 60), []);
   assert.deepEqual(run(h, 60, 6, 60), ['step']);
 });
 
-test('qualità Auto: le luci in più escono proprio dalla scena (lo shader non le calcola), e tornano per i livelli manuali', async () => {
+test('qualità: in nessun livello ci sono luci vere (le sorgenti stanno nella mappa di luce); ombre ridimensionabili', async () => {
   globalThis.document ??= { createElement: () => ({ width: 0, height: 0, getContext: () => ({ createLinearGradient: () => ({ addColorStop() {} }), createRadialGradient: () => ({ addColorStop() {} }), fillRect() {}, fillStyle: '' }) }) };
   const { Atmosphere } = await import('../src/view/Atmosphere.ts');
-  const scene = new THREE.Scene();
-  const atm = new Atmosphere(scene, 'high');
-  const lights = () => scene.getObjectsByProperty('type', 'PointLight').length;
-  assert.equal(lights(), 10);
-  atm.setLightBudget(4);
-  assert.equal(lights(), 4);
-  atm.focus(new THREE.Vector3(), 10);
-  for (let i = 0; i < 8; i++) atm.addAnchor(new THREE.Vector3(i - 4, 1, 0), { pos: [0, 0, 0], color: '#ffaa55', intensity: 1, range: 4, flicker: 0, halo: 1 });
-  for (let i = 0; i < 20; i++) atm.update(0.05, i * 0.05, new THREE.Camera());
-  assert.equal(scene.getObjectsByProperty('type', 'PointLight').filter((l) => l.intensity > 0).length, 4);
-  atm.setLightBudget(null);
-  assert.equal(lights(), 10);
-  atm.setShadowSize(1024);
-  assert.equal(atm.sun.shadow.mapSize.x, 1024);
+  for (const q of ['low', 'medium', 'high']) {
+    const scene = new THREE.Scene();
+    const atm = new Atmosphere(scene, q);
+    atm.focus(new THREE.Vector3(), 10);
+    for (let i = 0; i < 12; i++) atm.addAnchor(new THREE.Vector3(i - 6, 1, 0), { pos: [0, 0, 0], color: '#ffaa55', intensity: 1, range: 4, flicker: 0, halo: 1 });
+    for (let i = 0; i < 10; i++) atm.update(0.05, i * 0.05, new THREE.Camera());
+    assert.equal(scene.getObjectsByProperty('type', 'PointLight').length, 0, q);
+    atm.setShadowSize(1024);
+    assert.equal(atm.sun.shadow.mapSize.x, 1024);
+  }
 });
 
 test('qualità Auto, fase 2: oggetti fermi fusi per zona (stesso disegno, meno mesh) che si ricompongono quando serve', async () => {
@@ -926,4 +941,35 @@ test('varianti: ogni casetta ha il suo animale e ogni variante ha la sua miniatu
   assert.equal(key('lamp_post_gothic'), key('lamp_post', 2));
   assert.notEqual(key('lamp_post_gothic'), key('lamp_post'));
   for (const fam of Object.values(FAMILY_MEMBERS)) assert.equal(new Set(fam.map((t) => key(t))).size, fam.length);
+});
+
+test('luci più morbide: la pozza a terra sta sopra i sassi dei sentieri, vetri e aloni attenuati', async () => {
+  const A = await import('../src/view/Atmosphere.ts');
+  // i sassi del sentiero arrivano a circa 0,07 sopra il terreno: la luce finta a terra deve stare sopra
+  assert.ok(A.POOL_LIFT > 0.08, 'la pozza non finisce sotto le pietre');
+  assert.ok(A.POOL_RADIUS > 0.42, 'più larga di prima');
+  assert.ok(A.GLOW_SCALE < 1 && A.GLOW_SCALE > 0.4, 'vetri accesi meno abbaglianti, ma ancora luce');
+  assert.ok(A.HALO_OPACITY < 1 && A.HALO_FAR_MIN < 1);
+});
+
+test('chi parla accanto al suo oggetto: c’è davvero (i fratelli, il postino, il fioraio, il giardiniere)', async () => {
+  const { TALKER_OF, presenceLayout } = await import('../src/view/presences.ts');
+  const kinds = { hunterA: ['hunterA', 'hunterB'], postman: ['postman'], florist: ['florist'], gardener: ['gardener'] };
+  assert.deepEqual(Object.keys(TALKER_OF).sort(), ['flower_kiosk', 'gardener_corner', 'ghost_hunters', 'post_office']);
+  for (const [type, talker] of Object.entries(TALKER_OF)) {
+    const { cast } = presenceLayout({ type, broken: false }, { night: false, tier: 'high' });
+    assert.ok(cast.some((c) => kinds[talker].includes(c.kind)), `${type}: manca ${talker}`);
+  }
+  // i fratelli restano accanto all'auto anche rotta (il fumetto c'è sempre)
+  assert.ok(presenceLayout({ type: 'ghost_hunters', broken: true }, { night: false, tier: 'high' }).cast.some((c) => c.kind === 'hunterA'));
+});
+
+test('ogni oggetto con luce si spegne davvero col comando (luci e bagliore cambiano)', () => {
+  const v2 = (type, lit) => ({ type, variant: 0, seed: 1, dirty: false, broken: false, lit });
+  for (const d of Object.values(CATALOG).filter((x) => x.light)) {
+    const on = resolveLowpoly(placeableKey(v2(d.id, true)))(), off = resolveLowpoly(placeableKey(v2(d.id, false)))();
+    const glow = (m) => m.geometries.glow?.getAttribute('position').count ?? 0;
+    assert.ok(on.lights.length !== off.lights.length || glow(on) !== glow(off), `${d.id}: acceso e spento uguali`);
+    assert.ok(off.lights.every((l) => !l.intensity || l.intensity === 0) || off.lights.length < on.lights.length, `${d.id}: spento ha ancora luci`);
+  }
 });

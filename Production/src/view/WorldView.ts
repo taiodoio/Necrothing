@@ -5,7 +5,8 @@
 // Cambiare stile ricostruisce solo la resa: posizioni e stati arrivano sempre
 // dallo stato di gioco.
 
-import { houseVariant } from '../game/house.ts';
+import { houseLookOf } from '../game/house.ts';
+import { MAILBOX_AT } from '../render/lowpoly/architecture.ts';
 import { placeableKey, placeableSeed } from '../render/keys.ts';
 import type { PVis } from '../render/types.ts';
 import * as THREE from 'three';
@@ -69,6 +70,8 @@ export interface EntityView {
   badge?: THREE.Sprite;
   /** Bar e orto: incasso da riscuotere (etichetta con la fiammella e «+N», più una zona toccabile). */
   earn?: { n: number; sprite: THREE.Sprite; hit: THREE.Mesh; x: number };
+  /** La busta sopra la buca della casa del Custode, quando è tornata una lettera. */
+  mail?: THREE.Sprite;
   id: string;
   kind: EntityKind;
   key: string;
@@ -285,7 +288,7 @@ export class WorldView {
     this.version++;
     this.area = areaForLevel(state.world.expansionLevel);
     this.treeMemories = Math.min(30, state.entrusted.length);
-    this.houseLook = houseVariant(state.house);
+    this.houseLook = houseLookOf(state);
     this.syncTerrain(state);
     this.syncScenery(state);
     this.syncDecor(state);
@@ -298,6 +301,7 @@ export class WorldView {
     for (const id of [...this.hidden]) if (!alive.has(id)) this.hidden.delete(id);
     for (const id of [...this.marked]) if (!alive.has(id)) this.marked.delete(id); else if (id !== this.selectedId) this.setHighlight(id, null);
     this.syncWisps(state);
+    this.syncMail(state);
     this.refreshSelection();
     this.flushZones();
   }
@@ -307,7 +311,7 @@ export class WorldView {
     this.version++;
     this.area = areaForLevel(state.world.expansionLevel);
     this.treeMemories = Math.min(30, state.entrusted.length);
-    this.houseLook = houseVariant(state.house);
+    this.houseLook = houseLookOf(state);
     await yieldToPaint();
     this.syncTerrain(state);
     progress(0.24);
@@ -779,6 +783,22 @@ export class WorldView {
     this.keeperArea.position.set(center.x, this.heightAt(center.x, center.z), center.z);
   }
 
+  /** La busta sopra la buca delle lettere: c'è finché la lettera tornata non si legge. */
+  private syncMail(state: SaveData) {
+    const house = state.placeables.find((p) => p.type === 'keeper_house');
+    const e = house ? this.entities.get(house.id) : undefined;
+    const on = !!state.post?.inbox && state.placeables.some((p) => p.type === 'post_office');
+    for (const x of this.entities.values()) if (x.mail && (x !== e || !on)) { x.group.remove(x.mail); x.mail = undefined; }
+    if (!e || !on || e.mail) return;
+    const sprite = new THREE.Sprite(badgeMaterial('letter', '#f2c75a'));
+    sprite.scale.set(0.62, 0.62, 1);
+    sprite.renderOrder = 6;
+    sprite.position.set(MAILBOX_AT[0], MAILBOX_AT[1], MAILBOX_AT[2]);
+    e.group.add(sprite);
+    e.mail = sprite;
+    e.group.updateMatrixWorld(true);
+  }
+
   setEarnings(id: string, n: number) {
     if ((this.earnings.get(id) ?? 0) === n) return;
     if (n > 0) this.earnings.set(id, n); else this.earnings.delete(id);
@@ -1125,12 +1145,17 @@ export class WorldView {
   }
 
   /** Anteprima di trascinamento: sposta il gruppo e colora l'ingombro. */
+  /** Di quanto si alza quel che si tiene col dito (l'oggetto trascinato, quello che si posa). */
+  private lift = 0;
+  setLift(y: number) { this.lift = y; }
+
   previewMove(id: string, x: number, y: number, valid: boolean) {
     const e = this.entities.get(id);
     if (!e) return;
     const c = cellCenter(x, y, e.fp);
     c.y = this.heightAt(c.x, c.z);
     e.group.position.copy(c);
+    e.group.position.y += this.lift;
     e.group.updateMatrix();
     // la versione fa ridisegnare le ombre ferme (e ricalcolare i posti delle tombe): mentre si
     // trascina basta farlo ogni tanto, non a ogni movimento del dito (in Alta crollavano gli FPS)
@@ -1168,6 +1193,7 @@ export class WorldView {
     const c = cellCenter(x, y, fp);
     c.y = this.heightAt(c.x, c.z);
     this.ghost!.position.copy(c);
+    this.ghost!.position.y += this.lift;
     this.ghost!.rotation.y = -rot * Math.PI / 2;
     this.ghost!.traverse((o) => {
       const m = o as THREE.Mesh;
@@ -1274,6 +1300,7 @@ export class WorldView {
     if (this.areaOutline) (this.areaOutline.material as THREE.MeshBasicMaterial).opacity = 0.65 + Math.sin(t * 3) * 0.25;
     for (const e of this.entities.values()) {
       if (e.badge) e.badge.position.y = e.height + 0.45 + Math.sin(t * 2.5 + e.group.position.x) * 0.06;
+      if (e.mail) { e.mail.position.y = MAILBOX_AT[1] + Math.sin(t * 2.2) * 0.06; e.group.updateMatrixWorld(true); }
       // l'incasso sta sopra l'eventuale targhetta di sporco/rotto e ondeggia piano
       if (e.earn) e.earn.sprite.position.y = e.height + (e.badge && !e.earn.x ? 1.05 : 0.5) + Math.sin(t * 2 + e.group.position.z) * 0.05;
     }
@@ -1322,7 +1349,7 @@ export function modelJobs(state: SaveData, includeAmbient = true): Array<() => v
     const key = graveKeyOf(g);
     jobs.set(key, () => { getModel(key); });
   }
-  const tree = Math.min(30, state.entrusted.length), house = houseVariant(state.house);
+  const tree = Math.min(30, state.entrusted.length), house = houseLookOf(state);
   for (const p of state.placeables) {
     if (!CATALOG[p.type]) continue;
     const v = pvisFor(p, tree, house), key = placeableKey(v);

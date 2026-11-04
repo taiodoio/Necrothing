@@ -71,9 +71,9 @@ test('catalogo: ogni oggetto in una sola classe, e le eccezioni al criterio sono
   assert.equal(new Set(all).size, all.length, 'nessun oggetto in due classi');
   assert.deepEqual(all.filter((id) => !CATALOG[id]), [], 'nessuna voce sconosciuta');
   for (const d of CATALOG_LIST) assert.ok(d.access === 'demo' || d.access === 'full', d.id);
-  // criterio: Demo rango 1–2; eccezioni decise: i 6 stagionali e il rifugio dei gatti (Full), i due oggetti della partita nuova (Demo)
+  // criterio: Demo rango 1–2; eccezioni decise: i 6 stagionali, il rifugio dei gatti e il bastone mistico al rango 2 (Full), i due oggetti della partita nuova (Demo)
   assert.deepEqual(CATALOG_LIST.filter((d) => d.access === 'full' && d.minRank <= 2).map((d) => d.id).sort(),
-    ['cat_shelter', 'dead_altar', 'fence_lights', 'giant_web', 'lovers_bench', 'pumpkin_patch', 'skeleton_snowman']);
+    ['cat_shelter', 'dead_altar', 'fence_lights', 'giant_web', 'lovers_bench', 'mystic_staff', 'pumpkin_patch', 'skeleton_snowman']);
   assert.deepEqual(CATALOG_LIST.filter((d) => d.access === 'demo' && d.minRank >= 3).map((d) => d.id).sort(), ['angel_statue', 'lamp_post_gothic']);
   const start = new Set(createNewGame(NOW, 1).placeables.map((p) => p.type));
   for (const id of start) assert.equal(CATALOG[id].access, 'demo', `${id} è nella partita nuova`);
@@ -113,7 +113,7 @@ test('beta: si gioca come chiunque, rango, stagione, traguardi e tombe valgono',
   assert.equal(R.shopAvailability(s, 'lovers_bench', NOW), 'season', 'a ottobre la panchina di febbraio no');
   assert.equal(R.houseAvailability(s, 'veggie'), 'rank');
   assert.equal(R.graveTypeAvailability(s, 'angel'), 'rank');
-  assert.equal(R.lookOptionAvailability(s, 'hat', 'witch'), 'feat');
+  assert.equal(R.lookOptionAvailability(s, 'hat', 'witch'), 'hidden', 'il cappello da strega non si vede finché non si ha la strega');
   assert.throws(() => R.buy(s, 'zombie_bar', 1, NOW), /rango/);
   s.player.xp = 99_999;
   assert.equal(R.shopAvailability(s, 'keeper_lamp', NOW), 'feat');
@@ -187,7 +187,7 @@ test('migrazione v2 → v3: progressi, posizioni e preferenze intatti, e gli acq
   const { theme: _theme, style: _style, ...prefs } = raw.settings;
   assert.deepEqual(s.settings, prefs);
   assert.ok(!('style' in s.settings) && !('theme' in s.settings), 'niente scelte di stile o tema nel salvataggio');
-  assert.deepEqual(s.player.look, raw.player.look, 'il cappello da strega indossato resta');
+  assert.deepEqual(s.player.look, { ...raw.player.look, extra: 'none' }, 'il cappello da strega indossato resta (e niente becco)');
   assert.deepEqual(s.meta, { firstDistribution: 'beta-full', lastDistribution: 'beta-full' });
   // comprati prima dei blocchi: restano tuoi, anche se ora servirebbe il rango
   assert.equal(s.inventory.broom, 1);

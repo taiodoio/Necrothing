@@ -177,6 +177,28 @@ export function setDrawerBody(node: Node) {
   $('#drawer-body').replaceChildren(node);
 }
 
+/**
+ * Un campo di testo resta visibile con la tastiera aperta: il pannello che lo
+ * contiene scorre quanto basta per metterlo nella parte libera dello schermo
+ * (quella che la tastiera non copre), senza muovere la pagina. Con l'etichetta,
+ * se ci sta. Lo chiama il gioco quando un campo prende il fuoco e quando la
+ * tastiera cambia la parte visibile.
+ */
+export function keepFieldVisible(input: Element | null) {
+  if (!(input instanceof HTMLElement)) return;
+  const body = input.closest<HTMLElement>('.drawer-body, .dialog, .modal-body');
+  if (!body) return;
+  const vv = window.visualViewport;
+  const area = body.getBoundingClientRect();
+  const top = Math.max(area.top, vv?.offsetTop ?? 0) + 12;
+  const bottom = Math.min(area.bottom, (vv?.offsetTop ?? 0) + (vv?.height ?? window.innerHeight)) - 12;
+  if (bottom - top < 40) return;
+  const field = input.closest<HTMLElement>('.field');
+  const box = (field && field.getBoundingClientRect().height <= bottom - top ? field : input).getBoundingClientRect();
+  if (box.bottom > bottom) body.scrollTop += box.bottom - bottom;
+  else if (box.top < top) body.scrollTop -= top - box.top;
+}
+
 export function drawerOpen(): boolean {
   return !$('#drawer').hidden;
 }

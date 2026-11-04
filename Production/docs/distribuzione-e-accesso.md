@@ -96,6 +96,7 @@ I test controllano che ogni oggetto abbia una sola classe e che le eccezioni sia
 | Elemento | Classe provvisoria | Nota |
 |---|---|---|
 | `cat_shelter` (Rifugio dei gatti, rango 2, unico) | full | Unico: fuori dal criterio Demo. Messo con le altre presenze. Da confermare. |
+| `mystic_staff` (Bastone mistico, rango 2, unico) | full | Anticipato dal rango 4 al 2 su richiesta: resta Full, quindi fuori dal criterio Demo. |
 | `xmas_tree` (Albero di Natale, rango 1, solo dicembre) | demo | Stagionale per mese, non per finestra di date: non era tra i 6. Da confermare. |
 | Teste speciali (zucca, teschio, zombie) e altre scelte d'aspetto | demo | Oggi tutte libere. Solo il cappello da strega è Full (viene con l'Angolo della strega). |
 | Ampliamento del recinto (`expansion`) | demo | Si sblocca col prestigio. Per la Demo manca una decisione (fermarlo a un livello?). |
@@ -149,7 +150,6 @@ Generato dal codice il 27/10/2026.
 | `sign` | demo | 1 | 4 | — |
 | `angel_statue` | demo | 3 | 22 | — |
 | `votive_statue` | demo | 2 | 18 | — |
-| `open_coffin` | demo | 2 | 10 | — |
 | `bones` | demo | 1 | 3 | — |
 | `vase` | demo | 1 | 3 | — |
 | `book_pile` | demo | 1 | 6 | — |
@@ -158,6 +158,7 @@ Generato dal codice il 27/10/2026.
 | `reaper_statue` | full | 4 | 50 | — |
 | `keeper_statue` | full | 5 | 100 | unico |
 | `urn` | demo | 2 | 5 | — |
+| `carnivorous_plant` | demo | 2 | 10 | — |
 | `giant_web` | full | 1 | 12 | stagione: ottobre |
 | `dead_altar` | full | 1 | 25 | stagione: 31 ott – 2 nov |
 | `skeleton_snowman` | full | 1 | 15 | stagione: dic – gen |
@@ -170,12 +171,22 @@ Generato dal codice il 27/10/2026.
 | `keeper_house` | demo | 1 | 0 | unico |
 | `gravedigger_house` | full | 3 | 60 | unico |
 | `shrine` | full | 3 | 55 | unico |
-| `zombie_bar` | full | 3 | 45 | unico |
-| `brain_farm` | full | 3 | 35 | unico |
 | `mausoleum` | full | 4 | 80 | unico |
 | `open_grave` | demo | 2 | 12 | — |
 | `wall_stone` | demo | 1 | 3 | — |
 | `fence_wood` | demo | 1 | 2 | — |
+
+**Attività** (tutto ciò che incassa o genera qualcosa; prima erano sparse fra Costruzioni e Presenze)
+
+| ID | Accesso | Rango | Costo | Prerequisiti |
+|---|---|---|---|---|
+| `zombie_bar` | full | 3 | 45 | unico |
+| `brain_farm` | full | 3 | 35 | unico |
+| `witch_corner` | full | 4 | 55 | unico |
+| `food_truck` | full | 3 | 50 | unico |
+| `ice_cream_cart` | full | 3 | 40 | unico |
+| `flower_kiosk` | full | 3 | 35 | unico |
+| `post_office` | full | 3 | 60 | unico |
 | `fence_iron` | demo | 2 | 4 | — |
 | `arch_stone` | demo | 2 | 20 | — |
 | `arch_lights` | full | 3 | 28 | — |
@@ -216,7 +227,6 @@ Generato dal codice il 27/10/2026.
 | `swing_tree` | full | 3 | 28 | — |
 | `stone_circle` | full | 3 | 30 | — |
 | `hand_swamp` | full | 3 | 35 | unico |
-| `hell_crack` | full | 5 | 60 | unico |
 | `mud` | demo | 1 | 1 | — |
 | `pumpkin_patch` | full | 1 | 20 | stagione: ottobre |
 
@@ -231,16 +241,18 @@ Generato dal codice il 27/10/2026.
 | `ghosts_ball` | full | 4 | 34 | — |
 | `cat_shelter` | full | 2 | 25 | unico |
 | `ghost_picnic` | full | 3 | 40 | unico |
-| `witch_corner` | full | 4 | 55 | unico |
 | `skeleton_band` | full | 4 | 65 | unico |
 | `vampire_crypt` | full | 5 | 90 | unico |
+| `ghost_hunters` | full | 4 | 75 | unico |
+| `open_coffin` | demo | 2 | 10 | — |
+| `hell_crack` | full | 5 | 60 | unico |
 | `lovers_bench` | full | 1 | 30 | stagione: febbraio |
 
 **Extra**
 
 | ID | Accesso | Rango | Costo | Prerequisiti |
 |---|---|---|---|---|
-| `mystic_staff` | full | 4 | 0 | unico, traguardo: wispsEarned 500 |
+| `mystic_staff` | full | 2 | 0 | unico, traguardo: wispsEarned 500 |
 | `broom` | full | 5 | 120 | unico |
 | `bike` | demo | 2 | 60 | unico |
 

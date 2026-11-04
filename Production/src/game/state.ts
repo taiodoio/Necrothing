@@ -5,7 +5,7 @@ import { DEFAULT_LOOK, normalizeLook, type CustodeLook } from './look.ts';
 import { defaultHouse, houseItem, type HouseState } from './house.ts';
 import type { CauseChoice, Category, DeathCause, GraveType } from './graves.ts';
 import type { DayPhase } from './time.ts';
-import { MAP_SIZE, WISPS } from './balance.ts';
+import { LOOK_UNLOCKS, MAP_SIZE, PET_SPECIES, WISPS, type PetSpecies } from './balance.ts';
 import { CATALOG, FAMILY_MEMBERS, rotatedFootprint } from './catalog.ts';
 import { createRng, hashString } from './rng.ts';
 import { isoDate } from './time.ts';
@@ -150,6 +150,12 @@ export interface Counters {
   potionsSold: number;
   /** Tombe e ricordi riesumati: le sepolture fatte contano ancora per gli sblocchi. */
   exhumed: number;
+  /** Fuochi fatui avuti dai corvi (di passaggio o il proprio): traguardo «Ornitologo». */
+  crowWisps: number;
+  /** Lettere spedite dall'ufficio postale. */
+  lettersSent: number;
+  /** Tempi visti nel cimitero, a bit: nebbia 1, pioggia 2, temporale 4. */
+  weathersSeen: number;
 }
 
 export interface Player {
@@ -161,6 +167,10 @@ export interface Player {
   lastAbstractBurialDate: string | null;
   lastShareDate: string | null;
   counters: Counters;
+  /** Coccole e giochi con ciascuna specie di animale (sbloccano orecchie e becchi). */
+  petBond: Partial<Record<PetSpecies, number>>;
+  /** Pezzi d'aspetto sbloccati («hat:witch»…): restano sbloccati anche se poi si vende chi li ha dati. */
+  lookUnlocks: string[];
 }
 
 export interface WorldMeta {
@@ -214,6 +224,28 @@ export interface SaveData {
   meta: SaveMeta;
   /** Il percorso del primo ingresso (pergamena, nome, introduzione, cortile, primo obiettivo, consigli): game/onboarding.ts. */
   onboarding: OnboardingState;
+  /** La posta dell'ufficio postale: le lettere spedite (in giro), quella tornata nella buca, quando ne torna un'altra. */
+  post: PostState;
+}
+
+export interface Letter { id: string; text: string; sentAt: string }
+export interface PostState {
+  /** Lettere spedite che possono tornare (al massimo POST.maxLetters). */
+  letters: Letter[];
+  /** La lettera tornata nella buca della casa, da leggere. */
+  inbox: Letter | null;
+  /** Quando può tornare la prossima (null finché non se ne spedisce una). */
+  nextAt: string | null;
+}
+
+export function normalizePost(raw: unknown): PostState {
+  const r = (raw && typeof raw === 'object' ? raw : {}) as Partial<PostState>;
+  const ok = (l: unknown): l is Letter => !!l && typeof (l as Letter).text === 'string' && typeof (l as Letter).id === 'string' && typeof (l as Letter).sentAt === 'string';
+  return {
+    letters: Array.isArray(r.letters) ? r.letters.filter(ok).map((l) => ({ id: l.id, text: l.text.slice(0, 400), sentAt: l.sentAt })) : [],
+    inbox: ok(r.inbox) ? { id: r.inbox.id, text: r.inbox.text.slice(0, 400), sentAt: r.inbox.sentAt } : null,
+    nextAt: typeof r.nextAt === 'string' ? r.nextAt : null,
+  };
 }
 
 /**
@@ -245,6 +277,7 @@ export function emptyCounters(): Counters {
     flowersBrought: 0, cleanups: 0, ghostsWitnessed: 0, npcEncountered: 0,
     wispsSpent: 0, decorationsPlaced: 0, photosTaken: 0, repairs: 0,
     lightsRepaired: 0, wispsEarned: 0, potionsSold: 0, exhumed: 0,
+    crowWisps: 0, lettersSent: 0, weathersSeen: 0,
   };
 }
 
@@ -349,7 +382,7 @@ export function createNewGame(now: Date, seed = Math.floor(Math.random() * 1e9))
     createdAt: iso,
     player: {
       name: t('state.player.defaultName'), look: { ...DEFAULT_LOOK }, xp: 0, wisps: WISPS.start,
-      lastAbstractBurialDate: null, lastShareDate: null, counters: emptyCounters(),
+      lastAbstractBurialDate: null, lastShareDate: null, counters: emptyCounters(), petBond: {}, lookUnlocks: [],
     },
     graves,
     placeables,
@@ -373,6 +406,7 @@ export function createNewGame(now: Date, seed = Math.floor(Math.random() * 1e9))
     memories: [],
     entrusted: [],
     house: defaultHouse(),
+    post: { letters: [], inbox: null, nextAt: null },
     settings: { ...DEFAULT_SETTINGS },
     meta: { firstDistribution: distribution().id, lastDistribution: distribution().id },
     onboarding: newOnboarding(),
@@ -474,7 +508,15 @@ export function normalizeSave(raw: unknown): SaveData | null {
   return localizeStatic({
     ...base,
     ...data,
-    player: { ...base.player, ...data.player, look: normalizeLook(data.player.look), counters: { ...emptyCounters(), ...(data.player.counters ?? {}) } },
+    player: {
+      ...base.player, ...data.player, look: normalizeLook(data.player.look), counters: { ...emptyCounters(), ...(data.player.counters ?? {}) },
+      petBond: Object.fromEntries(PET_SPECIES.map((k) => [k, Number(data.player?.petBond?.[k]) || 0]).filter(([, n]) => (n as number) > 0)),
+      lookUnlocks: [...new Set([
+        ...(Array.isArray(data.player?.lookUnlocks) ? data.player.lookUnlocks.filter((k) => LOOK_UNLOCKS.some((u) => u.key === k)) : []),
+        // prima il cappello da strega si sbloccava con 30 pozioni vendute: chi ci era arrivato lo tiene
+        ...((data.player?.counters?.potionsSold ?? 0) >= 30 ? ['hat:witch'] : []),
+      ])],
+    },
     world: { ...base.world, ...(data.world ?? {}) },
     settings: { ...DEFAULT_SETTINGS, ...(data.settings ?? {}) },
     inventory: { ...(data.inventory ?? {}) },
@@ -483,6 +525,7 @@ export function normalizeSave(raw: unknown): SaveData | null {
     memories: data.memories ?? [],
     entrusted: Array.isArray(data.entrusted) ? data.entrusted : [],
     house: normalizeHouse(data.house),
+    post: normalizePost((data as { post?: unknown }).post),
     meta: { firstDistribution: data.meta?.firstDistribution ?? distribution().id, lastDistribution: distribution().id },
     onboarding: normalizeOnboarding(data.onboarding),
     // una partita di una versione più nuova del gioco resta alla sua versione (le sue migrazioni sono già fatte)

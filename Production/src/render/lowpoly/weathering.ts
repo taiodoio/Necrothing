@@ -170,7 +170,7 @@ export function weathered(m: LPModel, v: PVis, fp: [number, number], category: P
       lp.push([cx + r.range(-hx, hx) * 0.6, 0.02, cz + hz * r.range(0.3, 0.7)], r.range(0, 6.28), 0, r.range(-0.15, 0.15))
         .box(0, 0, 0, 0.06, 0.025, 0.18 + r.next() * 0.17, r.pick([LPC.wood, LPC.woodDark]), { vary: 0.1 }).pop();
     }
-    if (tall && category === 'structure' && size.y > 1.2 && !NO_BOARDS.has(v.type)) {
+    if (tall && (category === 'structure' || category === 'business') && size.y > 1.2 && !NO_BOARDS.has(v.type)) {
       // crepe sul muro vero
       for (const [fx, fy, len] of [[-0.28, 0.72, 0.3], [0.3, 0.5, 0.22]] as const) {
         const x = cx + size.x * fx, y = box.min.y + size.y * fy, z = wallZ(x, y);

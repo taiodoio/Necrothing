@@ -13,6 +13,8 @@ export const YARD_GRAVE = 'story-gym';
 export const YARD_LANTERN = 'yard-lantern';
 /** La lanterna comprata e posata (riprendendo dopo quel passo). */
 const BOUGHT_LANTERN = 'yard-lantern-2';
+/** Dove si posa la lanterna comprata (il tutorial lo illumina; riprendendo dopo quel passo è lì). */
+export const YARD_PLACE_SPOT = { x: 23, y: 20 } as const;
 /** Fuochi fatui all'inizio: con quelli raccolti bastano per la lanterna (5). */
 export const YARD_WISPS = 6;
 /** Il dono di benvenuto, all'arrivo nel cimitero vero: la lanterna comprata nel cortile e qualche fuoco fatuo. */
@@ -43,7 +45,7 @@ export function buildYard(real: SaveData, now: Date, onboarding: OnboardingState
   const house = real.placeables.find((p) => p.type === 'keeper_house');
   placeables.push(P('keeper_house', 20, 16, { id: house?.id ?? 'yard-house' }));
   placeables.push(P('lantern', 23, 25, { id: YARD_LANTERN, lit: after(step, 'light') }));
-  if (after(step, 'place')) placeables.push(P('lantern', 23, 20, { id: BOUGHT_LANTERN, lit: false }));
+  if (after(step, 'place')) placeables.push(P('lantern', YARD_PLACE_SPOT.x, YARD_PLACE_SPOT.y, { id: BOUGHT_LANTERN, lit: false }));
   // lo steccato: lungo il lato sud e il lato est (a nord e a ovest c'è già il recinto del cimitero)
   for (let x = 15; x <= EAST; x++) placeables.push(P('fence_wood', x, SOUTH));
   for (let y = 15; y < SOUTH; y++) placeables.push(P('fence_wood', EAST, y, { rot: 1 }));

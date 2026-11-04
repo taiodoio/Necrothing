@@ -7,7 +7,6 @@
 
 import * as THREE from 'three';
 import { DEFAULT_LOOK, LOOK_COLORS, LOOK_STYLES, lookKey, lookUnused, type CustodeLook } from '../game/look.ts';
-import { HAT_FEATS } from '../game/balance.ts';
 import * as R from '../game/rules.ts';
 import { lookThumb } from './lookThumbs.ts';
 import { animateRig, buildRig, type Rig } from '../view/characters.ts';
@@ -20,6 +19,7 @@ import { t } from '../i18n/index.ts';
 import { closeDrawer, confirmDialog, h, openDrawer, toast } from './dom.ts';
 import type { UI } from './UI.ts';
 import { monoIcon } from './monoIcons.ts';
+import { icon } from './icons.ts';
 
 let groundModel: CachedModel | null = null;
 
@@ -123,7 +123,7 @@ export class CustodePreview {
   }
 }
 
-type LookTab = 'aspetto' | 'capelli' | 'vestiti';
+type LookTab = 'aspetto' | 'capelli' | 'vestiti' | 'extra';
 /** Scheda aperta per ultima (riaprendo il pannello si torna lì). */
 let lastTab: LookTab = 'aspetto';
 
@@ -153,25 +153,30 @@ export function openCustomize(ui: UI) {
   const off = (key: keyof CustodeLook) => lookUnused(look.head).has(key);
 
   /** Griglia di scelte con la miniatura (si riempie man mano che le miniature sono pronte). */
-  const options = <K extends 'head' | 'hair' | 'hat' | 'outfit' | 'glasses' | 'beard' | 'mustache'>(key: K) => {
+  const options = <K extends 'head' | 'hair' | 'hat' | 'outfit' | 'glasses' | 'beard' | 'mustache' | 'extra'>(key: K) => {
     const box = h('div', { class: 'look-tiles', role: 'group' });
     const disabled = off(key);
+    // sotto la griglia, per ogni scelta bloccata: il lucchetto e che cosa la sblocca (sul telefono il «title» non si vede)
+    const notes: HTMLElement[] = [];
     for (const [v, label] of LOOK_STYLES[key] as Array<[CustodeLook[K], string]>) {
-      const img = h('img', { alt: '', width: 72, height: 72, draggable: false }) as HTMLImageElement;
-      // le regole dicono se si può indossare (accesso, poi il traguardo: il cappello da strega con le pozioni);
-      // quello che si ha già addosso resta scelto
+      // le regole dicono se si può indossare (accesso, poi lo sblocco); quello che si ha già addosso resta scelto.
+      // I pezzi da sbloccare non si vedono affatto finché non arrivano (niente lucchetto, niente «si sblocca con…»)
       const av = R.lookOptionAvailability(game.state, key, v);
-      const locked = av !== 'ok' && look[key] !== v;
-      const feat = locked && av === 'feat' ? HAT_FEATS[v as keyof typeof HAT_FEATS] : null;
-      const why = !locked ? undefined : feat ? t('look.ui.hatLocked', { label: feat.label, have: Math.min(feat.goal, game.state.player.counters[feat.counter]), goal: feat.goal }) : t('shop.need.full.long');
-      const b = h('button', { class: `look-tile${look[key] === v ? ' active' : ''}${locked ? ' locked' : ''}`, 'aria-pressed': String(look[key] === v), disabled: disabled || locked, title: why, onclick: () => {
+      if (av === 'hidden' && look[key] !== v && saved[key] !== v) continue;
+      const img = h('img', { alt: '', width: 72, height: 72, draggable: false }) as HTMLImageElement;
+      const locked = av === 'full' && look[key] !== v;
+      const why = locked ? t('shop.need.full.long') : undefined;
+      // bloccata: si tocca lo stesso, e il messaggio dice cosa serve
+      const b = h('button', { class: `look-tile${look[key] === v ? ' active' : ''}${locked ? ' locked' : ''}`, 'aria-pressed': String(look[key] === v), 'aria-disabled': locked ? 'true' : null, disabled: disabled, title: why, onclick: () => {
+        if (locked) { toast(t('look.ui.lockedNote', { name: label, why: why! })); return; }
         for (const x of Array.from(box.children)) { x.classList.toggle('active', x === b); x.setAttribute('aria-pressed', String(x === b)); }
         apply({ [key]: v } as Partial<CustodeLook>);
-      } }, h('span', { class: 'look-thumb' }, img), h('span', { class: 'look-tile-label' }, label));
+      } }, h('span', { class: 'look-thumb' }, img, locked ? h('span', { class: 'look-lock', 'aria-hidden': 'true' }, icon('lock', 24)) : null), h('span', { class: 'look-tile-label' }, label));
+      if (locked && !disabled) notes.push(h('p', { class: 'look-lock-note' }, icon('lock', 16), h('span', {}, t('look.ui.lockedNote', { name: label, why: why! }))));
       void lookThumb(key, v).then((url) => { if (url) { img.src = url; img.classList.add('ready'); } });
       box.append(b);
     }
-    return box;
+    return notes.length ? h('div', {}, box, ...notes) : box;
   };
 
   /** Tasselli di colore con nome (accessibili via aria-label). */
@@ -211,7 +216,11 @@ export function openCustomize(ui: UI) {
       title(t('look.ui.outfit')), options('outfit'), sub(t('look.ui.color')), swatches('outfitColor'),
       sub(t('look.ui.accentColor')), swatches('accentColor'),
       title(t('look.ui.hat')), options('hat'), sub(t('look.ui.color')), swatches('hatColor'))],
+    // «Extra» c'è solo quando se n'è sbloccato almeno uno (o lo si porta già)
+    ...(hasExtras() ? [['extra', t('look.ui.tab.extra'), h('div', {}, title(t('look.ui.extra')), options('extra'))] as [LookTab, string, HTMLElement]] : []),
   ];
+  /** Almeno un extra (becco) sbloccato o già addosso. */
+  function hasExtras() { return saved.extra !== 'none' || LOOK_STYLES.extra.some(([v]) => v !== 'none' && R.lookUnlocked(game.state, 'extra', v)); }
   let panes = buildPanes();
   const content = h('div', { class: 'look-pane' });
   const tabs = h('div', { class: 'tabs look-tabs', role: 'tablist' });
@@ -222,13 +231,13 @@ export function openCustomize(ui: UI) {
     if (toTop) content.parentElement?.parentElement?.scrollTo?.({ top: 0 });
   };
   // interfaccia «viva»: ogni scheda con la sua icona
-  const TAB_MONO: Record<LookTab, string> = { aspetto: 'face', capelli: 'comb', vestiti: 'shirt' };
+  const TAB_MONO: Record<LookTab, string> = { aspetto: 'face', capelli: 'comb', vestiti: 'shirt', extra: 'sparkle' };
   for (const [id, label] of panes) tabs.append(h('button', { class: 'tab', role: 'tab', 'data-tab': id, onclick: () => show(id) }, monoIcon(TAB_MONO[id], 19), label));
   const body = h('div', { class: 'look' },
     h('div', { class: 'look-stage' }, preview.canvas, tabs),
     content,
   );
-  show(lastTab);
+  show(panes.some(([id]) => id === lastTab) ? lastTab : 'aspetto');
   refresh();
   const reset = h('button', { class: 'big-btn ghost', onclick: () => {
     look = { ...DEFAULT_LOOK };

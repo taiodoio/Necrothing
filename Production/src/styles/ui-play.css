@@ -94,24 +94,24 @@
   background-size: 100% 100%, 100% 100%, 100% 100%, 300px auto, 100% 100%; background-repeat: no-repeat; box-shadow: 0 8px 18px rgba(0, 0, 0, 0.45);
 }
 /* i pulsanti della home: solo il gradiente, con un rametto */
-.ui-next.ui-play :is(.map-tools .icon-btn:not(.active), .fab) { background: var(--nat-bg); box-shadow: 0 8px 18px rgba(0, 0, 0, 0.45); }
+.ui-next.ui-play :is(:is(.map-tools, .tool-hud) .icon-btn:not(.active), .fab) { background: var(--nat-bg); box-shadow: 0 8px 18px rgba(0, 0, 0, 0.45); }
 /* bici, scopa, bastone in uso: il pulsante si accende (oro); il pipistrello col suo anello viola */
-.ui-next.ui-play .map-tools .icon-btn.active { box-shadow: 0 3px 0 var(--primary-deep), 0 8px 18px rgba(0, 0, 0, 0.45); }
+.ui-next.ui-play :is(.map-tools, .tool-hud) .icon-btn.active { box-shadow: 0 3px 0 var(--primary-deep), 0 8px 18px rgba(0, 0, 0, 0.45); }
 .ui-next.ui-play .map-tools .bat-btn { box-shadow: 0 8px 18px rgba(0, 0, 0, 0.45), 0 0 0 2.5px #a86ad0; }
 .ui-next.ui-play .fab:not(.bury-fab) { background: linear-gradient(165deg, #f6d48a, #e0aa52); }
 
 /* rametti: sotto il contenuto, in angoli opposti (gli pseudo-elementi non vanno dentro :is()) */
-.ui-next.ui-play :is(.player-chip, .clock-block, .npc-note, .map-tools .icon-btn, .fab, .dialog) { isolation: isolate; }
-.ui-next.ui-play .map-tools .icon-btn, .ui-next.ui-play .fab, .ui-next.ui-play .dialog { position: relative; }
+.ui-next.ui-play :is(.player-chip, .clock-block, .npc-note, :is(.map-tools, .tool-hud) .icon-btn, .fab, .dialog) { isolation: isolate; }
+.ui-next.ui-play :is(.map-tools, .tool-hud) .icon-btn, .ui-next.ui-play .fab, .ui-next.ui-play .dialog { position: relative; }
 .ui-next.ui-play .player-chip::before, .ui-next.ui-play .clock-block::after, .ui-next.ui-play .npc-note::before, .ui-next.ui-play .npc-note::after,
-.ui-next.ui-play .map-tools .icon-btn::before, .ui-next.ui-play .fab::before, .ui-next.ui-play .dialog::before, .ui-next.ui-play .dialog::after {
+.ui-next.ui-play :is(.map-tools, .tool-hud) .icon-btn::before, .ui-next.ui-play .fab::before, .ui-next.ui-play .dialog::before, .ui-next.ui-play .dialog::after {
   content: ''; position: absolute; z-index: -1; width: 42px; height: 42px; pointer-events: none; background: var(--sprig) no-repeat 0 0 / 100% 100%;
 }
 .ui-next.ui-play .player-chip::before, .ui-next.ui-play .npc-note::before, .ui-next.ui-play .dialog::before { left: 0; top: 0; }
 .ui-next.ui-play .npc-note::after, .ui-next.ui-play .dialog::after { right: 0; bottom: 0; rotate: 180deg; }
 .ui-next.ui-play .clock-block::after { right: 0; bottom: 0; width: 30px; height: 30px; rotate: 180deg; }
-.ui-next.ui-play .map-tools .icon-btn::before, .ui-next.ui-play .fab::before { width: 30px; height: 30px; }
-.ui-next.ui-play .map-tools .icon-btn::before { right: 0; top: 0; scale: -1 1; }
+.ui-next.ui-play :is(.map-tools, .tool-hud) .icon-btn::before, .ui-next.ui-play .fab::before { width: 30px; height: 30px; }
+.ui-next.ui-play :is(.map-tools, .tool-hud) .icon-btn::before { right: 0; top: 0; scale: -1 1; }
 .ui-next.ui-play .fab::before { left: 0; top: 0; }
 .ui-next.ui-play .dialog::before, .ui-next.ui-play .dialog::after { width: 64px; height: 64px; }
 
@@ -168,7 +168,7 @@
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; --hole: #2c2636;
 }
 .ui-next.ui-play .drawer .tabs:not(.look-tabs) .tab .pxi { display: none; }
-.ui-next.ui-play .drawer .tabs:not(.look-tabs) .tab.active { background: linear-gradient(180deg, #f6d48a, #e8b65e); color: #2a1f12; box-shadow: none; --hole: #eec170; }
+.ui-next.ui-play .drawer .tabs:not(.look-tabs) .tab.active { background: var(--here-bg); color: var(--here-ink); box-shadow: var(--here-shadow); --hole: #4a4160; }
 .ui-next.ui-play .drawer .tabs:not(.look-tabs) .tab .tab-n { position: absolute; top: 4px; right: 8px; margin: 0; padding: 0 5px; font-size: 10px; line-height: 15px; }
 .ui-next.ui-play .player-page .tabs:not(.look-tabs) { margin-bottom: 4px; }
 
@@ -270,7 +270,7 @@
   border: 0; border-radius: 11px; background: transparent; box-shadow: none; color: #b3abbf; font-size: 11px; font-weight: 800; line-height: 1.05; --hole: #2c2636;
 }
 .ui-next.ui-play .drawer[data-kind="look"] .look-tabs .tab .pxi { display: none; }
-.ui-next.ui-play .drawer[data-kind="look"] .look-tabs .tab.active { background: linear-gradient(180deg, #f6d48a, #e8b65e); color: #2a1f12; box-shadow: none; --hole: #eec170; }
+.ui-next.ui-play .drawer[data-kind="look"] .look-tabs .tab.active { background: var(--here-bg); color: var(--here-ink); box-shadow: var(--here-shadow); --hole: #4a4160; }
 
 /* ── Sepoltura: come le altre schede ─────────────────────────────────
    Titoli dei campi come le sezioni (gotico dorato), campi e scelte senza
@@ -300,3 +300,43 @@
 .ui-next.ui-play .drawer[data-kind="burial"] .grid .card.locked b { color: var(--muted); }
 /* il riepilogo */
 .ui-next.ui-play .drawer[data-kind="burial"] .burial-next { margin: 14px 4px 0; text-align: center; font-size: 13.5px; }
+
+/* Modifica di una tomba: le parti da toccare al posto dei puntini, e la nota sulla categoria bloccata */
+.ui-next.ui-play .drawer[data-kind="burial"] .edit-tabs { flex-wrap: nowrap; overflow-x: auto; margin: 0 0 12px; padding-bottom: 2px; scrollbar-width: none; }
+.ui-next.ui-play .drawer[data-kind="burial"] .edit-tabs::-webkit-scrollbar { display: none; }
+.ui-next.ui-play .drawer[data-kind="burial"] .edit-tabs .chip { flex: 1 0 auto; justify-content: center; padding-left: 9px; padding-right: 9px; font-size: 13px; }
+.ui-next.ui-play .drawer[data-kind="burial"] .edit-note { display: flex; align-items: center; gap: 6px; margin: 6px 0 0; font-size: 13px; }
+/* passi della sepoltura con l'icona sopra ogni tratto: grigia finché non ci si arriva, accesa man mano */
+.ui-next .steps.with-icons { gap: 6px; }
+.ui-next .steps.with-icons .step { flex: 1; display: grid; justify-items: center; gap: 6px; color: #6a6276; transition: color 0.25s; }
+.ui-next .steps.with-icons .step i { width: 100%; }
+.ui-next .steps.with-icons .step.done { color: #c9b07a; }
+.ui-next .steps.with-icons .step.now { color: var(--gold-bright); }
+.ui-next .steps.with-icons .step.now .mono { filter: drop-shadow(0 0 6px rgba(244, 213, 138, 0.45)); }
+/* modifica della tomba: le cinque schede in parti uguali, senza scorrere */
+.ui-next.ui-play .drawer[data-kind="burial"] .tabs.edit-tabs { grid-auto-columns: minmax(0, 1fr); overflow: visible; }
+
+/* ── Pressione lunga: l'anello dorato sotto il dito (ui/pressRing.ts) ──
+   112 px: si vede attorno al polpastrello. Compare dopo 120 ms (un tocco non lampeggia), si riempie
+   fino ai 350 ms; quando prende, scatta, si illumina e svanisce. */
+@property --press { syntax: '<number>'; inherits: false; initial-value: 0; }
+.press-ring {
+  position: fixed; z-index: 6; left: 0; top: 0; width: 112px; height: 112px; margin: -56px 0 0 -56px; border-radius: 50%;
+  pointer-events: none; opacity: 0; --press: 0;
+  background: conic-gradient(#f0c46e calc(var(--press) * 360deg), rgba(255, 244, 220, 0.2) 0);
+  -webkit-mask: radial-gradient(circle, transparent 47px, #000 48px, #000 55px, transparent 56px);
+  mask: radial-gradient(circle, transparent 47px, #000 48px, #000 55px, transparent 56px);
+  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.65));
+}
+.press-ring.on { animation: pressShow 0.08s linear var(--delay) both, pressFill var(--fill) linear var(--delay) both; }
+.press-ring.on.fire {
+  --press: 1; opacity: 1; animation: pressFire 0.34s cubic-bezier(0.2, 1.2, 0.4, 1) both;
+  filter: drop-shadow(0 0 8px rgba(240, 196, 110, 0.95)) drop-shadow(0 0 3px rgba(255, 226, 168, 0.9));
+}
+@keyframes pressShow { from { opacity: 0; } to { opacity: 1; } }
+@keyframes pressFill { from { --press: 0; } to { --press: 1; } }
+@keyframes pressFire { 0% { opacity: 1; transform: scale(1); } 45% { opacity: 1; transform: scale(1.16); } 100% { opacity: 0; transform: scale(1.24); } }
+@media (prefers-reduced-motion: reduce) {
+  .press-ring.on { animation: none; opacity: 0; }
+  .press-ring.on.fire { animation: pressShow 0.01s both reverse 0.3s; opacity: 1; transform: none; }
+}

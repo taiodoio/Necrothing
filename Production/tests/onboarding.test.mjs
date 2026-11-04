@@ -88,7 +88,7 @@ test('cortile: avanza solo con l’azione attesa, nell’ordine', () => {
   assert.equal(currentStep(o), 'walk');
   assert.equal(yardSignal(o, 'graveCleaned'), false, 'un’azione fuori ordine non conta');
   assert.equal(o.step, 0);
-  const signals = ['walked', 'wispCollected', 'graveCleaned', 'flowersBrought', 'lightToggled', 'itemBought', 'itemPlaced', 'editDone', 'presenceMet', 'graveOpened'];
+  const signals = ['walked', 'wispCollected', 'graveCleaned', 'flowersBrought', 'lightToggled', 'placementStarted', 'itemPlaced', 'editDone', 'presenceMet', 'graveOpened'];
   assert.equal(signals.length, YARD_STEPS.length);
   for (const sig of signals) { assert.equal(yardFinished(o), false); assert.ok(yardSignal(o, sig), sig); }
   assert.ok(yardFinished(o), 'finito: manca la chiusura');

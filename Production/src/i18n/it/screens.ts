@@ -3,6 +3,22 @@
 export default {
   // ── Sepoltura ──
   // titolo del pannello
+  'burial.edit.title': 'Modifica tomba',
+  'burial.edit.tab.name': 'Nome',
+  'burial.edit.tab.photo': 'Foto',
+  'burial.edit.tab.dates': 'Date',
+  'burial.edit.tab.epitaph': 'Epitaffio',
+  'burial.edit.tab.stone': 'Lapide',
+  'burial.edit.categoryLocked': 'La categoria non si cambia: da lei dipendono i punti già guadagnati.',
+  'burial.edit.save': 'Salva modifiche',
+  'burial.edit.leave.title': 'Uscire senza salvare?',
+  'burial.edit.leave.text': 'Le modifiche a questa tomba andranno perse.',
+  'burial.edit.leave.ok': 'Esci senza salvare',
+  'burial.edit.leave.cancel': 'Continua a modificare',
+  'burial.leave.title': 'Annullare la sepoltura?',
+  'burial.leave.text': 'Quello che hai scritto e la foto andranno persi.',
+  'burial.leave.ok': 'Annulla la sepoltura',
+  'burial.leave.cancel': 'Continua',
   'burial.title': 'Seppellisci',
   // epitaffi suggeriti (pulsanti sotto il campo), voci separate da «|»
   'burial.epitaph.suggestions': 'Ha dato tutto. Anche la garanzia.|Riposa in pezzi.|Non era rotto: era stanco.|Qui giace, finalmente scollegato.|Ci mancherai, più o meno.|Sei stato utile. A volte.',
@@ -47,7 +63,7 @@ export default {
 
   // ── Modalità Modifica ──
   'edit.intro.title': 'Modalità Modifica',
-  'edit.intro.text': 'In Modifica scegli la mano per spostare la vista o le frecce per trascinare un elemento. Tocca la lente per i dettagli, la freccia circolare per annullare e la spunta per confermare.',
+  'edit.intro.text': 'In Modifica tocca un oggetto per prenderlo e trascinalo, oppure tienilo premuto e trascinalo subito. Fuori dall’oggetto il dito sposta la vista, due dita fanno lo zoom. Conferma per lasciarlo lì, Annulla per rimetterlo com’era; la lente apre i dettagli.',
   'edit.intro.dontShow': 'Non mostrare più',
   // breve: pulsante
   'edit.intro.start': 'Inizia',
@@ -126,6 +142,7 @@ export default {
   'shop.buy.full': 'Nella versione completa',
   // breve: pulsante, seguito dall'icona del fuoco fatuo
   'shop.buy.ctaShort': 'Compra · {n}',
+  'shop.buy.short': 'Compra',
 
   // ── Bottega ──
   'shop.title': 'Bottega',
@@ -234,6 +251,7 @@ export default {
   // breve: pulsante che apre le azioni secondarie del dettaglio (fisarmonica)
   'detail.more': 'Altro',
   // breve: voci di «Altro» nel dettaglio della tomba, con l'icona
+  'detail.grave.edit': 'Modifica',
   'detail.grave.postcard': 'Manda una cartolina',
   'detail.grave.entrust': 'Affida all’albero',
   // in rosso (azione distruttiva)
@@ -252,6 +270,7 @@ export default {
   'exhume.free.ok': 'Libera',
 
   // ── Scheda dell'oggetto ──
+  'detail.item.effect': 'Effetto',
   'detail.item.category': 'Categoria',
   'detail.item.condition': 'Condizione',
   'detail.item.broken#one': 'Rotto (riparare: {n} fuochi fatui)',
@@ -310,6 +329,15 @@ export default {
   'player.districts.none': 'Nessuno (4 tombe coerenti vicine)',
   // in testa alla scheda dei traguardi
   'player.achievements': '{got} traguardi su {total}',
+  'player.info.more': 'Tocca per sapere cos’è',
+  'guide.wisps.title': 'Fuochi fatui',
+  'guide.wisps.text': 'La moneta del cimitero: la raccogli e la guadagni curando le tombe e incontrando le creature. Si spende in Bottega.',
+  'guide.xp.title': 'Punti Necro',
+  'guide.xp.text': 'L’esperienza del Custode: ogni cura e ogni incontro ne porta un po’. Non si spendono: fanno salire di rango.',
+  'guide.rank.title': 'Rango',
+  'guide.rank.text': 'Il tuo titolo, in cinque gradini. Ogni rango apre nuovi oggetti in Bottega.',
+  'guide.prestige.title': 'Prestigio',
+  'guide.prestige.text': 'Dice com’è il cimitero adesso: sale con tombe, fiori e decorazioni, scende se lo trascuri. Con più prestigio il recinto si allarga.',
   'player.tier.gold': 'Oro',
   'player.tier.silver': 'Argento',
   'player.tier.bronze': 'Bronzo',
@@ -342,6 +370,7 @@ export default {
   'settings.quality.low': 'Bassa',
   'settings.quality.medium': 'Media',
   'settings.quality.high': 'Alta',
+  'settings.quality.now': 'Stai usando la qualità {level}.',
   'settings.quality.autoHint': 'Auto sceglie Bassa, Media o Alta in base al dispositivo, e scende di livello se il gioco rallenta.',
   'settings.fps': 'Fluidità',
   // breve: pulsanti della fluidità

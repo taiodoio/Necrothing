@@ -2,13 +2,13 @@
 // rispetto a three/DOM. Ogni azione muta lo SaveData passato e ritorna un
 // esito (messaggio + ricompense) oppure lancia GameError.
 
-import { BUSINESS, DECAY, ECONOMY, HAT_FEATS, HOUSE_PERKS, EXPANSION, GRAVE_FOOTPRINT, GRAVEDIGGER, WISP_SPAWN, WISPS, XP, ZOMBIE_MUD } from './balance.ts';
+import { BUSINESS, DECAY, FLORIST, ECONOMY, HOUSE_PERKS, LOOK_UNLOCKS, PET_BOND_GOAL, POST, type PetSpecies, EXPANSION, GRAVE_FOOTPRINT, GRAVEDIGGER, WISP_SPAWN, WISPS, XP, ZOMBIE_MUD } from './balance.ts';
 import { CATALOG, isSeasonallyAvailable, placeableDef, repairCost, rotatedFootprint, type PlaceableDef } from './catalog.ts';
 import { CATEGORIES, CUSTOM_CAUSE_MAX, DEATH_CAUSES, GRAVE_TYPE_ACCESS, GRAVE_TYPE_MIN_RANK, GRAVE_TYPES, type CauseChoice, type Category, type DeathCause, type GraveType } from './graves.ts';
 import { evaluateAchievements, rankForXp, type AchievementDef } from './progression.ts';
 import { hashString, newId } from './rng.ts';
 import type { RoamerKind } from './spawn.ts';
-import type { Grave, MemoryType, Placed, SaveData } from './state.ts';
+import type { Grave, MemoryType, Placed, SaveData, Weather } from './state.ts';
 import { isoDate } from './time.ts';
 import { areaForLevel, buildOccupancy, canPlaceAt, cellsOf, computePrestige, nearestFreeSpot } from './world.ts';
 import { houseHasVeggie, houseItem, housePart, housePerk, houseRoof } from './house.ts';
@@ -60,14 +60,14 @@ function placedById(s: SaveData, id: string): Placed {
  * achievement. Il recinto non si allarga da solo: `unlocked` è il nuovo
  * livello sbloccato (o null) e il giocatore sceglie se ampliare.
  */
-export function afterAction(s: SaveData, now: Date): { achievements: AchievementDef[]; unlocked: number | null } {
+export function afterAction(s: SaveData, now: Date): { achievements: AchievementDef[]; unlocked: number | null; looks: string[] } {
   const prestige = computePrestige(s);
   let unlocked: number | null = null;
   while (s.world.unlockedLevel < EXPANSION.length - 1 && prestige >= EXPANSION[s.world.unlockedLevel + 1].minPrestige) {
     s.world.unlockedLevel++;
     unlocked = s.world.unlockedLevel;
   }
-  return { achievements: evaluateAchievements(s, now), unlocked };
+  return { achievements: evaluateAchievements(s, now), unlocked, looks: refreshLookUnlocks(s) };
 }
 
 /** Tombe e oggetti che non entrano (anche solo in parte) nel recinto di un certo livello. */
@@ -221,9 +221,18 @@ export function bringFlowers(s: SaveData, graveId: string, now: Date): ActionRes
   memory(s, g.id, 'flower', now);
   s.player.counters.flowersBrought++;
   // le fioriere della casa del Custode: un fuoco fatuo in più per ogni mazzo
-  const wisps = housePerk(s, 'flowerbox') ? HOUSE_PERKS.flowerboxWisps : WISPS.flowers;
+  let wisps = housePerk(s, 'flowerbox') ? HOUSE_PERKS.flowerboxWisps : WISPS.flowers;
+  // il chiosco del fioraio: ogni tanto lo scheletro ci aggiunge un rametto che vale un fuoco fatuo
+  const florist = floristBonus(s, g.id, now);
+  wisps += florist;
   reward(s, XP.flowers, wisps);
-  return ok(t('rules.flowers.done'), XP.flowers, wisps);
+  return ok(t(florist ? 'rules.flowers.florist' : 'rules.flowers.done'), XP.flowers, wisps);
+}
+
+/** Il rametto in più del fioraio: 1 volta su FLORIST.oneIn, solo con un chiosco in piedi (deterministico). */
+export function floristBonus(s: SaveData, graveId: string, now: Date): number {
+  if (!s.placeables.some((p) => p.type === 'flower_kiosk' && !p.broken)) return 0;
+  return hashString(`${graveId}:${now.toISOString()}:fioraio`) % FLORIST.oneIn === 0 ? FLORIST.bonus : 0;
 }
 
 export function cleanGrave(s: SaveData, graveId: string, now: Date): ActionResult {
@@ -392,6 +401,34 @@ export function toggleLight(s: SaveData, id: string): ActionResult {
   return ok(t(p.lit ? 'rules.light.on' : 'rules.light.off'));
 }
 
+/**
+ * Modifica di una tomba: si riscrive quello che si è scritto alla sepoltura
+ * (nome, date, causa, epitaffio, foto, lapide). La categoria no: da lei
+ * dipendono i punti e i fuochi fatui già dati (e il limite delle cose astratte).
+ * Posto, cure, fiori e stato restano quelli.
+ */
+export function editGrave(s: SaveData, id: string, d: BurialDraft, now: Date): ActionResult {
+  const g = graveById(s, id);
+  const draft: BurialDraft = { ...d, category: g.category };
+  const first = Object.values(validateDraft(draft, now))[0];
+  if (first) throw new GameError(first);
+  if (draft.graveType !== g.graveType) {
+    const av = graveTypeAvailability(s, draft.graveType!);
+    if (av === 'full') throw new GameError(t('rules.access.full'));
+    if (av === 'rank') throw new GameError(t('rules.bury.rankTooLow'));
+  }
+  g.name = draft.name.trim();
+  g.birthDate = draft.birthDate;
+  g.deathDate = draft.deathDate!;
+  g.deathCause = draft.deathCause!;
+  if (draft.deathCause === 'custom') g.deathCauseText = draft.deathCauseText.trim();
+  else delete g.deathCauseText;
+  g.epitaph = draft.epitaph.trim() || null;
+  g.photoId = draft.photoId;
+  g.graveType = draft.graveType!;
+  return ok(t('rules.grave.edited'));
+}
+
 export function setText(s: SaveData, id: string, text: string): ActionResult {
   const p = placedById(s, id);
   if (!CATALOG[p.type]?.editableText) throw new GameError(t('rules.text.notEditable'));
@@ -421,19 +458,52 @@ export function featProgress(s: SaveData, feat: NonNullable<PlaceableDef['feat']
   return [Math.min(feat.goal, s.player.counters[feat.counter] ?? 0), feat.goal];
 }
 
-/** Il cappello da strega (e gli altri cappelli a traguardo) si può indossare? */
-export function hatUnlocked(s: SaveData, hat: string): boolean {
-  const f = HAT_FEATS[hat as keyof typeof HAT_FEATS];
-  if (!f) return true;
-  return (s.player.counters[f.counter] ?? 0) >= f.goal;
+/** Il pezzo d'aspetto «chiave:valore» si sblocca? (null = sempre disponibile) */
+const lookUnlockOf = (key: keyof CustodeLook, value: unknown) => LOOK_UNLOCKS.find((u) => u.key === `${key}:${String(value)}`) ?? null;
+
+/** Un pezzo d'aspetto è sbloccato (o non ha bisogno di esserlo)? */
+export function lookUnlocked(s: SaveData, key: keyof CustodeLook, value: unknown): boolean {
+  const u = lookUnlockOf(key, value);
+  return !u || s.player.lookUnlocks.includes(u.key);
 }
 
-export type LookOptionAvailability = 'ok' | 'full' | 'feat';
+/**
+ * Sblocchi d'aspetto nuovi: chi ha (o ha avuto) quel personaggio, o ha fatto
+ * abbastanza coccole e giochi con quell'animale. Si segnano nella partita (non
+ * si perdono) e si restituiscono per festeggiarli.
+ */
+export function refreshLookUnlocks(s: SaveData): string[] {
+  const fresh: string[] = [];
+  for (const u of LOOK_UNLOCKS) {
+    if (s.player.lookUnlocks.includes(u.key)) continue;
+    const met = u.npc ? ownedCount(s, u.npc) + placedCount(s, u.npc) > 0 : (s.player.petBond[u.pet!] ?? 0) >= PET_BOND_GOAL;
+    if (met) { s.player.lookUnlocks.push(u.key); fresh.push(u.key); }
+  }
+  return fresh;
+}
 
-/** Una scelta d'aspetto si può indossare? Prima l'accesso commerciale, poi il traguardo (cappelli). */
+/** Il tempo che c'è adesso nel cimitero (traguardo «Custode d'Ogni Tempo»); vero se è la prima volta che si vede. */
+const weatherBit = (w: Weather) => (w === 'fog' ? 1 : w === 'rain' ? 2 : w === 'storm' ? 4 : 0);
+export const weatherIsNew = (s: SaveData, w: Weather) => !!weatherBit(w) && !(s.player.counters.weathersSeen & weatherBit(w));
+export function noteWeather(s: SaveData, w: Weather): boolean {
+  if (!weatherIsNew(s, w)) return false;
+  s.player.counters.weathersSeen |= weatherBit(w);
+  return true;
+}
+
+/** Una coccola o un gioco con un animale (conta per le sorprese d'aspetto). */
+export function bondWithPet(s: SaveData, species: PetSpecies): ActionResult {
+  s.player.petBond[species] = (s.player.petBond[species] ?? 0) + 1;
+  return ok('');
+}
+
+/** `hidden`: non si vede finché non si sblocca (si può indossare solo quel che è già addosso). */
+export type LookOptionAvailability = 'ok' | 'full' | 'hidden';
+
+/** Una scelta d'aspetto si può indossare? Prima l'accesso commerciale, poi lo sblocco. */
 export function lookOptionAvailability(s: SaveData, key: keyof CustodeLook, value: unknown): LookOptionAvailability {
   if (!hasAccess(lookOptionAccess(key, value))) return 'full';
-  if (key === 'hat' && !hatUnlocked(s, String(value))) return 'feat';
+  if (!lookUnlocked(s, key, value)) return 'hidden';
   return 'ok';
 }
 
@@ -660,6 +730,8 @@ export function collectBusiness(s: SaveData, id: string, now: Date): ActionResul
     s.player.counters.potionsSold += n;
     return ok(t('rules.collect.witch', { n }), 0, n);
   }
+  if (p.type === 'food_truck') return ok(t('rules.collect.foodTruck', { n }), 0, n);
+  if (p.type === 'ice_cream_cart') return ok(t('rules.collect.iceCream', { n }), 0, n);
   return ok(t('rules.collect.done', { n }), 0, n);
 }
 
@@ -754,7 +826,7 @@ export function interactRoamer(
     }
     case 'cat': reward(s, 0, WISPS.cat); return ok(t('rules.cat.met'), 0, WISPS.cat);
     case 'rat': reward(s, 0, WISPS.rat); return ok(t('rules.rat.met'), 0, WISPS.rat);
-    case 'crow': reward(s, 0, WISPS.crow); return ok(t('rules.crow.met'), 0, WISPS.crow);
+    case 'crow': reward(s, 0, WISPS.crow); c.crowWisps += WISPS.crow; return ok(t('rules.crow.met'), 0, WISPS.crow);
     case 'zombie': reward(s, XP.zombie, WISPS.zombie); return ok(t('rules.zombie.met'), XP.zombie, WISPS.zombie);
     case 'priest': {
       if (opts.graveId && s.graves.some((g) => g.id === opts.graveId)) memory(s, opts.graveId, 'blessing', now);
@@ -771,13 +843,16 @@ export function interactRoamer(
       reward(s, xp, w);
       return ok(near.length ? t('rules.gravedigger.cleaned', { n: near.length }) : t('rules.gravedigger.idle'), xp, w);
     }
+    // il postino e i fratelli fanno il loro giro: parlano (vedi Game.tapRoamer), non si «incontrano»
+    case 'postman': case 'hunterA': case 'hunterB': return ok('');
   }
 }
 
 /** L'animale, felice per le coccole o per il gioco, porta qualche fuoco fatuo. */
-export function petGift(s: SaveData, wisps: number): ActionResult {
+export function petGift(s: SaveData, wisps: number, species?: PetSpecies): ActionResult {
   const n = Math.max(1, Math.round(wisps));
   reward(s, 0, n);
+  if (species === 'crow') s.player.counters.crowWisps += n;
   return ok('', 0, n);
 }
 
@@ -865,4 +940,61 @@ export function toggleHousePart(s: SaveData, id: string, now?: Date): boolean {
   const home = s.placeables.find((p) => p.type === 'keeper_house');
   if (id === 'veggie' && i >= 0 && home && now) home.collectedAt = now.toISOString();
   return i >= 0;
+}
+
+// ── Posta (ufficio postale) ────────────────────────────────────────────
+
+/** C'è l'ufficio postale (posato e non rotto)? */
+export const postOfficeOpen = (s: SaveData) => s.placeables.some((p) => p.type === 'post_office' && !p.broken);
+
+/** Fra quanto torna la prossima lettera: tra POST.returnDays giorni, a caso ma ripetibile. */
+function nextMailAt(s: SaveData, now: Date): string {
+  const [lo, hi] = POST.returnDays;
+  const k = hashString(`${s.seed}:${now.toISOString()}:posta`) % 1000 / 1000;
+  return new Date(now.getTime() + (lo + k * (hi - lo)) * 86_400_000).toISOString();
+}
+
+/** Spedisce una lettera: entra nel mucchio di quelle che possono tornare. */
+export function sendLetter(s: SaveData, text: string, now: Date): ActionResult {
+  if (!postOfficeOpen(s)) throw new GameError(t('rules.post.closed'));
+  const clean = text.trim().slice(0, POST.maxLength);
+  if (!clean) throw new GameError(t('rules.post.empty'));
+  s.post.letters.push({ id: newId('l'), text: clean, sentAt: now.toISOString() });
+  if (s.post.letters.length > POST.maxLetters) s.post.letters.splice(0, s.post.letters.length - POST.maxLetters);
+  if (!s.post.nextAt) s.post.nextAt = nextMailAt(s, now);
+  s.player.counters.lettersSent++;
+  return ok(t('rules.post.sent'));
+}
+
+/**
+ * Se è il momento torna una delle lettere spedite (a caso) nella buca della
+ * casa del Custode; una alla volta. Vero se ne è appena arrivata una.
+ */
+export function checkMail(s: SaveData, now: Date): boolean {
+  const p = s.post;
+  if (p.inbox || !p.letters.length || !postOfficeOpen(s)) return false;
+  if (!p.nextAt) { p.nextAt = nextMailAt(s, now); return false; }
+  if (new Date(p.nextAt).getTime() > now.getTime()) return false;
+  const i = hashString(`${s.seed}:${p.nextAt}`) % p.letters.length;
+  p.inbox = p.letters.splice(i, 1)[0];
+  p.nextAt = nextMailAt(s, now);
+  return true;
+}
+
+/** Letta e chiusa: quella lettera non torna più (la prossima si fa attendere da adesso). */
+export function closeLetter(s: SaveData, now: Date): ActionResult {
+  s.post.inbox = null;
+  s.post.nextAt = nextMailAt(s, now);
+  return ok('');
+}
+
+/** Rispedita: torna nel mucchio, e un giorno potrà tornare di nuovo. */
+export function resendLetter(s: SaveData, now: Date): ActionResult {
+  const l = s.post.inbox;
+  if (!l) return ok('');
+  s.post.inbox = null;
+  s.post.letters.push({ ...l, sentAt: now.toISOString() });
+  if (s.post.letters.length > POST.maxLetters) s.post.letters.splice(0, s.post.letters.length - POST.maxLetters);
+  s.post.nextAt = nextMailAt(s, now);
+  return ok(t('rules.post.resent'));
 }

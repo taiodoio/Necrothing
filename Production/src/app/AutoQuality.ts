@@ -2,18 +2,19 @@
 // (niente three/DOM): Game applica i profili.
 //
 // - ogni livello è un profilo misurato sui telefoni:
-//   Bassa per i telefoni deboli (mondo alleggerito, luci finte, materiale
-//   semplice, niente ombre), Media per i medi (luci finte, materiale
-//   semplice, ombre ferme), Alta per i forti (luci vere, ombre vive);
-// - Auto sceglie il livello dal dispositivo (mai più su di quello stimato),
-//   dentro al livello regola solo la risoluzione, e se anche la risoluzione
-//   più bassa non regge scende di livello (cambiarlo ricostruisce parte
-//   della scena: mezzo secondo di blocco). Può risalire fino al livello
-//   stimato; un livello che appena raggiunto non ha retto non si ritenta.
-// - il regolatore giudica rispetto al ritmo atteso (30 o 60 FPS): scende
-//   subito se resta sotto per qualche secondo, risale solo dopo un lungo
-//   periodo pieno; un gradino che ha appena fatto crollare gli FPS non viene
-//   più ritentato (tetto).
+//   Bassa per i telefoni deboli (mondo alleggerito, materiale
+//   semplice, niente ombre), Media per i medi (materiale
+//   semplice, ombre ferme), Alta per i forti (materiale PBR, ombre vive); la luce delle lanterne è la mappa di luce in tutti;
+// - Auto sceglie il livello dal dispositivo e parte dalla risoluzione più alta
+//   di quel livello; nel gioco (AUTO_POLICY) il livello non cambia più e scende
+//   solo la risoluzione, come rete di sicurezza: dopo 25 secondi di gioco
+//   attivo e con gli FPS sotto il ritmo per 8 secondi di fila. Da fermo
+//   (risparmio batteria) e sotto i menù il gioco rallenta apposta: quei frame
+//   non si giudicano. Ogni apertura riparte dal livello stimato.
+// - il regolatore giudica rispetto al ritmo atteso (30 o 60 FPS) e risale
+//   (fino alla risoluzione più alta del livello) solo dopo un periodo pieno; un
+//   gradino che ha appena fatto crollare gli FPS non viene più ritentato (tetto).
+//   EAGER_POLICY è il comportamento di prima (scende presto, anche di livello).
 
 import type { Quality } from '../game/state.ts';
 import { t } from '../i18n/index.ts';
@@ -23,8 +24,6 @@ export interface QualityProfile {
   bake: Quality;
   /** Mondo alleggerito: un terzo di prato e decorazioni, metà bosco con alberi semplici. */
   lite: boolean;
-  /** Luci delle lanterne finte (chiazze di luce a terra) invece delle luci vere. */
-  fakeLights: boolean;
   /** Materiale semplice (Lambert) invece del PBR. */
   liteMaterials: boolean;
   /** Ombre: nessuna (disco sotto i personaggi), ferme (ridisegnate solo se cambia la vista) o vive. */
@@ -41,9 +40,9 @@ export interface QualityProfile {
 }
 
 export const PROFILES: Record<Quality, QualityProfile> = {
-  low: { bake: 'medium', lite: true, fakeLights: true, liteMaterials: true, shadows: 'off', dpr: [0.85, 1], msaa: 0, blurRadius: 3.5, fps: 30, presences: 'mid' },
-  medium: { bake: 'medium', lite: false, fakeLights: true, liteMaterials: true, shadows: 'still', dpr: [1.25, 1.5], msaa: 2, blurRadius: 3.5, fps: 30, presences: 'mid' },
-  high: { bake: 'high', lite: false, fakeLights: false, liteMaterials: false, shadows: 'live', dpr: [1.5, 1.75, 2], msaa: 4, blurRadius: 5, fps: 60, presences: 'high' },
+  low: { bake: 'medium', lite: true, liteMaterials: true, shadows: 'off', dpr: [0.85, 1], msaa: 0, blurRadius: 3.5, fps: 30, presences: 'mid' },
+  medium: { bake: 'medium', lite: false, liteMaterials: true, shadows: 'still', dpr: [1.25, 1.5], msaa: 2, blurRadius: 3.5, fps: 30, presences: 'mid' },
+  high: { bake: 'high', lite: false, liteMaterials: false, shadows: 'live', dpr: [1.5, 1.75, 2], msaa: 4, blurRadius: 5, fps: 60, presences: 'high' },
 };
 
 export const QUALITY_LABELS: Record<Quality, string> = { low: t('quality.low'), medium: t('quality.medium'), high: t('quality.high') };
@@ -104,6 +103,40 @@ export function newAutoProfile(tier: Quality): AutoProfile {
 /** Il livello cambia (si ricostruisce la scena) o solo la risoluzione. */
 export type AutoDecision = 'step' | 'tier' | null;
 
+/**
+ * Secondi senza giudizio all'avvio: la scena finisce di comporsi, gli shader si
+ * compilano, le anteprime si scaldano. Erano i frame lenti di questi secondi a
+ * far scendere anche i telefoni forti (un iPhone recente finiva sempre in Media).
+ */
+export const START_SETTLE = 5;
+/** Dopo un cambio di livello: la scena si ricostruisce e gli shader nuovi si compilano (un blocco che non dice nulla sul telefono). */
+export const TIER_SETTLE = 4;
+/** Un frame singolo più lungo di così, in mezzo a frame veloci, è uno scatto isolato (un modello generato, un salvataggio): non conta. */
+export const HITCH = 0.25;
+/** Come può scendere il regolatore. */
+export interface AutoPolicy {
+  /** Se può scendere (di risoluzione e, con `tierDown`, di livello). */
+  downgrade: boolean;
+  /** Se, alla risoluzione minima, può scendere anche di livello (ricostruisce parte della scena). */
+  tierDown: boolean;
+  /** Secondi di gioco attivo, a ritmo pieno, prima di poter scendere (da fermo e sotto i menù non contano). */
+  warmup: number;
+  /** Finestre di un secondo consecutive sotto il ritmo per scendere di un gradino. */
+  sustain: number;
+}
+
+/** Il regolatore di prima (i test lo usano così): scende presto, anche di livello. */
+export const EAGER_POLICY: AutoPolicy = { downgrade: true, tierDown: true, warmup: 0, sustain: 2 };
+
+/**
+ * Quello del gioco: rete di sicurezza prudente. Auto parte dal livello stimato
+ * per il dispositivo, alla risoluzione più alta, e il livello non cambia più;
+ * scende solo di risoluzione, dopo almeno 25 secondi di gioco attivo e se gli
+ * FPS restano sotto il ritmo per 8 secondi di fila (mai nei primi secondi,
+ * mai da fermo o sotto un menù: lì il gioco rallenta apposta).
+ */
+export const AUTO_POLICY: AutoPolicy = { downgrade: true, tierDown: false, warmup: 25, sustain: 8 };
+
 /** Regolatore a finestre di un secondo, con isteresi e tetti per ciò che non regge. */
 export class AutoGovernor {
   tier: Quality;
@@ -113,15 +146,22 @@ export class AutoGovernor {
   private winFrames = 0;
   private winTime = 0;
   private history: number[] = [];
-  /** Secondi da attendere prima di giudicare (dopo un cambio la scena si assesta). */
-  private settle = 1;
+  /** Secondi da attendere prima di giudicare (all'avvio e dopo un cambio la scena si assesta). */
+  private settle = START_SETTLE;
+  /** Durata del frame prima (per riconoscere gli scatti isolati). */
+  private lastDt = 0;
   /** Secondi prima di poter risalire. */
   private cooldown = 0;
   /** Da quanto si è saliti di gradino e di livello (per capire se la salita ha fatto crollare gli FPS). */
   private sinceUp = Infinity;
   private sinceTierUp = Infinity;
+  /** Come può scendere (vedi AUTO_POLICY). */
+  private readonly policy: AutoPolicy;
+  /** Secondi giudicati (gioco attivo a ritmo pieno, dopo l'assestamento). */
+  private active = 0;
 
-  constructor(p: AutoProfile) {
+  constructor(p: AutoProfile, policy: Partial<AutoPolicy> = {}) {
+    this.policy = { ...EAGER_POLICY, ...policy };
     this.tier = p.tier;
     this.top = ORDER.indexOf(p.top) >= ORDER.indexOf(p.tier) ? p.top : p.tier;
     const max = PROFILES[p.tier].dpr.length - 1;
@@ -147,10 +187,15 @@ export class AutoGovernor {
   /** Un frame disegnato, col ritmo atteso; ritorna la decisione quando c'è da cambiare qualcosa. */
   frame(dt: number, target: number): AutoDecision {
     if (dt <= 0 || dt > 2) return null; // pausa lunga; i blocchi visibili sotto i 2 s contano come frame lenti
+    // uno scatto isolato in mezzo a frame veloci non dice che il telefono non regge; una serie di frame lenti sì
+    const isolated = dt > HITCH && this.lastDt < 0.1;
+    this.lastDt = dt;
+    if (isolated) return null;
     this.sinceUp += dt;
     this.sinceTierUp += dt;
     if (this.cooldown > 0) this.cooldown -= dt;
     if (this.settle > 0) { this.settle -= dt; return null; }
+    this.active += dt;
     this.winFrames++;
     this.winTime += dt;
     if (this.winTime < 1) return null;
@@ -161,9 +206,11 @@ export class AutoGovernor {
     if (this.history.length > 30) this.history.shift();
     const last = (n: number) => this.history.length >= n && this.history.slice(-n);
     const low = AutoGovernor.low(target), high = AutoGovernor.high(target);
-    // Sotto il ritmo per due finestre consecutive si riduce subito la risoluzione.
-    const slow = last(2);
+    // Sotto il ritmo per `sustain` finestre consecutive (e dopo `warmup` secondi di gioco) si riduce la risoluzione.
+    const pol = this.policy;
+    const slow = last(pol.sustain);
     if (slow && slow.every((f) => f < low)) {
+      if (!pol.downgrade || this.active < pol.warmup) return null; // si resta dove si è (e non si sale)
       if (this.step > 0) {
         // la salita di poco fa non ha retto: quel gradino non si ritenta più
         if (this.sinceUp < 12) this.ceiling = this.step - 1;
@@ -172,15 +219,15 @@ export class AutoGovernor {
       }
       // Se anche alla risoluzione minima restiamo sotto il ritmo per tre
       // finestre, si riducono ombre, luci e densità della scena.
-      const slower = last(3);
+      const slower = last(pol.sustain + 1);
       const i = ORDER.indexOf(this.tier);
-      if (slower && slower.every((f) => f < low) && i > 0) {
+      if (pol.tierDown && slower && slower.every((f) => f < low) && i > 0) {
         // il livello raggiunto da poco non regge: non ci si torna più
         if (this.sinceTierUp < 40) this.top = ORDER[i - 1];
         this.tier = ORDER[i - 1];
         this.step = 0;
         this.ceiling = PROFILES[this.tier].dpr.length - 1;
-        this.change(this.step, 0);
+        this.change(this.step, 0, TIER_SETTLE);
         return 'tier';
       }
       return null;
@@ -200,19 +247,19 @@ export class AutoGovernor {
       this.tier = ORDER[i + 1];
       this.step = 0;
       this.ceiling = PROFILES[this.tier].dpr.length - 1;
-      this.change(0, 30);
+      this.change(0, 30, TIER_SETTLE);
       this.sinceTierUp = 0;
       return 'tier';
     }
     return null;
   }
 
-  private change(step: number, cooldown: number) {
+  private change(step: number, cooldown: number, settle = 1) {
     this.step = step;
     this.history = [];
     this.winFrames = 0;
     this.winTime = 0;
-    this.settle = 1;
+    this.settle = settle;
     this.cooldown = cooldown;
   }
 }

@@ -8,6 +8,7 @@ import { LPC } from './lowpoly/palette.ts';
 import { weeds } from './lowpoly/details.ts';
 import { getModel, instantiate, lightWorldPos, LOWPOLY_MATERIALS, type CachedModel } from './modelCache.ts';
 import { placeableKey } from './keys.ts';
+import type { PVis } from './types.ts';
 import { houseRoof, houseVariant } from '../game/house.ts';
 import { housePartLP } from './lowpoly/architecture.ts';
 import type { GraveType } from '../game/graves.ts';
@@ -158,10 +159,27 @@ function settle(src: HTMLCanvasElement, S: number): string {
 }
 
 /** Anteprima di un oggetto del catalogo. */
-export function renderItemPreview(type: string, S = 320): string {
-  const v = { type, variant: 0, dirty: false, broken: false, lit: true, seed: 1 };
+export function renderItemPreview(type: string, S = 320, state: Partial<Pick<PVis, 'variant' | 'dirty' | 'broken' | 'lit'>> = {}): string {
+  // `state`: solo per la guida agli asset (gli stati spento, sporco, rotto); le anteprime del gioco sono pulite e accese
+  const v: PVis = { type, variant: 0, dirty: false, broken: false, lit: true, seed: 1, ...state };
   // con chi lo abita (zombie, strega, fantasmi…), come nelle miniature
-  return renderPreview(getModel(placeableKey(v)), type, S, (o) => addPresences(o, v));
+  return renderPreview(getModel(placeableKey(v)), type, S, (o) => { addPresences(o, v); if (type === 'path_dirt') o.add(dirtPatch()); });
+}
+
+/**
+ * Il sentiero in terra: in gioco la terra battuta la dipinge il terreno sotto
+ * la casella (view/terrain.ts, stessi colori) e il modello porta solo zolle,
+ * sassi ed erba; nell'anteprima, senza terreno, la toppa di terra si aggiunge qui.
+ */
+function dirtPatch(): THREE.Object3D {
+  const lp = new LP('bake:dirtPatch');
+  const r = lp.rng;
+  lp.cyl(0, 0.0, 0, 0.5, 0.48, 0.014, 14, '#86643f', { jitter: 0.025, vary: 0.08, ao: 0 }); // terra battuta, bordo irregolare
+  for (let i = 0; i < 8; i++) { const a = r.range(0, Math.PI * 2), d = r.range(0, 0.38); lp.push([Math.cos(a) * d, 0.0145, Math.sin(a) * d], r.range(0, 3), -Math.PI / 2).plate(new THREE.Shape([new THREE.Vector2(-0.07, -0.04), new THREE.Vector2(0.08, -0.05), new THREE.Vector2(0.06, 0.05), new THREE.Vector2(-0.06, 0.04)]), 0.002, '#6c4f33', { ao: 0 }).pop(); }
+  const built = lp.build();
+  const g = new THREE.Group();
+  for (const [bucket, geo] of Object.entries(built.geometries)) if (geo) g.add(new THREE.Mesh(geo as THREE.BufferGeometry, (LOWPOLY_MATERIALS as unknown as Record<string, THREE.Material>)[bucket]));
+  return g;
 }
 
 /** Anteprima di una lapide (pulita), per la scelta nella sepoltura. */

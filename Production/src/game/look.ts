@@ -8,10 +8,13 @@ import type { Access } from '../config/distribution.ts';
 
 export type HairStyle = 'tufts' | 'bob' | 'long' | 'curly' | 'longcurly' | 'bun' | 'spiky' | 'none'
   | 'fringe' | 'fringeLong' | 'side' | 'sideLong' | 'wavy' | 'wavyLong' | 'buzz';
-/** Testa: umana, zucca intagliata, teschio, zombie. */
-export type HeadStyle = 'human' | 'pumpkin' | 'skull' | 'zombie';
-export type HatStyle = 'wide' | 'top' | 'beanie' | 'witch' | 'none';
-export type Outfit = 'coat' | 'cloak' | 'overalls' | 'sweater';
+/** Testa: umana, zucca intagliata, teschio, zombie, vampiro (si sblocca col vampiro). */
+export type HeadStyle = 'human' | 'pumpkin' | 'skull' | 'zombie' | 'vampire';
+/** Cappelli; strega, paglia e orecchie si sbloccano (vedi lookUnlocks in rules.ts). */
+export type HatStyle = 'wide' | 'top' | 'beanie' | 'witch' | 'straw' | 'cap' | 'catEars' | 'dogEars' | 'bunnyEars' | 'none';
+/** Extra sul viso (solo sbloccati): becco da corvo, becco da papera. */
+export type LookExtra = 'none' | 'crowBeak' | 'duckBeak';
+export type Outfit = 'coat' | 'cloak' | 'overalls' | 'sweater' | 'flannel';
 export type Glasses = 'none' | 'round' | 'square' | 'monocle';
 export type Beard = 'none' | 'short' | 'full' | 'braid';
 export type Mustache = 'none' | 'thin' | 'handlebar' | 'bushy';
@@ -33,6 +36,7 @@ export interface CustodeLook {
   bandaid: boolean;
   hat: HatStyle;
   hatColor: string;
+  extra: LookExtra;
   outfit: Outfit;
   outfitColor: string;
   accentColor: string;
@@ -51,14 +55,18 @@ export const LOOK_COLORS: Record<'skin' | 'hairColor' | 'beardColor' | 'eyes' | 
 };
 
 export const LOOK_STYLES = {
-  head: [['human', t('look.head.human')], ['pumpkin', t('look.head.pumpkin')], ['skull', t('look.head.skull')], ['zombie', t('look.head.zombie')]] as Array<[HeadStyle, string]>,
+  head: [['human', t('look.head.human')], ['pumpkin', t('look.head.pumpkin')], ['skull', t('look.head.skull')], ['zombie', t('look.head.zombie')], ['vampire', t('look.head.vampire')]] as Array<[HeadStyle, string]>,
   hair: [
     ['tufts', t('look.hair.tufts')], ['spiky', t('look.hair.spiky')], ['buzz', t('look.hair.buzz')], ['bob', t('look.hair.bob')], ['long', t('look.hair.long')],
     ['fringe', t('look.hair.fringe')], ['fringeLong', t('look.hair.fringeLong')], ['side', t('look.hair.side')], ['sideLong', t('look.hair.sideLong')], ['wavy', t('look.hair.wavy')],
     ['wavyLong', t('look.hair.wavyLong')], ['curly', t('look.hair.curly')], ['longcurly', t('look.hair.longcurly')], ['bun', t('look.hair.bun')], ['none', t('look.hair.none')],
   ] as Array<[HairStyle, string]>,
-  hat: [['wide', t('look.hat.wide')], ['top', t('look.hat.top')], ['beanie', t('look.hat.beanie')], ['witch', t('look.hat.witch')], ['none', t('look.hat.none')]] as Array<[HatStyle, string]>,
-  outfit: [['coat', t('look.outfit.coat')], ['cloak', t('look.outfit.cloak')], ['overalls', t('look.outfit.overalls')], ['sweater', t('look.outfit.sweater')]] as Array<[Outfit, string]>,
+  hat: [
+    ['wide', t('look.hat.wide')], ['top', t('look.hat.top')], ['beanie', t('look.hat.beanie')], ['witch', t('look.hat.witch')], ['straw', t('look.hat.straw')], ['cap', t('look.hat.cap')],
+    ['catEars', t('look.hat.catEars')], ['dogEars', t('look.hat.dogEars')], ['bunnyEars', t('look.hat.bunnyEars')], ['none', t('look.hat.none')],
+  ] as Array<[HatStyle, string]>,
+  extra: [['none', t('look.extra.none')], ['crowBeak', t('look.extra.crowBeak')], ['duckBeak', t('look.extra.duckBeak')]] as Array<[LookExtra, string]>,
+  outfit: [['coat', t('look.outfit.coat')], ['cloak', t('look.outfit.cloak')], ['overalls', t('look.outfit.overalls')], ['sweater', t('look.outfit.sweater')], ['flannel', t('look.outfit.flannel')]] as Array<[Outfit, string]>,
   glasses: [['none', t('look.glasses.none')], ['round', t('look.glasses.round')], ['square', t('look.glasses.square')], ['monocle', t('look.glasses.monocle')]] as Array<[Glasses, string]>,
   beard: [['none', t('look.beard.none')], ['short', t('look.beard.short')], ['full', t('look.beard.full')], ['braid', t('look.beard.braid')]] as Array<[Beard, string]>,
   mustache: [['none', t('look.mustache.none')], ['thin', t('look.mustache.thin')], ['handlebar', t('look.mustache.handlebar')], ['bushy', t('look.mustache.bushy')]] as Array<[Mustache, string]>,
@@ -67,7 +75,7 @@ export const LOOK_STYLES = {
 export const DEFAULT_LOOK: CustodeLook = {
   head: 'human', skin: '#f2cfb0', sparkle: false, hair: 'tufts', hairColor: '#6b4a33', eyes: '#1b1a20',
   glasses: 'none', beard: 'none', mustache: 'none', beardColor: '#6b4a33', freckles: false, bandaid: false,
-  hat: 'wide', hatColor: '#4a3326', outfit: 'coat', outfitColor: '#6e4c36', accentColor: '#a4473b',
+  hat: 'wide', hatColor: '#4a3326', extra: 'none', outfit: 'coat', outfitColor: '#6e4c36', accentColor: '#a4473b',
 };
 
 /** Accetta solo valori noti (salvataggi vecchi o manomessi tornano al predefinito). */
@@ -83,6 +91,7 @@ export function normalizeLook(raw: unknown): CustodeLook {
     head: pick(r.head, LOOK_STYLES.head, DEFAULT_LOOK.head),
     hair: pick(r.hair, LOOK_STYLES.hair, DEFAULT_LOOK.hair),
     hat: pick(r.hat, LOOK_STYLES.hat, DEFAULT_LOOK.hat),
+    extra: pick(r.extra, LOOK_STYLES.extra, DEFAULT_LOOK.extra),
     outfit: pick(r.outfit, LOOK_STYLES.outfit, DEFAULT_LOOK.outfit),
     glasses: pick(r.glasses, LOOK_STYLES.glasses, DEFAULT_LOOK.glasses),
     beard: pick(r.beard, LOOK_STYLES.beard, DEFAULT_LOOK.beard),
@@ -92,7 +101,7 @@ export function normalizeLook(raw: unknown): CustodeLook {
 
 /** Chiave breve e stabile di un aspetto (cache dei modelli). */
 export function lookKey(l: CustodeLook): string {
-  const s = JSON.stringify([l.head === 'human' ? undefined : l.head, l.skin, l.sparkle, l.hair, l.hairColor, l.eyes, l.glasses, l.beard, l.mustache, l.beardColor, l.freckles, l.bandaid, l.hat, l.hatColor, l.outfit, l.outfitColor, l.accentColor]);
+  const s = JSON.stringify([l.head === 'human' ? undefined : l.head, l.skin, l.sparkle, l.hair, l.hairColor, l.eyes, l.glasses, l.beard, l.mustache, l.beardColor, l.freckles, l.bandaid, l.hat, l.hatColor, l.outfit, l.outfitColor, l.accentColor, l.extra === 'none' ? undefined : l.extra]);
   let h = 2166136261;
   for (let i = 0; i < s.length; i++) h = Math.imul(h ^ s.charCodeAt(i), 16777619);
   return (h >>> 0).toString(36);

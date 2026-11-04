@@ -92,8 +92,7 @@
 .ui-next .mtf-back .section-title { color: #6e4b20; font-size: 20px; }
 .ui-next .mtf-back .dc-log li { border-bottom: 1px dashed rgba(58, 42, 34, 0.25); color: #3a2a22; font-size: 13px; padding: 5px 0; }
 .ui-next .mtf-back .dc-log time, .ui-next .mtf-back .dc-more { color: #7a6656; }
-.ui-next .mtf-actions { display: grid; gap: 8px; margin-top: 10px; }
-.ui-next .mtf-btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; width: 100%; height: 48px; padding: 0 12px; border: 0; border-radius: 12px; font: 800 15px/1.1 var(--pixel, sans-serif); color: #f6eddb; background: #4a3426; box-shadow: 0 2px 0 #24170f; }
+.ui-next .mtf-actions { margin-top: 10px; }
 .ui-next .mtf-back .more-toggle { min-height: 46px; color: #3a2a22; background: rgba(58, 42, 34, 0.1); box-shadow: inset 0 0 0 1.5px rgba(58, 42, 34, 0.18); }
 /* il retro è ruotato, quindi fa da contenitore per i figli «fixed»: il velo del menù copre esattamente il cartellino */
 .ui-next .mtf-back .more-scrim { position: fixed; inset: 0; border-radius: 8px 8px 22px 22px; }
@@ -199,7 +198,6 @@
 .ui-next .ach-card:not(.got) .ach-badge img { opacity: 0.75; }
 .ui-next .ach-n { position: absolute; right: 0; top: 2px; min-width: 22px; height: 20px; padding: 0 5px; border-radius: 999px; display: grid; place-items: center;
   background: var(--primary); color: var(--on-primary); font-size: 11.5px; font-weight: 800; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.4); }
-.ui-next .ach-card:not(.got) .ach-n { background: var(--track); color: var(--paper); }
 .ui-next .ach-card b { display: block; color: var(--paper); font-size: 15px; font-weight: 800; }
 .ui-next .ach-card p { margin: 2px 0 4px; color: var(--muted); font-size: 13px; }
 .ui-next .ach-tier { display: inline-block; padding: 1px 8px; border-radius: 999px; font-size: 11px; font-weight: 800; }
@@ -207,3 +205,11 @@
 .ui-next .ach-tier.tier-silver { background: rgba(195, 202, 214, 0.18); color: #c3cad6; }
 .ui-next .ach-tier.tier-bronze { background: rgba(200, 138, 84, 0.2); color: #d39a66; }
 .ui-next .ach-bar { display: block; height: 5px; margin-top: 6px; }
+
+/* Tasselli del Custode: la «i» in alto a destra (e tutto il tassello) apre cosa vuol dire quel dato */
+.ui-next button.pl-chip { position: relative; border: 0; color: inherit; font: inherit; cursor: pointer; }
+.ui-next button.pl-chip:active { transform: translateY(1px); }
+.ui-next .pl-info { position: absolute; top: 5px; right: 5px; width: 16px; height: 16px; border-radius: 50%; display: grid; place-items: center;
+  border: 1.5px solid var(--muted); color: var(--muted); font: italic 800 10px/1 Georgia, 'Times New Roman', serif; }
+.ui-next .stat-info h2 { display: flex; align-items: center; gap: 10px; padding-right: 44px; }
+.ui-next .stat-info p { color: var(--muted); font-size: 15px; }

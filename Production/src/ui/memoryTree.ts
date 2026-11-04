@@ -17,7 +17,7 @@ import { treeHeader } from './treeHeader.ts';
 import { icon } from './icons.ts';
 import { memorials } from '../app/persistence.ts';
 import { openPostcard, portrait } from './memorial.ts';
-import { confirmExhume, MEMORY_LABELS, moreActions, postcardData } from './screens.ts';
+import { actionRow, confirmExhume, MEMORY_LABELS, moreActions, postcardData } from './screens.ts';
 import { modelThumb } from './thumbs.ts';
 import type { UI } from './UI.ts';
 
@@ -113,15 +113,16 @@ export function openMemory(ui: UI, id: string, visit?: R.ActionResult, fromList 
     mem.length ? h('div', {}, h('div', { class: 'section-title' }, t('tree.memory.log')),
       h('ul', { class: 'timeline' }, ...mem.map((m) => h('li', {}, h('time', {}, fmtDate(m.at)), m.type === 'ghost' && m.at >= e.entrustedAt ? t('tree.memory.ghostNear') : MEMORY_LABELS[m.type])))) : null,
   ), {
-    footer: h('div', { style: 'display:grid;gap:6px' },
+    // come nelle altre schede: l'azione principale larga e «Altro» quadrato accanto
+    footer: actionRow(
+      h('button', { class: 'big-btn', onclick: () => openMemoryTree(ui) }, t('tree.memory.back')),
       moreActions([
         { icon: 'postcard', label: t('detail.grave.postcard'), run: () => {
           const photo = g.photoId ? memorials.get(g.photoId).then((m) => m?.dataUrl ?? null, () => null) : Promise.resolve(null);
           void openPostcard(photo.then((ph) => postcardData(g, ph, ui, g.seed % 4, fruitImg())));
         } },
         { icon: 'shovel', label: t('tree.memory.free'), danger: true, run: () => confirmExhume(ui, id, g.name, 'memory') },
-      ]),
-      h('button', { class: 'big-btn', onclick: () => openMemoryTree(ui) }, t('tree.memory.back'))),
+      ], { compact: true })),
     beforeClose: fromList ? () => { openMemoryTree(ui); return false; } : undefined,
   });
 }

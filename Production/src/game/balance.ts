@@ -75,8 +75,26 @@ export const SIM = {
 } as const;
 
 /** Decadimento & riparazione. */
-/** Cappelli del Custode che si sbloccano con un traguardo. */
-export const HAT_FEATS = { witch: { counter: 'potionsSold', goal: 30, label: t('feat.potionsSold') } } as const;
+/**
+ * Pezzi d'aspetto del Custode che si sbloccano (e fino ad allora non si vedono):
+ * cappello da strega, da giardiniere e testa da vampiro quando si ha quel personaggio;
+ * orecchie e becchi (sorpresa) dopo tante coccole e giochi con quell'animale.
+ */
+export const PET_SPECIES = ['dog', 'cat', 'rabbit', 'duck', 'crow'] as const;
+export type PetSpecies = typeof PET_SPECIES[number];
+export const PET_BOND_GOAL = 25;
+export const LOOK_UNLOCKS: ReadonlyArray<{ key: string; npc?: string; pet?: PetSpecies }> = [
+  { key: 'hat:witch', npc: 'witch_corner' },
+  { key: 'hat:straw', npc: 'gardener_corner' },
+  { key: 'head:vampire', npc: 'vampire_crypt' },
+  { key: 'outfit:flannel', npc: 'ghost_hunters' },
+  { key: 'hat:cap', npc: 'ghost_hunters' },
+  { key: 'hat:catEars', pet: 'cat' },
+  { key: 'hat:dogEars', pet: 'dog' },
+  { key: 'hat:bunnyEars', pet: 'rabbit' },
+  { key: 'extra:crowBeak', pet: 'crow' },
+  { key: 'extra:duckBeak', pet: 'duck' },
+];
 
 export const DECAY = {
   /** Tomba: giorni dal primo segno d'incuria (erbacce o sporco) a rotta. */
@@ -152,6 +170,12 @@ export const SPAWN_MODIFIERS = {
   hellCrackGhostBonus: 0.04,
   /** Fiori portati aumentano gli eventi (Implementation_Note). */
   flowerEventBonus: 0.01,
+  /** Il food truck chiama gli zombie (ai tacos di cervelli non resistono). */
+  zombieFoodTruck: 0.06,
+  /** Il carretto dei gelati chiama i fantasmi. */
+  iceCreamGhostBonus: 0.05,
+  /** I cacciatori di fantasmi: zombie e fantasmi li adorano e si fanno vedere di più. */
+  huntersBonus: 0.1,
 } as const;
 
 /**
@@ -166,7 +190,13 @@ export const BUSINESS: Record<string, { perDay: [number, number]; cap: number }>
   witch_corner: { perDay: [3, 6], cap: 15 },
   // l'orto dietro la casa del Custode (rende solo se c'è: vedi houseHasVeggie)
   keeper_house: { perDay: [2, 4], cap: 10 },
+  // tacos di cervelli e coni al gelo: ogni fuoco fatuo è un cliente servito
+  food_truck: { perDay: [3, 6], cap: 15 },
+  ice_cream_cart: { perDay: [2, 5], cap: 12 },
 };
+
+/** Il chiosco del fioraio: ogni tanto (1 su `oneIn`) il mazzo vale un fuoco fatuo in più. */
+export const FLORIST = { oneIn: 4, bonus: 1 } as const;
 
 /**
  * Vantaggi delle aggiunte della Casa del Custode (solo quelle in vista): i
@@ -244,3 +274,9 @@ export const DISTRICT = { minGraves: 4, adjacency: 3 } as const;
  * o di giochi con l'osso, tra `every`) porta da 1 a 5 fuochi fatui.
  */
 export const PET_GIFT = { every: [3, 6] as const, wisps: [1, 5] as const, perOpening: 2 };
+
+/** La posta: lunghezza massima, quante lettere in giro, ogni quanto ne torna una (1–2 a settimana). */
+/** Ogni tick (40 s) la probabilità che parta il giro del postino e (la sera e la notte) dei fratelli. */
+export const ROUNDS = { postman: 0.1, hunters: 0.12 } as const;
+
+export const POST = { maxLength: 280, maxLetters: 30, returnDays: [3, 7] as const };

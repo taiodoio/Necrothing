@@ -187,7 +187,7 @@
         <h3>Monocromatiche</h3>
         <div class="ds-icons" id="mono-icons"></div>
         <h3>Medaglie</h3>
-        <p class="sub">Il grado (bronzo, argento, oro) è scritto a mano in ogni traguardo. <code>locked</code> è il grigio dei traguardi non ancora presi. Si ottengono con <code>lpBadgeUrl(icona, grado)</code>.</p>
+        <p class="sub">Il grado (bronzo, argento, oro) è scritto a mano in ogni traguardo. <code>locked</code> è il grigio dei traguardi non ancora presi. Si ottengono con <code>lpBadgeUrl(icona, grado)</code>. Sui medaglioni dei traguardi non va nessun numero: il tondo dorato col numero è il rango (HUD e festa del nuovo rango).</p>
         <div class="ds-badges">
           <figure><img data-badge="trophy:bronze" alt="" />bronzo</figure>
           <figure><img data-badge="trophy:silver" alt="" />argento</figure>
@@ -195,6 +195,8 @@
           <figure><img data-badge="trophy:locked" alt="" />locked</figure>
           <figure><img data-badge="rank:gold" alt="" />rango</figure>
           <figure><img data-badge="wisp:gold" alt="" />fuoco fatuo</figure>
+          <figure><img data-badge="letter:gold" alt="" />lettera spedita</figure>
+          <figure><img data-badge="crow:silver" alt="" />ornitologo</figure>
         </div>
       </section>
 
@@ -260,6 +262,20 @@
             </div>
           </div>
         </div>
+        <h3>Azione principale e «Altro»</h3>
+        <div class="ds-example">
+          <p class="ds-label">In fondo a ogni scheda con azioni secondarie (oggetto, tomba, cartellino dell'albero)</p>
+          <div class="ds-live">
+            <div data-snippet style="display: contents">
+              <div class="act-row">
+                <button class="big-btn"><i data-icon="postcard"></i>Manda una cartolina</button>
+                <div class="more compact"><button class="big-btn ghost more-toggle" aria-label="Altro"><i data-icon="more"></i></button></div>
+              </div>
+            </div>
+          </div>
+          <details class="ds-code"><summary>Markup</summary><pre></pre></details>
+          <p class="ds-note">Sempre così (<code>actionRow(main, moreActions(voci, { compact: true }))</code> in <code>screens.ts</code>): l'azione principale larga, in oro, e accanto «Altro» quadrato con solo i tre puntini. Dentro, le voci con la loro icona; quelle distruttive in rosso. Mai «Altro» con la scritta, mai sopra l'azione principale. Le icone colorate sull'oro hanno sempre il contorno bianco (regola in <code>ui-next.css</code>, la stessa dei pulsanti d'oro).</p>
+        </div>
         <h3>Lo scatto della foto</h3>
         <div class="ds-example">
           <p class="ds-label">Chiudi · scatto · galleria (quello grande è l'unico dorato)</p>
@@ -306,10 +322,11 @@
             </div>
           </div>
           <div class="ds-example">
-            <p class="ds-label">Quantità, passi, cursore</p>
+            <p class="ds-label">Quantità, passi della sepoltura (con le icone), cursore</p>
             <div class="ds-live col">
               <div class="qty"><button>−</button><b>2</b><button>+</button></div>
-              <div class="steps"><i class="on"></i><i class="on"></i><i class="on"></i><i></i><i></i><i></i></div>
+              <!-- sepoltura: l'icona del passo sopra ogni tratto, grigia finché non ci si arriva, dorata accesa sul passo di adesso; le stesse icone fanno da schede nella Modifica tomba -->
+              <div class="steps with-icons"><span class="step done"><i data-mono="tag" data-size="20"></i><i class="on"></i></span><span class="step done"><i data-mono="camera" data-size="20"></i><i class="on"></i></span><span class="step now"><i data-mono="calendar" data-size="20"></i><i class="on"></i></span><span class="step "><i data-mono="quill" data-size="20"></i><i class=""></i></span><span class="step "><i data-mono="tomb" data-size="20"></i><i class=""></i></span><span class="step "><i data-mono="shovel" data-size="20"></i><i class=""></i></span></div>
               <input type="range" class="terrain-slider" min="0" max="100" value="40" style="--open: 40%" />
             </div>
           </div>
@@ -399,6 +416,29 @@
               </div>
             </div>
           </div>
+          <details class="ds-code"><summary>Markup</summary><pre></pre></details>
+        </div>
+              <h3>Modifica e posizionamento</h3>
+        <div class="ds-example">
+          <p class="ds-label">Il pannello dice solo come si usa la modalità; sotto, senza riquadro, i pulsanti come quelli della mappa (qui: Modifica con un oggetto preso)</p>
+          <div class="ds-live bare">
+            <div class="ds-stage" style="height: 260px">
+              <div data-snippet style="display: contents">
+                <div class="place-ui">
+                  <div class="tutorial tool-bar">
+                    <div class="tool-head"><b>Modifica</b><button class="pill exit" aria-label="Esci"><i data-icon="close" style="--s: 18px"></i></button></div>
+                    <p class="muted tool-hint">Trascina l’oggetto dove vuoi: vicino al bordo la vista scorre da sola. Conferma per lasciarlo lì, Annulla per rimetterlo com’era.</p>
+                  </div>
+                  <div class="tool-hud">
+                    <span class="tool-gap"></span>
+                    <button class="icon-btn tool-round" data-tool="cancel" aria-label="Annulla: rimettilo com’era"><i data-icon="undo" style="--s: 30px"></i></button>
+                    <button class="icon-btn active tool-round tool-main" data-tool="confirm" aria-label="Conferma la modifica"><i data-icon="check" style="--s: 32px"></i></button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <p class="ds-note">Niente interruttore Mappa/Sposta: in Disegno, Posizionamento e Modifica valgono gli stessi gesti. Si trascina dall'elemento attivo (il cerchio dorato del punto di partenza, l'oggetto che si posa, l'oggetto preso) per spostarlo o disegnare, oppure lo si tiene premuto 350 ms e si trascina senza alzare il dito; altrove un dito sposta la vista e due dita fanno zoom e pan (e sospendono il gesto in corso). Il dito vicino al bordo fa scorrere la vista. Tenendo premuto su qualcosa che si può prendere compare sotto il dito l'anello dorato della pressione lunga (<code>.press-ring</code>, 112 px, oro <code>#f0c46e</code> come il cerchio del tutorial): si vede dopo 120 ms, si riempie fino ai 350 ms, poi scatta, si illumina e svanisce; l'oggetto tenuto si alza un poco finché non lo si lascia. In Modifica un oggetto preso è bloccato: a destra «Annulla» (freccia: torna dov'era e com'era girato) e «Conferma»; senza un oggetto preso, «Annulla ultima modifica» e la spunta per uscire. Un tocco non sposta mai niente. I pulsanti tondi sono alti <code>--hud</code> come quelli della mappa; spenti restano pieni e si spegne solo l'icona. L'azione principale è la spunta, o «Compra» col costo quando nel tracciato mancano pezzi. Nel pannello solo titolo, istruzione e X: le azioni sull'oggetto (Ruota, Riponi) stanno sempre nel menù contestuale sopra l'oggetto, anche mentre lo si posa; «Riponi» non chiude Modifica.</p>
           <details class="ds-code"><summary>Markup</summary><pre></pre></details>
         </div>
       </section>
@@ -514,13 +554,13 @@
         <h3>Profilo e traguardi</h3>
         <div class="ds-grid">
           <div class="ds-example">
-            <p class="ds-label">Tasselli del profilo (<code>.pl-chip</code>)</p>
+            <p class="ds-label">Tasselli del profilo (<code>button.pl-chip</code>): la «i» in alto a destra (<code>.pl-info</code>) dice che toccandolo si apre cosa vuol dire quel dato, in due righe</p>
             <div class="ds-live col">
               <div class="pl-chips">
-                <div class="pl-chip"><i data-icon="rank" style="--s: 30px"></i><b>4</b><small>Rango</small></div>
-                <div class="pl-chip"><i data-icon="xp" style="--s: 30px"></i><b>2.410</b><small>Punti Necro</small><div class="xp-bar pl-bar"><i style="width: 40%"></i></div></div>
-                <div class="pl-chip"><i data-icon="wisp" style="--s: 30px"></i><b>30</b><small>Fuochi fatui</small></div>
-                <div class="pl-chip"><i data-icon="prestige" style="--s: 30px"></i><b>142</b><small>Prestigio</small></div>
+                <button class="pl-chip"><span class="pl-info">i</span><i data-icon="rank" style="--s: 30px"></i><b>4</b><small>Rango</small></button>
+                <button class="pl-chip"><span class="pl-info">i</span><i data-icon="xp" style="--s: 30px"></i><b>2.410</b><small>Punti Necro</small><div class="xp-bar pl-bar"><i style="width: 40%"></i></div></button>
+                <button class="pl-chip"><span class="pl-info">i</span><i data-icon="wisp" style="--s: 30px"></i><b>30</b><small>Fuochi fatui</small></button>
+                <button class="pl-chip"><span class="pl-info">i</span><i data-icon="prestige" style="--s: 30px"></i><b>142</b><small>Prestigio</small></button>
               </div>
             </div>
           </div>
@@ -686,16 +726,18 @@
           </div>
         </div>
         <p class="ds-note">La pergamena si disegna alla sua misura (<code>parchment()</code> in <code>ui/parchment.ts</code>): non si costruisce a mano in HTML, qui è fatta come nel gioco. Le etichette di una voce hanno la loro icona monocromatica (<code>FACT_ICONS</code>).</p>
+        <h3>La lettera dell'Ufficio postale</h3>
+        <p class="sub">Scrivere e leggere una lettera usa la stessa pergamena piegata in quattro dell'intro (<code>ui/letter.ts</code>), sopra il gioco scurito e in pausa (<code>.mail-layer</code>, <code>setUiBlocking</code>). Si scrive direttamente sulle righe del foglio (<code>.mail-text</code>, corsivo 18 px, al massimo 280 caratteri col contatore <code>.mail-count</code>); i pulsanti stanno sotto il foglio, affiancati: quello secondario a sinistra, l'azione a destra. «Spedisci» richiude il foglio con l'animazione d'apertura al contrario (<code>.ob-stage.close</code>) e poi arriva il momento «Spedita!»; in lettura «Chiudi» sfuma e basta, «Rispedisci» la richiude come all'invio. Un'azione spenta resta piena (desaturata e scura), mai trasparente: sotto ci sarebbe l'HUD.</p>
       </section>
 
       <!-- ═════════════════════ Momenti ═════════════════════ -->
       <section class="ds-sec" id="momenti">
         <h2>Momenti</h2>
-        <p class="sub">Una cosa importante succede in una finestra al centro: il medaglione esce dal bordo, davanti a una raggiera e a un bagliore, con qualche scintilla. Si usa per un traguardo, un rango e la fine di un percorso; non per un esito qualsiasi (quello è un toast). Si crea con <code>celebrate({ kicker, title, text, badge, ok })</code>.</p>
+        <p class="sub">Una cosa importante succede in una finestra al centro: il medaglione esce dal bordo, davanti a una raggiera e a un bagliore, con qualche scintilla. Si usa per un traguardo, un rango e la fine di un percorso; non per un esito qualsiasi (quello è un toast). Si crea con <code>celebrate({ kicker, title, text, badge, ok })</code>. Quel che nasce dalla stessa azione fa <b>una carta sola</b>: in grande il rango (o l'evento, o il traguardo più prezioso), il traguardo di quel rango diventa l'etichetta del grado col suo medaglino, gli altri traguardi stanno sotto «Hai sbloccato anche» (<code>.cel-more</code>, una <code>.cel-row</code> ciascuno, al più 3). I pezzi d'aspetto («Provalo») e la fine del cortile restano carte a sé.</p>
         <div class="ds-example">
           <p class="ds-label">Celebrazione</p>
           <div class="ds-live bare">
-            <div class="ds-stage night" style="height: 470px">
+            <div class="ds-stage night" style="height: 600px">
               <div data-snippet style="display: contents">
                 <div class="dialog-scrim cel-scrim">
                   <div class="dialog modal cel-card" role="alertdialog">
@@ -706,9 +748,13 @@
                     </div>
                     <small class="cel-kicker">Nuovo rango</small>
                     <h3>Mietitore quotidiano</h3>
-                    <span class="cel-tier">Oro</span>
+                    <span class="cel-tier"><img data-badge="rank:gold" alt="" />Traguardo raggiunto · Oro</span>
                     <p>Sei arrivato al rango 4.</p>
                     <p class="cel-extra">Sblocchi 22 oggetti in Bottega e 3 lapidi.</p>
+                    <div class="cel-more">
+                      <small>Hai sbloccato anche</small>
+                      <div class="cel-row"><img data-badge="graves:bronze" alt="" /><div><b>Piccolo Camposanto</b><span>Bronzo · Raggiungi 5 tombe.</span></div></div>
+                    </div>
                     <button class="big-btn">Evviva!</button>
                   </div>
                 </div>
@@ -734,6 +780,7 @@
               <tr><td>Apertura di pannelli e modali</td><td>sale e si allarga</td><td>idem</td><td>nessuna animazione</td></tr>
               <tr><td>Occhio di bue</td><td>pulsa piano</td><td>idem</td><td>fermo</td></tr>
               <tr><td>Lettera piegata in 3D</td><td>sì</td><td>sì</td><td>sale e appare</td></tr>
+              <tr><td>Lettera della posta che si richiude</td><td>si ripiega al contrario e scende</td><td>idem</td><td>scende e sfuma</td></tr>
             </tbody>
           </table>
         </div>

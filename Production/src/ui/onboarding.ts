@@ -15,7 +15,7 @@
 
 import type * as THREE from 'three';
 import { Capacitor } from '@capacitor/core';
-import { scheduleSave } from '../app/persistence.ts';
+import { flushPersistence, saveNow, scheduleSave } from '../app/persistence.ts';
 import { checkName, NAME_MAX } from '../game/playerName.ts';
 import { currentStep, yardFinished, yardSignal, YARD_STEPS, type OnboardingStage, type OnboardingState, type YardSignal, type YardStep } from '../game/onboarding.ts';
 import { personalGraves } from '../game/rules.ts';
@@ -23,6 +23,7 @@ import { markTip, nextTip } from '../game/tips.ts';
 import { applyYardGift, buildYard, YARD_GIFT, YARD_GRAVE, YARD_LANTERN } from '../game/yard.ts';
 import { t, tList } from '../i18n/index.ts';
 import { cellCenter } from '../view/WorldView.ts';
+import { rotatedFootprint } from '../game/catalog.ts';
 import { celebrate } from './celebrate.ts';
 import { $, closeDrawer, drawerOpen, h, setUiBlocking, toast, uiBlocking } from './dom.ts';
 import { lpBadgeUrl, lpIconPng } from './lpIcons.ts';
@@ -59,13 +60,20 @@ const loadingContent = (key: string, determinate = false) => {
 };
 
 /** Le fasi a schermo pieno, sullo sfondo del percorso (passando dall'una all'altra lo sfondo resta; il cortile si prepara sotto). */
+/** Dall'Inventario, nel menu, fino a «Inserisci» sulla lanterna comprata. */
+const INVENTORY_PATH = `.drawer .card[data-item="${YARD_GIFT.item}"], .drawer .drawer-foot .big-btn:not(.ghost), #fab, #bubble .slot[data-act="inventory"]`; // i18n-ok: selettori CSS
+
 const SOLID: readonly OnboardingStage[] = ['welcome', 'name', 'intro', 'yard'];
 /** Le schede dell'introduzione: l'immagine (il fuoco fatuo e il fantasma sono quelli della scena) e la chiave del testo. */
 const INTRO: Array<[() => string, number, string]> = [
   [wispPortrait, 1, 'wisp'], [() => lpIconPng('flower', 160), 2, 'icon'], [() => npcPortrait('ghost'), 3, 'ghost'], [() => lpIconPng('coffin', 160), 4, 'icon'],
 ];
 /** Un bersaglio sulla scena: dove toccare (`at`) e dove poggia (`base`, per misurare l'occhio di bue). */
-interface SceneTarget { at: () => THREE.Vector3 | null; base: () => THREE.Vector3 | null }
+/**
+ * Un punto della scena, misurato dalla cima (`at`) a dove poggia (`base`). `also`: altri punti che la
+ * luce deve comprendere (la lanterna da trascinare, oltre al punto d'arrivo): il cerchio del tocco resta sul bersaglio.
+ */
+interface SceneTarget { at: () => THREE.Vector3 | null; base: () => THREE.Vector3 | null; also?: () => THREE.Vector3[] }
 /** Un bersaglio: un pulsante (selettore CSS) o un punto della scena. */
 type Target = SceneTarget | string;
 
@@ -89,6 +97,8 @@ export class Onboarding {
   private step: YardStep | null = null;
   /** In Modifica la lanterna è stata spostata: ora si tocca «Fine». */
   private moved = false;
+  /** Passo «posa la lanterna»: dove stava all'inizio (finché non la sposti, l'occhio di bue resta su di lei). */
+  /** In Modifica, prima di spostare la lanterna: l'interruttore Mappa / Sposta, un tocco per parte. */
   /** Il bersaglio nella scena era fuori dallo schermo e la camera ci è già andata (una volta per passo). */
   private framed = false;
   /** I bersagli dentro un pannello già fatti scorrere in vista. */
@@ -122,7 +132,7 @@ export class Onboarding {
   get running(): boolean { return this.o.stage !== 'done'; }
 
   /** Durante il cortile solo le azioni del passo attuale possono raggiungere il gioco. */
-  allowsYardScene(hit: { entityId?: string; wispId?: string; roamerId?: string; petId?: string; vampireId?: string; talkerId?: string } | null, gesture: 'tap' | 'drag'): boolean {
+  allowsYardScene(hit: { entityId?: string; wispId?: string; roamerId?: string; petId?: string; vampireId?: string; talkerId?: string } | null, gesture: 'tap' | 'drag' | 'hold'): boolean {
     if (!this.game.inYard || this.o.stage !== 'yard') return true;
     const step = currentStep(this.o), g = this.game;
     if (step === 'walk') return gesture === 'drag' || !hit;
@@ -133,7 +143,8 @@ export class Onboarding {
     if (step === 'place') return !!g.placement;
     if (step === 'edit') {
       if (!g.editMode) return false;
-      if (g.toolMode === 'pan' && gesture === 'drag') return true;
+      // presa la lanterna, la si trascina anche dal terreno sotto di lei (altrove il dito sposta la vista)
+      if (gesture === 'drag' && g.editLocked()) return true;
       const lamp = [...g.state.placeables].reverse().find((p) => p.type === YARD_GIFT.item);
       return !!lamp && hit?.entityId === lamp.id;
     }
@@ -160,12 +171,16 @@ export class Onboarding {
     else if (step === 'flowers') allowed = ctx('flowers', YARD_GRAVE);
     else if (step === 'light') allowed = ctx('light', YARD_LANTERN);
     else if (step === 'sheet') allowed = ctx('detail', YARD_GRAVE);
-    else if (step === 'shop') allowed = ctx('shop', this.shopId()) || matches(`.drawer .card[data-item="${YARD_GIFT.item}"], .dialog .shop-detail .row .big-btn:not(.ghost)`);
+    // la Bottega: comprarla e poi «Inserisci ora» (o, comprata e chiusa la Bottega, dall'Inventario)
+    else if (step === 'shop') allowed = ctx('shop', this.shopId()) || matches(`.drawer .card[data-item="${YARD_GIFT.item}"], .dialog .shop-detail .row .big-btn:not(.ghost)`)
+      || (this.bought() && matches(INVENTORY_PATH));
+    // posarla dove si vuole: niente punto obbligato (la spunta è spenta se il posto è occupato)
     else if (step === 'place') allowed = g.placement
-      ? matches('.tool-bar [data-tool="pan"], .tool-bar [data-tool="work"], .tool-bar [data-tool="undo"], .tool-bar [data-tool="confirm"], .tool-bar [data-tool="rotate"]')
-      : matches(`.dialog .shop-detail .row .big-btn:not(.ghost), .drawer .card[data-item="${YARD_GIFT.item}"], .drawer .drawer-foot .big-btn:not(.ghost), #fab, #bubble .slot[data-act="inventory"]`);
+      ? matches('.place-ui [data-tool="undo"], .place-ui [data-tool="confirm"], #ctx [data-ctx="rotate"]')
+      : matches(`.dialog .shop-detail .row .big-btn:not(.ghost), ${INVENTORY_PATH}`);
     else if (step === 'edit') allowed = g.editMode
-      ? matches('.tool-bar [data-tool="pan"], .tool-bar [data-tool="work"], .tool-bar [data-tool="undo"]') || (this.moved && matches('.tool-bar [data-tool="confirm"]'))
+      ? (g.editLocked() ? matches('.place-ui [data-tool="cancel"], .place-ui [data-tool="confirm"]')
+        : matches('.place-ui [data-tool="undo"]') || (this.moved && matches('.place-ui [data-tool="done"]')))
       : matches('#fab, #bubble .slot[data-act="edit"], #drawer .drawer-foot .big-btn');
     else if (!step && yardFinished(this.o)) allowed = matches('#drawer-close, .cel-card .big-btn');
     if (!allowed) {
@@ -485,6 +500,34 @@ export class Onboarding {
     document.body.append(this.halo, this.tap);
   }
 
+  /** La lanterna è comprata (è nell'Inventario, non ancora sulla mappa)? */
+  private bought(): boolean { return (this.game.state.inventory[YARD_GIFT.item] ?? 0) > 0; }
+
+  /** Cambia la scritta del consiglio in corso (senza rifarlo: resta al suo posto). */
+  private retext(text: string) {
+    const para = this.coach?.querySelector('.ob-coach-body > p');
+    if (!para || para.textContent === text) return;
+    para.textContent = text;
+    $('#game').style.setProperty('--coach-h', `${this.coach!.offsetHeight}px`); // i18n-ok: stile
+  }
+
+  /**
+   * La scritta del consiglio segue quel che succede dentro il passo. Bottega: compra, poi «Inserisci ora»
+   * (o dall'Inventario). Modifica, un gesto alla volta: tocca la lanterna per prenderla (o tienila premuta),
+   * trascinala, conferma; poi la spunta per uscire. Con «Annulla» la lanterna torna com'era e si riprende.
+   */
+  private followStep() {
+    const g = this.game;
+    // la Bottega, comprata: ora sulla mappa («Inserisci ora», o dall'Inventario se la Bottega è chiusa)
+    if (this.step === 'shop') { this.retext(t(!this.bought() ? 'onboarding.yard.shop' : document.querySelector('.dialog .shop-detail') ? 'onboarding.yard.shopPlace' : 'onboarding.yard.fromInventory')); return; }
+    if (this.step === 'place') { this.retext(t(g.placement ? 'onboarding.yard.place' : 'onboarding.yard.fromInventory')); return; }
+    if (this.step !== 'edit') return;
+    if (!g.editMode) { this.retext(t('onboarding.yard.edit')); return; }
+    if (this.moved && !g.canUndoTool()) this.moved = false; // annullata: la lanterna è tornata dov'era
+    const locked = !!g.editLocked();
+    this.retext(t(locked ? (this.moved ? 'onboarding.yard.editConfirm' : 'onboarding.yard.editDrag') : this.moved ? 'onboarding.yard.editExit' : 'onboarding.yard.editPick'));
+  }
+
   private shopId() { return this.game.state.placeables.find((p) => p.type === 'shop')?.id ?? null; }
 
   /**
@@ -500,21 +543,34 @@ export class Onboarding {
     const card = (id: string) => `.drawer:not([hidden]) .card[data-item="${id}"]`;
     // il pulsante pieno del modale della Bottega: «Compra», poi «Posala»
     const shopCta = '.dialog .shop-detail .row .big-btn:not(.ghost)';
+    // la lanterna comprata dall'Inventario: il menu, l'Inventario, la carta, «Inserisci»
+    const fromInventory = ['.drawer:not([hidden]) .drawer-foot .big-btn:not(.ghost)', card(YARD_GIFT.item), '#bubble.open .slot[data-act="inventory"]', '#fab'];
     switch (step) {
       case 'walk': return () => [point(23, 20, 0.25, 0)];
       case 'wisp': return () => { const w = g.state.world.looseWisps[0]; return w ? [point(w.x, w.y, 1.1, 0.4)] : []; };
       case 'clean': return () => [ctx('clean'), entity(YARD_GRAVE)];
       case 'flowers': return () => [ctx('flowers'), entity(YARD_GRAVE)];
       case 'light': return () => [ctx('light'), entity(YARD_LANTERN)];
-      case 'shop': return () => [shopCta, card(YARD_GIFT.item), ctx('shop'), ...(this.shopId() ? [entity(this.shopId()!)] : [])];
-      case 'place': return () => ['#game > .tutorial .pill.primary', shopCta, '.drawer:not([hidden]) .drawer-foot .big-btn:not(.ghost)', card(YARD_GIFT.item), '#bubble.open .slot[data-act="inventory"]', '#fab'];
+      // comprata, il passo finisce quando è sulla mappa: «Inserisci ora» (o dall'Inventario, se la Bottega è chiusa)
+      case 'shop': return () => this.bought() ? [shopCta, ...fromInventory]
+        : [shopCta, card(YARD_GIFT.item), ctx('shop'), ...(this.shopId() ? [entity(this.shopId()!)] : [])];
+      case 'place': return () => {
+        // il cerchio sulla lanterna finché non la si trascina in un posto libero; poi sulla spunta (va bene qualsiasi posto)
+        const p = g.placement;
+        if (p) {
+          if (p.history?.length && p.valid) return ['.place-ui [data-tool="confirm"]'];
+          const lamp = () => cellCenter(p.x, p.y, rotatedFootprint(p.type ?? '', p.rot));
+          return [{ at: () => lamp().setY(0.9), base: () => lamp().setY(0) }];
+        }
+        return [shopCta, ...fromInventory];
+      };
       case 'edit': return () => {
         // la prima volta Modifica si presenta con una scheda: «Inizia»
         if (!g.editMode) return ['#drawer:not([hidden]) .drawer-foot .big-btn', '#bubble.open .slot[data-act="edit"]', '#fab'];
-        if (this.moved) return ['.tool-bar [data-tool="confirm"]'];
-        // la lanterna appena posata (o quella del cortile)
+        // la lanterna appena posata: prenderla, trascinarla, confermare; poi la spunta per uscire
+        if (this.moved) return [g.editLocked() ? '.place-ui [data-tool="confirm"]' : '.place-ui [data-tool="done"]'];
         const lamp = [...g.state.placeables].reverse().find((p) => p.type === YARD_GIFT.item);
-        return lamp ? [entity(lamp.id)] : ['.tool-bar [data-tool="confirm"]'];
+        return lamp ? [entity(lamp.id)] : ['.place-ui [data-tool="done"]'];
       };
       case 'ghost': return () => {
         const pos = () => (this.ghostId ? g.roamerPos(this.ghostId) : null);
@@ -537,7 +593,9 @@ export class Onboarding {
   signal(sig: OnboardingSignal) {
     if (sig === 'itemMoved') { if (this.step === 'edit') this.moved = true; return; }
     if (!this.game.inYard || !yardSignal(this.o, sig)) return;
-    this.save();
+    // il passo fatto si salva subito (non dopo un quarto di secondo): se il telefono chiude l'app
+    // proprio adesso, alla riapertura il cortile riprende dal passo dopo, non da questo
+    if (!this.replaying) { saveNow(this.game.state); void flushPersistence(); }
     this.stepDone();
   }
 
@@ -659,6 +717,43 @@ export class Onboarding {
     this.mark(() => ['#bury-fab']);
   }
 
+  /** Il consiglio della prima scelta del posto per una tomba è in vista. */
+  private graveCoach = false;
+
+  /**
+   * La prima volta che si sceglie dove seppellire: il Custode spiega l'interruttore
+   * (con «Mappa» si sposta solo la vista) e l'occhio di bue va su «Seppellisci qui».
+   * Una volta sola (come i consigli); sparisce con «Ho capito» o finita la scelta.
+   */
+  gravePlacement() {
+    const s = this.game.state;
+    if (this.game.inYard || this.replaying || this.coach || s.onboarding.tips.includes('gravePlace')) return;
+    markTip(s, 'gravePlace');
+    this.save();
+    this.graveCoach = true;
+    this.coachBox(t('onboarding.grave.title'), t('onboarding.grave.text'), '',
+      h('button', { class: 'npc-note-cta', onclick: () => this.endGravePlacement() }, t('onboarding.grave.ok')));
+    this.mark(() => ['.place-ui [data-tool="confirm"]']);
+  }
+
+  /** Finita la scelta del posto (sepolta, o annullata): via il consiglio, se c'è. */
+  endGravePlacement() {
+    if (!this.graveCoach) return;
+    this.graveCoach = false;
+    this.dropCoach();
+  }
+
+  /**
+   * Comincia una sepoltura: via il banner del primo obiettivo (e il suo occhio di bue).
+   * Toccandolo durante la sepoltura se ne apriva un'altra e questa si annullava; se la
+   * prima sepoltura non si conclude, il banner torna alla prossima apertura del gioco.
+   */
+  burialStarted() {
+    window.clearTimeout(this.goalTimer);
+    this.goalShown = true;
+    if (this.coach && !this.step && !this.graveCoach) this.dropCoach();
+  }
+
   /** La prima sepoltura è fatta (Game): via il primo obiettivo, se è ancora in vista. */
   goalReached() {
     window.clearTimeout(this.goalTimer);
@@ -716,12 +811,15 @@ export class Onboarding {
     const halo = this.halo, tap = this.tap;
     if (!halo || !tap || !this.targets) return;
     this.keepGhost();
+    this.followStep();
     const covered = drawerOpen() || !!document.querySelector('.dialog-scrim');
     let r: { x: number; y: number; w: number; h: number } | null = null;
     // dove comincia (in alto) quel che va toccato nella scena o nel menù dell'oggetto
     let edge: number | null = null;
     // dentro un pannello il buio attorno è più leggero (il pannello si deve leggere)
     let inPanel = false;
+    // dove va il cerchio del tocco (di solito al centro della luce)
+    let tapAt: { x: number; y: number } | null = null;
     for (const tg of this.targets()) {
       if (typeof tg === 'string') {
         const el = document.querySelector<HTMLElement>(tg);
@@ -743,6 +841,14 @@ export class Onboarding {
       if (this.step && !this.framed && (pb.x < 0 || pb.x > innerWidth || pb.y < 0 || pb.y > innerHeight)) { this.framed = true; this.game.focusPoint(base!); }
       const d = Math.hypot(pt.x - pb.x, pt.y - pb.y);
       r = { x: (pt.x + pb.x) / 2, y: (pt.y + pb.y) / 2, w: Math.max(120, d * 1.8 + 60), h: Math.max(110, d * 1.2 + 70) };
+      tapAt = { x: r.x, y: r.y };
+      // altri punti da comprendere nella luce: l'ovale si allarga fino a loro (il cerchio del tocco resta dov'era)
+      const extra = tg.also?.().map((v) => this.game.project(v)).filter((q): q is { x: number; y: number } => !!q) ?? [];
+      if (extra.length) {
+        const xs = [pt.x, pb.x, ...extra.map((q) => q.x)], ys = [pt.y, pb.y, ...extra.map((q) => q.y)];
+        const x0 = Math.min(...xs), x1 = Math.max(...xs), y0 = Math.min(...ys), y1 = Math.max(...ys);
+        r = { x: (x0 + x1) / 2, y: (y0 + y1) / 2, w: Math.max(r.w, (x1 - x0) * 1.15 + 110), h: Math.max(r.h, (y1 - y0) * 1.15 + 100) };
+      }
       // sopra l'oggetto compare il suo menù: un po' di spazio anche per quello
       edge = pt.y - 80;
       break;
@@ -754,7 +860,8 @@ export class Onboarding {
     if (!r) return;
     halo.classList.toggle('soft', inPanel);
     // con `translate` (non `transform`): la pulsazione (`scale`) non deve ingrandire anche lo spostamento
-    halo.style.translate = tap.style.translate = `${r.x}px ${r.y}px`; // i18n-ok: stile
+    halo.style.translate = `${r.x}px ${r.y}px`; // i18n-ok: stile
+    tap.style.translate = `${(tapAt ?? r).x}px ${(tapAt ?? r).y}px`; // i18n-ok: stile
     this.beamSize(r.w, r.h);
   }
 }

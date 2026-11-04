@@ -79,20 +79,17 @@ export default {
   'hud.staff.take': 'Impugna il bastone mistico',
   // banner di Modifica, interfaccia nuova (breve: deve stare intero sul telefono)
   'hud.edit.banner': 'Tocca un elemento e trascinalo',
-  'hud.tools.pan': 'Sposta la vista',
-  'hud.tools.move': 'Sposta elemento',
-  'hud.tools.draw': 'Disegna',
   'hud.tools.undo': 'Annulla ultima modifica',
-  'hud.tools.drawGuide': 'Tocca {hand} per spostarti sulla mappa. Tocca {tool} per disegnare.',
-  'hud.tools.moveGuide': 'Tocca {hand} per spostarti sulla mappa. Tocca {tool} per selezionare e spostare un oggetto.',
-  'hud.tools.panHint': 'Trascina la mappa per spostarti; usa due dita per zoomare. Tocca un elemento per i dettagli.',
-  'hud.tools.moveHint': 'Tocca un elemento per i dettagli o trascinalo per spostarlo.',
-  'hud.tools.drawHint': 'Tocca la mappa per aggiungere o togliere un elemento. Trascina sulla mappa per tracciare: il percorso curva automaticamente.',
+  'hud.tools.moveHint': 'Tocca un oggetto per prenderlo e trascinalo, o tienilo premuto e trascinalo subito. Fuori dall’oggetto il dito sposta la vista; due dita per lo zoom.',
+  'hud.tools.moveHintLocked': 'Trascina l’oggetto dove vuoi: vicino al bordo la vista scorre da sola. Conferma per lasciarlo lì, Annulla per rimetterlo com’era.',
+  'hud.tools.drawHint': 'Tocca il terreno per scegliere da dove partire, poi trascina dal cerchio (o tieni premuto e trascina). Fuori dal cerchio sposti la vista; tocca un pezzo per toglierlo.',
 
   // ── Barra di posizionamento ──
   // tracciando sentieri e recinti, prima di cominciare
   'hud.trace.hint': 'Trascina il dito sul terreno per tracciare: quando giri, il tracciato piega da solo. Due dita spostano la vista.',
   // tracciando: pezzi pronti da posare
+  'hud.trace.needBuy': 'Ne hai {have}: ne mancano {n}. Tocca «Compra» qui sotto ({cost} fuochi fatui), poi conferma.',
+  'hud.trace.noFunds': 'Ne mancano {n}, ma non hai abbastanza fuochi fatui: togli qualche pezzo o conferma quelli che hai.',
   'hud.trace.ok': '{n} da posare',
   // tracciando: pezzi che non si hanno
   'hud.trace.short': 'ne mancano {n}',
@@ -107,14 +104,19 @@ export default {
   // per i lettori di schermo: la X che esce dal tracciamento
   'hud.place.exit': 'Esci',
   // breve: pulsante
+  'hud.place.buy': 'Compra',
   'hud.place.confirm': 'Conferma',
+  'hud.edit.confirm': 'Conferma la modifica',
+  'hud.edit.cancel': 'Annulla: rimettilo com’era',
+  'hud.edit.done': 'Esci da Modifica',
   // breve: pulsante
   'hud.place.rotate': 'Ruota',
   // breve: pulsante, conferma il punto della tomba
   'hud.place.bury': 'Seppellisci qui',
   // titolo della barra quando si sceglie dove seppellire
   'hud.place.graveTitle': 'Dove riposerà {name}?',
-  'hud.place.hint': 'Tocca il terreno o trascina per spostare, poi conferma.',
+  'hud.place.hint': 'Trascina l’oggetto per spostarlo (o tienilo premuto e trascinalo); fuori dall’oggetto sposti la vista. Poi conferma.',
+  'hud.place.graveHint': 'Trascina la tomba dove vuoi; fuori dalla tomba sposti la vista. Poi tocca «Seppellisci qui».',
   'hud.place.busy': 'Spazio occupato: scegli un punto libero.',
   // {what}: cosa c'è (es. «Fango»)
   'hud.place.busyBy': 'Qui c’è già: {what}. Scegli un punto libero.',
@@ -136,6 +138,9 @@ export default {
   'ctx.shop': 'Entra in bottega',
   'ctx.registry': 'Registro delle sepolture',
   'ctx.house': 'Personalizza la casa',
+  'ctx.readMail': 'Leggi la posta',
+  'ctx.sendLetter': 'Spedisci una lettera',
+  'ctx.talk': 'Parla',
   // l'Albero dei ricordi: apre l'elenco dei ricordi
   'ctx.memories': 'Ricordi',
   'ctx.bell.ring': 'Suona la campana',
@@ -343,6 +348,8 @@ export default {
   'look.ui.tab.aspetto': 'Aspetto',
   'look.ui.tab.capelli': 'Capelli',
   'look.ui.tab.vestiti': 'Vestiti',
+  'look.ui.tab.extra': 'Extra',
+  'look.ui.extra': 'Sul viso',
   // titoli delle sezioni
   'look.ui.head': 'Testa',
   'look.ui.skin': 'Pelle',
@@ -364,6 +371,8 @@ export default {
   'look.ui.bandaid': 'Cerotto',
   // suggerimento su un cappello bloccato: {label} è l'impresa, poi il progresso
   'look.ui.hatLocked': '{label} ({have}/{goal})',
+  'look.ui.unlock.potionsSold': 'si sblocca quando la strega del suo angolo avrà venduto {goal} pozioni ({have}/{goal}).',
+  'look.ui.lockedNote': '{name}: {why}',
   'look.ui.bald.pumpkin': 'Con la testa a zucca capelli, barba, baffi, pelle e occhi non si usano: tornano scegliendo un’altra testa.',
   'look.ui.bald.skull': 'Con la testa a teschio capelli, barba, baffi, pelle e occhi non si usano: tornano scegliendo un’altra testa.',
   'look.ui.unsaved.title': 'Modifiche non salvate',
@@ -467,9 +476,15 @@ export default {
   'onboarding.yard.clean': 'Questa tomba è trascurata. Toccala e scegli la scopa.',
   'onboarding.yard.flowers': 'Ora è pulita: portale dei fiori. Una tomba trascurata a lungo si rompe, e ripararla costa.',
   'onboarding.yard.light': 'Le lanterne si accendono e si spengono: tocca questa e accendila.',
-  'onboarding.yard.shop': 'Tocca la Bottega e compra una lanterna: si paga in fuochi fatui.',
-  'onboarding.yard.place': 'Fatto! Sposta la lanterna dove vuoi e tocca la spunta per posarla. Quello che compri e non posi aspetta nell’Inventario, nel menu: da lì puoi anche rivenderlo.',
-  'onboarding.yard.edit': 'Apri il menu e scegli Modifica, poi trascina la lanterna dove preferisci. Quando hai finito, tocca la spunta.',
+  'onboarding.yard.shop': 'Tocca la Bottega e compra una lanterna (si paga in fuochi fatui).',
+  'onboarding.yard.shopPlace': 'Ora tocca «Inserisci ora»: la lanterna compare nel cortile.',
+  'onboarding.yard.fromInventory': 'La lanterna è nell’Inventario: apri il menu, scegli Inventario e tocca «Inserisci».',
+  'onboarding.yard.place': 'Trascinala dove vuoi, poi tocca la spunta.',
+  'onboarding.yard.edit': 'Apri il menu e scegli Modifica: lì sposti, ruoti e riponi quello che hai posato.',
+  'onboarding.yard.editPick': 'Tocca la lanterna per prenderla, poi trascinala (o tienila premuta).',
+  'onboarding.yard.editDrag': 'Trascinala dove vuoi.',
+  'onboarding.yard.editConfirm': 'Tocca la spunta per confermare.',
+  'onboarding.yard.editExit': 'Tocca di nuovo la spunta per uscire da Modifica.',
   'onboarding.yard.ghost': 'Qualcuno è venuto a trovarti. Tocca il fantasma: ti racconta qualcosa e ti lascia un regalo.',
   'onboarding.yard.sheet': 'Ogni tomba ha la sua scheda. Tocca la tomba e aprila con la lente.',
   'onboarding.yard.sheetOpen': 'Qui ci sono la sua storia e i suoi ricordi. In «Altro» puoi riesumarla o affidarla all’albero. Chiudi la scheda quando hai finito.',
@@ -493,6 +508,9 @@ export default {
   'onboarding.goal.text': 'Qualcosa a cui tenevi se n’è andato? Dagli una tomba: scegli la lapide, scrivi l’epitaffio, scatta il ricordo.',
   // breve: pulsanti del primo obiettivo
   'onboarding.goal.later': 'Più tardi',
+  'onboarding.grave.title': 'Dove riposerà?',
+  'onboarding.grave.text': 'Trascina la tomba dove vuoi (trascinando fuori dalla tomba sposti solo la vista), poi tocca «Seppellisci qui».',
+  'onboarding.grave.ok': 'Ho capito',
   'onboarding.goal.go': 'Seppellisci',
   // i consigli al momento giusto: una notifica del Custode, una volta sola; .say è la sua battuta
   'tips.show': 'Mostrami',

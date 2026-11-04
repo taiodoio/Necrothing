@@ -12,6 +12,9 @@ let flameModel: CachedModel | null = null;
 let sparkModel: CachedModel | null = null;
 let glowTex: THREE.Texture | null = null;
 const coreMat = new THREE.MeshBasicMaterial({ color: '#e9fff8', toneMapped: false });
+/** Il fuoco fatuo brilla sempre uguale: non il materiale «glow» comune, che di notte l'Atmosfera attenua per le luci. */
+const wispGlowMat = new THREE.MeshBasicMaterial({ vertexColors: true, toneMapped: false });
+const ownGlow = (o: THREE.Object3D) => { o.traverse((m) => { if ((m as THREE.Mesh).isMesh && m.name === 'glow') (m as THREE.Mesh).material = wispGlowMat; }); return o; };
 
 function model(build: (lp: LP) => void): CachedModel {
   const lp = new LP('wisp');
@@ -39,7 +42,7 @@ export function createWispVisual(): WispVisual {
   const root = new THREE.Group();
   root.scale.setScalar(1.4);
   const body = new THREE.Group();
-  body.add(instantiate(flameModel, { castShadow: false }));
+  body.add(ownGlow(instantiate(flameModel, { castShadow: false })));
   const core = new THREE.Mesh(new THREE.IcosahedronGeometry(0.06, 0), coreMat);
   core.position.y = -0.05;
   body.add(core);
@@ -48,7 +51,7 @@ export function createWispVisual(): WispVisual {
   glow.scale.setScalar(0.9);
   glow.renderOrder = 3;
   root.add(glow);
-  const sparks = [0, 1, 2].map(() => { const s = instantiate(sparkModel!, { castShadow: false }); root.add(s); return s; });
+  const sparks = [0, 1, 2].map(() => { const s = ownGlow(instantiate(sparkModel!, { castShadow: false })); root.add(s); return s; });
   return {
     root,
     update(t, ph) {

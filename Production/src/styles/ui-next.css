@@ -20,6 +20,10 @@
   --gold: #c99340;
   --primary: #f0c46e;
   --primary-deep: #c99340;
+  /* «dove sei» (scheda, segmento, strumento scelti): un viola più chiaro col testo dorato, non l’oro delle azioni */
+  --here-bg: linear-gradient(180deg, #5d5272, #4a4160);
+  --here-ink: #ffe2a8;
+  --here-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.14); /* niente riga dorata sotto: basta il fondo chiaro e il testo dorato */
   --on-primary: #2f230f;
   --spectral: #9ff0d6;
   --danger: #ff9a86;
@@ -50,11 +54,19 @@
 .ui-next :is(.field input, .field textarea, .field select) { background: var(--input); box-shadow: inset 0 0 0 1.5px var(--edge); color: var(--paper); font-weight: 600; }
 .ui-next :is(.field input, .field textarea):focus { box-shadow: inset 0 0 0 2px var(--primary); }
 /* azioni principali: oro, con un filo di spessore sotto */
-.ui-next :is(.big-btn:not(.ghost):not(.danger), .pill.primary, .tab.active, .chip.active, .ctx-actions button.primary, .icon-btn.active, .seg button.active) {
+.ui-next :is(.big-btn:not(.ghost):not(.danger), .pill.primary, .chip.active, .ctx-actions button.primary, .icon-btn.active) {
   background: var(--primary); color: var(--on-primary); box-shadow: 0 3px 0 var(--primary-deep), 0 4px 10px rgba(0, 0, 0, 0.18);
+}
+/* dove sei: scheda attiva, segmento scelto, strumento scelto (l'oro resta per le azioni) */
+.ui-next :is(.tab.active, .seg button.active, .tool-btn.selected) { background: var(--here-bg); color: var(--here-ink); box-shadow: var(--here-shadow); --hole: #4a4160; }
+/* le icone colorate sull'oro: molti loro toni sono vicini all'oro e sparirebbero; un contorno bianco le stacca */
+.ui-next :is(.big-btn:not(.ghost):not(.danger), .pill.primary, .chip.active, .ctx-actions button.primary, .icon-btn.active) .pxi {
+  filter: drop-shadow(1.2px 0 0 #fff) drop-shadow(-1.2px 0 0 #fff) drop-shadow(0 1.2px 0 #fff) drop-shadow(0 -1.2px 0 #fff);
 }
 .ui-next .big-btn.danger, .ui-next .pill.danger, .ui-next .ctx-actions button.danger { color: var(--danger); background: var(--panel-2); box-shadow: none; }
 .ui-next .card.selected, .ui-next .ach.got { box-shadow: 0 0 0 2.5px var(--primary); }
+/* un punto in più di carattere (si leggevano a fatica); sotto le notifiche dei personaggi restano sotto (has-note) */
+.ui-next .toast { font-size: 15px; line-height: 1.3; padding: 4px 10px; }
 .ui-next .toast.ach { color: var(--gold-bright); box-shadow: var(--shadow), 0 0 0 2px var(--primary); }
 .ui-next :is(button.slot, .icon-btn, .ctx-actions button, .big-btn, .pill, .card, .chip, .tab, .fab):active { transform: translateY(1px); }
 
@@ -238,23 +250,30 @@
 .ui-next .trace-bar b { display: flex; align-items: center; gap: 6px; }
 .ui-next .trace-count { flex: none; margin-left: auto; font: 800 15px var(--pixel); color: var(--spectral); }
 .ui-next .trace-bar .warn { color: var(--danger); }
-.ui-next .trace-bar > .pill { justify-self: start; display: inline-flex; align-items: center; gap: 5px; color: var(--spectral); }
-.ui-next .trace-bar .row { display: flex; gap: 8px; }
-.ui-next .trace-bar .row .pill { flex: 1; white-space: nowrap; }
 .ui-next .tool-bar { padding: 14px 14px 12px; }
-.ui-next .tool-head { display: flex; align-items: center; min-height: 44px; gap: 8px; margin-bottom: 4px; }
+.ui-next .tool-head { display: flex; align-items: center; min-height: 44px; gap: 8px; margin-bottom: 2px; }
 .ui-next .tool-head b { flex: 1; min-width: 0; margin: 0; }
-.ui-next .tool-head .exit, .ui-next .tool-head .rotate { flex: none; width: 44px; height: 44px; padding: 0; justify-content: center; }
-.ui-next .tool-actions { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
-.ui-next .tool-actions .tool-btn { min-width: 0; min-height: 54px; display: grid; place-items: center; padding: 4px; border-radius: 12px; background: #363240; box-shadow: 0 3px 0 #1a1720; }
-.ui-next .tool-actions .tool-toggle { grid-column: span 2; display: grid; grid-template-columns: 1fr 1fr; gap: 4px; padding: 4px; border-radius: 15px; background: rgba(28, 23, 35, 0.95); box-shadow: 0 6px 14px rgba(0, 0, 0, 0.3); }
-.ui-next .tool-actions .tool-toggle .tool-btn { min-height: 46px; height: 46px; border-radius: 11px; background: transparent; box-shadow: none; }
-.ui-next .tool-actions .tool-toggle .tool-btn.selected { background: linear-gradient(180deg, #f6d48a, #e8b65e); box-shadow: none; }
-.ui-next .tool-actions .tool-toggle .tool-btn.selected .pxi { filter: drop-shadow(0 1px 1px rgba(42, 31, 18, 0.65)); }
-.ui-next .tool-actions .tool-btn.primary { background: #e9ba65; box-shadow: 0 3px 0 #a67431; }
-.ui-next .tool-actions .tool-btn:disabled { opacity: .4; }
-.ui-next .tool-bar > .muted { line-height: 1.35; }
-.ui-next .tool-guide .mono { display: inline-grid; vertical-align: -3px; margin: 0 2px; }
+.ui-next .tool-head .exit { flex: none; width: 44px; height: 44px; padding: 0; justify-content: center; }
+.ui-next .tool-bar > .muted, .ui-next .tool-hint { margin: 0; font-size: 14px; line-height: 1.35; }
+/* quanti pezzi mancano e quanto costano (tracciato) */
+.ui-next .tool-info { display: flex; gap: 8px; align-items: center; margin: 0; padding: 8px 10px; border-radius: var(--r-s); background: rgba(0, 0, 0, 0.25); color: var(--gold-bright); font-size: 14px; line-height: 1.3; }
+.ui-next .tool-info .pxi { flex: none; }
+
+/* Modifica e posizionamento: il pannello e, sotto, i pulsanti come quelli della mappa (senza riquadro) */
+.ui-next .place-ui { position: absolute; z-index: 7; left: calc(10px + var(--safe-l)); right: calc(10px + var(--safe-r)); bottom: calc(14px + var(--safe-b)); display: grid; gap: 10px; pointer-events: none; }
+.ui-next .place-ui > * { pointer-events: auto; }
+/* (più specifico della regola dei pannelli in basso, più avanti nel foglio, che li spostava di 10px: bordi allineati ai pulsanti sotto) */
+.ui-next .place-ui > .tutorial.tool-bar { position: relative; left: auto; right: auto; bottom: auto; transform: none; width: auto; max-width: none; margin: 0; z-index: auto; }
+.ui-next .tool-hud { display: flex; align-items: center; gap: 10px; pointer-events: none; }
+.ui-next .tool-hud > * { pointer-events: auto; }
+.ui-next .tool-hud .tool-gap { flex: 1; pointer-events: none; }
+.ui-next .tool-hud .tool-round { position: relative; width: var(--hud); height: var(--hud); display: grid; place-items: center; }
+/* spento ma ben visibile: il pulsante resta pieno, solo l'icona si spegne (grigia) */
+.ui-next .tool-hud .tool-round:disabled { opacity: 1; cursor: default; }
+.ui-next .tool-hud .tool-round:disabled .pxi { filter: grayscale(1) brightness(0.8); opacity: 0.55; }
+.ui-next .tool-hud .tool-cost { position: absolute; top: -7px; right: -5px; display: inline-flex; align-items: center; gap: 2px; padding: 1px 6px 1px 4px; border-radius: 999px;
+  background: #2a2433; color: var(--spectral); font: 800 12px/18px var(--pixel); font-style: normal; box-shadow: 0 2px 6px rgba(0, 0, 0, 0.4); }
+.ui-next .tool-hud .tool-cost .pxi { filter: none; }
 
 /* ── Testata animata della Bottega ────────────────────────────────── */
 .ui-next .drawer.with-hero { overflow: hidden; }
@@ -363,3 +382,24 @@
   .ui-next .drawer { left: 50%; right: auto; width: 560px; translate: -50% -50%; }
 }
 @media (prefers-reduced-motion: reduce) { .ui-next :is(.drawer, .dialog.modal, .scrim) { animation: none; } }
+
+/* Impostazioni › Grafica, con Auto: la qualità a cui è arrivata adesso */
+.ui-next .quality-now { display: flex; align-items: center; gap: 8px; margin: 0 0 6px; padding: 8px 12px; border-radius: var(--r-s); font-size: 14px;
+  background: rgba(159, 240, 214, 0.1); box-shadow: inset 0 0 0 1.5px rgba(159, 240, 214, 0.3); color: var(--paper); }
+
+/* Personaggio: una scelta bloccata (cappello da strega) col lucchetto, e sotto la riga che dice cosa la sblocca */
+.ui-next .look-tile.locked .look-thumb { position: relative; }
+.ui-next .look-tile.locked .look-thumb img { opacity: 0.35; }
+.ui-next .look-tile.locked .look-tile-label { opacity: 0.6; }
+.ui-next .look-lock { position: absolute; inset: 0; display: grid; place-items: center; }
+.ui-next .look-lock .pxi { filter: drop-shadow(0 2px 3px rgba(0, 0, 0, 0.5)); }
+.ui-next .look-lock-note { display: flex; gap: 8px; align-items: flex-start; margin: 2px 0 8px; padding: 8px 10px; border-radius: var(--r-s);
+  background: rgba(0, 0, 0, 0.22); color: var(--muted); font-size: 13px; line-height: 1.35; }
+.ui-next .look-lock-note b { color: var(--paper); }
+.ui-next .look-lock-note .pxi { flex: none; margin-top: 1px; }
+
+/* «Compra» (Bottega, Casa): icona, parola e prezzo nella capsula, su una riga; più largo di «Chiudi» */
+.ui-next .buy-btn { gap: 8px; white-space: nowrap; }
+.ui-next .row > .buy-btn { flex: 1.5; }
+.ui-next .cost-pill { display: inline-flex; align-items: center; gap: 3px; padding: 2px 9px 2px 6px; border-radius: 999px; background: rgba(47, 35, 15, 0.16); font: 800 15px/20px var(--pixel); }
+.ui-next .cost-pill .pxi { filter: none !important; }

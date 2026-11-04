@@ -32,8 +32,9 @@ Per conservare i dati durante l’aggiornamento, installa sopra l’app esistent
 - `src/i18n/`: localizzazione, font per lingua e dizionari generati.
 - `scripts/`: sincronizzazione testi, licenze e strumenti di build.
 - `design-system.html`: catalogo interattivo dei componenti usati nel gioco.
+- `asset-guide.html`: guida per creare icone, medaglie, oggetti 3D e personaggi nello stile del gioco (con i campioni veri e le ricette passo per passo).
 
-Ogni nuova interfaccia deve seguire i principi e i componenti di `design-system.html`, aggiornando la pagina con esempi e markup quando introduce un nuovo pattern.
+Ogni nuova interfaccia deve seguire i principi e i componenti di `design-system.html`, aggiornando la pagina con esempi e markup quando introduce un nuovo pattern. Ogni nuovo asset (icona, medaglia, oggetto, personaggio) segue `asset-guide.html`.
 
 ## Testi e traduzioni
 

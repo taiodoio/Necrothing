@@ -6,7 +6,8 @@ import * as THREE from 'three';
 import { GRAVE_FOOTPRINT } from '../game/balance.ts';
 import { placeableKey } from '../render/keys.ts';
 import type { PVis } from '../render/types.ts';
-import { CATALOG, PRESENCE_TYPES } from '../game/catalog.ts';
+import { CATALOG, PRESENCE_TYPES, isPetHouse, visualOf } from '../game/catalog.ts';
+import { CROW_NEST } from '../render/lowpoly/petHouses.ts';
 import { DEFAULT_LOOK } from '../game/look.ts';
 import { animateRig, buildRig } from '../view/characters.ts';
 import { attachProp, castPose, dimGhosts, presenceLayout, propPose, scenePropObject } from '../view/presences.ts';
@@ -91,8 +92,26 @@ export function placeableThumb(type: string, variant = 0): string {
 /** Chi abita l'oggetto, fermo nella sua posa (anche nelle anteprime già pronte, render/bake). */
 export function addPresences(g: THREE.Object3D, v: PVis) {
   if (PRESENCE_TYPES.has(v.type)) addCast(g, v.type);
+  if (isPetHouse(v.type)) addPet(g, visualOf(v.type, v.variant).variant);
   // la testa dello spaventapasseri è una parte animata: in miniatura c'è lo stesso
-  if (v.type === 'scarecrow') { const anim = createAnimated(v); if (anim) { anim.update(30); g.add(anim.root); } }
+  if (v.type === 'scarecrow' || v.type === 'carnivorous_plant') { const anim = createAnimated(v); if (anim) { anim.update(30); g.add(anim.root); } }
+}
+
+/** Chi abita la casetta, fuori: cane e coniglio davanti, il gatto sul tiragraffi, la papera nella pozza, il corvo sul nido. */
+const PET_SPOTS: Array<{ kind: 'petDog' | 'petCat' | 'petRabbit' | 'petDuck' | 'petCrow'; at: [number, number, number]; yaw: number }> = [
+  { kind: 'petDog', at: [-0.42, 0, 0.62], yaw: 0.5 },
+  { kind: 'petCat', at: [0.58, 1.1, -0.42], yaw: 0.4 },
+  { kind: 'petRabbit', at: [0.5, 0, 0.72], yaw: -0.3 },
+  { kind: 'petDuck', at: [0.42, 0.0, 0.32], yaw: 0.6 },
+  { kind: 'petCrow', at: [CROW_NEST[0], CROW_NEST[1] - 0.04, CROW_NEST[2]], yaw: 0.5 },
+];
+function addPet(g: THREE.Object3D, kind: number) {
+  const spot = PET_SPOTS[kind] ?? PET_SPOTS[0];
+  const rig = buildRig(spot.kind);
+  animateRig(rig, 'idle', 0.6, 0.7);
+  rig.root.position.set(...spot.at);
+  rig.root.rotation.y = spot.yaw;
+  g.add(rig.root);
 }
 
 /**

@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { createNewGame } from '../src/game/state.ts';
+import { createNewGame, normalizeSave } from '../src/game/state.ts';
 import * as R from '../src/game/rules.ts';
 import { runCatchUp, liveTick } from '../src/game/simulation.ts';
 import { computeSpawns, countBuildings } from '../src/game/spawn.ts';
@@ -10,7 +10,7 @@ import { CATALOG_LIST, rotatedFootprint } from '../src/game/catalog.ts';
 import { evaluateAchievements, rankForXp } from '../src/game/progression.ts';
 import { shortWisps } from '../src/ui/numbers.ts';
 import { moveTraceDraw, startTraceDraw, traceDrawCells } from '../src/game/trace.ts';
-import { DECAY, EXPANSION, WISPS, XP } from '../src/game/balance.ts';
+import { DECAY, EXPANSION, PET_BOND_GOAL, WISPS, XP } from '../src/game/balance.ts';
 
 const NOW = new Date('2026-10-09T12:00:00Z');
 const later = (days) => new Date(NOW.getTime() + days * 86_400_000);
@@ -657,9 +657,8 @@ test('nuovi sbloccabili: servono sempre rango, stagione e traguardo', async () =
     s.player.counters.lightsRepaired = 25;
     assert.equal(R.shopAvailability(s, 'keeper_lamp', NOW), 'ok');
     assert.equal(R.shopAvailability(s, 'mystic_staff', NOW), 'feat');
-    assert.equal(R.hatUnlocked(s, 'witch'), false);
-    s.player.counters.potionsSold = 30;
-    assert.equal(R.hatUnlocked(s, 'witch'), true);
+    // il cappello da strega ora arriva con la strega (non più con le pozioni)
+    assert.equal(R.lookUnlocked(s, 'hat', 'witch'), false);
     // finestre a cavallo di mese e d'anno
     const altar = CATALOG.dead_altar, snow = CATALOG.skeleton_snowman;
     assert.ok(isSeasonallyAvailable(altar, 9, 31) && isSeasonallyAvailable(altar, 10, 2));
@@ -1170,4 +1169,245 @@ test('tracciato: segue il dito e piega da solo quando il dito gira', () => {
   assert.equal(key(traceDrawCells(d)), '10,10 11,10 12,10');
   // ogni casella una volta sola, con il verso del suo tratto
   assert.ok(traceDrawCells(d).every((c) => c.rot === 0));
+});
+
+test('modifica della tomba: si riscrive quanto scritto alla sepoltura, la categoria e il resto no', () => {
+  const s = createNewGame(NOW, 3);
+  const a = spot(s);
+  const { grave } = R.bury(s, draft({ epitaph: 'Ciao' }), a.x, a.y, NOW);
+  grave.hasFlowers = true;
+  const xp = s.player.xp, wisps = s.player.wisps;
+  R.editGrave(s, grave.id, { ...draft(), name: '  Caricatore rapido ', category: 'abstract', deathCause: 'custom', deathCauseText: ' Morso dal criceto ', epitaph: '', birthDate: '2020-01-01' }, NOW);
+  const g = s.graves.find((x) => x.id === grave.id);
+  assert.equal(g.name, 'Caricatore rapido');
+  assert.equal(g.category, 'electronics', 'la categoria non cambia (da lei dipendono i punti)');
+  assert.equal(g.deathCause, 'custom');
+  assert.equal(g.deathCauseText, 'Morso dal criceto');
+  assert.equal(g.epitaph, null);
+  assert.equal(g.birthDate, '2020-01-01');
+  assert.deepEqual([g.x, g.y, g.hasFlowers, s.player.xp, s.player.wisps], [a.x, a.y, true, xp, wisps], 'posto, cure e ricompense restano');
+  // tornando a una causa della lista il testo a mano sparisce
+  R.editGrave(s, grave.id, { ...draft(), deathCause: 'broken_cable' }, NOW);
+  assert.equal(s.graves.find((x) => x.id === grave.id).deathCauseText, undefined);
+  // regole della sepoltura: nome vuoto e data futura no
+  assert.throws(() => R.editGrave(s, grave.id, draft({ name: ' ' }), NOW), R.GameError);
+  assert.throws(() => R.editGrave(s, grave.id, draft({ deathDate: '2099-01-01' }), NOW), R.GameError);
+});
+
+test('effetti: solo oggetti veri, e le varianti prendono quello della famiglia', async () => {
+  const { itemEffect, EFFECT_TYPES } = await import('../src/ui/effects.ts');
+  const ids = new Set(CATALOG_LIST.map((d) => d.id));
+  for (const id of EFFECT_TYPES) assert.ok(ids.has(id), id);
+  assert.ok(itemEffect('mausoleum').includes('10'));
+  assert.equal(itemEffect('pet_house_cat'), itemEffect('pet_house'));
+  assert.equal(itemEffect('lantern'), null);
+});
+
+test('traguardi di rango: uno per ogni rango oltre il primo', async () => {
+  const { ACHIEVEMENTS } = await import('../src/game/progression.ts');
+  const { ACH_ICONS, RANK_ICONS } = await import('../src/ui/icons.ts');
+  const { RANKS } = await import('../src/game/balance.ts');
+  for (const r of RANKS.filter((x) => x.level > 1)) {
+    const a = ACHIEVEMENTS.find((x) => x.id === `rank_${r.level}`);
+    assert.ok(a, `rango ${r.level}`);
+    assert.equal(ACH_ICONS[a.id], RANK_ICONS[r.level]);
+  }
+  for (const a of ACHIEVEMENTS) assert.ok(ACH_ICONS[a.id], `icona per ${a.id}`);
+});
+
+test('aspetto: cappelli, testa e becchi si sbloccano con i personaggi e con le coccole, una volta sola', () => {
+  const s = createNewGame(NOW, 7);
+  for (const [k, v] of [['hat', 'witch'], ['hat', 'straw'], ['head', 'vampire'], ['hat', 'catEars'], ['extra', 'duckBeak']]) assert.equal(R.lookOptionAvailability(s, k, v), 'hidden', `${k}.${v} nascosto all'inizio`);
+  assert.equal(R.lookOptionAvailability(s, 'hat', 'wide'), 'ok', 'i cappelli di sempre ci sono');
+  // la strega comprata: arriva il suo cappello (e resta anche se la si rivende)
+  s.inventory.witch_corner = 1;
+  assert.deepEqual(R.refreshLookUnlocks(s), ['hat:witch']);
+  assert.deepEqual(R.refreshLookUnlocks(s), [], 'una volta sola');
+  delete s.inventory.witch_corner;
+  R.refreshLookUnlocks(s);
+  assert.equal(R.lookUnlocked(s, 'hat', 'witch'), true);
+  // giardiniere e vampiro
+  s.inventory.gardener_corner = 1; s.inventory.vampire_crypt = 1;
+  assert.deepEqual(R.refreshLookUnlocks(s).sort(), ['hat:straw', 'head:vampire']);
+  // coccole e giochi: ogni specie per conto suo
+  for (let i = 0; i < PET_BOND_GOAL - 1; i++) R.bondWithPet(s, 'cat');
+  R.bondWithPet(s, 'duck');
+  assert.deepEqual(R.refreshLookUnlocks(s), [], 'non ancora');
+  R.bondWithPet(s, 'cat');
+  assert.deepEqual(R.refreshLookUnlocks(s), ['hat:catEars'], 'solo le orecchie da gatto');
+  assert.equal(R.lookOptionAvailability(s, 'extra', 'duckBeak'), 'hidden');
+});
+
+test('salvataggi: chi aveva già 30 pozioni vendute tiene il cappello da strega; sblocchi e coccole si salvano', () => {
+  const s = createNewGame(NOW, 7);
+  s.player.counters.potionsSold = 30;
+  s.player.petBond = { crow: 7, bogus: 3 };
+  s.player.lookUnlocks = ['extra:crowBeak', 'hat:inventato'];
+  const back = normalizeSave(JSON.parse(JSON.stringify(s)));
+  assert.deepEqual(back.player.lookUnlocks.sort(), ['extra:crowBeak', 'hat:witch']);
+  assert.deepEqual(back.player.petBond, { crow: 7 });
+});
+
+test('posta: si spedisce solo con l’ufficio, una lettera torna nella buca ogni 3–7 giorni, si chiude o si rispedisce', async () => {
+  const { POST } = await import('../src/game/balance.ts');
+  const s = richAt(2600);
+  assert.throws(() => R.sendLetter(s, 'Ciao', NOW), /ufficio postale/);
+  const office = placeBusiness(s, 'post_office');
+  assert.throws(() => R.sendLetter(s, '   ', NOW), /bianco/);
+  R.sendLetter(s, 'x'.repeat(POST.maxLength + 50), NOW);
+  assert.equal(s.post.letters[0].text.length, POST.maxLength, 'tagliata alla lunghezza massima');
+  for (let i = 0; i < POST.maxLetters + 5; i++) R.sendLetter(s, `lettera ${i}`, NOW);
+  assert.equal(s.post.letters.length, POST.maxLetters, 'al massimo 30 in giro');
+  // non prima di 3 giorni, sì entro 7
+  const days = (new Date(s.post.nextAt).getTime() - NOW.getTime()) / 86_400_000;
+  assert.ok(days >= POST.returnDays[0] && days <= POST.returnDays[1], `${days}`);
+  assert.equal(R.checkMail(s, later(POST.returnDays[0] - 0.5)), false);
+  assert.equal(R.checkMail(s, later(POST.returnDays[1])), true);
+  const back = s.post.inbox;
+  assert.ok(back && s.post.letters.length === POST.maxLetters - 1);
+  // una alla volta
+  assert.equal(R.checkMail(s, later(30)), false);
+  // rispedita: torna nel mucchio
+  R.resendLetter(s, later(8));
+  assert.equal(s.post.inbox, null);
+  assert.ok(s.post.letters.some((l) => l.id === back.id));
+  // chiusa: non torna più, e la prossima si fa attendere da adesso
+  s.post.nextAt = later(8).toISOString();
+  assert.equal(R.checkMail(s, later(9)), true);
+  const gone = s.post.inbox.id;
+  R.closeLetter(s, later(9));
+  assert.ok(!s.post.letters.some((l) => l.id === gone));
+  assert.ok(new Date(s.post.nextAt).getTime() >= later(9 + POST.returnDays[0]).getTime());
+  // con l'ufficio rotto non arriva niente
+  office.broken = true;
+  assert.equal(R.checkMail(s, later(60)), false);
+  // salvataggi vecchi senza posta
+  const old = JSON.parse(JSON.stringify(s)); delete old.post;
+  assert.deepEqual(normalizeSave(old).post, { letters: [], inbox: null, nextAt: null });
+});
+
+test('attività nuove: food truck e carretto incassano ogni giorno; il fioraio a volte aggiunge un fuoco fatuo', async () => {
+  const { BUSINESS, FLORIST, WISPS: W } = await import('../src/game/balance.ts');
+  const s = richAt(2600);
+  for (const type of ['food_truck', 'ice_cream_cart']) {
+    const p = placeBusiness(s, type);
+    const n = R.businessPending(s, p.id, later(1));
+    assert.ok(n >= BUSINESS[type].perDay[0] && n <= BUSINESS[type].perDay[1], `${type}: ${n}`);
+    assert.equal(R.businessPending(s, p.id, later(30)), BUSINESS[type].cap);
+  }
+  // senza chiosco mai il rametto; col chiosco circa 1 volta su 4 (deterministico)
+  const at = spot(s);
+  const { grave } = R.bury(s, draft(), at.x, at.y, NOW);
+  const bonus = () => Array.from({ length: 400 }, (_, i) => R.floristBonus(s, grave.id, new Date(NOW.getTime() + i * 86_400_000)));
+  assert.ok(bonus().every((b) => b === 0));
+  placeBusiness(s, 'flower_kiosk');
+  const hits = bonus().filter((b) => b === FLORIST.bonus).length;
+  assert.ok(hits > 400 / FLORIST.oneIn * 0.6 && hits < 400 / FLORIST.oneIn * 1.4, `${hits}`);
+  // un mazzo nel giorno del rametto vale un fuoco fatuo in più
+  const day = Array.from({ length: 60 }, (_, i) => later(i + 1)).find((d) => R.floristBonus(s, grave.id, d));
+  const before = s.player.wisps;
+  R.bringFlowers(s, grave.id, day);
+  assert.equal(s.player.wisps - before, W.flowers + FLORIST.bonus);
+});
+
+test('comparse: food truck chiama gli zombie, carretto i fantasmi, i cacciatori +10% a entrambi', async () => {
+  const { SPAWN_MODIFIERS: M, SPAWN_CHANCE: C } = await import('../src/game/balance.ts');
+  const s = richAt(2600);
+  const at = spot(s);
+  R.bury(s, draft(), at.x, at.y, NOW);
+  for (const g of s.graves) g.hasFlowers = false; // i fiori alzano tutto un po'
+  const edge = (p) => ({ next: () => p, int: () => 0, range: (a) => a, chance: (q) => p < q, pick: (xs) => xs[0] });
+  // di giorno: le zucche della casa di partenza chiamano i fantasmi solo di notte
+  const kinds = (st, p) => computeSpawns(st, false, edge(p), NOW).map((r) => r.kind);
+  assert.ok(!kinds(s, 0.0001).includes('zombie'));
+  placeBusiness(s, 'food_truck');
+  assert.equal(countBuildings(s).foodTruck, 1);
+  assert.ok(kinds(s, M.zombieFoodTruck * 0.99).includes('zombie') && !kinds(s, M.zombieFoodTruck * 1.01).includes('zombie'));
+  const ghost = C.ghostGenericDay;
+  assert.ok(!kinds(s, ghost * 1.01).includes('ghost'));
+  placeBusiness(s, 'ice_cream_cart');
+  assert.ok(kinds(s, (ghost + M.iceCreamGhostBonus) * 0.99).includes('ghost'));
+  placeBusiness(s, 'ghost_hunters');
+  const g = (ghost + M.iceCreamGhostBonus) * (1 + M.huntersBonus);
+  assert.ok(kinds(s, g * 0.99).includes('ghost') && !kinds(s, g * 1.01).includes('ghost'));
+  const z = M.zombieFoodTruck * (1 + M.huntersBonus);
+  assert.ok(kinds(s, z * 0.99).includes('zombie') && !kinds(s, z * 1.01).includes('zombie'));
+});
+
+test('meteo: per stagione, con continuità, e la pioggia a rovesci di qualche ora', async () => {
+  const W = await import('../src/game/weather.ts');
+  const { isoDate } = await import('../src/game/time.ts');
+  const days = 3000, count = { clear: 0, fog: 0, rain: 0, storm: 0 };
+  let prev = null, same = 0, stormStorm = 0, maxWet = 0;
+  const winter = { n: 0, wet: 0 }, summer = { n: 0, wet: 0 };
+  for (let i = 0; i < days; i++) {
+    const d = new Date(2027, 0, 1 + i), date = isoDate(d);
+    const k = W.dayWeather('semi', date, prev);
+    count[k]++;
+    if (prev === k) same++;
+    if (prev === 'storm' && k === 'storm') stormStorm++;
+    const m = d.getMonth(), wet = k === 'rain' || k === 'storm' || k === 'fog';
+    if (m >= 9 || m <= 1) { winter.n++; winter.wet += wet; } else if (m >= 5 && m <= 7) { summer.n++; summer.wet += wet; }
+    // ore bagnate di quel giorno (a passi di un quarto d'ora)
+    let wetH = 0;
+    for (let h = 0; h < 24; h += 0.25) { const w = W.weatherAtHour('semi', date, k, h); if (w === 'rain' || w === 'storm') wetH += 0.25; }
+    if (k === 'rain' || k === 'storm') assert.ok(wetH >= 1 && wetH <= 9, `pioggia per ${wetH} ore il ${date}`);
+    else assert.equal(wetH, 0);
+    maxWet = Math.max(maxWet, wetH);
+    prev = k;
+  }
+  assert.equal(stormStorm, 0, 'un temporale non dura due giorni');
+  assert.ok(same / days > 0.5, 'spesso il tempo di ieri continua');
+  const share = (k) => count[k] / days;
+  assert.ok(share('clear') > 0.42 && share('clear') < 0.56, `sereno ${share('clear')}`);
+  assert.ok(share('storm') < 0.1, `temporale ${share('storm')}`);
+  assert.ok(share('rain') + share('storm') < 0.32, 'meno pioggia di prima (era il 40% dei giorni)');
+  assert.ok(winter.wet / winter.n > summer.wet / summer.n + 0.1, 'più nebbia e pioggia d\'inverno');
+  assert.ok(maxWet < 24);
+  // stesso giorno, stesso tempo; un giorno che si salta non porta la continuità
+  assert.equal(W.dayWeather('semi', '2027-03-04', 'rain'), W.dayWeather('semi', '2027-03-04', 'rain'));
+  const s = createNewGame(NOW, 7);
+  s.world.lastWeatherDate = '2027-03-03'; s.world.weather = 'storm';
+  assert.equal(W.rollWeather(s, new Date(2027, 2, 4, 9)), true);
+  assert.notEqual(s.world.weather, 'storm');
+  assert.equal(W.rollWeather(s, new Date(2027, 2, 4, 20)), false, 'al più un cambio al giorno');
+  // gioco aperto oltre la mezzanotte: il giro di vita fa cominciare il giorno nuovo
+  liveTick(s, new Date(2027, 2, 5, 0, 30), 1);
+  assert.equal(s.world.lastWeatherDate, '2027-03-05');
+});
+
+test('traguardi nuovi: corvi, coccole, lettere, tempi visti, attività e fuochi guadagnati', async () => {
+  const { ACHIEVEMENTS } = await import('../src/game/progression.ts');
+  assert.equal(ACHIEVEMENTS.length, 35);
+  const ids = (s) => evaluateAchievements(s, NOW).map((a) => a.id);
+  const s = richAt(2600);
+  for (let i = 0; i < 9; i++) R.interactRoamer(s, 'crow', NOW);
+  assert.ok(!ids(s).includes('ornithologist'));
+  R.petGift(s, 1, 'crow'); // il proprio corvo conta anche lui
+  assert.equal(s.player.counters.crowWisps, 10);
+  assert.ok(ids(s).includes('ornithologist'));
+  R.petGift(s, 3, 'dog');
+  assert.equal(s.player.counters.crowWisps, 10, 'il regalo del cane no');
+  for (let i = 0; i < 20; i++) R.bondWithPet(s, 'cat');
+  for (let i = 0; i < 5; i++) R.bondWithPet(s, 'dog');
+  assert.ok(ids(s).includes('loyal_friend'), 'le coccole di tutte le specie insieme');
+  placeBusiness(s, 'post_office');
+  for (let i = 0; i < 3; i++) R.sendLetter(s, `lettera ${i}`, NOW);
+  assert.ok(ids(s).includes('quill'));
+  assert.equal(R.noteWeather(s, 'clear'), false, 'il sereno non conta');
+  assert.equal(R.noteWeather(s, 'fog'), true);
+  assert.equal(R.noteWeather(s, 'fog'), false, 'una volta sola');
+  R.noteWeather(s, 'rain');
+  assert.ok(!ids(s).includes('all_weathers'));
+  R.noteWeather(s, 'storm');
+  assert.ok(ids(s).includes('all_weathers'));
+  placeBusiness(s, 'zombie_bar'); placeBusiness(s, 'food_truck');
+  assert.ok(ids(s).includes('shopkeeper'));
+  s.player.counters.wispsEarned = 500;
+  assert.ok(ids(s).includes('living_lantern'));
+  // i contatori nuovi si salvano, e i salvataggi di prima partono da zero
+  const back = normalizeSave(JSON.parse(JSON.stringify(s)));
+  assert.equal(back.player.counters.crowWisps, 10);
+  const old = JSON.parse(JSON.stringify(s)); delete old.player.counters.crowWisps; delete old.player.counters.weathersSeen;
+  assert.equal(normalizeSave(old).player.counters.crowWisps, 0);
 });

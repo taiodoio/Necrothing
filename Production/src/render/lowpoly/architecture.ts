@@ -346,7 +346,8 @@ export function shopLP(v: PVis): LPModel {
 
 export function gravediggerHouseLP(v: PVis): LPModel {
   const lp = new LP(`lp:gdhouse:${v.seed}:${v.dirty}${v.broken}`);
-  const lit = !v.broken;
+  // accesa se non è rotta e se non la si è spenta (prima ignorava l'interruttore: «spenta» restava accesa)
+  const lit = !v.broken && v.lit !== false;
   const w = 2.3, d = 1.55, wallH = 1.1, rise = 0.85;
   const front = d / 2;
   lp.push([-0.55, 0, -0.35]);
@@ -357,12 +358,13 @@ export function gravediggerHouseLP(v: PVis): LPModel {
   shutters(lp, -0.5, 0.31, front + 0.02, 0.4, 0.52, '#5a4a36');
   cobweb(lp, -w / 2 + 0.08, wallH - 0.05, front + 0.03, 0.25);
   lp.pop();
-  // portico: tettoia su due pali
-  // la tettoia parte sotto la gronda del tetto principale e scende verso l'esterno
-  for (const x of [-0.95, 0.95]) lp.cyl(x, 0, front + 0.7, 0.045, 0.04, 1.0, 5, LPC.woodDark, { vary: 0.12 });
-  lp.box(0, 0.96, front + 0.7, 2.0, 0.05, 0.06, LPC.woodDark, { jitter: 0, vary: 0.1 });
-  lp.push([0, 1.1, front + 0.42], 0, 0.27).box(0, 0, 0, 2.34, 0.05, 0.86, '#2f3540', { bevel: 0.008, vary: 0.08 }).pop();
-  hangingLantern(lp, 0.95, 0.96, front + 0.7, lit, 0.9);
+  // pensilina sopra la porta, su due mensole (prima un portico largo quanto la casa copriva porta e finestra)
+  const DX = 0.4;
+  lp.push([DX, 1.3, front + 0.2], 0, 0.32).box(0, 0, 0, 0.82, 0.045, 0.42, '#2f3540', { bevel: 0.008, vary: 0.08 }).pop();
+  for (const s of [-1, 1]) lp.push([DX + s * 0.32, 1.08, front + 0.1], 0, -0.75).box(0, 0, 0, 0.04, 0.04, 0.3, LPC.woodDark, { jitter: 0 }).pop();
+  // lanterna su un braccio accanto alla porta
+  lp.box(DX + 0.5, 1.02, front + 0.12, 0.04, 0.04, 0.26, LPC.iron, { jitter: 0 });
+  hangingLantern(lp, DX + 0.5, 1.02, front + 0.26, lit, 0.8);
   chimney(lp, -w * 0.32, 0.2 + wallH + rise * 0.15, -d * 0.15, rise * 1.1);
   lp.pop();
   // bara appoggiata al muro, legna, attrezzi
@@ -375,7 +377,7 @@ export function gravediggerHouseLP(v: PVis): LPModel {
   pumpkin(lp, 1.6, 0, 0.75, 0.13, false, false);
   ivy(lp, -1.62, 0.0, 0.42, 1.0, 0.1);
   // la finestra illumina il portico e il davanti della casa (prima la luce stava contro il muro: casa buia)
-  lp.light(-0.6, 0.8, 0.95, LPC.window, lit ? 0.95 : 0, 5, 0.1, 0); // senza alone: sta sotto la tettoia (la finestra brilla già da sé)
+  lp.light(-0.6, 0.8, 0.95, LPC.window, lit ? 0.95 : 0, 5, 0.1, 0); // senza alone (la finestra brilla già da sé)
   grassTuft(lp, 1.8, 1.2, 1.2); grassTuft(lp, -1.8, -1.2, 1.1);
   decayLP(lp, v, 3.6, 2.6);
   return lp.build();
@@ -383,7 +385,7 @@ export function gravediggerHouseLP(v: PVis): LPModel {
 
 export function mausoleumLP(v: PVis): LPModel {
   const lp = new LP(`lp:mausoleum:${v.seed}:${v.dirty}${v.broken}`);
-  const lit = !v.broken;
+  const lit = !v.broken && v.lit !== false; // come la casa del becchino: segue anche l'interruttore
   const o = v.dirty ? { topTint: LPC.moss, topAmount: 0.45 } : {};
   for (let i = 0; i < 3; i++) lp.box(0, i * 0.1, 0.1 - i * 0.06, 2.7 - i * 0.18, 0.1, 2.7 - i * 0.22, i % 2 ? LPC.stone : LPC.stoneDark, { bevel: 0.02, vary: 0.06, ...o });
   const y0 = 0.3;
@@ -675,8 +677,29 @@ function fruitTree(lp: LP, x: number, zz: number, fruit: string, s: number) {
 }
 
 /** Le aggiunte del cortile (coordinate dell'ingombro 4×4, centro 0,0; la casetta sta sul retro). */
+/** Dove sta la buca delle lettere della casa del Custode (nel cortile, accanto al sentiero), e l'altezza della sua icona. */
+export const MAILBOX_AT: [number, number, number] = [0.62, 1.25, 1.62];
+
+/** Buca delle lettere su un paletto, con la bandierina: alzata quando c'è posta. */
+function mailboxLP(lp: LP, flag: boolean) {
+  const [x, , z] = MAILBOX_AT;
+  lp.push([x, 0, z], -0.35);
+  lp.cyl(0, 0, 0, 0.035, 0.03, 0.62, 5, LPC.woodDark, { vary: 0.1 });
+  lp.box(0, 0.62, 0, 0.2, 0.18, 0.3, '#b8463a', { bevel: 0.03, vary: 0.05 });
+  lp.push([0, 0.8, 0], 0, 0, Math.PI / 2).cyl(0, -0.1, 0, 0.09, 0.09, 0.2, 10, '#b8463a', { jitter: 0 }).pop(); // tetto tondo
+  lp.box(0, 0.68, 0.155, 0.14, 0.02, 0.01, '#1e1a1c', { jitter: 0 }); // fessura
+  lp.blob(0, 0.74, 0.16, 0.03, 0.022, 0.008, LPC.bone, { jitter: 0 }); // teschietto sul davanti
+  // bandierina sul fianco: dritta se c'è una lettera, giù se no
+  lp.push([0.105, 0.72, -0.05], 0, 0, flag ? 0 : -Math.PI / 2);
+  lp.box(0, 0, 0, 0.015, 0.22, 0.015, LPC.iron, { jitter: 0 });
+  lp.box(0, 0.16, 0.05, 0.012, 0.07, 0.1, flag ? '#f2c75a' : '#8a7a3a', flag ? { jitter: 0, bucket: 'glow' } : { jitter: 0 });
+  lp.pop();
+  lp.pop();
+}
+
 function housePartsLP(lp: LP, parts: Set<string>) {
   const r = lp.rng;
+  if (parts.has('mailbox')) mailboxLP(lp, parts.has('mailFlag'));
   if (parts.has('pumpkins')) { pumpkin(lp, -0.95, 0, 0.02, 0.14, true, true, 0.3); pumpkin(lp, -1.15, 0, 0.2, 0.1, true, false, -0.5); pumpkin(lp, 0.1, 0, -0.05, 0.09, false, false); }
   if (parts.has('toolbench')) {
     // banco da lavoro accanto alla casa, con la rastrelliera degli attrezzi appesi

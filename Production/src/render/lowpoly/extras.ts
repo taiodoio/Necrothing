@@ -12,6 +12,7 @@ import { bouquet, candle, cobweb, deadLeaves, flower, grassTuft, hangingLantern,
 import { decayLP } from './lights.ts';
 import { frontGable, gableRoof, quoins } from './architecture.ts';
 import { LPC } from './palette.ts';
+import { speciesHouseLP } from './petHouses.ts';
 import type { PVis } from '../types.ts';
 
 /** Accesa: le luci rotte restano accese (sfarfallano forte); il falò e il buco infernale rotti no. */
@@ -423,6 +424,8 @@ export function hellHoleLP(v: PVis): LPModel {
 }
 
 export function petHouseLP(v: PVis): LPModel {
+  // ogni specie ha la sua casetta (petHouses.ts); questa è la cuccia del cane
+  if (v.variant > 0) return speciesHouseLP(v, v.variant);
   const lp = new LP(`lp:pethouse:${v.seed}:${v.dirty}${v.broken}`);
   const r = lp.rng;
   lp.box(0, 0, -0.1, 1.15, 0.08, 1.05, LPC.woodDark, { bevel: 0.01, vary: 0.1 });

@@ -114,6 +114,11 @@ export class Atmosphere {
   private readonly scene: THREE.Scene;
   /** Luci finte (telefoni deboli): niente luci vere, ogni sorgente dipinta nella mappa di luce (render/lightMap.ts). */
   private fake: LightMapPainter | null = null;
+  /**
+   * Alta: le luci vere restano (le 10 più vicine al centro della vista) e la mappa di luce
+   * accende tutte le altre fonti, così ai lati dello schermo non restano al buio.
+   */
+  private fillOnly = false;
   private fakeStrength = 0;
   private fakeT = 0;
   private fakePool = 0;
@@ -267,10 +272,11 @@ export class Atmosphere {
    * le porte e i personaggi rivolti verso la fonte. Tremola con la fiamma.
    */
   setFakeLights(on: boolean) {
-    if (on === !!this.fake) return;
+    if (on === !this.fillOnly && this.fake) return;
     this.setLightBudget(on ? 0 : null);
-    if (!on) { this.fake!.dispose(); this.fake = null; return; }
-    this.fake = new LightMapPainter(512);
+    // senza luci finte la mappa resta per le fonti che non hanno una luce vera (Alta)
+    this.fillOnly = !on;
+    this.fake ??= new LightMapPainter(512);
   }
 
   private updateFake(t: number, pool: number) {
@@ -279,9 +285,15 @@ export class Atmosphere {
     m.begin();
     this.fakeStrength = pool;
     if (pool <= 0.01) return;
+    // Alta: quanto ogni fonte è già accesa da una luce vera (sua o del capogruppo vicino): lì la mappa si fa da parte
+    const real: Array<{ at: THREE.Vector3; w: number }> = [];
+    if (this.fillOnly) for (const l of this.pool) { const e = l.userData.entry as AnchorEntry | undefined; if (e && l.parent) real.push({ at: e.pos, w: (l.userData.w as number | undefined) ?? 1 }); }
     for (const e of this.anchors.values()) {
       if (!e.on || e.anchor.intensity <= 0.2) continue;
-      const f = e.flicker.value(t);
+      let k = 1;
+      for (const r of real) if (r.at.distanceToSquared(e.pos) < CLUSTER_R * CLUSTER_R) k = Math.min(k, 1 - r.w);
+      if (k <= 0.01) continue;
+      const f = e.flicker.value(t) * k;
       // la quota del modello dell'ancora è l'altezza da terra: il suolo sotto la fonte
       const ground = e.pos.y - lightWorldPos(e.anchor, lp).y;
       c.set(e.anchor.color).multiplyScalar(Math.min(1, e.anchor.intensity) * f * e.crowd * e.boost);

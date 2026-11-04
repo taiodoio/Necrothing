@@ -2,9 +2,9 @@
 // (niente three/DOM): Game applica i profili.
 //
 // - ogni livello è un profilo misurato sui telefoni:
-//   Bassa per i telefoni deboli (mondo alleggerito, luci finte, materiale
-//   semplice, niente ombre), Media per i medi (luci finte, materiale
-//   semplice, ombre ferme), Alta per i forti (luci vere, ombre vive);
+//   Bassa per i telefoni deboli (mondo alleggerito, materiale
+//   semplice, niente ombre), Media per i medi (materiale
+//   semplice, ombre ferme), Alta per i forti (materiale PBR, ombre vive); la luce delle lanterne è la mappa di luce in tutti;
 // - Auto sceglie il livello dal dispositivo e parte dalla risoluzione più alta
 //   di quel livello; nel gioco (AUTO_POLICY) il livello non cambia più e scende
 //   solo la risoluzione, come rete di sicurezza: dopo 25 secondi di gioco
@@ -24,8 +24,6 @@ export interface QualityProfile {
   bake: Quality;
   /** Mondo alleggerito: un terzo di prato e decorazioni, metà bosco con alberi semplici. */
   lite: boolean;
-  /** Luci delle lanterne finte (chiazze di luce a terra) invece delle luci vere. */
-  fakeLights: boolean;
   /** Materiale semplice (Lambert) invece del PBR. */
   liteMaterials: boolean;
   /** Ombre: nessuna (disco sotto i personaggi), ferme (ridisegnate solo se cambia la vista) o vive. */
@@ -42,9 +40,9 @@ export interface QualityProfile {
 }
 
 export const PROFILES: Record<Quality, QualityProfile> = {
-  low: { bake: 'medium', lite: true, fakeLights: true, liteMaterials: true, shadows: 'off', dpr: [0.85, 1], msaa: 0, blurRadius: 3.5, fps: 30, presences: 'mid' },
-  medium: { bake: 'medium', lite: false, fakeLights: true, liteMaterials: true, shadows: 'still', dpr: [1.25, 1.5], msaa: 2, blurRadius: 3.5, fps: 30, presences: 'mid' },
-  high: { bake: 'high', lite: false, fakeLights: false, liteMaterials: false, shadows: 'live', dpr: [1.5, 1.75, 2], msaa: 4, blurRadius: 5, fps: 60, presences: 'high' },
+  low: { bake: 'medium', lite: true, liteMaterials: true, shadows: 'off', dpr: [0.85, 1], msaa: 0, blurRadius: 3.5, fps: 30, presences: 'mid' },
+  medium: { bake: 'medium', lite: false, liteMaterials: true, shadows: 'still', dpr: [1.25, 1.5], msaa: 2, blurRadius: 3.5, fps: 30, presences: 'mid' },
+  high: { bake: 'high', lite: false, liteMaterials: false, shadows: 'live', dpr: [1.5, 1.75, 2], msaa: 4, blurRadius: 5, fps: 60, presences: 'high' },
 };
 
 export const QUALITY_LABELS: Record<Quality, string> = { low: t('quality.low'), medium: t('quality.medium'), high: t('quality.high') };

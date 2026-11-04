@@ -293,7 +293,7 @@ if (quality) {
     const p = PROFILES[tier];
     const tr = el('tr');
     const c0 = el('td'); c0.append(el('code', undefined, tier));
-    tr.append(c0, el('td', undefined, yes(p.liteMaterials)), el('td', undefined, yes(p.fakeLights)), el('td', undefined, p.shadows), el('td', undefined, yes(p.lite)), el('td', undefined, p.presences), el('td', 'num', String(p.fps)));
+    tr.append(c0, el('td', undefined, yes(p.liteMaterials)), el('td', undefined, p.shadows), el('td', undefined, yes(p.lite)), el('td', undefined, p.presences), el('td', 'num', String(p.fps)));
     quality.append(tr);
   }
 }

@@ -31,6 +31,8 @@ const REMOVED_KEYS = [
   'hud.tools.pan', 'hud.tools.move', 'hud.tools.draw', 'hud.tools.drawGuide', 'hud.tools.moveGuide', 'hud.tools.panShort',
   'hud.tools.moveShort', 'hud.tools.drawShort', 'hud.tools.panHintPlace', 'hud.tools.panHint',
   'onboarding.yard.editPan', 'onboarding.yard.editWork',
+  // niente più luci vere: la riga di debug non dice più se sono vere o finte
+  'game.debug.lightsFake', 'game.debug.lightsReal',
 ];
 const RECOVERED = {
   it: { 'detail.business.ready#one': '+{n} pronto da riscuotere ({min}–{max} fuochi fatui al giorno, fino a {cap})', 'detail.business.ready#other': '+{n} pronti da riscuotere ({min}–{max} fuochi fatui al giorno, fino a {cap})', 'inventory.sellGain': '+{n}' },

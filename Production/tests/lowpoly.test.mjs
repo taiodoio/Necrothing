@@ -974,10 +974,10 @@ test('ogni oggetto con luce si spegne davvero col comando (luci e bagliore cambi
   }
 });
 
-test('santuario: l\'arco è chiuso da un portone, con la vetrata che si accende', () => {
+test('santuario: l\'arco è chiuso da un portone a due battenti; le candele si accendono', () => {
   const tris = (m) => Object.values(m.geometries).reduce((a, g) => a + g.getAttribute('position').count / 3, 0);
   const on = resolveLowpoly('p:shrine:0:1:001')(), off = resolveLowpoly('p:shrine:0:1:000')();
-  assert.ok(on.geometries.glow, 'accesa: vetrata e candele luminose');
+  assert.ok(on.geometries.glow, 'accesa: candele luminose');
   assert.ok(!off.geometries.glow, 'spenta: niente parti luminose');
   assert.ok(tris(on) > 600, 'ha portone e ferramenta');
   assert.ok(Math.abs(tris(on) - tris(off)) < 150, 'le stesse forme, accesa o spenta (cambiano solo le fiammelle)');

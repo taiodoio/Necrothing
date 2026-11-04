@@ -6,7 +6,7 @@ import * as THREE from 'three';
 import { LPC } from './palette.ts';
 import { skull as gameSkull } from './extras.ts';
 import {
-  beam, block, cloth, CP, emit, flame, groundRing, groundStroke, leaf, mushroom, prof, put, root, slab, torus, tuft, turned, votive, type CryptCtx,
+  beam, block, cloth, CP, emit, flame, groundRing, leaf, mushroom, prof, put, root, slab, torus, tuft, turned, votive, type CryptCtx,
 } from './cryptKit.ts';
 
 const skull = (c: CryptCtx, x: number, y: number, z: number, s = 0.16, color: string = LPC.bone) => gameSkull(c.lp, x, y - s * 0.55, z, s / 0.1, color);
@@ -43,8 +43,6 @@ function ground(c: CryptCtx) {
       slab(lp, 0, 0.01, 1.18, 1.94, 0.065, 1.91, '#554e62');
       const ring = emit(c, v.broken ? '#746476' : '#ba9ecd');
       for (const r of [0.69, 0.77]) groundRing(lp, 0, 0.075, 1.18, r, 0.02, ring.color, 16, Math.PI * 2, ring.o);
-      const pts = Array.from({ length: 6 }, (_, i) => [Math.sin((i / 6) * Math.PI * 2) * 0.59, Math.cos((i / 6) * Math.PI * 2) * 0.59 + 1.18] as [number, number]);
-      for (let i = 0; i < 6; i++) groundStroke(lp, pts[i], pts[(i + 2) % 6], 0.078, 0.02, v.broken ? '#796d75' : '#b59ac9');
       for (const z of [0.21, 2.2, 2.38]) slab(lp, 0, 0.01, z, 0.58, 0.055, 0.19, '#74697e');
       break;
     }

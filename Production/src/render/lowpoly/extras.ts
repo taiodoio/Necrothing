@@ -146,6 +146,42 @@ export function candleTreeLP(v: PVis): LPModel {
 
 // ── Costruzioni ──────────────────────────────────────────────────────────
 
+/**
+ * Portone del santuario a due battenti, nello spessore della facciata ad arco acuto
+ * (largo `w`, alto `h`): assi verticali di tono diverso con le fughe scure tra l'una e
+ * l'altra, cerniere in ferro solo sui bordi esterni e due anelli al centro.
+ */
+function shrineDoor(lp: LP, z: number, w: number, h: number) {
+  const hw = w / 2, R = w, spring = h - Math.sqrt(R * R - (R - hw) * (R - hw));
+  const top = (x: number) => spring + Math.sqrt(Math.max(0, R * R - (Math.abs(x) - (hw - R)) ** 2));
+  // fondo scuro (le fughe) e le assi sopra, rifilate sotto la curva dell'arco
+  lp.push([0, 0, z]).extrude(gothicArchShape(w, h, 6), 0.04, '#2e221b', { ao: 0, jitter: 0 }).pop();
+  const n = 6, pw = w / n, tones = ['#5c4433', '#664b37', '#553e2f'];
+  for (let i = 0; i < n; i++) {
+    const x0 = -hw + i * pw + (i === n / 2 ? 0.012 : 0.006), x1 = -hw + (i + 1) * pw - (i === n / 2 - 1 ? 0.012 : 0.006);
+    const s = new THREE.Shape();
+    s.moveTo(x0, 0); s.lineTo(x1, 0);
+    for (let k = 0; k <= 3; k++) { const x = x1 - ((x1 - x0) * k) / 3; s.lineTo(x, top(x) - 0.025); }
+    s.closePath();
+    lp.push([0, 0, z + 0.025]).extrude(s, 0.02, tones[i % 3], { vary: 0.05, ao: 0.15, jitter: 0.002 }).pop();
+  }
+  // cerniere: bandelle dai bordi verso il centro, con la punta arrotondata
+  // mezza larghezza dell'arco all'altezza y (sopra l'imposta la curva stringe)
+  const half = (y: number) => (y <= spring ? hw : hw - R + Math.sqrt(Math.max(0, R * R - (y - spring) ** 2)));
+  for (const y of [0.28, 0.8]) for (const sx of [-1, 1]) {
+    const edge = Math.min(half(y), half(y + 0.045)) - 0.025, len = 0.28;
+    lp.box(sx * (edge - len / 2), y, z + 0.047, len, 0.045, 0.012, LPC.iron, { jitter: 0, ao: 0 });
+    lp.blob(sx * (edge - len), y + 0.022, z + 0.05, 0.03, 0.03, 0.012, LPC.iron, { jitter: 0 });
+  }
+  // due anelli ai lati della fuga centrale, con la piastrina
+  for (const sx of [-1, 1]) {
+    lp.blob(sx * 0.07, 0.62, z + 0.05, 0.025, 0.025, 0.01, LPC.iron, { jitter: 0 });
+    lp.add(new THREE.TorusGeometry(0.045, 0.009, 3, 8).translate(sx * 0.07, 0.575, z + 0.058), LPC.ironLight, { jitter: 0 });
+  }
+  // soglia in pietra
+  lp.box(0, 0, z + 0.06, w + 0.08, 0.035, 0.14, LPC.stoneLight, { bevel: 0.01 });
+}
+
 export function shrineLP(v: PVis): LPModel {
   const lp = new LP(`lp:shrine:${v.seed}:${v.dirty}${v.broken}`);
   const lit = on(v);
@@ -167,16 +203,7 @@ export function shrineLP(v: PVis): LPModel {
   front.holes.push(new THREE.Path(hole.getPoints().reverse()));
   lp.push([0, 0, D / 2 - 0.08]).extrude(front, 0.16, LPC.stone, { bevel: 0.012, vary: 0.05, ...o }).pop();
   lp.push([0, 0, D / 2 + 0.005]).plate((() => { const f = gothicArchShape(1.12, 1.33, 5); f.holes.push(new THREE.Path(gothicArchShape(1.0, 1.25, 5).getPoints().reverse())); return f; })(), 0.03, LPC.stoneLight, { ao: 0 }).pop();
-  // portone di legno a sesto acuto, accostato nello spessore della facciata: chiude l'arco (dall'alto
-  // l'interno non si vedrebbe comunque) e la vetrata sopra, accesa, dice che dentro c'è qualcuno
-  const doorZ = D / 2 - 0.08 + 0.05;
-  lp.push([0, 0, doorZ]).extrude(gothicArchShape(1.0, 1.25, 5), 0.06, LPC.woodDark, { bevel: 0.008, vary: 0.08, ao: 0.2 }).pop();
-  lp.box(0, 0, doorZ + 0.06, 0.03, 0.82, 0.02, LPC.iron, { jitter: 0 });
-  for (const y of [0.22, 0.62]) lp.box(0, y, doorZ + 0.06, 0.92, 0.05, 0.015, LPC.iron, { jitter: 0.004, bevel: 0.004 });
-  for (const x of [-0.11, 0.11]) lp.blob(x, 0.42, doorZ + 0.075, 0.035, 0.035, 0.02, LPC.gold, { jitter: 0 });
-  lp.push([0, 0.86, doorZ + 0.06]).plate(gothicArchShape(0.62, 0.34, 4), 0.012, lit ? '#e8b668' : '#4a3a2a', { bucket: lit ? 'glow' : 'solid', ao: 0 }).pop();
-  lp.box(0, 0.86, doorZ + 0.07, 0.02, 0.3, 0.012, LPC.iron, { jitter: 0 });
-  lp.box(0, 1.0, doorZ + 0.07, 0.4, 0.02, 0.012, LPC.iron, { jitter: 0 });
+  shrineDoor(lp, D / 2 - 0.08 + 0.03, 1.0, 1.25);
   // interno: altare, icona illuminata, candele
   lp.box(0, 0, -0.35, 0.8, 0.5, 0.35, LPC.marble, { bevel: 0.015 });
   lp.box(0, 0.5, -0.35, 0.86, 0.04, 0.4, LPC.stoneLight, { bevel: 0.008 });

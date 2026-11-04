@@ -91,13 +91,6 @@ export function groundRing(lp: LP, x: number, y: number, z: number, r: number, w
   return lp.add(g, color, { jitter: 0, ao: 0, ...o });
 }
 
-/** Tratto sottile a terra tra due punti (incisioni del sigillo). */
-export function groundStroke(lp: LP, a: [number, number], b: [number, number], y: number, width: number, color: string, o: LPOpts = {}) {
-  const dx = b[0] - a[0], dz = b[1] - a[1];
-  return lp.push([(a[0] + b[0]) / 2, y, (a[1] + b[1]) / 2], Math.atan2(dx, dz))
-    .box(0, 0, 0, width, 0.012, Math.hypot(dx, dz), color, { jitter: 0, ao: 0, ...o }).pop();
-}
-
 /** Stoffa appesa o distesa: tre strisce sottili sfalsate, perché si veda piegata. */
 export function cloth(lp: LP, x: number, y: number, z: number, w: number, h: number, color: string, { ragged = false, rotate = 0, laid = false }: { ragged?: boolean; rotate?: number; laid?: boolean } = {}) {
   lp.push([x, y, z], rotate, laid ? -Math.PI / 2 : 0);

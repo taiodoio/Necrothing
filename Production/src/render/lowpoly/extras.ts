@@ -167,6 +167,16 @@ export function shrineLP(v: PVis): LPModel {
   front.holes.push(new THREE.Path(hole.getPoints().reverse()));
   lp.push([0, 0, D / 2 - 0.08]).extrude(front, 0.16, LPC.stone, { bevel: 0.012, vary: 0.05, ...o }).pop();
   lp.push([0, 0, D / 2 + 0.005]).plate((() => { const f = gothicArchShape(1.12, 1.33, 5); f.holes.push(new THREE.Path(gothicArchShape(1.0, 1.25, 5).getPoints().reverse())); return f; })(), 0.03, LPC.stoneLight, { ao: 0 }).pop();
+  // portone di legno a sesto acuto, accostato nello spessore della facciata: chiude l'arco (dall'alto
+  // l'interno non si vedrebbe comunque) e la vetrata sopra, accesa, dice che dentro c'è qualcuno
+  const doorZ = D / 2 - 0.08 + 0.05;
+  lp.push([0, 0, doorZ]).extrude(gothicArchShape(1.0, 1.25, 5), 0.06, LPC.woodDark, { bevel: 0.008, vary: 0.08, ao: 0.2 }).pop();
+  lp.box(0, 0, doorZ + 0.06, 0.03, 0.82, 0.02, LPC.iron, { jitter: 0 });
+  for (const y of [0.22, 0.62]) lp.box(0, y, doorZ + 0.06, 0.92, 0.05, 0.015, LPC.iron, { jitter: 0.004, bevel: 0.004 });
+  for (const x of [-0.11, 0.11]) lp.blob(x, 0.42, doorZ + 0.075, 0.035, 0.035, 0.02, LPC.gold, { jitter: 0 });
+  lp.push([0, 0.86, doorZ + 0.06]).plate(gothicArchShape(0.62, 0.34, 4), 0.012, lit ? '#e8b668' : '#4a3a2a', { bucket: lit ? 'glow' : 'solid', ao: 0 }).pop();
+  lp.box(0, 0.86, doorZ + 0.07, 0.02, 0.3, 0.012, LPC.iron, { jitter: 0 });
+  lp.box(0, 1.0, doorZ + 0.07, 0.4, 0.02, 0.012, LPC.iron, { jitter: 0 });
   // interno: altare, icona illuminata, candele
   lp.box(0, 0, -0.35, 0.8, 0.5, 0.35, LPC.marble, { bevel: 0.015 });
   lp.box(0, 0.5, -0.35, 0.86, 0.04, 0.4, LPC.stoneLight, { bevel: 0.008 });

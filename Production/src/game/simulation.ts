@@ -5,11 +5,12 @@
 //    fuochi fatui secondo la matrice di spawn.
 // Deterministico rispetto a seed + ora (stessa ora → stessi esiti).
 
-import { DECAY, HOUSE_PERKS, KEEPER_LAMP, SIM, WISPS, XP } from './balance.ts';
+import { DECAY, HOUSE_PERKS, KEEPER_LAMP, SIM, WISPS, XP, ZOMBIE_OFFLINE } from './balance.ts';
 import { housePerk } from './house.ts';
 import { CATALOG, rotatedFootprint } from './catalog.ts';
 import { createRng, hashString, newId, type Rng } from './rng.ts';
-import { computeSpawns, liveWispChance, wispCap, type SpawnRequest } from './spawn.ts';
+import { zombieMudChance, zombieTrample } from './rules.ts';
+import { computeSpawns, countBuildings, liveWispChance, wispCap, zombieAppeal, type SpawnRequest } from './spawn.ts';
 import type { SaveData } from './state.ts';
 import { rollWeather } from './weather.ts';
 import { DAY_MS, dayPhaseForHour, daysBetween, isoDate } from './time.ts';
@@ -19,6 +20,8 @@ import { t } from '../i18n/index.ts';
 export interface CatchUpReport {
   elapsedDays: number;
   newDirty: number;
+  /** Tombe sporcate dagli zombie passati mentre eri via. */
+  zombieMud: number;
   newBroken: number;
   witheredFlowers: number;
   placeablesDirty: number;
@@ -149,13 +152,28 @@ export function runCatchUp(s: SaveData, now: Date): CatchUpReport {
   // dell'assenza (quella che conta), non all'apertura: il conto verso «rotta» parte da lì
   const onset = () => new Date(decayFrom.getTime() + rng.next() * Math.max(0, now.getTime() - decayFrom.getTime())).toISOString();
   const r: CatchUpReport = {
-    elapsedDays, newDirty: 0, newBroken: 0, witheredFlowers: 0, placeablesDirty: 0,
+    elapsedDays, newDirty: 0, zombieMud: 0, newBroken: 0, witheredFlowers: 0, placeablesDirty: 0,
     placeablesBroken: 0, anniversaries: [], anniversaryIds: [], missedAnniversaries: [], blessing: null, wispsAdded: 0, weatherChanged: false, xpGained: 0,
   };
 
   // casa del Custode: l'arnia fa durare i fiori, il giardinetto rallenta le erbacce
   const flowerDays = housePerk(s, 'beehive') ? HOUSE_PERKS.beehiveFlowerDays : SIM.flowerWitherDays;
   const weedPace = housePerk(s, 'garden') ? HOUSE_PERKS.gardenWeeds : 1;
+  // zombie di passaggio mentre eri via: ognuno prova a sporcare una tomba a caso
+  // (le appena curate e le rotte restano com'erano, come dal vivo)
+  const appeal = zombieAppeal(countBuildings(s));
+  if (appeal > 0 && decayDays > 0 && s.graves.length > 0) {
+    const expected = Math.min(ZOMBIE_OFFLINE.maxVisits, decayDays * ZOMBIE_OFFLINE.visitsPerDay);
+    const rounds = Math.floor(expected) + (rng.chance(expected - Math.floor(expected)) ? 1 : 0);
+    const mud = zombieMudChance(s);
+    const span = Math.max(0, now.getTime() - decayFrom.getTime());
+    for (let i = 0; i < rounds; i++) {
+      if (!rng.chance(appeal)) continue;
+      const g = rng.pick(s.graves);
+      const at = new Date(decayFrom.getTime() + rng.next() * span);
+      if (rng.chance(mud) && zombieTrample(s, g.id, at)) r.zombieMud++;
+    }
+  }
   for (const g of s.graves) {
     // Anniversario annuale della morte (dagli anni successivi): quello di oggi dà la ricompensa;
     // quelli caduti mentre il gioco era chiuso restano nei ricordi della tomba, senza premio
@@ -269,6 +287,7 @@ export function catchUpMessage(r: CatchUpReport): string | null {
   if (r.newBroken > 0) return t('sim.gravesBroken', { n: r.newBroken });
   if (r.placeablesBroken > 0) return t('sim.itemsBroken', { n: r.placeablesBroken });
   if (r.blessing) return t('sim.blessing', { name: r.blessing });
+  if (r.zombieMud > 0) return t('sim.zombieMud', { n: r.zombieMud });
   if (r.witheredFlowers > 0) return t('sim.flowersWithered');
   if (r.newDirty > 0) return t('sim.gravesDirty', { n: r.newDirty });
   if (r.placeablesDirty > 0) return t('sim.itemsDirty');

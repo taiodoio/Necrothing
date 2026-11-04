@@ -10,7 +10,7 @@
     "build": "tsc --noEmit && vite build",
     "prebuild:beta": "node scripts/collect-licenses.mjs",
     "build:beta": "tsc --noEmit && VITE_DISTRIBUTION=beta-full vite build",
-    "test": "node --experimental-strip-types --no-warnings --test tests/domain.test.mjs tests/distribution.test.mjs tests/economy.test.mjs tests/onboarding.test.mjs tests/render.test.mjs tests/lowpoly.test.mjs tests/i18n.test.mjs tests/platform.test.mjs",
+    "test": "node --experimental-strip-types --no-warnings --test tests/domain.test.mjs tests/distribution.test.mjs tests/economy.test.mjs tests/onboarding.test.mjs tests/render.test.mjs tests/lowpoly.test.mjs tests/crypts.test.mjs tests/i18n.test.mjs tests/platform.test.mjs",
     "typecheck": "tsc --noEmit",
     "sim:economy": "node --experimental-strip-types --no-warnings scripts/sim-economy.mjs",
     "preview": "vite preview",

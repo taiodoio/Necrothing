@@ -41,7 +41,8 @@ import { clearLang, currentLang, deviceLang, hasManualLang, languagePreference, 
  * altrimenti la miniatura disegnata al momento.
  */
 function itemImg(type: string, cls: 'lit' | 'lit-hero', variant = 0): HTMLElement {
-  const url = previewUrl(type);
+  // gli oggetti a più versioni (le cripte) hanno l'anteprima di ogni versione: «tipo-v2», «tipo-v3»
+  const url = (variant > 0 ? previewUrl(`${type}-v${variant + 1}`) : null) ?? previewUrl(type);
   return url
     ? h('img', { class: cls, src: url, alt: '', decoding: 'async' })
     : h('img', { src: placeableThumb(type, variant), alt: '' });

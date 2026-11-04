@@ -71,6 +71,8 @@ export interface Placement {
   rot: number;
   valid: boolean;
   history?: Array<{ x: number; y: number; rot: number }>;
+  /** L'aspetto che avrà (per gli oggetti con più versioni: scelto a caso quando si comincia a posare). */
+  variant?: number;
   /**
    * Strumento a traccia (interfaccia nuova): i tratti già tirati e quello sotto il dito.
    * `handle`: il punto di partenza scelto con un tocco (trascinando da lì si disegna; altrove si sposta la vista).
@@ -1005,7 +1007,8 @@ export class Game {
     const spot = nearestFreeSpot(c.x, c.y, fp, occ, areaForLevel(this.state.world.expansionLevel));
     if (!spot) { toast(t('game.noSpace.item')); return; }
     this.select(null);
-    this.placement = { kind: 'item', type, x: spot.x, y: spot.y, rot: 0, valid: true, history: [] };
+    const looks = CATALOG[type].randomVariants;
+    this.placement = { kind: 'item', type, x: spot.x, y: spot.y, rot: 0, valid: true, history: [], variant: looks ? Math.floor(Math.random() * looks) : undefined };
     this.rig.follow = null;
     this.rig.jumpTo(cellCenter(spot.x, spot.y, fp));
     this.refreshPlacement();
@@ -1089,7 +1092,7 @@ export class Game {
       const key = `g:${type}:clean:0`;
       this.world.showGhost(key, () => getModel(key), fp, p.x, p.y, 0, p.valid);
     } else {
-      const v: PVis = { type: p.type!, variant: 0, dirty: false, broken: false, lit: true, seed: 0 };
+      const v: PVis = { type: p.type!, variant: p.variant ?? 0, dirty: false, broken: false, lit: true, seed: 0 };
       this.world.showGhost(placeableKey(v), () => getModel(placeableKey(v)), fp, p.x, p.y, p.rot, p.valid);
     }
     this.ui.refreshPlacementBar();
@@ -1172,7 +1175,7 @@ export class Game {
       return;
     }
     const type = p.type!;
-    const ok = this.act((s, n) => { R.placeFromInventory(s, type, p.x, p.y, p.rot, n); return { message: t('game.place.item', { item: CATALOG[type].label }), xp: 0, wisps: 0 }; });
+    const ok = this.act((s, n) => { R.placeFromInventory(s, type, p.x, p.y, p.rot, n, p.variant); return { message: t('game.place.item', { item: CATALOG[type].label }), xp: 0, wisps: 0 }; });
     if (ok) {
       this.placement = null;
       this.refreshPlacement();
@@ -2112,7 +2115,10 @@ export class Game {
     const queue: PVis[] = [];
     for (const type of types) {
       if (!CATALOG[type] || CATALOG[type].category === 'extra') continue;
-      for (let seed = 0; seed < seedCount(type); seed++) queue.push({ type, variant: 0, seed: placeableSeed(type, seed), dirty: false, broken: false, lit: true });
+      // gli oggetti con più versioni (le cripte) le preparano tutte: posarne una non fa scattare la scena
+      for (let variant = 0; variant < (CATALOG[type].randomVariants ?? 1); variant++) {
+        for (let seed = 0; seed < seedCount(type); seed++) queue.push({ type, variant, seed: placeableSeed(type, seed), dirty: false, broken: false, lit: true });
+      }
     }
     const idle = (cb: () => void) => ('requestIdleCallback' in window ? window.requestIdleCallback(cb, { timeout: 300 }) : setTimeout(cb, 60));
     const step = () => {

@@ -715,7 +715,8 @@ function iceCreamGhostSpec(): KawaiiSpec {
 function iceCreamCustomerSpec(): KawaiiSpec {
   return ghostSpec(false, {
     held: (lp) => {
-      lp.push([0, 0.0, 0.05]);
+      // un po' più grande del vero: a quella distanza il cono deve leggersi
+      lp.push([0, 0.02, 0.06], 0, 0, 0, 1.6);
       lp.add(new THREE.ConeGeometry(0.035, 0.1, 7).rotateX(Math.PI).translate(0, 0.0, 0), '#d6a55a', O);
       lp.blob(0, 0.065, 0, 0.04, 0.035, 0.04, '#a6f0d0', D1);
       lp.blob(0, 0.11, 0, 0.034, 0.03, 0.034, '#e7a6bf', D1);

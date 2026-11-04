@@ -146,6 +146,52 @@ export function candleTreeLP(v: PVis): LPModel {
 
 // ── Costruzioni ──────────────────────────────────────────────────────────
 
+/**
+ * Portone del santuario a due battenti, nello spessore della facciata ad arco acuto
+ * (largo `w`, alto `h`): assi verticali di tono diverso con le fughe scure tra l'una e
+ * l'altra, cerniere in ferro solo sui bordi esterni e due anelli al centro.
+ */
+function shrineDoor(lp: LP, z: number, w: number, h: number, lit: boolean) {
+  const hw = w / 2, R = w, spring = h - Math.sqrt(R * R - (R - hw) * (R - hw));
+  const top = (x: number) => spring + Math.sqrt(Math.max(0, R * R - (Math.abs(x) - (hw - R)) ** 2));
+  // fondo scuro (le fughe) e le assi sopra, rifilate sotto la curva dell'arco
+  lp.push([0, 0, z]).extrude(gothicArchShape(w, h, 6), 0.04, '#2e221b', { ao: 0, jitter: 0 }).pop();
+  const n = 6, pw = w / n, tones = ['#5c4433', '#664b37', '#553e2f'];
+  for (let i = 0; i < n; i++) {
+    const x0 = -hw + i * pw + (i === n / 2 ? 0.012 : 0.006), x1 = -hw + (i + 1) * pw - (i === n / 2 - 1 ? 0.012 : 0.006);
+    const s = new THREE.Shape();
+    s.moveTo(x0, 0); s.lineTo(x1, 0);
+    for (let k = 0; k <= 3; k++) { const x = x1 - ((x1 - x0) * k) / 3; s.lineTo(x, top(x) - 0.025); }
+    s.closePath();
+    lp.push([0, 0, z + 0.025]).extrude(s, 0.02, tones[i % 3], { vary: 0.05, ao: 0.15, jitter: 0.002 }).pop();
+  }
+  // cerniere: bandelle dai bordi verso il centro, con la punta arrotondata
+  // mezza larghezza dell'arco all'altezza y (sopra l'imposta la curva stringe)
+  const half = (y: number) => (y <= spring ? hw : hw - R + Math.sqrt(Math.max(0, R * R - (y - spring) ** 2)));
+  for (const y of [0.24, 0.62]) for (const sx of [-1, 1]) {
+    const edge = Math.min(half(y), half(y + 0.045)) - 0.025, len = 0.28;
+    lp.box(sx * (edge - len / 2), y, z + 0.047, len, 0.045, 0.012, LPC.iron, { jitter: 0, ao: 0 });
+    lp.blob(sx * (edge - len), y + 0.022, z + 0.05, 0.03, 0.03, 0.012, LPC.iron, { jitter: 0 });
+  }
+  // due anelli ai lati della fuga centrale, con la piastrina
+  for (const sx of [-1, 1]) {
+    lp.blob(sx * 0.07, 0.5, z + 0.05, 0.025, 0.025, 0.01, LPC.iron, { jitter: 0 });
+    lp.add(new THREE.TorusGeometry(0.045, 0.009, 3, 8).translate(sx * 0.07, 0.455, z + 0.058), LPC.ironLight, { jitter: 0 });
+  }
+  // una vetrata a sesto acuto nella parte alta di ogni battente: di sera si vede la luce delle candele
+  const gw = 0.2, gh = 0.3, g0 = 0.7;
+  for (const sx of [-1, 1]) {
+    const x = sx * 0.19;
+    lp.push([x, 0, z + 0.046]).plate(gothicArchShape(gw + 0.06, gh + 0.05, 4, g0 - 0.03), 0.008, '#3a2a20', { ao: 0 }).pop();
+    lp.push([x, 0, z + 0.054]).plate(gothicArchShape(gw, gh, 4, g0), 0.006, lit ? '#f0b866' : '#3b3631', { bucket: lit ? 'glow' : 'solid', ao: 0, vary: 0.06 }).pop();
+    lp.box(x, g0, z + 0.062, 0.016, gh * 0.92, 0.008, LPC.iron, { jitter: 0, ao: 0 });
+    lp.box(x, g0 + gh * 0.45, z + 0.062, gw, 0.016, 0.008, LPC.iron, { jitter: 0, ao: 0 });
+  }
+  if (lit) lp.light(0, g0 + gh * 0.4, z + 0.2, '#f0b866', 0.25, 2, 0.3, 0.4);
+  // soglia in pietra
+  lp.box(0, 0, z + 0.06, w + 0.08, 0.035, 0.14, LPC.stoneLight, { bevel: 0.01 });
+}
+
 export function shrineLP(v: PVis): LPModel {
   const lp = new LP(`lp:shrine:${v.seed}:${v.dirty}${v.broken}`);
   const lit = on(v);
@@ -167,6 +213,7 @@ export function shrineLP(v: PVis): LPModel {
   front.holes.push(new THREE.Path(hole.getPoints().reverse()));
   lp.push([0, 0, D / 2 - 0.08]).extrude(front, 0.16, LPC.stone, { bevel: 0.012, vary: 0.05, ...o }).pop();
   lp.push([0, 0, D / 2 + 0.005]).plate((() => { const f = gothicArchShape(1.12, 1.33, 5); f.holes.push(new THREE.Path(gothicArchShape(1.0, 1.25, 5).getPoints().reverse())); return f; })(), 0.03, LPC.stoneLight, { ao: 0 }).pop();
+  shrineDoor(lp, D / 2 - 0.08 + 0.03, 1.0, 1.25, lit);
   // interno: altare, icona illuminata, candele
   lp.box(0, 0, -0.35, 0.8, 0.5, 0.35, LPC.marble, { bevel: 0.015 });
   lp.box(0, 0.5, -0.35, 0.86, 0.04, 0.4, LPC.stoneLight, { bevel: 0.008 });

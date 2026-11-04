@@ -23,6 +23,8 @@ const LANGS = [
 ];
 const NATIVE_NAMES = { it: 'Italiano', en: 'English', de: 'Deutsch', fr: 'Français', es: 'Español', pt: 'Português', 'zh-Hans': '简体中文', 'zh-Hant': '繁體中文', ja: '日本語', ko: '한국어' };
 const REMOVED_KEYS = [
+  // la Cripta Soprannaturale è diventata la Cripta della Strega
+  'item.cryptSupernatural.label', 'item.cryptSupernatural.desc',
   'game.debug.style', 'demo.grave.name', 'demo.grave.epitaph', 'page.bench.title', 'look.ui.styleNote',
   'settings.assetGallery', 'settings.info', 'settings.build.dev', 'settings.build.version', 'settings.build.distribution',
   'settings.section.onboarding', 'game.pet.freeOld', 'shop.intro.classic#one', 'shop.intro.classic#other',

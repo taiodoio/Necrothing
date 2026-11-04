@@ -973,3 +973,12 @@ test('ogni oggetto con luce si spegne davvero col comando (luci e bagliore cambi
     assert.ok(off.lights.every((l) => !l.intensity || l.intensity === 0) || off.lights.length < on.lights.length, `${d.id}: spento ha ancora luci`);
   }
 });
+
+test('santuario: l\'arco è chiuso da un portone a due battenti; le candele si accendono', () => {
+  const tris = (m) => Object.values(m.geometries).reduce((a, g) => a + g.getAttribute('position').count / 3, 0);
+  const on = resolveLowpoly('p:shrine:0:1:001')(), off = resolveLowpoly('p:shrine:0:1:000')();
+  assert.ok(on.geometries.glow, 'accesa: candele luminose');
+  assert.ok(!off.geometries.glow, 'spenta: niente parti luminose');
+  assert.ok(tris(on) > 600, 'ha portone e ferramenta');
+  assert.ok(Math.abs(tris(on) - tris(off)) < 150, 'le stesse forme, accesa o spenta (cambiano solo le fiammelle)');
+});

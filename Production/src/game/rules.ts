@@ -582,7 +582,11 @@ export function sell(s: SaveData, type: string, qty = 1): ActionResult {
 
 // ── Piazzamento (modalità Modifica) ─────────────────────────────────────
 
-export function placeFromInventory(s: SaveData, type: string, x: number, y: number, rot: number, now: Date): Placed {
+/**
+ * `variant`: l'aspetto, per gli oggetti con più versioni (le cripte); se non lo si dice se ne pesca una
+ * a caso, ma sempre la stessa per lo stesso oggetto (dal suo id), così le prove restano ripetibili.
+ */
+export function placeFromInventory(s: SaveData, type: string, x: number, y: number, rot: number, now: Date, variant?: number): Placed {
   const def = placeableDef(type);
   if (def.category === 'extra') throw new GameError(t('rules.place.extra'));
   if (ownedCount(s, type) < 1) throw new GameError(t('rules.place.noneOwned'));
@@ -594,8 +598,10 @@ export function placeFromInventory(s: SaveData, type: string, x: number, y: numb
   s.inventory[type] = ownedCount(s, type) - 1;
   if (s.inventory[type] === 0) delete s.inventory[type];
   const iso = now.toISOString();
+  const id = newId(type);
+  const looks = def.randomVariants ?? 0;
   const p: Placed = {
-    id: newId(type), type, x, y, rot: r, variant: 0, lit: true,
+    id, type, x, y, rot: r, variant: looks ? (variant ?? hashString(id)) % looks : 0, lit: true,
     caredAt: iso, dirty: false, broken: false, createdAt: iso,
     ...(def.editableText ? { text: t('rules.place.defaultText') } : {}),
   };

@@ -536,6 +536,25 @@ export class Actors {
 
   teleport(p: THREE.Vector3) { this.avatar.pos.copy(p); this.avatar.path = []; }
 
+  /**
+   * Il Custode è su una cella dove non si può stare (ci è stato posato sopra qualcosa)?
+   * Lo porta nella cella libera più vicina, a cerchi crescenti. Ritorna true se l'ha spostato.
+   */
+  unstick(): boolean {
+    const c = worldToCell(this.avatar.pos);
+    if (this.canGo(c.x, c.y)) return false;
+    for (let r = 1; r <= 12; r++) {
+      let best: Cell | null = null, bestD = Infinity;
+      for (let dy = -r; dy <= r; dy++) for (let dx = -r; dx <= r; dx++) {
+        if (Math.max(Math.abs(dx), Math.abs(dy)) !== r || !this.canGo(c.x + dx, c.y + dy)) continue;
+        const d = dx * dx + dy * dy;
+        if (d < bestD) { bestD = d; best = { x: c.x + dx, y: c.y + dy }; }
+      }
+      if (best) { this.teleport(cellCenter(best.x, best.y, [1, 1])); this.arrive = null; return true; }
+    }
+    return false;
+  }
+
   // ── Bicicletta ───────────────────────────────────────────────────────
 
   private ride: Ride | null = null;

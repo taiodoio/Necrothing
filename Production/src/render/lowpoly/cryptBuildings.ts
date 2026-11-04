@@ -55,14 +55,19 @@ function portal(c: CryptCtx, { color = CP.pale as string, width = 1.12, height =
   }
 }
 
-/** Falda del tetto tra due punti del profilo (x, y), lunga `d` in z, con le file di lastre. */
+/**
+ * Falda del tetto tra due punti del profilo (x, y), lunga `d` in z (il colmo corre lungo z): come
+ * gableRoof, una lastra con sopra le file parallele al colmo, a passo fisso lungo la falda.
+ */
 function roofBand(c: CryptCtx, xa: number, ya: number, xb: number, yb: number, zc: number, d: number, color: string, dark: string) {
   const { lp } = c;
+  // sempre da sinistra a destra: girata al contrario la falda finiva a testa in giù e le file sotto
+  if (xb < xa) [xa, ya, xb, yb] = [xb, yb, xa, ya];
   const len = Math.hypot(xb - xa, yb - ya);
   lp.push([(xa + xb) / 2, (ya + yb) / 2, zc], 0, 0, Math.atan2(yb - ya, xb - xa));
   lp.box(0, -0.035, 0, len + 0.01, 0.07, d, color, { bevel: 0.01, vary: 0.04, ao: 0.1 });
-  const rows = Math.max(3, Math.round(d / 0.3));
-  for (let i = 0; i < rows; i++) lp.box(lp.rng.range(-0.015, 0.015), 0.03, -d / 2 + (i + 0.5) * (d / rows), len - 0.04, 0.03, (d / rows) * 0.7, i % 2 ? color : dark, { bevel: 0.006, vary: 0.08, ao: 0 });
+  const rows = Math.max(1, Math.round(len / 0.24));
+  for (let i = 0; i < rows; i++) lp.box(-len / 2 + (i + 0.5) * (len / rows), 0.03, lp.rng.range(-0.015, 0.015), (len / rows) * 0.7, 0.03, d - 0.04, i % 2 ? color : dark, { bevel: 0.006, vary: 0.08, ao: 0 });
   lp.pop();
 }
 
@@ -75,12 +80,15 @@ const roofH = (x: number) => (x < -0.14 ? 2.1 - ((-0.14 - x) / 0.98) * 0.59 : 2.
 function cottageRoof(c: CryptCtx) {
   const { lp, v } = c;
   const ridge = -0.14;
-  const tiles = [pick(c, '#3b4352', '#50584f', '#514b46'), '#3e4655', '#39414f', '#414958'];
-  for (let side = 0; side < 2; side++) for (let col = 0; col < 4; col++) {
+  // una falda per lato, come i tetti delle altre case (da rotta, sul lato destro manca un pezzo verso il colmo)
+  const roof = pick(c, '#3b4352', '#50584f', '#514b46');
+  for (let side = 0; side < 2; side++) {
     const edge = side ? 1.12 : -1.12;
-    const xa = edge + (ridge - edge) * (col / 4), xb = edge + (ridge - edge) * ((col + 1) / 4);
-    const short = v.broken && side === 1 && col > 0;
-    roofBand(c, xa, roofH(xa), xb, roofH(xb), short ? -0.7 : -0.28, short ? 1.2 : 2.04, tiles[col], LPC.roofDark);
+    if (v.broken && side === 1) {
+      const xm = edge + (ridge - edge) * 0.25;
+      roofBand(c, edge, roofH(edge), xm, roofH(xm), -0.28, 2.04, roof, LPC.roofDark);
+      roofBand(c, xm, roofH(xm), ridge, roofH(ridge), -0.7, 1.2, roof, LPC.roofDark);
+    } else roofBand(c, edge, roofH(edge), ridge, roofH(ridge), -0.28, 2.04, roof, LPC.roofDark);
   }
   beam(lp, [ridge, 2.125, -1.33], [ridge, 2.125, 0.79], 0.036, '#706249');
   for (const z of [-1.32, 0.77]) for (const edge of [-1.14, 1.14]) {

@@ -798,6 +798,8 @@ export class Game {
   private refreshWalkable() {
     const occ = buildOccupancy(this.state);
     this.actors.setWorld(areaForLevel(this.state.world.expansionLevel), (x, y) => occ.blocked.has(`${x},${y}`));
+    // se per qualsiasi via il Custode è rimasto dentro un ingombro, esce nella cella libera più vicina
+    if (this.actors.unstick() && this.sceneReady) this.effects.cloudPuff(this.actors.avatar.pos.clone().setY(this.groundAt(this.actors.avatar.pos)));
   }
 
   private collectNearbyWisps() {
@@ -985,6 +987,16 @@ export class Game {
     return { x: c.x + 2, y: c.y };
   }
 
+  /**
+   * Un ingombro che non si calpesta (tombe, costruzioni, luci…) non si posa sopra il Custode:
+   * lo chiuderebbe dentro. `type` assente: una tomba. I sentieri e il resto calpestabile sì.
+   */
+  private coversKeeper(type: string | null, x: number, y: number, fp: [number, number]): boolean {
+    if (type && CATALOG[type]?.walkable) return false;
+    const k = worldToCell(this.actors.avatar.pos);
+    return k.x >= x && k.x < x + fp[0] && k.y >= y && k.y < y + fp[1];
+  }
+
   startGravePlacement(draft: R.BurialDraft) {
     const occ = buildOccupancy(this.state);
     const c = this.placementOriginCell();
@@ -1076,7 +1088,8 @@ export class Game {
     if (!p) { this.world.hideGhost(); this.ui.refreshPlacementBar(); return; }
     if (p.trace) {
       const cells = this.traceCells();
-      const status = R.traceStatus(this.state, p.type!, cells);
+      const status = R.traceStatus(this.state, p.type!, cells)
+        .map((st, i) => (st === 'ok' && this.coversKeeper(p.type!, cells[i].x, cells[i].y, rotatedFootprint(p.type!, cells[i].rot)) ? 'busy' : st));
       const turn = !!CATALOG[p.type!].rotatable;
       const v: PVis = { type: p.type!, variant: 0, dirty: false, broken: false, lit: true, seed: 0 };
       this.world.showTrace(placeableKey(v), () => getModel(placeableKey(v)),
@@ -1086,7 +1099,8 @@ export class Game {
       return;
     }
     const fp = this.placementFp();
-    p.valid = canPlaceAt(p.x, p.y, fp, buildOccupancy(this.state), areaForLevel(this.state.world.expansionLevel));
+    p.valid = canPlaceAt(p.x, p.y, fp, buildOccupancy(this.state), areaForLevel(this.state.world.expansionLevel))
+      && !this.coversKeeper(p.kind === 'grave' ? null : p.type!, p.x, p.y, fp);
     if (p.kind === 'grave') {
       const type = p.draft!.graveType!;
       const key = `g:${type}:clean:0`;
@@ -2008,7 +2022,9 @@ export class Game {
       this.refreshPlacement();
       return;
     }
-    const valid = canPlaceAt(nx, ny, fp, buildOccupancy(this.state, id), areaForLevel(this.state.world.expansionLevel));
+    const moved = this.state.placeables.find((q) => q.id === id);
+    const valid = canPlaceAt(nx, ny, fp, buildOccupancy(this.state, id), areaForLevel(this.state.world.expansionLevel))
+      && !this.coversKeeper(moved ? moved.type : null, nx, ny, fp);
     this.drag.x = nx; this.drag.y = ny; this.drag.valid = valid;
     this.world.previewMove(id, nx, ny, valid);
     this.refreshKeeperArea();

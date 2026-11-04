@@ -102,7 +102,7 @@ function ghostYard(c: CryptCtx) {
   const { lp, v } = c;
   const x = -0.56, z = 1.16;
   const arc = v.broken ? Math.PI * 1.75 : Math.PI * 2;
-  put(lp, new THREE.LatheGeometry([[0, 0.015], [0.54, 0.015], [0.64, 0.07], [0.66, 0.19], [0.57, 0.22], [0.53, 0.11], [0, 0.11]].map(([a, b]) => new THREE.Vector2(a, b)), 16, 0, arc), '#a8b4a0', [x, 0.01, z], [0, 0, 0], { vary: 0.06, ao: 0.2 });
+  put(lp, new THREE.LatheGeometry([[0, 0.015], [0.54, 0.015], [0.64, 0.07], [0.66, 0.19], [0.57, 0.22], [0.53, 0.11], [0, 0.11]].map(([a, b]) => new THREE.Vector2(a, b)), 16, 0, arc), '#a8b4a0', [x, 0.01, z], [0, 0, 0], { vary: 0.06, ao: 0.2 }, v.broken);
   const pool = emit(c, v.broken ? '#4a554b' : '#719f96');
   lp.cyl(x, v.broken ? 0.06 : 0.13, z, 0.535, 0.535, 0.012, 16, pool.color, { ...pool.o, jitter: 0 });
   if (!v.broken) { const r = emit(c, '#a0c6b5'); groundRing(lp, x, 0.14, z, 0.24, 0.014, r.color, 12, Math.PI * 1.75, r.o); flame(c, x - 0.13, 0.26, z + 0.08, '#afd7c7', 0.026); }

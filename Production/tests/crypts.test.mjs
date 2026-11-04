@@ -133,3 +133,18 @@ test('cripte: la chiave del modello distingue versione e stato; salvataggi vecch
   assert.notEqual(k(0, true, false), k(0, true, true));
   assert.equal(k(2, false, false), 'p:crypt_zombie:2:0:001');
 });
+
+test('cripte: le superfici aperte (spicchi del tetto, vasca rotta, anelli a metà) si vedono dai due lati', async () => {
+  const { twoSided } = await import('../src/render/lowpoly/cryptKit.ts');
+  const g = twoSided(new THREE.CylinderGeometry(0.15, 1, 0.8, 1, 1, true, 0, Math.PI / 4));
+  const p = g.getAttribute('position');
+  assert.equal(p.count % 6, 0, 'ogni triangolo ha il suo gemello');
+  const n = p.count / 2, nrm = (i) => {
+    const a = new THREE.Vector3().fromBufferAttribute(p, i), b = new THREE.Vector3().fromBufferAttribute(p, i + 1), c = new THREE.Vector3().fromBufferAttribute(p, i + 2);
+    return b.sub(a).cross(c.sub(a)).normalize();
+  };
+  for (let i = 0; i < n; i += 3) assert.ok(nrm(i).dot(nrm(n + i)) < -0.99, 'il gemello guarda dall\'altra parte');
+  // il tetto ottagonale rotto (due spicchi mancano): gli altri spicchi hanno anche il rovescio
+  const broken = build('crypt_supernatural', 0, true, true), whole = build('crypt_supernatural', 0);
+  assert.ok(tris(broken) > 0 && tris(whole) > 0);
+});

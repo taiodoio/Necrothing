@@ -383,7 +383,7 @@ function supernatural(c: CryptCtx) {
     for (let i = 0; i < 8; i++) {
       if (v.broken && i < 2) continue;
       const a = (i / 8) * Math.PI * 2;
-      put(lp, new THREE.CylinderGeometry(0.15, 1.06, 0.83, 1, 1, true, a, Math.PI / 4), facets[i % 4], [0, 1.805, -0.35], [0, 0, 0], { vary: 0.03, jitter: 0.008 });
+      put(lp, new THREE.CylinderGeometry(0.15, 1.06, 0.83, 1, 1, true, a, Math.PI / 4), facets[i % 4], [0, 1.805, -0.35], [0, 0, 0], { vary: 0.03, jitter: 0.008 }, true);
       const p: P3 = [Math.sin(a) * 1.07, 1.39, -0.35 + Math.cos(a) * 1.07], q: P3 = [Math.sin(a + Math.PI / 4) * 1.07, 1.39, -0.35 + Math.cos(a + Math.PI / 4) * 1.07];
       beam(lp, p, q, 0.027, '#9a849e');
       beam(lp, [Math.sin(a) * 0.15, 2.22, -0.35 + Math.cos(a) * 0.15], p, 0.016, '#93809d');

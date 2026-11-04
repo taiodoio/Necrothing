@@ -5,7 +5,7 @@
 // la terra in fondo alle schede in src/assets/deco/ground.webp. Vite le
 // pubblica col nome che cambia col contenuto (si possono tenere in cache per
 // sempre). Si rifà quando cambia un modello. Serve il server di sviluppo acceso (npx vite --port 5173) e
-// Playwright con Chromium: node scripts/bake-previews.mjs [id … | grave-<tipo> …]
+// Playwright con Chromium: node scripts/bake-previews.mjs [id … | grave-<tipo> … | <id>-v<N> …]
 import fs from 'node:fs';
 import path from 'node:path';
 
@@ -28,13 +28,17 @@ const ev = async (fn, arg) => {
   }
 };
 const only = process.argv.slice(2);
-const ids = only.length ? only : await ev(async () => (await import('/src/game/catalog.ts')).CATALOG_LIST.map((d) => d.id));
+const ids = only.length ? only : await ev(async () => (await import('/src/game/catalog.ts')).CATALOG_LIST.flatMap((d) => [d.id, ...Array.from({ length: Math.max(0, (d.randomVariants ?? 1) - 1) }, (_, i) => `${d.id}-v${i + 2}`)]));
 // si scrive tutto alla fine: un file nuovo in src/assets fa ricaricare la pagina al server di sviluppo
 const out = new Map();
 const save = (rel, url) => out.set(rel, url);
 const grave = (type) => ev(async (type) => (await import('/src/render/bake.ts')).renderGravePreview(type), type);
 for (const id of ids) {
-  save(`previews/${id}.webp`, id.startsWith('grave-') ? await grave(id.slice(6)) : await ev(async (id) => (await import('/src/render/bake.ts')).renderItemPreview(id), id));
+  // «tipo-vN»: la versione N (da 1) degli oggetti a più versioni, per la scheda dell'oggetto posato
+  const ver = /^(.+)-v(\d)$/.exec(id);
+  save(`previews/${id}.webp`, id.startsWith('grave-') ? await grave(id.slice(6))
+    : ver ? await ev(async ([type, n]) => (await import('/src/render/bake.ts')).renderItemPreview(type, 320, { variant: n - 1 }), [ver[1], Number(ver[2])])
+    : await ev(async (id) => (await import('/src/render/bake.ts')).renderItemPreview(id), id));
   console.log('anteprima', id);
 }
 if (!only.length) {

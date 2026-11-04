@@ -38,8 +38,31 @@ export const CP = {
 const _a = new THREE.Vector3(), _b = new THREE.Vector3(), _d = new THREE.Vector3();
 const UP = new THREE.Vector3(0, 1, 0);
 
-/** Aggiunge una geometria ruotata (X, poi Y, poi Z) e portata in `p`. */
-export function put(lp: LP, geo: THREE.BufferGeometry, color: string, p: P3 = [0, 0, 0], rot: P3 = [0, 0, 0], o: LPOpts = {}) {
+/**
+ * Superficie aperta (spicchi di cono, tornito tagliato) vista da entrambi i lati: i
+ * materiali del gioco disegnano una faccia sola, quindi si aggiunge la copia con i
+ * triangoli rovesciati. Le forme chiuse non ne hanno bisogno.
+ */
+export function twoSided(geo: THREE.BufferGeometry): THREE.BufferGeometry {
+  const g = geo.index ? geo.toNonIndexed() : geo;
+  const p = g.getAttribute('position').array as Float32Array;
+  const out = new Float32Array(p.length * 2);
+  out.set(p);
+  for (let i = 0; i < p.length; i += 9) {
+    out.set(p.subarray(i, i + 3), p.length + i);
+    out.set(p.subarray(i + 6, i + 9), p.length + i + 3);
+    out.set(p.subarray(i + 3, i + 6), p.length + i + 6);
+  }
+  const both = new THREE.BufferGeometry();
+  both.setAttribute('position', new THREE.BufferAttribute(out, 3));
+  if (g !== geo) g.dispose();
+  geo.dispose();
+  return both;
+}
+
+/** Aggiunge una geometria ruotata (X, poi Y, poi Z) e portata in `p`; `open`: superficie aperta, a due facce. */
+export function put(lp: LP, geo: THREE.BufferGeometry, color: string, p: P3 = [0, 0, 0], rot: P3 = [0, 0, 0], o: LPOpts = {}, open = false) {
+  if (open) geo = twoSided(geo);
   if (rot[0]) geo.rotateX(rot[0]);
   if (rot[1]) geo.rotateY(rot[1]);
   if (rot[2]) geo.rotateZ(rot[2]);
@@ -80,15 +103,14 @@ export function prof(lp: LP, pts: Array<[number, number]>, depth: number, color:
 }
 
 export function torus(lp: LP, x: number, y: number, z: number, r: number, t: number, color: string, rot: P3 = [0, 0, 0], arc = Math.PI * 2, o: LPOpts = {}) {
-  return put(lp, new THREE.TorusGeometry(r, t, 3, r < 0.12 ? 8 : r < 0.35 ? 10 : 14, arc), color, [x, y, z], rot, o);
+  return put(lp, new THREE.TorusGeometry(r, t, 3, r < 0.12 ? 8 : r < 0.35 ? 10 : 14, arc), color, [x, y, z], rot, o, arc < Math.PI * 2);
 }
 
 /** Anello piatto a terra (o parte di anello): un piccolo tubo di sezione rettangolare. */
 export function groundRing(lp: LP, x: number, y: number, z: number, r: number, width: number, color: string, seg = 12, arc = Math.PI * 2, o: LPOpts = {}) {
   const r0 = Math.max(0.001, r - width / 2), r1 = r + width / 2, h = 0.012;
   const g = new THREE.LatheGeometry([[r0, 0], [r1, 0], [r1, h], [r0, h], [r0, 0]].map(([a, b]) => new THREE.Vector2(a, b)), seg, 0, arc);
-  g.translate(x, y, z);
-  return lp.add(g, color, { jitter: 0, ao: 0, ...o });
+  return put(lp, g, color, [x, y, z], [0, 0, 0], { jitter: 0, ao: 0, ...o }, arc < Math.PI * 2);
 }
 
 /** Stoffa appesa o distesa: tre strisce sottili sfalsate, perché si veda piegata. */

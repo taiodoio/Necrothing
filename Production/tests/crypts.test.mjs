@@ -2,7 +2,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import * as THREE from 'three';
-import { CATALOG, CATALOG_LIST, ACCESS, rotatedFootprint } from '../src/game/catalog.ts';
+import { CATALOG, CATALOG_LIST, ACCESS } from '../src/game/catalog.ts';
 import { resolveLowpoly } from '../src/render/lowpoly/index.ts';
 import { CRYPT_FAMILIES, CRYPT_TYPES, CRYPT_VARIANTS, cryptLP } from '../src/render/lowpoly/cryptModels.ts';
 import { placeableKey, seedCount } from '../src/render/keys.ts';
@@ -14,7 +14,7 @@ const tris = (m) => Object.values(m.geometries).reduce((a, g) => a + g.getAttrib
 const key = (type, variant, dirty, broken, lit = true) => `p:${type}:${variant}:0:${+dirty}${+broken}${+lit}`;
 const build = (type, variant, dirty = false, broken = false, lit = true) => resolveLowpoly(key(type, variant, dirty, broken, lit))();
 
-test('cripte: cinque voci in Bottega, lotti 4×5 ruotabili, a più versioni, nella Full', () => {
+test('cripte: cinque voci in Bottega, lotti 4×5 non ruotabili, a più versioni, nella Full', () => {
   assert.equal(CRYPT_TYPES.length, 5);
   assert.deepEqual(CRYPT_FAMILIES, ['zombie', 'ghost', 'skeleton', 'nature', 'witch']);
   for (const type of CRYPT_TYPES) {
@@ -22,8 +22,7 @@ test('cripte: cinque voci in Bottega, lotti 4×5 ruotabili, a più versioni, nel
     assert.ok(d, type);
     assert.equal(d.category, 'structure');
     assert.deepEqual(d.footprint, [4, 5]);
-    assert.deepEqual(rotatedFootprint(type, 1), [5, 4], 'ruotata scambia i lati');
-    assert.ok(d.rotatable && d.decays && d.light && !d.unique, `${type}: ruotabile, si sporca, ha luce, se ne possono avere più d'una`);
+    assert.ok(!d.rotatable && d.decays && d.light && !d.unique, `${type}: non si gira, si sporca, ha luce, se ne possono avere più d'una`);
     assert.equal(d.randomVariants, CRYPT_VARIANTS);
     assert.ok(ACCESS.full.includes(type), 'nella Full');
     assert.ok(d.description.length > 40 && !d.description.startsWith('item.'), `${type}: descrizione scritta`);
@@ -162,4 +161,15 @@ test('cripta della strega: grande calderone (1), calderone piccolo e tavolino (2
   const sizes = [0, 1, 2].map((v) => tris(lit(v)));
   assert.equal(new Set(sizes).size, 3);
   for (let v = 0; v < 3; v++) assert.ok(lit(v).lights.some((l) => l.color === '#9af06a'), `versione ${v + 1}: luce della pozione`);
+});
+
+test('cripte: non si girano (per ora): posate restano dritte, e «Ruota» non c\'è', () => {
+  const now = new Date('2026-11-04T10:00:00Z');
+  const s = createNewGame(now, 11);
+  s.placeables = []; s.graves = [];
+  const spot = nearestFreeSpot(24, 22, [4, 5], buildOccupancy(s), areaForLevel(s.world.expansionLevel));
+  s.inventory.crypt_witch = 1;
+  const p = R.placeFromInventory(s, 'crypt_witch', spot.x, spot.y, 1, now);
+  assert.equal(p.rot, 0, 'anche se si chiede un quarto di giro, resta dritta');
+  assert.throws(() => R.rotateEntity(s, p.id), 'in Modifica non si gira');
 });

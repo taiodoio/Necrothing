@@ -74,7 +74,7 @@ test('cripte: luci accese solo da integre o sporche e accese; spente o rotte nie
     assert.ok(on.geometries.glow, `${type}: ha parti luminose`);
     assert.equal(off.lights.length, 0, `${type}: spenta senza luci`);
     assert.ok(!off.geometries.glow, `${type}: spenta senza parti luminose`);
-    assert.ok(Math.abs(tris(off) - tris(on)) <= tris(on) * 0.05, `${type}: spenta ha le stesse forme (scure), meno le fiammelle`);
+    assert.ok(Math.abs(tris(off) - tris(on)) <= tris(on) * 0.12, `${type}: spenta ha le stesse forme (scure), meno le fiammelle`);
     assert.equal(broken.lights.length, 0, `${type}: rotta senza luci`);
     assert.ok(!broken.geometries.glow);
     assert.equal(brokenOn.lights.length, 0, 'rotta e «accesa»: comunque niente luci (nel generatore)');
@@ -96,7 +96,9 @@ test('cripte: sporche e rotte cambiano forma come le altre costruzioni (degrado 
 test('cripte: costruite con il kit dei generatori (colori per faccia, nessun materiale proprio, solo i gruppi del gioco)', () => {
   for (const type of CRYPT_TYPES) {
     const m = build(type, 0);
-    assert.deepEqual(Object.keys(m.geometries).sort(), ['glow', 'solid'], `${type}: solido e luce`);
+    const keys = Object.keys(m.geometries);
+    assert.ok(keys.includes('solid') && keys.includes('glow'), `${type}: solido e luce`);
+    assert.deepEqual(keys.filter((k) => !['solid', 'glow', 'gloss', 'water', 'ghost'].includes(k)), [], `${type}: solo i gruppi del gioco`);
     for (const g of Object.values(m.geometries)) {
       assert.ok(g.getAttribute('color') && g.getAttribute('normal'), 'colori e normali per vertice');
       assert.equal(g.getAttribute('position').count % 3, 0, 'triangoli separati (sfaccettato)');

@@ -7,6 +7,9 @@
 import * as THREE from 'three';
 import { LPC } from './palette.ts';
 import { skull as gameSkull } from './extras.ts';
+import { column, gothicWindow } from './architecture.ts';
+import { hangingLantern } from './details.ts';
+import { irregularShape, roundTopShape } from './kit.ts';
 import {
   beam, block, chain, cloth, CP, dim, emit, flame, leaf, mushroom, prof, put, root, slab, torus, turned, votive, type CryptCtx, type P3,
 } from './cryptKit.ts';
@@ -161,66 +164,132 @@ function zombie(c: CryptCtx) {
   }
 }
 
-// ── Fantasmi: il cubo terrazzato del ricordo ─────────────────────────────
+// ── Fantasmi: la casa infestata, casetta da fiaba col tetto a campana ────
+
+/** Le tre versioni: colori, altezza del tetto, da che parte sta la torretta tonda, abbaino, pendenza. */
+const HAUNTED: Record<1 | 2 | 3, { plaster: string; trim: string; roof: string; stone: string; apex: number; annex: 1 | -1; dormer: 0 | 1 | -1; lean: number; frontWindow: boolean; spire: boolean; chimney: number }> = {
+  1: { plaster: '#7d7486', trim: '#4a3a30', roof: '#3b3f4a', stone: '#6b6660', apex: 2.75, annex: 1, dormer: 1, lean: 0, frontWindow: true, spire: false, chimney: -0.36 },
+  2: { plaster: '#8a7f6a', trim: '#3f3128', roof: '#4a3a46', stone: '#66625c', apex: 2.6, annex: -1, dormer: 0, lean: 0.022, frontWindow: false, spire: false, chimney: 0.36 },
+  // la torretta con la guglia a punta coprirebbe l'abbaino a destra: l'abbaino va sulla falda sinistra
+  3: { plaster: '#6f7d78', trim: '#2f2a2a', roof: '#5a4232', stone: '#625f58', apex: 3.0, annex: 1, dormer: -1, lean: -0.025, frontWindow: false, spire: true, chimney: 0.32 },
+};
+
+/** Lastra tra due punti del profilo (x, y), lunga `d` in z: falde, mantovane, cornici. */
+function slabBetween(c: CryptCtx, a: [number, number], b: [number, number], zc: number, d: number, thick: number, color: string, out = 0) {
+  // sempre da sinistra a destra, così la lastra non si gira a testa in giù
+  if (b[0] < a[0]) [a, b] = [b, a];
+  const len = Math.hypot(b[0] - a[0], b[1] - a[1]), ang = Math.atan2(b[1] - a[1], b[0] - a[0]);
+  // spostata di `out` verso l'esterno della falda (la normale che guarda in su)
+  const nx = -Math.sin(ang) * out, ny = Math.cos(ang) * out;
+  c.lp.push([(a[0] + b[0]) / 2 + nx, (a[1] + b[1]) / 2 + ny, zc], 0, 0, ang).box(0, -thick / 2, 0, len + 0.02, thick, d, color, { bevel: 0.008, vary: 0.05, ao: 0.05 }).pop();
+}
+
+/** Finestra rettangolare a croce con la cornice, il davanzale e il cappello (piano z = zFace). */
+function crossWindow(c: CryptCtx, x: number, y: number, zFace: number, w: number, h: number, trim: string, boarded = false) {
+  const { lp } = c;
+  const g = emit(c, LPC.window);
+  lp.box(x, y - 0.03, zFace + 0.01, w + 0.1, h + 0.06, 0.03, trim, { jitter: 0, vary: 0.05 });
+  lp.box(x, y, zFace + 0.02, w, h, 0.02, c.lit ? g.color : '#26231f', { ...(c.lit ? g.o : {}), ao: 0 });
+  lp.box(x, y, zFace + 0.035, 0.022, h, 0.012, trim, { jitter: 0, ao: 0 });
+  lp.box(x, y + h * 0.55, zFace + 0.035, w, 0.022, 0.012, trim, { jitter: 0, ao: 0 });
+  lp.box(x, y - 0.06, zFace + 0.04, w + 0.16, 0.04, 0.08, trim, { bevel: 0.006 });
+  lp.box(x, y + h + 0.03, zFace + 0.035, w + 0.16, 0.05, 0.07, trim, { bevel: 0.006 });
+  lp.box(x, y + h + 0.08, zFace + 0.03, 0.06, 0.08, 0.05, trim, { jitter: 0 });
+  if (boarded) for (const s of [-1, 1]) lp.push([x, y + h / 2, zFace + 0.06], 0, 0, s * 0.6).box(0, -0.03, 0, h * 1.05, 0.06, 0.02, '#6b5a46', { vary: 0.1, ao: 0 }).pop();
+}
+
+/** Lenzuolo-fantasma che fa capolino (solo a casa integra). */
+function peekGhost(c: CryptCtx, x: number, y: number, z: number, s = 1) {
+  if (c.v.broken) return;
+  c.lp.blob(x, y, z, 0.08 * s, 0.11 * s, 0.05 * s, '#eef2f0', { jitter: 0, detail: 1 });
+  for (const sx of [-1, 1]) c.lp.blob(x + sx * 0.028 * s, y + 0.03 * s, z + 0.045 * s, 0.011 * s, 0.016 * s, 0.006, '#1f2a2c', { jitter: 0 });
+}
 
 function ghost(c: CryptCtx) {
   const { lp, v } = c;
-  steps(c, 0.96); chamber(c, '#969e97', { height: 1.08, width: 1.92 });
-  darkDoor(c, 1.12, 1.13, 0.18, 0.4, '#365a51');
-  portal(c, { color: '#c3c1b0', width: 1.1, height: 1.08, z: 0.58 });
-  // porte di pietra incise, senza volti
-  for (const sx of [-1, 1]) {
-    block(lp, sx * 0.235, 0.21, 0.47, 0.44, 0.91, 0.06, v.broken ? '#515e57' : '#718e82');
-    lp.box(sx * 0.235, 0.4, 0.507, 0.026, 0.54, 0.012, '#a9bba7', { jitter: 0, ao: 0 });
-    torus(lp, sx * 0.075, 0.65, 0.52, 0.035, 0.008, LPC.marble);
+  const k = HAUNTED[c.variant];
+  const W = 1.45, D = 1.3, z0 = -0.45, B = 0.24, Y1 = 1.1, AP = k.apex;
+  const zf = z0 + D / 2;
+  lp.push([0, 0, z0], 0, 0, k.lean);
+  // zoccolo di pietre, con qualche pietra in rilievo sul davanti
+  lp.box(0, 0, 0, W + 0.16, B, D + 0.16, k.stone, { bevel: 0.02, vary: 0.08, ao: 0.25 });
+  for (let i = 0; i < 6; i++) lp.push([-0.62 + i * 0.25, 0.06 + (i % 2) * 0.08, D / 2 + 0.08]).plate(irregularShape(lp.rng, 0.06, 6, 0.6), 0.012, dim(k.stone, 0.8), { ao: 0 }).pop();
+  // pianterreno intonacato con i montanti scuri, la fascia di legno
+  lp.box(0, B, 0, W, Y1 - B, D, k.plaster, { bevel: 0.015, vary: 0.05, ao: 0.2 });
+  for (const sx of [-1, 1]) for (const sz of [-1, 1]) lp.box(sx * (W / 2 - 0.02), B, sz * (D / 2 - 0.02), 0.07, Y1 - B, 0.07, k.trim, { jitter: 0, vary: 0.06 });
+  lp.box(0, Y1, 0, W + 0.1, 0.07, D + 0.1, k.trim, { bevel: 0.01, vary: 0.06 });
+  // il tetto a campana: falde che scendono ripide e si allargano in fondo, sopra il timpano
+  const R: Array<[number, number]> = [[0, AP], [0.24, AP - 0.6], [0.48, AP - 1.05], [0.72, 1.32], [0.97, 1.13]];
+  const wall: Array<[number, number]> = [[-W / 2, Y1 + 0.06], [W / 2, Y1 + 0.06], [W / 2, 1.3], [0.47, AP - 1.07], [0.23, AP - 0.63], [0, AP - 0.06], [-0.23, AP - 0.63], [-0.47, AP - 1.07], [-W / 2, 1.3]];
+  prof(lp, wall, D - 0.02, k.plaster, [0, 0, 0], [0, 0, 0], { vary: 0.05, ao: 0.1 });
+  for (const sx of [-1, 1]) for (let i = 0; i < R.length - 1; i++) {
+    if (v.broken && sx > 0 && i === R.length - 2) continue;
+    const a: [number, number] = [sx * R[i][0], R[i][1]], b: [number, number] = [sx * R[i + 1][0], R[i + 1][1]];
+    slabBetween(c, a, b, 0, D + 0.26, 0.07, k.roof, 0.035);
+    // mantovane chiare sul davanti e sul retro
+    for (const sz of [-1, 1]) slabBetween(c, a, b, sz * (D / 2 + 0.14), 0.05, 0.1, k.trim, 0.05);
   }
-  const lids = [pick(c, '#b0b7aa', '#9eafa8', '#beb7a7'), '#c2c4b2', '#a3ada1'];
-  for (let i = 0; i < 3; i++) {
-    if (v.broken && i === 0) continue;
-    slab(lp, 0, 1.23 + i * 0.115, -0.31, 2.16 - i * 0.23, 0.12, 1.91 - i * 0.15, lids[i]);
-  }
-  for (const sx of [-1, 1]) {
-    const pts: Array<[number, number]> = [[sx * 0.8, 0.24], [sx * 1.04, 0.24], [sx * 1.04, 1.3], [sx * 0.84, 1.65], [sx * 0.8, 1.15]];
-    if (!(v.broken && sx === 1)) prof(lp, pts, 0.47, '#a8b2a7', [0, 0, -0.38], [0, 0, 0], { vary: 0.06 });
-    else prof(lp, pts.map(([x, y]) => [x * 0.48, y * 0.42] as [number, number]), 0.16, '#89928a', [0.37, 0.04, 0.55], [Math.PI / 2, 0, 0.4]);
-    block(lp, sx * 0.97, 0.12, -0.03, 0.3, 0.25, 1.64, '#7e8d84');
-    slab(lp, sx * 0.97, 0.37, -0.03, 0.38, 0.08, 1.76, '#adb4a7');
-    votive(c, sx * 0.99, 0.46, 0.55, '#88cbbb');
-  }
-  if (c.variant === 1) {
-    torus(lp, 0, 1.75, -0.77, 0.24, 0.035, v.broken ? '#6b7670' : '#a9c1b3');
-    // una vera falce di luna: profilo a mezzaluna
-    const moon: Array<[number, number]> = [];
-    for (let i = 0; i <= 10; i++) { const a = -Math.PI * 0.6 + (i / 10) * Math.PI * 1.35; moon.push([Math.cos(a) * 0.19, Math.sin(a) * 0.19]); }
-    for (let i = 10; i >= 0; i--) { const a = -Math.PI * 0.64 + (i / 10) * Math.PI * 1.43; moon.push([0.085 + Math.cos(a) * 0.12, Math.sin(a) * 0.15]); }
-    prof(lp, moon, 0.055, '#d3d1b8', [0, 1.75, -0.7]);
-  } else if (c.variant === 2) {
-    for (const sx of [-1, 1]) {
-      slab(lp, sx * 0.6, 1.56, -0.69, 0.3, 0.09, 0.3, '#a9b4aa');
-      prof(lp, [[sx * 0.48, 0], [sx * 0.72, 0], [sx * 0.66, 0.31], [sx * 0.6, 0.52], [sx * 0.54, 0.31]], 0.2, '#c6c9b7', [0, 1.64, -0.69]);
-    }
-    torus(lp, 0, 1.74, -0.68, 0.16, 0.022, '#bfcbb8');
-  } else {
-    lp.cyl(0, 1.56, -0.7, 0.22, 0.16, 0.14, 8, '#a3afa5', { jitter: 0.006 });
-    lp.cyl(0, 1.7, -0.7, 0.16, 0.24, 0.11, 8, '#bec7b4', { jitter: 0.006 });
-    if (!v.broken) flame(c, 0, 1.86, -0.7, '#92caba', 0.09);
-    for (const sx of [-1, 1]) votive(c, sx * 0.62, 1.55, -0.65, CP.spectral);
-  }
-  // versione 2: torre lunare · versione 3: loggia degli spiriti
-  if (c.variant === 2) {
-    lp.push([0, 0, -0.29], Math.PI / 8);
-    lp.cyl(0, 1.57, 0, 0.49, 0.43, 0.46, 8, '#afbeb4', { vary: 0.06 });
-    lp.cyl(0, 2.03, 0, 0.54, 0.38, 0.14, 8, '#d0d4c2');
+  lp.box(0, AP - 0.02, 0, 0.14, 0.1, D + 0.3, k.trim, { bevel: 0.01 });
+  lp.box(0, AP - 0.12, D / 2 + 0.16, 0.16, 0.24, 0.08, k.trim, { bevel: 0.01 });
+  // finestra in alto sul timpano col fantasma che guarda fuori
+  crossWindow(c, 0, 1.42, D / 2, 0.3, 0.4, k.trim, v.broken);
+  peekGhost(c, 0.03, 1.58, D / 2 + 0.07, 0.8);
+  // porta di assi con il cappellino a due falde, le mensole, la lanterna appesa, due gradini
+  const dx = -0.2;
+  lp.push([dx, B, D / 2 + 0.005]).plate(roundTopShape(0.5, 0.72, 7), 0.03, k.trim, { ao: 0 }).pop();
+  lp.push([dx, B + 0.02, D / 2 + 0.02]).plate(roundTopShape(0.4, 0.66, 7), 0.03, '#4a3426', { vary: 0.08, ao: 0.1 }).pop();
+  for (const ox of [-0.1, 0, 0.1]) lp.box(dx + ox, B + 0.04, D / 2 + 0.052, 0.012, 0.5, 0.006, '#2e211a', { jitter: 0, ao: 0 });
+  lp.blob(dx + 0.12, B + 0.34, D / 2 + 0.06, 0.02, 0.02, 0.015, LPC.iron, { jitter: 0 });
+  if (!v.broken) {
+    for (const s of [-1, 1]) lp.push([dx + s * 0.13, B + 0.86, D / 2 + 0.2], 0, 0, -s * 0.55).box(0, 0, 0, 0.32, 0.05, 0.42, k.roof, { bevel: 0.008, vary: 0.05 }).pop();
+    for (const s of [-1, 1]) beam(lp, [dx + s * 0.22, B + 0.6, D / 2 + 0.01], [dx + s * 0.24, B + 0.82, D / 2 + 0.3], 0.018, k.trim);
+    hangingLantern(lp, dx - 0.36, B + 0.85, D / 2 + 0.14, c.lit, 0.75);
+  } else block(lp, dx + 0.5, 0.02, D / 2 + 0.55, 0.32, 0.05, 0.42, k.roof, [0.2, 0.5, 0.3]);
+  for (let i = 0; i < 2; i++) lp.box(dx, 0, D / 2 + 0.17 + i * 0.12, 0.6 - i * 0.08, B - 0.1 * i, 0.14, LPC.stone, { bevel: 0.01, vary: 0.08 });
+  // da rotta: due assi inchiodate a croce davanti alla porta (sopra le assi della porta, non dietro)
+  if (v.broken) for (const s of [-1, 1]) lp.push([dx, B + 0.36, D / 2 + 0.08], 0, 0, s * 0.62).box(0, -0.04, 0, 0.66, 0.08, 0.025, '#7a5c42', { vary: 0.12, ao: 0 }).box(-0.28, -0.012, 0.015, 0.025, 0.025, 0.01, LPC.iron, { jitter: 0 }).box(0.28, -0.012, 0.015, 0.025, 0.025, 0.01, LPC.iron, { jitter: 0 }).pop();
+  // una finestra sul davanti, accanto alla porta (versione 1)
+  if (k.frontWindow) crossWindow(c, 0.36, B + 0.3, D / 2, 0.26, 0.36, k.trim, v.broken);
+  // finestra al pianterreno sul fianco destro
+  lp.push([W / 2, 0, 0], Math.PI / 2);
+  crossWindow(c, 0.1, B + 0.25, 0, 0.28, 0.4, k.trim, v.broken);
+  lp.pop();
+  // abbaino sulla falda destra (1, 3)
+  if (k.dormer) {
+    // abbaino sulla falda destra (1) o sinistra (3), girato verso l'esterno
+    lp.push([k.dormer * 0.42, 0, -0.18], k.dormer > 0 ? 0 : Math.PI);
+    lp.box(0, AP - 1.25, 0, 0.36, 0.42, 0.34, k.plaster, { bevel: 0.01, vary: 0.05 });
+    for (const s of [-1, 1]) lp.push([0, AP - 0.78, s * 0.11], 0, s * 0.6).box(0, 0, 0, 0.44, 0.04, 0.26, k.roof, { bevel: 0.006 }).pop();
+    lp.push([0.18, 0, 0], Math.PI / 2);
+    crossWindow(c, 0, AP - 1.15, 0, 0.16, 0.22, k.trim);
     lp.pop();
-    if (!v.broken) torus(lp, 0, 2.31, -0.29, 0.19, 0.025, '#d6dbbf', [Math.PI / 2, 0, 0]);
-  } else if (c.variant === 3) {
-    for (const x of [-0.78, 0.78]) {
-      block(lp, x, 0.14, 0.93, 0.14, 1.07, 0.14, '#b8c3b4');
-      slab(lp, x, 1.21, 0.93, 0.23, 0.09, 0.23, '#d0d3c2');
-    }
-    beam(lp, [-0.85, 1.35, 0.93], [0.85, 1.35, 0.93], 0.065, '#b9c6b6');
-    for (const x of [-0.53, 0, 0.53]) lp.blob(x, 1.19, 0.94, 0.055, 0.11, 0.055, '#b1d0be');
+    lp.pop();
   }
+  // comignolo alto in pietra coi due vasetti (da rotto senza cappello)
+  const cx = k.chimney;
+  lp.box(cx, 1.3, -0.38, 0.3, AP + 0.25 - 1.3, 0.3, k.stone, { bevel: 0.015, vary: 0.08 });
+  if (!v.broken) {
+    lp.box(cx, AP + 0.25, -0.38, 0.38, 0.06, 0.38, dim(k.stone, 0.8), { bevel: 0.01 });
+    for (const ox of [-0.07, 0.07]) lp.cyl(cx + ox, AP + 0.31, -0.38, 0.05, 0.045, 0.12, 6, '#8a5a3a', { jitter: 0 });
+  }
+  lp.pop();
+  // la torretta tonda sul fianco, col tetto a cupola e la porticina
+  const ax = k.annex * (W / 2 + 0.08);
+  lp.cyl(ax, 0, z0 - 0.1, 0.42, 0.42, B, 10, k.stone, { vary: 0.08 });
+  lp.cyl(ax, B, z0 - 0.1, 0.36, 0.36, 0.95, 10, k.plaster, { vary: 0.05, ao: 0.2 });
+  lp.cyl(ax, B + 0.95, z0 - 0.1, 0.4, 0.4, 0.06, 10, k.trim, { jitter: 0 });
+  if (k.spire) {
+    // guglia a punta, alta e sottile, col pinnacolo in ferro (da rotta, storta)
+    lp.push([ax, B + 1.01, z0 - 0.1], 0, 0, v.broken ? -0.2 : 0);
+    lp.cyl(0, 0, 0, 0.44, 0.0, 1.15, 10, k.roof, { vary: 0.05, ao: 0.1 });
+    beam(lp, [0, 1.1, 0], [0, 1.4, 0], 0.014, LPC.iron, 0.003);
+    lp.blob(0, 1.25, 0, 0.03, 0.03, 0.03, LPC.iron, { jitter: 0 });
+    lp.pop();
+  } else if (!(v.broken && c.variant === 1)) turned(lp, ax, B + 1.01, z0 - 0.1, [[0, 0], [0.38, 0], [0.34, 0.16], [0.24, 0.3], [0.1, 0.38], [0, 0.4]], 10, k.roof);
+  lp.push([ax, 0, z0 - 0.1], 0);
+  lp.push([0, 0, 0.36]).plate(roundTopShape(0.26, 0.52, 6, B), 0.03, k.trim, { ao: 0 }).pop();
+  lp.push([0, 0, 0.375]).plate(roundTopShape(0.2, 0.48, 6, B + 0.01), 0.025, '#4a3426', { vary: 0.08, ao: 0.1 }).pop();
+  lp.pop();
 }
 
 // ── Scheletri: la torre-ossario ──────────────────────────────────────────

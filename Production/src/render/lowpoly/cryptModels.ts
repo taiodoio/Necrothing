@@ -8,7 +8,7 @@ import type { PVis } from '../types.ts';
 import { decayLP } from './lights.ts';
 import { LP, type LPModel } from './kit.ts';
 import { BUILDINGS } from './cryptBuildings.ts';
-import { yard, fence } from './cryptYards.ts';
+import { yard } from './cryptYards.ts';
 import type { CryptCtx } from './cryptKit.ts';
 
 export const CRYPT_FAMILIES = ['zombie', 'ghost', 'skeleton', 'nature', 'witch'] as const;
@@ -27,7 +27,8 @@ const BODY_Z = -0.85;
 /** Luci: poche e fisse, una per gruppo di candele (non una per ogni fiammella). */
 const LIGHTS: Record<CryptFamily, Array<[number, number, number, string, number, number, number, number, 'body' | 'yard']>> = {
   zombie: [[-0.49, 0.32, 1.04, '#a7ca77', 0.52, 3, 0.24, 0.5, 'body'], [0.48, 0.32, 1.04, '#a7ca77', 0.52, 3, 0.24, 0.5, 'body']],
-  ghost: [[0.99, 0.76, 0.55, '#88cbbb', 0.6, 3.3, 0.18, 0.6, 'body'], [-0.56, 0.26, 1.16, '#a0d3c4', 0.48, 2.7, 0.12, 0.45, 'yard']],
+  // la lanterna alla porta e quella del lampione hanno la loro luce (hangingLantern)
+  ghost: [],
   skeleton: [[-1.05, 0.3, 0.95, '#f2ac58', 0.52, 3, 0.25, 0.5, 'body'], [1.05, 0.3, 0.95, '#f2ac58', 0.52, 3, 0.25, 0.5, 'body']],
   nature: [[-0.51, 0.35, 1.11, '#e3bb70', 0.52, 3, 0.25, 0.5, 'body'], [0.51, 0.35, 1.11, '#e3bb70', 0.52, 3, 0.25, 0.5, 'body']],
   witch: [[0, 0.75, 1.18, '#9af06a', 0.7, 4, 0.22, 0.7, 'yard'], [0, 0.6, 0.85, '#b8f08a', 0.45, 2.6, 0.2, 0.45, 'body']],
@@ -41,7 +42,7 @@ export function cryptLP(v: PVis): LPModel {
   lp.push([0, 0, BODY_Z]);
   BUILDINGS[family](c);
   lp.pop();
-  fence(c);
+  // senza recinto: il cortile si apre sul prato, e più case vicine fanno un villaggetto
   yard(c);
   if (c.lit) {
     for (const [x, y, z, color, intensity, range, flicker, halo, area] of LIGHTS[family]) {

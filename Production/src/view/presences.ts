@@ -118,8 +118,10 @@ export function presenceLayout(p: Pick<Placed, 'type' | 'broken'>, opts: { night
     }
     case 'ice_cream_cart':
       if (p.broken) break;
-      still('work', -0.1, -0.55, 0, 0, undefined, 'icecreamGhost', 0.9); // dietro il carretto, pesca il gelato
-      if (opts.tier !== 'low') cast.push({ kind: 'icecreamCustomer', role: 'still', pose: 'idle', x: 0.62, z: 0.8, facing: Math.PI + 0.5, size: 0.8, dim: 0.85 }); // un cliente col cono in mano
+      // il gelataio sul fianco destro del carretto, fuori dall'ombrellone (dietro non si vedeva), girato verso chi guarda (la camera sta a 35° verso +x)
+      still('work', 0.95, 0.1, -0.2, 0, undefined, 'icecreamGhost', 0.9);
+      // il cliente davanti, girato verso di noi: il cono che tiene in mano si vede
+      if (opts.tier !== 'low') cast.push({ kind: 'icecreamCustomer', role: 'still', pose: 'idle', x: -0.25, z: 0.85, facing: 0.75, size: 0.85, dim: 0.85 });
       break;
     case 'flower_kiosk':
       if (!p.broken) still('idle', 0.72, 0.5, -0.45, 0, undefined, 'florist');

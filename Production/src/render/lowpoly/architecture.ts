@@ -666,7 +666,7 @@ function yardScatter(lp: LP, parts: Set<string>) {
 }
 
 /** Alberello da frutto storto, carico di frutti. */
-function fruitTree(lp: LP, x: number, zz: number, fruit: string, s: number) {
+export function fruitTree(lp: LP, x: number, zz: number, fruit: string, s: number) {
   const r = lp.rng;
   lp.push([x, 0, zz], r.range(0, 3), 0, r.range(-0.06, 0.06));
   lp.cyl(0, 0, 0, 0.07 * s, 0.05 * s, 0.75 * s, 6, LPC.woodDark, { vary: 0.12 });

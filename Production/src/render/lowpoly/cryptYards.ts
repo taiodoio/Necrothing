@@ -5,10 +5,10 @@
 import * as THREE from 'three';
 import { LPC } from './palette.ts';
 import { skull as gameSkull } from './extras.ts';
-import { roundTopShape } from './kit.ts';
+import { fruitTree } from './architecture.ts';
 import { flower, hangingLantern, pumpkin } from './details.ts';
 import {
-  beam, block, cloth, CP, emit, flame, groundRing, leaf, mushroom, prof, put, root, slab, torus, tuft, turned, votive, type CryptCtx,
+  beam, block, cloth, cobblePath, CP, emit, flame, groundRing, leaf, meadow, mushroom, prof, put, root, slab, torus, tuft, turned, votive, type CryptCtx, type Keep,
 } from './cryptKit.ts';
 
 const skull = (c: CryptCtx, x: number, y: number, z: number, s = 0.16, color: string = LPC.bone) => gameSkull(c.lp, x, y - s * 0.55, z, s / 0.1, color);
@@ -20,12 +20,11 @@ function ground(c: CryptCtx) {
   switch (c.family) {
     case 'zombie':
       for (const [x, z, rx, rz] of [[-0.96, 1.46, 0.66, 0.49], [1.02, 1.48, 0.52, 0.55], [0.49, 0.54, 0.28, 0.32]] as const) lp.blob(x, 0.008, z, rx, 0.014, rz, v.dirty ? '#3c3b29' : '#4b4932', { detail: 1, jitter: 0.012, ao: 0 });
-      for (let i = 0; i < 9; i++) slab(lp, Math.sin(i * 1.1) * 0.09, 0.015, 0.35 + i * 0.23, 0.55, 0.055, 0.18, i % 2 ? '#8b8b75' : '#696d60', Math.sin(i) * 0.08);
+      cobblePath(c, [[0, 0.3], [0, 2.45]], 0.6);
       break;
     case 'ghost':
-      // il vialetto di pietre piatte dalla porta al bordo del lotto
-      ([[-0.2, 0.42], [-0.16, 0.72], [-0.24, 1.02], [-0.18, 1.33], [-0.26, 1.64], [-0.2, 1.95], [-0.25, 2.25]] as const)
-        .forEach(([x, z], i) => slab(lp, x, 0.012, z, 0.34, 0.045, 0.24, i % 2 ? '#8d8a80' : '#7a776d', i * 0.4 - 0.2));
+      // il vialetto in ciottoli dalla porta al bordo del lotto
+      cobblePath(c, [[-0.2, -0.22], [-0.2, 2.45]], 0.56);
       break;
     case 'skeleton':
       slab(lp, 0, 0.012, 1.14, 3.05, 0.04, 1.9, '#5a5a4f');
@@ -102,7 +101,7 @@ function zombieYard(c: CryptCtx) {
 }
 
 /** Panchina di legno coi braccioli in ferro, alla scala della panchina del gioco (seduta a 0,38, lunga 1,3). */
-function bench(c: CryptCtx, x: number, z: number, ry: number) {
+export function bench(c: CryptCtx, x: number, z: number, ry: number) {
   const { lp, v } = c;
   const L = 1.3;
   lp.push([x, 0, z], ry);
@@ -119,7 +118,7 @@ function bench(c: CryptCtx, x: number, z: number, ry: number) {
 }
 
 /** Lampione in ferro col lume caldo appeso al braccio, alto come i lampioni del gioco (~2,2). */
-function yardLamp(c: CryptCtx, x: number, z: number, ry = 0) {
+export function yardLamp(c: CryptCtx, x: number, z: number, ry = 0) {
   const { lp } = c;
   lp.push([x, 0, z], ry);
   lp.box(0, 0, 0, 0.3, 0.1, 0.3, LPC.stoneDark, { bevel: 0.015 });
@@ -177,8 +176,8 @@ function ghostYard(c: CryptCtx) {
     lp.cyl(-0.45, 0, 0.95, 0.12, 0.12, 0.24, 8, '#6d826c', { vary: 0.07 });
     beam(lp, [-0.35, 0.18, 0.95], [-0.15, 0.27, 0.95], 0.02, '#8a9b7b');
   } else {
-    // 3 · il piccolo camposanto di famiglia sotto l'arco di rose, e la panchina
-    lp.push([-0.22, 0, 1.15]);
+    // 3 · il frutteto: l'arco di rose sul vialetto, due alberelli da frutto, l'aiuola fiorita e la panchina
+    lp.push([-0.2, 0, 1.15]);
     for (const sx of [-1, 1]) beam(lp, [sx * 0.42, 0, 0], [sx * 0.42, 1.55, 0], 0.035, LPC.woodDark);
     if (!(v.broken)) torus(lp, 0, 1.55, 0, 0.42, 0.03, LPC.woodDark, [0, 0, 0], Math.PI, { jitter: 0 });
     for (let i = 0; i < 12; i++) {
@@ -187,12 +186,13 @@ function ghostYard(c: CryptCtx) {
       lp.blob(Math.cos(a) * rr, 1.55 + Math.sin(a) * rr, 0, 0.07, 0.06, 0.07, i % 3 ? LPC.leaf : '#7a2f3a', { jitter: 0.01 });
     }
     lp.pop();
-    for (const [x, z, h] of [[0.65, 0.75, 0.55], [1.1, 0.9, 0.45], [0.85, 1.45, 0.5]] as const) {
-      lp.push([x, 0, z], -0.3, 0, v.broken && x > 1 ? 0.25 : 0).extrude(roundTopShape(0.32, h, 6), 0.08, LPC.stone, { bevel: 0.01, vary: 0.08, topTint: LPC.moss, topAmount: 0.4 }).pop();
-      lp.box(x, 0, z + 0.25, 0.3, 0.05, 0.4, LPC.soil, { bevel: 0.02, vary: 0.1 });
-      if (!v.broken) flower(lp, x, z + 0.18, '#e7a6bf', 0.18);
-    }
-    votive(c, 0.65, 0, 1.05);
+    fruitTree(lp, 0.8, 0.75, v.broken ? '#6b5a3a' : '#c8402e', 0.85);
+    fruitTree(lp, 1.35, 1.75, v.broken ? '#6b5a3a' : '#d8b440', 0.8);
+    if (!v.broken) for (const [x, z] of [[0.55, 1.05], [1.05, 0.95], [1.6, 2.05]] as const) lp.blob(x, 0.04, z, 0.045, 0.045, 0.045, '#c8402e', { jitter: 0 });
+    // aiuola fiorita tra gli alberi, bordata di sassi
+    lp.box(0.65, 0, 1.65, 0.7, 0.06, 0.55, LPC.soil, { bevel: 0.02, vary: 0.1 });
+    for (let i = 0; i < 10; i++) { const a = (i / 10) * Math.PI * 2; lp.blob(0.65 + Math.cos(a) * 0.38, 0.04, 1.65 + Math.sin(a) * 0.3, 0.06, 0.045, 0.05, i % 2 ? LPC.stoneLight : LPC.stone, { vary: 0.1 }); }
+    for (let i = 0; i < 9; i++) flower(lp, 0.42 + (i % 3) * 0.22, 1.47 + Math.floor(i / 3) * 0.18, v.broken ? LPC.dry : ['#e7a6bf', '#d6cdb9', '#c9a7e8'][i % 3], 0.22, 0.05);
     bench(c, -1.15, 1.6, Math.PI / 2 + 0.3);
   }
 }
@@ -449,9 +449,36 @@ function variantProps(c: CryptCtx) {
   }
 }
 
+/** Dove il prato non cresce: la casa (in fondo al lotto), il vialetto e gli oggetti del cortile. */
+function keepOut(c: CryptCtx): Keep[] {
+  switch (c.family) {
+    case 'zombie': return [[-1.3, -2.6, 1.5, 0.28], [-0.36, 0.25, 0.36, 2.55], [-1.7, 0.55, -0.4, 0.9], [-1.62, 0.97, -0.3, 1.95], [0.45, 0.2, 1.6, 2.05], [1.3, 0.05, 1.65, 0.35]];
+    case 'nature': return [[-1.45, -2.6, 1.45, 0.25], [-0.38, 0.05, 0.32, 2.5], [-1.55, 0.2, -0.55, 1.4], [0.4, 1.05, 1.45, 2.12], [0.85, 0.05, 1.65, 0.9], [-1.5, 1.42, -0.42, 2.22], [-1.65, 0.05, -1.3, 0.3]];
+    case 'witch': return [[-1.25, -2.6, 1.25, 0.25], [-1.0, 0.2, 1.0, 2.15], [-0.35, 2.1, 0.35, 2.5], [-1.5, 0.2, -1.05, 0.62], [1.0, 0.2, 1.42, 0.65], [1.15, 1.25, 1.66, 2.1], [-1.65, 0.4, -0.95, 1.12], [-1.62, 1.68, -0.82, 2.0], [0.4, 0.15, 0.85, 0.5]];
+    case 'skeleton': return [[-1.6, -2.6, 1.6, 2.5]];
+    case 'ghost': {
+      const k: Keep[] = [[-1.4, -2.6, 1.4, -0.5], [-0.55, -0.6, 0.15, 2.55], [-1.25, 0.15, -0.65, 0.7], [0.15, 1.85, 0.6, 2.28]];
+      if (c.variant === 1) k.push([0.2, 0.68, 1.52, 1.92], [-1.5, 0.55, -0.7, 2.15], [0.3, 0.2, 0.88, 0.55]);
+      else if (c.variant === 2) k.push([0.08, 0.55, 1.42, 1.75], [-1.3, 1.1, -0.55, 1.8], [-0.62, 0.8, -0.3, 1.1], [1.35, 1.75, 1.65, 2.0]);
+      else k.push([0.35, 0.35, 1.25, 1.2], [0.25, 1.3, 1.75, 2.15], [-1.55, 0.85, -0.75, 2.35], [1.3, 0.25, 1.75, 0.75], [-0.7, 1.05, 0.3, 1.25]);
+      return k;
+    }
+    default: return [[-2, -2.5, 2, 2.5]];
+  }
+}
+
 export function yard(c: CryptCtx) {
   ground(c);
   YARDS[c.family](c);
   variantProps(c);
+  meadow(c, keepOut(c), SHRUBS[c.family] ?? []);
 }
+
+/** Cespugli agli angoli davanti della casa. */
+const SHRUBS: Partial<Record<CryptCtx['family'], Array<[number, number, number]>>> = {
+  zombie: [[-1.6, -0.3, 0.9], [1.7, -0.7, 0.8]],
+  nature: [[-1.62, -0.4, 1], [1.62, -0.5, 0.9]],
+  witch: [[-1.45, -0.6, 1], [1.45, -0.5, 0.9]],
+  ghost: [[-1.05, -0.42, 0.95], [1.1, -0.35, 0.85]],
+};
 

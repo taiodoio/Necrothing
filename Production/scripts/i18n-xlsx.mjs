@@ -49,6 +49,11 @@ const RECOVERED = {
   ko: { 'detail.business.ready#one': '+{n}개 수령 가능 (하루 위스프 {min}~{max}개, 최대 {cap}개)', 'detail.business.ready#other': '+{n}개 수령 가능 (하루 위스프 {min}~{max}개, 최대 {cap}개)', 'inventory.sellGain': '+{n}' },
 };
 const TEXT_OVERRIDES = {
+  // «fino a N» sembrava un limite dell'oggetto: è quanto si può pagare coi fuochi fatui che si hanno
+  'shop.detail.availableValue': {
+    it: '{max} con i fuochi fatui che hai', en: '{max} with the wisps you have', de: '{max} mit deinen Irrlichtern', fr: '{max} avec tes feux follets', es: '{max} con los fuegos fatuos que tienes', pt: '{max} com os fogos-fátuos que tens',
+    'zh-Hans': '用你现有的鬼火可买 {max}', 'zh-Hant': '用你現有的鬼火可買 {max}', ja: '手持ちの鬼火で{max}', ko: '가진 도깨비불로 {max}',
+  },
   // la Cripta dei Fantasmi è diventata la Casetta infestata
   'item.cryptGhost.label': {
     it: 'Casetta infestata', en: 'Haunted Cottage', de: 'Spukhäuschen', fr: 'Maisonnette hantée', es: 'Casita encantada', pt: 'Casinha assombrada',

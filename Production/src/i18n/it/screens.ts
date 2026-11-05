@@ -168,7 +168,7 @@ export default {
   // sulla pergamena dell'acquisto: quanti se ne possono comprare
   'shop.detail.available': 'Acquistabili',
   // valore accanto a «Acquistabili»
-  'shop.detail.availableValue': 'fino a {max}',
+  'shop.detail.availableValue': '{max} con i fuochi fatui che hai',
   // sulla pergamena dell'acquisto: quanti ne hai già
   'shop.detail.owned': 'Già tuoi',
   'shop.detail.max': 'Max {max}',

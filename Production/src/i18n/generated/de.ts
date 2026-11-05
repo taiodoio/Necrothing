@@ -1350,7 +1350,7 @@ export default {
   "postcard.failed": "Postkarte konnte nicht erstellt werden",
   "postcard.failedText": "Beim Erstellen ist etwas schiefgelaufen. Versuch es erneut; klappt es nicht, starte das Spiel neu.",
   "shop.detail.available": "Kaufbar",
-  "shop.detail.availableValue": "bis zu {max}",
+  "shop.detail.availableValue": "{max} mit deinen Irrlichtern",
   "shop.detail.owned": "Bereits deins",
   "backup.newer": "Dieses Backup stammt aus einer neueren Spielversion. Aktualisiere das Spiel und versuche es erneut.",
   "save.recovered": "Der Spielstand konnte nicht gelesen werden. Eine Kopie wurde gesichert und ein neues Spiel gestartet.",

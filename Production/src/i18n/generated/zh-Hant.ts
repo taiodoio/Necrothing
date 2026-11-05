@@ -1350,7 +1350,7 @@ export default {
   "postcard.failed": "明信片製作失敗",
   "postcard.failedText": "繪製時出了點問題。請重試；仍失敗的話，關閉遊戲再開啟。",
   "shop.detail.available": "可購買",
-  "shop.detail.availableValue": "最多 {max}",
+  "shop.detail.availableValue": "用你現有的鬼火可買 {max}",
   "shop.detail.owned": "已擁有",
   "backup.newer": "備份來自更新版本的遊戲。請更新遊戲後重試。",
   "save.recovered": "無法讀取存檔，已保留副本並開始新遊戲。",

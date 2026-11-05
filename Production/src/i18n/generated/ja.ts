@@ -1633,5 +1633,14 @@ export default {
   "sim.zombieMud#other": "留守のあいだにゾンビが通りました。墓石が{n}基、泥の足跡だらけです。",
   "item.cryptWitch.label": "魔女の地下墓室",
   "item.cryptWitch.desc": "魔女の家。帽子の形の屋根、刻まれた円、そして庭でぐつぐつ煮えている何か。バージョンは3つ。決めるのは大釜で、大釜には逆らえません。",
-  "rules.buy.retired": "もうショップでは売っていません。"
+  "rules.buy.retired": "もうショップでは売っていません。",
+  "item.effect.village": "墓地に活気を。ちょっと賑やかでも、誰も死にはしない。",
+  "item.villageFlorist.label": "花屋の温室",
+  "item.villageFlorist.desc": "骸骨の花屋の家。温室がくっついていて、花壇のふちは骨でできている。花のことならおまかせ。なにしろ、あちら側からもこちら側からも見てきたのだから。",
+  "item.villageRectory.label": "司祭館",
+  "item.villageRectory.desc": "司祭の家。屋根には小さな鐘楼、法衣はお日さまの下で干してある。となりの香部屋はいつでも開いている。ただし、そっとノックした人にだけ。",
+  "item.villageLamplighter.label": "点灯夫の家",
+  "item.villageLamplighter.desc": "ここに住む点灯夫は、毎晩長い竿で墓地の明かりをともして回る。差し掛け小屋ではランタンの修理。壊れたランタンに必要なのは、信じてくれる誰かだけなんだとか。",
+  "item.villageReaper.label": "死神のコテージ",
+  "item.villageReaper.desc": "死神は引退した。大鎌は今や草刈り専用、破風の時計はいつも三時を指している。育てているのはトマト。今のところは。"
 } satisfies Record<string, string>;

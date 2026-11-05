@@ -1633,5 +1633,14 @@ export default {
   "sim.zombieMud#other": "你不在的時候有殭屍路過：{n} 塊墓碑沾滿了泥腳印。",
   "item.cryptWitch.label": "女巫墓室",
   "item.cryptWitch.desc": "女巫的家：帽子形狀的屋頂、刻在地上的圓圈，還有花園裡咕嘟作響的東西。共有三個版本：由大鍋決定，而大鍋的決定沒得商量。",
-  "rules.buy.retired": "商店裡已經不賣了。"
+  "rules.buy.retired": "商店裡已經不賣了。",
+  "item.effect.village": "讓墓地熱鬧起來：多一點生氣，又不會要誰的命。",
+  "item.villageFlorist.label": "花匠的溫室",
+  "item.villageFlorist.desc": "骷髏花匠的家，旁邊連著溫室，花壇用骨頭圍邊。他很懂花：兩邊的花他都見過。",
+  "item.villageRectory.label": "神父的小屋",
+  "item.villageRectory.desc": "神父的家，屋頂上有座小鐘樓，長袍晾在太陽底下。隔壁的聖器室總是開著，但只給輕輕敲門的人開。",
+  "item.villageLamplighter.label": "點燈人的家",
+  "item.villageLamplighter.desc": "點燈人住在這裡，每天傍晚他都用長竿點亮墓地的燈。他在棚子底下修燈籠：他說，壞掉的燈籠只是需要有人相信它們。",
+  "item.villageReaper.label": "死神的小屋",
+  "item.villageReaper.desc": "死神退休了：鐮刀現在只用來割草，山牆上的鐘永遠停在三點。他在種番茄。暫時而已。"
 } satisfies Record<string, string>;

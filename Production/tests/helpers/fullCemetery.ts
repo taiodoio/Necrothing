@@ -48,7 +48,7 @@ export function fullCemetery(seed = 4242, now = new Date(), graves = 150): SaveD
   };
 
   // prima le cose grandi (si sistemano meglio), poi le piccole
-  const items = CATALOG_LIST.filter((d) => d.category !== 'extra' && !SKIP.has(d.id))
+  const items = CATALOG_LIST.filter((d) => d.category !== 'extra' && !d.retired && !SKIP.has(d.id))
     .flatMap((d) => Array.from({ length: d.unique ? 1 : COPIES[d.category] ?? 1 }, () => d))
     .sort((a, b) => b.footprint[0] * b.footprint[1] - a.footprint[0] * a.footprint[1]);
   for (const d of items) {

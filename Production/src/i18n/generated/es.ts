@@ -1633,5 +1633,14 @@ export default {
   "sim.zombieMud#other": "Unos zombis han pasado mientras no estabas: {n} lápidas están llenas de huellas de barro.",
   "item.cryptWitch.label": "Cripta de la bruja",
   "item.cryptWitch.desc": "La casa de la bruja: un tejado con forma de sombrero, un círculo grabado y algo que borbotea en el jardín. Hay tres versiones: decide el caldero, y con el caldero no se discute.",
-  "rules.buy.retired": "Ya no se vende en la Tienda."
+  "rules.buy.retired": "Ya no se vende en la Tienda.",
+  "item.effect.village": "Da vida al cementerio: un poco de vida nunca mató a nadie.",
+  "item.villageFlorist.label": "Invernadero del florista",
+  "item.villageFlorist.desc": "La casa del esqueleto florista, con el invernadero pegado y los arriates bordeados de huesos. De flores sabe un rato: las ha visto desde los dos lados.",
+  "item.villageRectory.label": "Casa parroquial",
+  "item.villageRectory.desc": "La casa del cura, con el campanario en el tejado y la sotana tendida al sol. La sacristía de al lado siempre está abierta, pero solo para quien llama despacito.",
+  "item.villageLamplighter.label": "Casa del farolero",
+  "item.villageLamplighter.desc": "Aquí vive el farolero, que cada noche enciende las luces del cementerio con su pértiga. Bajo el cobertizo arregla faroles: los rotos, dice, solo necesitan que alguien crea en ellos.",
+  "item.villageReaper.label": "Casita de la Parca",
+  "item.villageReaper.desc": "La Parca se ha jubilado: la guadaña ya solo sirve para la hierba y el reloj del frontón marca siempre las tres. Cultiva tomates. Por ahora."
 } satisfies Record<string, string>;

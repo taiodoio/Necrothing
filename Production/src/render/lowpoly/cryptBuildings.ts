@@ -175,7 +175,7 @@ const HAUNTED: Record<1 | 2 | 3, { plaster: string; trim: string; roof: string; 
 };
 
 /** Lastra tra due punti del profilo (x, y), lunga `d` in z: falde, mantovane, cornici. */
-function slabBetween(c: CryptCtx, a: [number, number], b: [number, number], zc: number, d: number, thick: number, color: string, out = 0) {
+export function slabBetween(c: CryptCtx, a: [number, number], b: [number, number], zc: number, d: number, thick: number, color: string, out = 0) {
   // sempre da sinistra a destra, così la lastra non si gira a testa in giù
   if (b[0] < a[0]) [a, b] = [b, a];
   const len = Math.hypot(b[0] - a[0], b[1] - a[1]), ang = Math.atan2(b[1] - a[1], b[0] - a[0]);
@@ -185,7 +185,7 @@ function slabBetween(c: CryptCtx, a: [number, number], b: [number, number], zc: 
 }
 
 /** Finestra rettangolare a croce con la cornice, il davanzale e il cappello (piano z = zFace). */
-function crossWindow(c: CryptCtx, x: number, y: number, zFace: number, w: number, h: number, trim: string, boarded = false) {
+export function crossWindow(c: CryptCtx, x: number, y: number, zFace: number, w: number, h: number, trim: string, boarded = false) {
   const { lp } = c;
   const g = emit(c, LPC.window);
   lp.box(x, y - 0.03, zFace + 0.01, w + 0.1, h + 0.06, 0.03, trim, { jitter: 0, vary: 0.05 });
@@ -198,11 +198,32 @@ function crossWindow(c: CryptCtx, x: number, y: number, zFace: number, w: number
   if (boarded) for (const s of [-1, 1]) lp.push([x, y + h / 2, zFace + 0.06], 0, 0, s * 0.6).box(0, -0.03, 0, h * 1.05, 0.06, 0.02, '#6b5a46', { vary: 0.1, ao: 0 }).pop();
 }
 
-/** Lenzuolo-fantasma che fa capolino (solo a casa integra). */
-function peekGhost(c: CryptCtx, x: number, y: number, z: number, s = 1) {
+/**
+ * Il fantasma di casa alla finestra: una sagoma chiara dietro il vetro (tra il vetro e la
+ * croce dei montanti), come qualcuno che guarda fuori dalla stanza; solo a casa integra.
+ */
+function windowGhost(c: CryptCtx, x: number, y: number, zFace: number, s = 1) {
   if (c.v.broken) return;
-  c.lp.blob(x, y, z, 0.08 * s, 0.11 * s, 0.05 * s, '#eef2f0', { jitter: 0, detail: 1 });
-  for (const sx of [-1, 1]) c.lp.blob(x + sx * 0.028 * s, y + 0.03 * s, z + 0.045 * s, 0.011 * s, 0.016 * s, 0.006, '#1f2a2c', { jitter: 0 });
+  const sh = new THREE.Shape();
+  const w = 0.075 * s, h = 0.17 * s;
+  sh.moveTo(-w, 0);
+  for (let i = 1; i <= 4; i++) sh.lineTo(-w + (i * 2 * w) / 4, i % 2 ? 0.025 * s : 0);
+  sh.lineTo(w, h);
+  for (let i = 1; i < 8; i++) { const a = (i / 8) * Math.PI; sh.lineTo(Math.cos(a) * w, h + Math.sin(a) * w); }
+  sh.lineTo(-w, h);
+  sh.closePath();
+  const g = emit(c, '#dfe9e6');
+  c.lp.push([x, y, zFace + 0.031]).plate(sh, 0.003, c.lit ? g.color : '#9aa6a4', { ...(c.lit ? g.o : {}), ao: 0 }).pop();
+  for (const sx of [-1, 1]) c.lp.blob(x + sx * 0.026 * s, y + h + 0.01 * s, zFace + 0.035, 0.011 * s, 0.017 * s, 0.002, '#1f2a2c', { jitter: 0, ao: 0 });
+}
+
+/** Lanterna a muro su una mensola di ferro (accanto alla porta). */
+export function wallLantern(c: CryptCtx, x: number, y: number, zFace: number, s = 0.62) {
+  const { lp } = c;
+  lp.box(x, y - 0.06, zFace + 0.01, 0.06, 0.12, 0.02, LPC.iron, { jitter: 0 });
+  beam(lp, [x, y, zFace], [x, y, zFace + 0.17], 0.012, LPC.iron);
+  beam(lp, [x, y - 0.08, zFace], [x, y, zFace + 0.11], 0.009, LPC.iron);
+  hangingLantern(lp, x, y, zFace + 0.17, c.lit, s);
 }
 
 function ghost(c: CryptCtx) {
@@ -233,7 +254,7 @@ function ghost(c: CryptCtx) {
   lp.box(0, AP - 0.12, D / 2 + 0.16, 0.16, 0.24, 0.08, k.trim, { bevel: 0.01 });
   // finestra in alto sul timpano col fantasma che guarda fuori
   crossWindow(c, 0, 1.42, D / 2, 0.3, 0.4, k.trim, v.broken);
-  peekGhost(c, 0.03, 1.58, D / 2 + 0.07, 0.8);
+  windowGhost(c, 0.04, 1.43, D / 2);
   // porta di assi con il cappellino a due falde, le mensole, la lanterna appesa, due gradini
   const dx = -0.2;
   lp.push([dx, B, D / 2 + 0.005]).plate(roundTopShape(0.5, 0.72, 7), 0.03, k.trim, { ao: 0 }).pop();
@@ -248,8 +269,9 @@ function ghost(c: CryptCtx) {
   for (let i = 0; i < 2; i++) lp.box(dx, 0, D / 2 + 0.17 + i * 0.12, 0.6 - i * 0.08, B - 0.1 * i, 0.14, LPC.stone, { bevel: 0.01, vary: 0.08 });
   // da rotta: due assi inchiodate a croce davanti alla porta (sopra le assi della porta, non dietro)
   if (v.broken) for (const s of [-1, 1]) lp.push([dx, B + 0.36, D / 2 + 0.08], 0, 0, s * 0.62).box(0, -0.04, 0, 0.66, 0.08, 0.025, '#7a5c42', { vary: 0.12, ao: 0 }).box(-0.28, -0.012, 0.015, 0.025, 0.025, 0.01, LPC.iron, { jitter: 0 }).box(0.28, -0.012, 0.015, 0.025, 0.025, 0.01, LPC.iron, { jitter: 0 }).pop();
-  // una finestra sul davanti, accanto alla porta (versione 1)
+  // accanto alla porta: una finestra (versione 1) o una lanterna a muro (2, 3)
   if (k.frontWindow) crossWindow(c, 0.36, B + 0.3, D / 2, 0.26, 0.36, k.trim, v.broken);
+  else if (!v.broken) wallLantern(c, 0.3, B + 0.78, D / 2);
   // finestra al pianterreno sul fianco destro
   lp.push([W / 2, 0, 0], Math.PI / 2);
   crossWindow(c, 0.1, B + 0.25, 0, 0.28, 0.4, k.trim, v.broken);
@@ -531,4 +553,4 @@ function witch(c: CryptCtx) {
   }
 }
 
-export const BUILDINGS: Record<CryptCtx['family'], (c: CryptCtx) => void> = { zombie, ghost, skeleton, nature, witch };
+export const BUILDINGS: Record<'zombie' | 'ghost' | 'skeleton' | 'nature' | 'witch', (c: CryptCtx) => void> = { zombie, ghost, skeleton, nature, witch };

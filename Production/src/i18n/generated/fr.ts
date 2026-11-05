@@ -1633,5 +1633,14 @@ export default {
   "sim.zombieMud#other": "Des zombies sont passés pendant ton absence : {n} pierres tombales sont couvertes d’empreintes de boue.",
   "item.cryptWitch.label": "Crypte de la sorcière",
   "item.cryptWitch.desc": "La maison de la sorcière : un toit en forme de chapeau, un cercle gravé et quelque chose qui bouillonne au jardin. Il y a trois versions : le chaudron décide, et on ne discute pas avec le chaudron.",
-  "rules.buy.retired": "Ce n’est plus vendu à la Boutique."
+  "rules.buy.retired": "Ce n’est plus vendu à la Boutique.",
+  "item.effect.village": "Ranime le cimetière : un peu de vie n’a jamais tué personne.",
+  "item.villageFlorist.label": "Serre du fleuriste",
+  "item.villageFlorist.desc": "La maison du fleuriste squelette, avec la serre accolée et les plates-bandes bordées d’os. Les fleurs, il connaît : il les a vues des deux côtés.",
+  "item.villageRectory.label": "Presbytère",
+  "item.villageRectory.desc": "La maison du prêtre, avec un petit clocher sur le toit et la soutane qui sèche au soleil. La sacristie d’à côté est toujours ouverte, mais seulement pour qui frappe doucement.",
+  "item.villageLamplighter.label": "Maison de l’allumeur de réverbères",
+  "item.villageLamplighter.desc": "Ici vit l’allumeur de réverbères, qui allume chaque soir les lumières du cimetière avec sa perche. Sous l’appentis, il répare les lanternes : celles qui sont cassées, dit-il, ont juste besoin que quelqu’un croie en elles.",
+  "item.villageReaper.label": "Maisonnette de la Faucheuse",
+  "item.villageReaper.desc": "La Faucheuse a pris sa retraite : la faux ne sert plus qu’à l’herbe et l’horloge du pignon indique toujours trois heures. Elle cultive des tomates. Pour l’instant."
 } satisfies Record<string, string>;

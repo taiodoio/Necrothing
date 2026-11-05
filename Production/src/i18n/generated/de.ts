@@ -1633,5 +1633,14 @@ export default {
   "sim.zombieMud#other": "Während du weg warst, sind Zombies vorbeigetorkelt: {n} Grabsteine sind voller Schlammspuren.",
   "item.cryptWitch.label": "Hexengruft",
   "item.cryptWitch.desc": "Das Haus der Hexe: ein Dach wie ein Hut, ein eingeritzter Kreis und etwas, das im Garten blubbert. Es gibt drei Versionen: Der Kessel entscheidet, und mit dem Kessel diskutiert man nicht.",
-  "rules.buy.retired": "Gibt es im Laden nicht mehr."
+  "rules.buy.retired": "Gibt es im Laden nicht mehr.",
+  "item.effect.village": "Belebt den Friedhof: Ein bisschen Leben hat noch niemanden umgebracht.",
+  "item.villageFlorist.label": "Gewächshaus des Floristen",
+  "item.villageFlorist.desc": "Das Haus des Skelett-Floristen, mit angebautem Gewächshaus und Beeten mit Knochen als Rand. Von Blumen versteht er etwas: Er hat sie von beiden Seiten gesehen.",
+  "item.villageRectory.label": "Pfarrhaus",
+  "item.villageRectory.desc": "Das Haus des Pfarrers, mit einem Glockentürmchen auf dem Dach und der Soutane, die in der Sonne trocknet. Die Sakristei nebenan ist immer offen, aber nur für den, der leise klopft.",
+  "item.villageLamplighter.label": "Haus des Laternenanzünders",
+  "item.villageLamplighter.desc": "Hier wohnt der Laternenanzünder, der jeden Abend mit seiner Stange die Lichter des Friedhofs anzündet. Unter dem Vordach repariert er Laternen: Die kaputten, sagt er, brauchen nur jemanden, der an sie glaubt.",
+  "item.villageReaper.label": "Häuschen des Sensenmanns",
+  "item.villageReaper.desc": "Der Sensenmann ist in Rente: Die Sense ist jetzt nur noch fürs Gras, und die Uhr am Giebel zeigt immer drei. Er zieht Tomaten. Vorerst."
 } satisfies Record<string, string>;

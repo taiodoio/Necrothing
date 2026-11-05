@@ -13,37 +13,41 @@ import * as R from '../src/game/rules.ts';
 const tris = (m) => Object.values(m.geometries).reduce((a, g) => a + g.getAttribute('position').count / 3, 0);
 const key = (type, variant, dirty, broken, lit = true) => `p:${type}:${variant}:0:${+dirty}${+broken}${+lit}`;
 const build = (type, variant, dirty = false, broken = false, lit = true) => resolveLowpoly(key(type, variant, dirty, broken, lit))();
+/** Quante versioni ha un lotto: tre le cripte, una le case del villaggetto. */
+const VARS = (type) => CATALOG[type].randomVariants ?? 1;
+const VILLAGE = ['crypt_florist', 'crypt_rectory', 'crypt_lamplighter', 'crypt_reaper'];
 
-test('cripte: cinque cripte (quella degli scheletri ritirata dalla Bottega), lotti 4×5 non ruotabili, a più versioni, nella Full', () => {
-  assert.equal(CRYPT_TYPES.length, 5);
-  assert.deepEqual(CRYPT_FAMILIES, ['zombie', 'ghost', 'skeleton', 'nature', 'witch']);
+test('cripte e case del villaggetto: lotti 4×5 non ruotabili, nella Full; in Bottega restano la Casetta infestata e le quattro case', () => {
+  assert.equal(CRYPT_TYPES.length, 9);
+  assert.deepEqual(CRYPT_FAMILIES, ['zombie', 'ghost', 'skeleton', 'nature', 'witch', 'reaper', 'rectory', 'lamplighter', 'florist']);
   for (const type of CRYPT_TYPES) {
     const d = CATALOG[type];
     assert.ok(d, type);
     assert.equal(d.category, 'structure');
     assert.deepEqual(d.footprint, [4, 5]);
     assert.ok(!d.rotatable && d.decays && d.light && !d.unique, `${type}: non si gira, si sporca, ha luce, se ne possono avere più d'una`);
-    assert.equal(d.randomVariants, CRYPT_VARIANTS);
+    assert.equal(d.randomVariants, VILLAGE.includes(type) ? undefined : CRYPT_VARIANTS);
     assert.ok(ACCESS.full.includes(type), 'nella Full');
     assert.ok(d.description.length > 40 && !d.description.startsWith('item.'), `${type}: descrizione scritta`);
     assert.ok(!d.label.startsWith('item.'), `${type}: nome scritto`);
   }
-  // le altre varianti non sono voci in Bottega: solo le cinque «principali»
-  assert.equal(CATALOG_LIST.filter((d) => d.id.startsWith('crypt_')).length, 5);
-  // la cripta degli scheletri per ora è ritirata: non si compra, ma chi l'ha posata la tiene
-  assert.deepEqual(CATALOG_LIST.filter((d) => d.retired).map((d) => d.id), ['crypt_skeleton']);
+  // le altre versioni non sono voci in Bottega: una voce per lotto
+  assert.equal(CATALOG_LIST.filter((d) => d.id.startsWith('crypt_')).length, 9);
+  // le cripte sono ritirate (non si comprano, chi le ha posate le tiene): restano la Casetta infestata e le case nuove
+  assert.deepEqual(CATALOG_LIST.filter((d) => d.retired).map((d) => d.id), ['crypt_zombie', 'crypt_nature', 'crypt_skeleton', 'crypt_witch']);
+  assert.deepEqual(CRYPT_TYPES.filter((t) => !CATALOG[t].retired), ['crypt_ghost', 'crypt_reaper', 'crypt_rectory', 'crypt_lamplighter', 'crypt_florist']);
   // costi e ranghi: crescono, e stanno nella scala delle costruzioni che ci sono già (Mausoleo 80 al rango 4, Cripta del vampiro 90 al 5)
   const byRank = CRYPT_TYPES.map((t) => CATALOG[t]);
   assert.ok(Math.min(...byRank.map((d) => d.cost)) >= CATALOG.gravedigger_house.cost - 5 && Math.max(...byRank.map((d) => d.cost)) <= CATALOG.vampire_crypt.cost + 15);
   assert.ok(Math.min(...byRank.map((d) => d.minRank)) >= 3 && Math.max(...byRank.map((d) => d.minRank)) <= 5);
 });
 
-test('cripte: 5 famiglie × 3 varianti × 3 stati si costruiscono, diverse tra loro, e stanno nel lotto', () => {
+test('cripte e case: ogni versione × 3 stati si costruisce, diverse tra loro, e sta nel lotto', () => {
   const seen = new Set();
   for (const type of CRYPT_TYPES) {
     assert.equal(seedCount(type), 1, 'un solo seme: la variante non dipende da lui');
     const sigs = new Set();
-    for (let v = 0; v < CRYPT_VARIANTS; v++) {
+    for (let v = 0; v < VARS(type); v++) {
       const clean = build(type, v), dirty = build(type, v, true), broken = build(type, v, true, true);
       assert.ok(clean.geometries.solid && tris(clean) > 2500, `${type} v${v}: modello vero`);
       assert.ok(tris(dirty) > tris(clean) && tris(broken) > tris(clean), `${type} v${v}: sporca e rotta hanno più dettagli`);
@@ -54,9 +58,9 @@ test('cripte: 5 famiglie × 3 varianti × 3 stati si costruiscono, diverse tra l
       assert.ok(box.min.y > -0.3 && box.max.y < 5, `${type} v${v}: altezza ragionevole`);
       seen.add(`${type}:${v}`);
     }
-    assert.equal(sigs.size, 3, `${type}: le tre varianti sono davvero diverse`);
+    assert.equal(sigs.size, VARS(type), `${type}: le versioni sono davvero diverse`);
   }
-  assert.equal(seen.size, 15);
+  assert.equal(seen.size, 15 + VILLAGE.length);
 });
 
 test('cripte: la variante è sempre nell\'intervallo, anche se il salvataggio dice altro', () => {
@@ -69,8 +73,8 @@ test('cripte: la variante è sempre nell\'intervallo, anche se il salvataggio di
 test('cripte: luci accese solo da integre o sporche e accese; spente o rotte niente luce', () => {
   for (const type of CRYPT_TYPES) {
     const on = build(type, 0), dirty = build(type, 0, true), off = build(type, 0, false, false, false), broken = build(type, 0, true, true), brokenOn = build(type, 0, true, true, true);
-    assert.equal(on.lights.length, 2, `${type}: due luci`);
-    assert.equal(dirty.lights.length, 2);
+    assert.ok(on.lights.length >= 1 && on.lights.length <= 6, `${type}: qualche luce (${on.lights.length})`);
+    assert.equal(dirty.lights.length, on.lights.length);
     assert.ok(on.geometries.glow, `${type}: ha parti luminose`);
     assert.equal(off.lights.length, 0, `${type}: spenta senza luci`);
     assert.ok(!off.geometries.glow, `${type}: spenta senza parti luminose`);
@@ -84,7 +88,7 @@ test('cripte: luci accese solo da integre o sporche e accese; spente o rotte nie
 
 test('cripte: sporche e rotte cambiano forma come le altre costruzioni (degrado comune + pezzi che mancano)', () => {
   for (const type of CRYPT_TYPES) {
-    for (let v = 0; v < CRYPT_VARIANTS; v++) {
+    for (let v = 0; v < VARS(type); v++) {
       const clean = build(type, v), dirty = build(type, v, true), broken = build(type, v, true, true);
       // le forme di partenza sono le stesse: lo sporco aggiunge, da rotta si perde qualcosa e si aggiungono macerie
       assert.ok(tris(dirty) > tris(clean) * 1.02, `${type} v${v}: sporca > integra`);
@@ -154,7 +158,7 @@ test('cripte: le superfici aperte (spicchi del tetto, vasca rotta, anelli a met�
 
 test('cripte: ogni versione ha la sua anteprima (Bottega mostra la principale, la scheda di una cripta posata la sua)', async () => {
   const fs = await import('node:fs');
-  for (const type of CRYPT_TYPES) for (const id of [type, `${type}-v2`, `${type}-v3`]) {
+  for (const type of CRYPT_TYPES) for (const id of [type, `${type}-v2`, `${type}-v3`].slice(0, VARS(type))) {
     assert.ok(fs.existsSync(new URL(`../src/assets/previews/${id}.webp`, import.meta.url)), `manca l'anteprima ${id}`);
   }
 });
@@ -191,4 +195,19 @@ test('cripta degli scheletri ritirata: non si compra più, ma quella già posata
   s.inventory.crypt_skeleton = 1;
   const p = R.placeFromInventory(s, 'crypt_skeleton', spot.x, spot.y, 0, now);
   assert.ok(p && build('crypt_skeleton', p.variant).geometries.solid, 'si disegna ancora');
+});
+
+test('case del villaggetto: si comprano quante se ne vuole, hanno la riga «Effetto» che ravviva il cimitero', async () => {
+  const { itemEffect } = await import('../src/ui/effects.ts');
+  const now = new Date('2026-11-05T10:00:00Z');
+  const s = createNewGame(now, 17);
+  s.player.xp = 99999; s.player.wisps = 9999;
+  for (const type of ['crypt_ghost', ...VILLAGE]) {
+    assert.equal(R.shopAvailability(s, type, now), 'ok', type);
+    assert.ok(R.maxBuyable(s, type) > 1, `${type}: più d'una`);
+    assert.ok(itemEffect(type) && !itemEffect(type).startsWith('item.'), `${type}: effetto scritto`);
+  }
+  R.buy(s, 'crypt_reaper', 2, now);
+  assert.equal(s.inventory.crypt_reaper, 2);
+  for (const type of ['crypt_zombie', 'crypt_nature', 'crypt_witch']) assert.equal(R.shopAvailability(s, type, now), 'retired', type);
 });

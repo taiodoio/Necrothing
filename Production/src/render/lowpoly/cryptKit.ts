@@ -5,9 +5,9 @@
 
 import * as THREE from 'three';
 import type { PVis } from '../types.ts';
-import { LP, type LPOpts } from './kit.ts';
-import { LPC } from './palette.ts';
-import { candle as gameCandle, grassTuft } from './details.ts';
+import { irregularShape, LP, type LPOpts } from './kit.ts';
+import { GRASS, GRASS_DRY, LPC } from './palette.ts';
+import { candle as gameCandle, flower, grassTuft, pebbles, weeds } from './details.ts';
 
 export type P3 = [number, number, number];
 type Opts = LPOpts & { bevel?: number };
@@ -16,7 +16,7 @@ type Opts = LPOpts & { bevel?: number };
 export interface CryptCtx {
   lp: LP;
   v: PVis;
-  family: 'zombie' | 'ghost' | 'skeleton' | 'nature' | 'witch';
+  family: 'zombie' | 'ghost' | 'skeleton' | 'nature' | 'witch' | 'reaper' | 'rectory' | 'lamplighter' | 'florist';
   variant: 1 | 2 | 3;
   /** Luci accese: non rotta e acceso. */
   lit: boolean;
@@ -187,4 +187,79 @@ export function votive(c: CryptCtx, x: number, y: number, z: number, color: stri
 /** Ciuffo d'erba nel cortile; `h` come nelle misure del laboratorio (0,08–0,35). */
 export function tuft(lp: LP, x: number, z: number, h = 0.2, dry = false) {
   grassTuft(lp, x, z, Math.max(0.6, h / 0.12), dry ? ['#8a8053', '#7a6e4c'] : undefined);
+}
+
+/** Rettangolo del lotto (x0, z0, x1, z1) da lasciare libero dal prato: casa, vialetto, oggetti. */
+export type Keep = readonly [number, number, number, number];
+
+/**
+ * Il prato del lotto, come quello del gioco attorno (che sulle caselle occupate non cresce):
+ * ciuffi d'erba fitti, qualche fiorellino e sassolino, cella per cella, fuori dai rettangoli
+ * `keep`. Il lotto 4 × 5 si fonde così col prato vicino. Trascurato: erba secca ed erbacce.
+ */
+export function meadow(c: CryptCtx, keep: readonly Keep[], shrubs: ReadonlyArray<readonly [number, number, number]> = [], density = 3.4) {
+  const { lp, v } = c;
+  const r = lp.rng;
+  const free = (x: number, z: number) => !keep.some(([x0, z0, x1, z1]) => x > x0 && x < x1 && z > z0 && z < z1);
+  for (let cz = -2.5; cz < 2.5; cz += 1) for (let cx = -2; cx < 2; cx += 1) {
+    let n = Math.floor(density) + (r.next() < density % 1 ? 1 : 0);
+    while (n-- > 0) {
+      const x = cx + r.range(0.12, 0.88), z = cz + r.range(0.12, 0.88), k = r.next();
+      if (!free(x, z)) continue;
+      if (k < 0.74) {
+        for (let i = 0; i < 1 + r.int(2); i++) grassTuft(lp, x + r.range(-0.15, 0.15), z + r.range(-0.15, 0.15), 1.5 + r.next() * 0.65, v.dirty && r.chance(0.5) ? GRASS_DRY : GRASS);
+      } else if (k < 0.84) {
+        grassTuft(lp, x, z, 1.15);
+        const col = r.pick(LPC.flowers);
+        for (let i = 0; i < 3 + r.int(3); i++) flower(lp, x + r.range(-0.2, 0.2), z + r.range(-0.2, 0.2), v.broken ? LPC.dry : r.chance(0.8) ? col : r.pick(LPC.flowers), 0.14 + r.next() * 0.1);
+      } else if (k < 0.94) pebbles(lp, x - 0.15, z - 0.15, x + 0.15, z + 0.15, 3 + r.int(2));
+      else if (v.dirty) weeds(lp, x, z, 1.2);
+      else grassTuft(lp, x, z, 1.9, GRASS);
+    }
+  }
+  for (const [x, z, sc] of shrubs) shrub(c, x, z, sc);
+}
+
+/** Cespuglio basso (tre o quattro chiome) agli angoli della casa: la lega al prato. */
+export function shrub(c: CryptCtx, x: number, z: number, s = 1) {
+  const { lp, v } = c;
+  const r = lp.rng;
+  const pal = v.dirty ? ['#4a4a2c', '#55522f', '#3f4a2c'] : ['#2f4529', '#3a5230', '#44502c', '#4a5f3a'];
+  for (let i = 0; i < 3 + r.int(2); i++) {
+    const a = r.range(0, Math.PI * 2), d = r.range(0, 0.16) * s, rr = (0.17 + r.next() * 0.09) * s;
+    lp.blob(x + Math.cos(a) * d, rr * 0.7, z + Math.sin(a) * d, rr, rr * 0.85, rr, r.pick(pal), { vary: 0.12, detail: 1 });
+  }
+  for (let i = 0; i < 3; i++) grassTuft(lp, x + r.range(-0.3, 0.3) * s, z + r.range(-0.3, 0.3) * s, 1.4, GRASS);
+}
+
+/**
+ * Vialetto in ciottoli come il Sentiero di pietra del gioco: pietre poligonali basse, a file
+ * sfalsate, lungo una linea (punti x, z del lotto) larga `w`. Ordinato, con le fughe d'erba.
+ */
+export function cobblePath(c: CryptCtx, pts: ReadonlyArray<readonly [number, number]>, w = 0.62) {
+  const { lp, v } = c;
+  const r = lp.rng;
+  const tones = [LPC.stone, '#5d6168', '#727069', LPC.stoneWarm, '#666660', '#7d7a74'];
+  const P = 0.2;
+  let row = 0;
+  for (let i = 1; i < pts.length; i++) {
+    const [ax, az] = pts[i - 1], [bx, bz] = pts[i];
+    const len = Math.hypot(bx - ax, bz - az), ang = Math.atan2(bx - ax, bz - az);
+    const n = Math.max(1, Math.round(len / P));
+    for (let k = 0; k < n; k++, row++) {
+      const t = (k + 0.5) / n, cx = ax + (bx - ax) * t, cz = az + (bz - az) * t;
+      const cols = Math.max(2, Math.round(w / P)), shift = row % 2 ? P * 0.5 : 0;
+      for (let j = 0; j < cols + (row % 2 ? 0 : 1); j++) {
+        const off = -w / 2 + j * P + shift + r.range(-0.02, 0.02);
+        if (Math.abs(off) > w / 2 + 0.02) continue;
+        if (v.broken && r.chance(0.18)) continue;
+        const x = cx + Math.cos(ang) * off, z = cz - Math.sin(ang) * off, h = 0.035 + r.next() * 0.02;
+        lp.push([x, h / 2 - 0.006, z], r.range(0, 6.28), -Math.PI / 2 + r.range(-0.05, 0.05), r.range(-0.05, 0.05));
+        lp.extrude(irregularShape(r, 0.085 + r.next() * 0.02, 5 + r.int(3), 0.85 + r.next() * 0.25), h, r.pick(tones), {
+          bevel: 0.01, vary: 0.05, ao: 0.3, curve: 1, topTint: v.dirty ? LPC.moss : '#8f8c86', topAmount: v.dirty ? 0.45 : 0.3,
+        });
+        lp.pop();
+      }
+    }
+  }
 }

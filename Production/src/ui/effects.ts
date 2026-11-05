@@ -33,6 +33,12 @@ const EFFECTS: Record<string, () => string> = {
   ice_cream_cart: () => t('item.effect.iceCreamCart'),
   flower_kiosk: () => t('item.effect.flowerKiosk'),
   post_office: () => t('item.effect.postOffice'),
+  // le case del villaggetto non fanno niente di speciale: ravvivano il cimitero
+  crypt_ghost: () => t('item.effect.village'),
+  crypt_florist: () => t('item.effect.village'),
+  crypt_rectory: () => t('item.effect.village'),
+  crypt_lamplighter: () => t('item.effect.village'),
+  crypt_reaper: () => t('item.effect.village'),
   ghost_hunters: () => t('item.effect.ghostHunters', { n: Math.round(SPAWN_MODIFIERS.huntersBonus * 100) }),
 };
 

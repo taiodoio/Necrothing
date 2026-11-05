@@ -1642,5 +1642,6 @@ export default {
   "item.villageLamplighter.label": "点灯夫の家",
   "item.villageLamplighter.desc": "ここに住む点灯夫は、毎晩長い竿で墓地の明かりをともして回る。差し掛け小屋ではランタンの修理。壊れたランタンに必要なのは、信じてくれる誰かだけなんだとか。",
   "item.villageReaper.label": "死神のコテージ",
-  "item.villageReaper.desc": "死神は引退した。大鎌は今や草刈り専用、破風の時計はいつも三時を指している。育てているのはトマト。今のところは。"
+  "item.villageReaper.desc": "死神は引退した。大鎌は今や草刈り専用、破風の時計はいつも三時を指している。育てているのはトマト。今のところは。",
+  "settings.sky.title": "時間と天気"
 } satisfies Record<string, string>;

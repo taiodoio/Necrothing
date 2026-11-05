@@ -309,6 +309,8 @@ export function progressDialog(title: string, message: string): Progress {
 export interface Modal {
   /** Cambia il contenuto (es. dopo l'acquisto). */
   set: (node: Node) => void;
+  /** Mostra un elemento fisso nell'angolo, sopra il contenuto scorrevole. */
+  setPinned: (node: Node | null) => void;
   /** Chiude; `quiet` salta onClose (quando si chiude anche il drawer). */
   close: (quiet?: boolean) => void;
 }
@@ -331,12 +333,13 @@ export function openModal(content: Node, opts: { onClose?: () => void; label?: s
   const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') { e.stopPropagation(); e.preventDefault(); close(); } };
   // la X in alto a destra, come nei pannelli; il contenuto si cambia senza toccarla
   const body = h('div', { class: 'modal-body' }, content);
+  const pinned = h('div', { class: 'modal-pinned', hidden: true });
   const x = h('button', { class: 'icon-btn small modal-close', 'aria-label': t('dialog.close'), onclick: () => close() }, icon('close', 22));
-  const box = h('div', { class: 'dialog modal', role: 'dialog', 'aria-modal': 'true', 'aria-label': opts.label, onclick: (e: Event) => e.stopPropagation() }, x, body);
+  const box = h('div', { class: 'dialog modal', role: 'dialog', 'aria-modal': 'true', 'aria-label': opts.label, onclick: (e: Event) => e.stopPropagation() }, pinned, x, body);
   const scrim = h('div', { class: 'dialog-scrim modal-scrim', onclick: () => close() }, box);
   ($('#drawer').parentElement ?? document.body).append(scrim);
   document.addEventListener('keydown', onKey, true);
-  return { set: (node) => body.replaceChildren(node), close };
+  return { set: (node) => body.replaceChildren(node), setPinned: (node) => { pinned.replaceChildren(...(node ? [node] : [])); pinned.hidden = !node; }, close };
 }
 
 export function fmtDate(iso: string | null): string {

@@ -1642,5 +1642,6 @@ export default {
   "item.villageLamplighter.label": "点灯人的家",
   "item.villageLamplighter.desc": "点灯人住在这里，每天傍晚他都用长杆点亮墓地的灯。他在棚子底下修灯笼：他说，坏掉的灯笼只是需要有人相信它们。",
   "item.villageReaper.label": "死神的小屋",
-  "item.villageReaper.desc": "死神退休了：镰刀现在只用来割草，山墙上的钟永远停在三点。他在种番茄。暂时而已。"
+  "item.villageReaper.desc": "死神退休了：镰刀现在只用来割草，山墙上的钟永远停在三点。他在种番茄。暂时而已。",
+  "settings.sky.title": "时间与天气"
 } satisfies Record<string, string>;

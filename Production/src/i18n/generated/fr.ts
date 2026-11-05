@@ -1642,5 +1642,6 @@ export default {
   "item.villageLamplighter.label": "Maison de l’allumeur de réverbères",
   "item.villageLamplighter.desc": "Ici vit l’allumeur de réverbères, qui allume chaque soir les lumières du cimetière avec sa perche. Sous l’appentis, il répare les lanternes : celles qui sont cassées, dit-il, ont juste besoin que quelqu’un croie en elles.",
   "item.villageReaper.label": "Maisonnette de la Faucheuse",
-  "item.villageReaper.desc": "La Faucheuse a pris sa retraite : la faux ne sert plus qu’à l’herbe et l’horloge du pignon indique toujours trois heures. Elle cultive des tomates. Pour l’instant."
+  "item.villageReaper.desc": "La Faucheuse a pris sa retraite : la faux ne sert plus qu’à l’herbe et l’horloge du pignon indique toujours trois heures. Elle cultive des tomates. Pour l’instant.",
+  "settings.sky.title": "Heure & météo"
 } satisfies Record<string, string>;

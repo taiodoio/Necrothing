@@ -1682,5 +1682,6 @@ export default {
   "item.villageLamplighter.label": "Lamplighter's House",
   "item.villageLamplighter.desc": "Home of the lamplighter, who lights the cemetery every evening with his long pole. Under the lean-to he mends lanterns: the broken ones, he says, just need someone to believe in them.",
   "item.villageReaper.label": "Reaper's Cottage",
-  "item.villageReaper.desc": "The Reaper has retired: the scythe is just for the grass now, and the clock on the gable always says three. He grows tomatoes. For now."
+  "item.villageReaper.desc": "The Reaper has retired: the scythe is just for the grass now, and the clock on the gable always says three. He grows tomatoes. For now.",
+  "settings.sky.title": "Time & Weather"
 } satisfies Record<string, string>;

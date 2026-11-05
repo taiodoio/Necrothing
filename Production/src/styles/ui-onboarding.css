@@ -20,6 +20,7 @@
 }
 .ob-content.out { animation: obFadeOut 0.24s ease-in both; pointer-events: none; }
 .ob-name-layer { align-content: safe center; }
+.ob-intro-layer { touch-action: pan-y; }
 @keyframes obFade { from { opacity: 0; } }
 @keyframes obFadeOut { to { opacity: 0; } }
 .ob-layer .row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; width: 100%; }
@@ -226,6 +227,10 @@ body.ob-open .ob-coach { display: none; }
 /* ancorato in alto: esce sempre di un terzo, anche quando il consiglio è lungo */
 .ob-coach .ob-bust.small { position: absolute; left: 6px; top: 0; width: 84px; height: 74px; margin: 0; }
 .ob-coach .ob-bust.small img { height: 116px; }
+/* Il primo obiettivo resta sotto l'HUD, come le notifiche dei personaggi. */
+.ui-next .ob-coach.ob-goal { top: calc(var(--hud-top) + 22px + var(--safe-t)); }
+.ob-coach.ob-goal .ob-bust.small { top: 4px; height: 80px; overflow: hidden; border-radius: 12px 12px 0 0; }
+.ob-coach.ob-goal .ob-bust.small img { height: 92px; bottom: 0; }
 /* nel cortile l'HUD in alto non c'è (nessun passo lo spiega; torna nel cimitero): il consiglio sale al suo posto,
    col mezzobusto dentro il riquadro (sopra non c'è più spazio per farlo sporgere) */
 body.yard-play .hud-top { visibility: hidden; }

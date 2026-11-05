@@ -381,6 +381,7 @@ export default {
   'settings.fps.30Hint': 'Consuma meno batteria e scalda meno il telefono.',
   'settings.fps.60Hint': 'Più fluido, ma consuma più batteria.',
   'settings.time': 'Ora del giorno',
+  'settings.sky.title': 'Ora & Meteo',
   // breve: pulsanti dell'ora del giorno («Reale» = l'ora del telefono)
   'settings.time.auto': 'Reale',
   'settings.time.day': 'Giorno',

@@ -1642,5 +1642,6 @@ export default {
   "item.villageLamplighter.label": "Casa do Acendedor de Lampiões",
   "item.villageLamplighter.desc": "Aqui vive o acendedor de lampiões, que todas as noites acende as luzes do cemitério com a vara. Debaixo do alpendre conserta lanternas: as partidas, diz ele, só precisam de alguém que acredite nelas.",
   "item.villageReaper.label": "Casinha do Ceifeiro",
-  "item.villageReaper.desc": "O Ceifeiro reformou-se: a foice agora só serve para a relva e o relógio do frontão marca sempre as três. Cultiva tomates. Por enquanto."
+  "item.villageReaper.desc": "O Ceifeiro reformou-se: a foice agora só serve para a relva e o relógio do frontão marca sempre as três. Cultiva tomates. Por enquanto.",
+  "settings.sky.title": "Hora e tempo"
 } satisfies Record<string, string>;

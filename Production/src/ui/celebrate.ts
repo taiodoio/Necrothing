@@ -192,7 +192,7 @@ export function celebrateRank(level: number) {
 function rankCard(level: number, levels: number[]): Celebration {
   const rank = RANKS.find((r) => r.level === level)!;
   const has = (r: number) => levels.includes(r);
-  const items = CATALOG_LIST.filter((d) => has(d.minRank) && !d.permanent && d.cost > 0).length;
+  const items = CATALOG_LIST.filter((d) => has(d.minRank) && !d.permanent && !d.retired && d.cost > 0).length;
   const stones = Object.values(GRAVE_TYPE_MIN_RANK).filter((r) => has(r)).length;
   const parts = [items ? t('celebrate.rank.items', { n: items }) : '', stones ? t('celebrate.rank.stones', { n: stones }) : ''].filter(Boolean);
   return {

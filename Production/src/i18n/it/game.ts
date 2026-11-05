@@ -74,6 +74,7 @@ export default {
 
   // ── Regole: Bottega e inventario ──
   'rules.buy.season': 'Non è la stagione giusta.',
+  'rules.buy.retired': 'Non si trova più in Bottega.',
   'rules.buy.rank': 'Serve il rango {rank}.',
   // {feat}: descrizione del traguardo, in minuscolo (es. «la strega deve vendere 30 pozioni»)
   'rules.buy.feat': 'Si sblocca con un traguardo: {feat}.',

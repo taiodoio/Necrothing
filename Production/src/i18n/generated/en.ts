@@ -1665,12 +1665,13 @@ export default {
   "item.cryptZombie.desc": "Laundry of dubious hygiene, a wheelbarrow and a crooked tomb. There are three versions: the foreman picks one by flipping a three-sided coin.",
   "item.cryptNature.label": "Nature Crypt",
   "item.cryptNature.desc": "A wild vegetable patch with a dolmen and mushrooms. Nobody designed it, so naturally chance picks the version.",
-  "item.cryptGhost.label": "Ghost Crypt",
-  "item.cryptGhost.desc": "A memory garden with a moon pond and a bench for chatting. There are three designs and the ghosts, undecided, draw lots.",
+  "item.cryptGhost.label": "Haunted Cottage",
+  "item.cryptGhost.desc": "A crooked cottage with a bell-shaped roof: there’s always someone at the window, even when nobody’s home. There are three versions: the house ghost chooses, and it doesn’t like visitors.",
   "item.cryptSkeleton.label": "Skeleton Crypt",
   "item.cryptSkeleton.desc": "A rehearsal room in bone and wood, marimba included. Three versions are possible; the drummer decides which one you get, in time.",
   "sim.zombieMud#one": "A zombie shambled through while you were away: one headstone is covered in muddy footprints.",
   "sim.zombieMud#other": "Zombies shambled through while you were away: {n} headstones are covered in muddy footprints.",
   "item.cryptWitch.label": "Witch's Crypt",
-  "item.cryptWitch.desc": "The witch's house: a hat-shaped roof, a carved circle and something bubbling in the garden. There are three versions: the cauldron decides, and you don't argue with the cauldron."
+  "item.cryptWitch.desc": "The witch's house: a hat-shaped roof, a carved circle and something bubbling in the garden. There are three versions: the cauldron decides, and you don't argue with the cauldron.",
+  "rules.buy.retired": "It's no longer sold at the Shop."
 } satisfies Record<string, string>;

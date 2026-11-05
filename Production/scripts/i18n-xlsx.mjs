@@ -49,6 +49,23 @@ const RECOVERED = {
   ko: { 'detail.business.ready#one': '+{n}개 수령 가능 (하루 위스프 {min}~{max}개, 최대 {cap}개)', 'detail.business.ready#other': '+{n}개 수령 가능 (하루 위스프 {min}~{max}개, 최대 {cap}개)', 'inventory.sellGain': '+{n}' },
 };
 const TEXT_OVERRIDES = {
+  // la Cripta dei Fantasmi è diventata la Casetta infestata
+  'item.cryptGhost.label': {
+    it: 'Casetta infestata', en: 'Haunted Cottage', de: 'Spukhäuschen', fr: 'Maisonnette hantée', es: 'Casita encantada', pt: 'Casinha assombrada',
+    'zh-Hans': '闹鬼小屋', 'zh-Hant': '鬧鬼小屋', ja: 'おばけの小さな家', ko: '유령 들린 오두막',
+  },
+  'item.cryptGhost.desc': {
+    it: 'Una casetta storta col tetto a campana: alla finestra c’è sempre qualcuno, anche quando non c’è nessuno. Le versioni sono tre: le sceglie il fantasma di casa, che non ama le visite.',
+    en: 'A crooked cottage with a bell-shaped roof: there’s always someone at the window, even when nobody’s home. There are three versions: the house ghost chooses, and it doesn’t like visitors.',
+    de: 'Ein schiefes Häuschen mit glockenförmigem Dach: Am Fenster steht immer jemand, auch wenn niemand da ist. Es gibt drei Versionen: Der Hausgeist sucht aus, und er mag keinen Besuch.',
+    fr: 'Une maisonnette de travers au toit en cloche : il y a toujours quelqu’un à la fenêtre, même quand il n’y a personne. Il y a trois versions : c’est le fantôme de la maison qui choisit, et il n’aime pas les visites.',
+    es: 'Una casita torcida con tejado de campana: siempre hay alguien en la ventana, aunque no haya nadie. Hay tres versiones: las elige el fantasma de la casa, que no soporta las visitas.',
+    pt: 'Uma casinha torta com telhado em forma de sino: há sempre alguém à janela, mesmo quando não está ninguém. Há três versões: escolhe-as o fantasma da casa, que não gosta de visitas.',
+    'zh-Hans': '一座歪歪的钟形屋顶小屋：窗边总有人在，哪怕屋里谁也没有。共有三个版本：由屋里的幽灵挑选，它可不喜欢访客。',
+    'zh-Hant': '一座歪歪的鐘形屋頂小屋：窗邊總有人在，哪怕屋裡誰也沒有。共有三個版本：由屋裡的幽靈挑選，它可不喜歡訪客。',
+    ja: '釣り鐘形の屋根の、かしいだ小さな家。誰もいないときでも、窓辺にはいつも誰かがいます。バージョンは3つ。選ぶのは家に住むおばけで、お客さんは苦手です。',
+    ko: '종 모양 지붕의 삐뚤어진 오두막. 아무도 없을 때도 창가엔 늘 누군가 있어요. 버전은 세 가지이고, 집에 사는 유령이 고르는데 손님은 반기지 않아요.',
+  },
   'hud.tools.undo': { it: 'Annulla ultima modifica', en: 'Undo last change', de: 'Letzte Änderung rückgängig', fr: 'Annuler la dernière modification', es: 'Deshacer último cambio', pt: 'Desfazer última alteração', 'zh-Hans': '撤销上一步', 'zh-Hant': '復原上一步', ja: '直前の変更を元に戻す', ko: '마지막 변경 취소' },
   // onboarding.yard.place e onboarding.yard.edit, i suggerimenti degli strumenti e edit.intro.text: tolti, ora i testi li dà il workbook (CMS)
   'tree.memory.free': {

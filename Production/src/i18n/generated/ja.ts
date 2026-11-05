@@ -1625,12 +1625,13 @@ export default {
   "item.cryptZombie.desc": "衛生に疑問のある洗濯物と、手押し車、傾いたお墓。バージョンは3つ。親方が三面のコインを投げて決めます。",
   "item.cryptNature.label": "自然の地下墓室",
   "item.cryptNature.desc": "ドルメンとキノコのある野生の菜園。誰も設計していないので、バージョンはもちろん運任せです。",
-  "item.cryptGhost.label": "幽霊の地下墓室",
-  "item.cryptGhost.desc": "月の池と、おしゃべり用のベンチがある思い出の庭。設計は3つあり、優柔不断な幽霊たちがくじ引きで決めます。",
+  "item.cryptGhost.label": "おばけの小さな家",
+  "item.cryptGhost.desc": "釣り鐘形の屋根の、かしいだ小さな家。誰もいないときでも、窓辺にはいつも誰かがいます。バージョンは3つ。選ぶのは家に住むおばけで、お客さんは苦手です。",
   "item.cryptSkeleton.label": "ガイコツの地下墓室",
   "item.cryptSkeleton.desc": "骨と木でできたリハーサル室。マリンバ付きです。バージョンは3つ。どれが来るかはドラマーがリズムに乗って決めます。",
   "sim.zombieMud#one": "留守のあいだにゾンビが通りました。墓石が一基、泥の足跡だらけです。",
   "sim.zombieMud#other": "留守のあいだにゾンビが通りました。墓石が{n}基、泥の足跡だらけです。",
   "item.cryptWitch.label": "魔女の地下墓室",
-  "item.cryptWitch.desc": "魔女の家。帽子の形の屋根、刻まれた円、そして庭でぐつぐつ煮えている何か。バージョンは3つ。決めるのは大釜で、大釜には逆らえません。"
+  "item.cryptWitch.desc": "魔女の家。帽子の形の屋根、刻まれた円、そして庭でぐつぐつ煮えている何か。バージョンは3つ。決めるのは大釜で、大釜には逆らえません。",
+  "rules.buy.retired": "もうショップでは売っていません。"
 } satisfies Record<string, string>;

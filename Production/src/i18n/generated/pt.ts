@@ -1625,12 +1625,13 @@ export default {
   "item.cryptZombie.desc": "Roupa de higiene duvidosa, um carrinho de mão e um túmulo torto. Existem três versões: o capataz escolhe atirando uma moeda de três faces.",
   "item.cryptNature.label": "Cripta da Natureza",
   "item.cryptNature.desc": "Uma horta selvagem com um dólmen e cogumelos. Ninguém a projetou, por isso, naturalmente, é o acaso que escolhe a versão.",
-  "item.cryptGhost.label": "Cripta dos Fantasmas",
-  "item.cryptGhost.desc": "Um jardim da memória com lago lunar e um banco para conversar. Há três projetos e os fantasmas, indecisos, tiram à sorte.",
+  "item.cryptGhost.label": "Casinha assombrada",
+  "item.cryptGhost.desc": "Uma casinha torta com telhado em forma de sino: há sempre alguém à janela, mesmo quando não está ninguém. Há três versões: escolhe-as o fantasma da casa, que não gosta de visitas.",
   "item.cryptSkeleton.label": "Cripta dos Esqueletos",
   "item.cryptSkeleton.desc": "Uma sala de ensaio de osso e madeira, marimba incluída. São possíveis três versões; qual te calha decide-o o baterista, a compasso.",
   "sim.zombieMud#one": "Um zombie passou enquanto estiveste fora: uma lápide ficou cheia de pegadas de lama.",
   "sim.zombieMud#other": "Uns zombies passaram enquanto estiveste fora: {n} lápides ficaram cheias de pegadas de lama.",
   "item.cryptWitch.label": "Cripta da Bruxa",
-  "item.cryptWitch.desc": "A casa da bruxa: um telhado em forma de chapéu, um círculo gravado e algo a borbulhar no jardim. Há três versões: decide o caldeirão, e com o caldeirão não se discute."
+  "item.cryptWitch.desc": "A casa da bruxa: um telhado em forma de chapéu, um círculo gravado e algo a borbulhar no jardim. Há três versões: decide o caldeirão, e com o caldeirão não se discute.",
+  "rules.buy.retired": "Já não se vende na Loja."
 } satisfies Record<string, string>;

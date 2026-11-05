@@ -5,6 +5,8 @@
 import * as THREE from 'three';
 import { LPC } from './palette.ts';
 import { skull as gameSkull } from './extras.ts';
+import { roundTopShape } from './kit.ts';
+import { flower, hangingLantern, pumpkin } from './details.ts';
 import {
   beam, block, cloth, CP, emit, flame, groundRing, leaf, mushroom, prof, put, root, slab, torus, tuft, turned, votive, type CryptCtx,
 } from './cryptKit.ts';
@@ -21,8 +23,9 @@ function ground(c: CryptCtx) {
       for (let i = 0; i < 9; i++) slab(lp, Math.sin(i * 1.1) * 0.09, 0.015, 0.35 + i * 0.23, 0.55, 0.055, 0.18, i % 2 ? '#8b8b75' : '#696d60', Math.sin(i) * 0.08);
       break;
     case 'ghost':
-      ([[0, 2.27], [0.35, 2.02], [0.64, 1.72], [0.72, 1.39], [0.7, 1.06], [0.56, 0.72], [0.28, 0.42], [0, 0.22]] as const)
-        .forEach(([x, z], i) => slab(lp, x, 0.015, z, 0.36, 0.045, 0.26, i % 2 ? '#a7afa0' : '#929d8b', i * 0.16));
+      // il vialetto di pietre piatte dalla porta al bordo del lotto
+      ([[-0.2, 0.42], [-0.16, 0.72], [-0.24, 1.02], [-0.18, 1.33], [-0.26, 1.64], [-0.2, 1.95], [-0.25, 2.25]] as const)
+        .forEach(([x, z], i) => slab(lp, x, 0.012, z, 0.34, 0.045, 0.24, i % 2 ? '#8d8a80' : '#7a776d', i * 0.4 - 0.2));
       break;
     case 'skeleton':
       slab(lp, 0, 0.012, 1.14, 3.05, 0.04, 1.9, '#5a5a4f');
@@ -98,42 +101,100 @@ function zombieYard(c: CryptCtx) {
   prof(lp, [[-0.085, 0], [0.085, 0], [0.07, -0.15], [0, -0.21], [-0.07, -0.15]], 0.025, '#6b6f68', [1.49, 0.22, 0.44]);
 }
 
+/** Panchina di legno coi braccioli in ferro, alla scala della panchina del gioco (seduta a 0,38, lunga 1,3). */
+function bench(c: CryptCtx, x: number, z: number, ry: number) {
+  const { lp, v } = c;
+  const L = 1.3;
+  lp.push([x, 0, z], ry);
+  if (!v.broken) {
+    for (let i = 0; i < 3; i++) lp.box(0, 0.36, -0.12 + i * 0.12, L, 0.04, 0.1, LPC.wood, { bevel: 0.006, vary: 0.1 });
+    for (let i = 0; i < 2; i++) lp.push([0, 0.52 + i * 0.15, -0.2], 0, -0.15).box(0, 0, 0, L, 0.08, 0.035, LPC.wood, { bevel: 0.006, vary: 0.1 }).pop();
+  } else lp.push([0.25, 0.06, 0.15], 0.4, 0, 0.25).box(0, 0, 0, L, 0.04, 0.32, LPC.wood, { vary: 0.1 }).pop();
+  for (const sx of [-1, 1]) {
+    beam(lp, [sx * (L / 2 - 0.05), 0, 0.14], [sx * (L / 2 - 0.05), 0.38, 0.12], 0.024, LPC.iron);
+    beam(lp, [sx * (L / 2 - 0.05), 0, -0.16], [sx * (L / 2 - 0.05), 0.82, -0.24], 0.024, LPC.iron);
+    beam(lp, [sx * (L / 2 - 0.05), 0.54, 0.14], [sx * (L / 2 - 0.05), 0.54, -0.2], 0.02, LPC.iron);
+  }
+  lp.pop();
+}
+
+/** Lampione in ferro col lume caldo appeso al braccio, alto come i lampioni del gioco (~2,2). */
+function yardLamp(c: CryptCtx, x: number, z: number, ry = 0) {
+  const { lp } = c;
+  lp.push([x, 0, z], ry);
+  lp.box(0, 0, 0, 0.3, 0.1, 0.3, LPC.stoneDark, { bevel: 0.015 });
+  lp.lathe(0, 0.1, 0, [[0.09, 0], [0.08, 0.06], [0.05, 0.14], [0, 0.14]], 8, LPC.iron, { jitter: 0 });
+  lp.cyl(0, 0.24, 0, 0.04, 0.032, 1.85, 6, LPC.iron, { jitter: 0 });
+  beam(lp, [0, 2.0, 0], [-0.38, 2.0, 0], 0.022, LPC.iron);
+  put(lp, new THREE.TorusGeometry(0.1, 0.012, 3, 8, Math.PI), LPC.iron, [-0.12, 1.88, 0], [0, 0, Math.PI / 2], { jitter: 0 });
+  hangingLantern(lp, -0.36, 1.98, 0, c.lit, 1.1);
+  lp.pop();
+}
+
 function ghostYard(c: CryptCtx) {
   const { lp, v } = c;
-  const x = -0.56, z = 1.16;
-  const arc = v.broken ? Math.PI * 1.75 : Math.PI * 2;
-  put(lp, new THREE.LatheGeometry([[0, 0.015], [0.54, 0.015], [0.64, 0.07], [0.66, 0.19], [0.57, 0.22], [0.53, 0.11], [0, 0.11]].map(([a, b]) => new THREE.Vector2(a, b)), 16, 0, arc), '#a8b4a0', [x, 0.01, z], [0, 0, 0], { vary: 0.06, ao: 0.2 }, v.broken);
-  const pool = emit(c, v.broken ? '#4a554b' : '#719f96');
-  lp.cyl(x, v.broken ? 0.06 : 0.13, z, 0.535, 0.535, 0.012, 16, pool.color, { ...pool.o, jitter: 0 });
-  if (!v.broken) { const r = emit(c, '#a0c6b5'); groundRing(lp, x, 0.14, z, 0.24, 0.014, r.color, 12, Math.PI * 1.75, r.o); flame(c, x - 0.13, 0.26, z + 0.08, '#afd7c7', 0.026); }
-  // panca curva
-  for (let i = 0; i < 3; i++) {
-    const a = (i - 1) * 0.4, xx = 0.62 + Math.cos(a) * 0.76, zz = 1.2 + Math.sin(a) * 0.76;
-    block(lp, xx, 0.02, zz, 0.14, 0.29, 0.16, '#889785');
-    if (v.broken && i === 2) { slab(lp, xx - 0.15, 0.04, zz + 0.18, 0.3, 0.065, 0.4, '#9fa993', 0.4); continue; }
-    slab(lp, xx, 0.31, zz, 0.3, 0.09, 0.39, '#bdc4af', a);
+  // in tutte: zucche vicino alla casa e un lampione accanto al vialetto
+  for (const [x, z, r, carved] of [[-1.05, 0.35, 0.16, true], [-0.8, 0.52, 0.11, false]] as const) pumpkin(lp, x, 0, z, r, carved && !v.broken, c.lit && carved, 0.6, 1, false);
+  yardLamp(c, 0.35, 2.05);
+  if (c.variant === 1) {
+    // 1 · il laghetto con le ninfee, la panchina a guardarlo, l'aiuola sotto le finestre
+    const px = 0.85, pz = 1.3, R = 0.55;
+    for (let i = 0; i < 14; i++) { const a = (i / 14) * Math.PI * 2; lp.blob(px + Math.cos(a) * (R + 0.05), 0.05, pz + Math.sin(a) * (R + 0.02) * 0.85, 0.1, 0.07, 0.09, i % 3 ? LPC.stone : LPC.stoneLight, { vary: 0.1 }); }
+    lp.push([px, 0, pz], 0, 0, 0, [1, 1, 0.85]);
+    lp.cyl(0, 0, 0, R, R, 0.05, 14, v.broken ? '#3d352a' : '#2c4a50', { bucket: v.broken ? 'solid' : 'water', jitter: 0 });
+    lp.pop();
+    if (!v.broken) {
+      for (const [dx, dz, r] of [[-0.2, -0.1, 0.12], [0.14, 0.12, 0.1], [0.24, -0.16, 0.11], [-0.05, 0.2, 0.09], [-0.3, 0.15, 0.08]] as const) {
+        const sh = new THREE.Shape(); sh.moveTo(0, 0); sh.absarc(0, 0, r, 0.4, Math.PI * 2 - 0.1, false); sh.closePath();
+        lp.push([px + dx, 0.052, pz + dz], dx * 7, -Math.PI / 2).plate(sh, 0.01, LPC.leaf, { ao: 0, vary: 0.12 }).pop();
+      }
+      for (const [dx, dz, col] of [[0.14, 0.12, '#e7a6bf'], [-0.2, -0.1, '#f2ead6'], [0.24, -0.16, '#e7a6bf']] as const) {
+        for (let p = 0; p < 6; p++) lp.push([px + dx, 0.07, pz + dz], (p / 6) * Math.PI * 2, 0.5).box(0, 0, 0.03, 0.035, 0.014, 0.06, col, { jitter: 0, ao: 0 }).pop();
+        lp.blob(px + dx, 0.085, pz + dz, 0.016, 0.014, 0.016, LPC.gold, { jitter: 0 });
+      }
+    } else for (let i = 0; i < 5; i++) lp.blob(px + (i - 2) * 0.12, 0.06, pz + Math.sin(i) * 0.15, 0.07, 0.008, 0.06, '#6b5a3a', { ao: 0 });
+    bench(c, -1.1, 1.35, Math.PI / 2 + 0.25);
+    for (let i = 0; i < 6; i++) flower(lp, 0.42 + (i % 3) * 0.17, 0.3 + Math.floor(i / 3) * 0.15, v.broken ? LPC.dry : i % 2 ? '#d6d7bf' : '#c9a7e8', 0.24);
+  } else if (c.variant === 2) {
+    // 2 · l'orto delle zucche, coi solchi, lo spaventapasseri-fantasma e l'annaffiatoio
+    for (let r = 0; r < 3; r++) lp.box(0.75, 0, 0.75 + r * 0.42, 1.2, 0.06, 0.24, LPC.soil, { bevel: 0.02, vary: 0.12, jitter: 0.015 });
+    for (let r = 0; r < 3; r++) for (let k = 0; k < 3; k++) {
+      if (v.broken && (r + k) % 2) continue;
+      const x = 0.33 + k * 0.42, z = 0.75 + r * 0.42;
+      pumpkin(lp, x, 0.05, z, 0.1 + ((r + k) % 3) * 0.03, false, false, r + k, 1, false);
+      for (let l = 0; l < 2; l++) leaf(lp, x + 0.12, 0.08, z + (l - 0.5) * 0.1, 0.1, LPC.leaf, l * 2);
+    }
+    // spaventapasseri: palo, traversa, un lenzuolo con gli occhi e un cappello
+    lp.push([-0.95, 0, 1.45], 0.4, 0, v.broken ? 0.3 : 0);
+    beam(lp, [0, 0, 0], [0, 1.55, 0], 0.03, LPC.woodDark);
+    beam(lp, [-0.4, 1.15, 0], [0.4, 1.15, 0], 0.025, LPC.woodDark);
+    lp.blob(0, 1.4, 0, 0.17, 0.2, 0.15, '#e8ebe6', { detail: 1, jitter: 0.004 });
+    lp.cyl(0, 0.75, 0, 0.24, 0.14, 0.6, 8, '#e8ebe6', { vary: 0.05 });
+    for (const sx of [-1, 1]) lp.blob(sx * 0.06, 1.44, 0.14, 0.022, 0.03, 0.01, '#1f2a2c', { jitter: 0 });
+    lp.cyl(0, 1.55, 0, 0.26, 0.26, 0.03, 10, LPC.woodDark, { jitter: 0 });
+    lp.cyl(0, 1.58, 0, 0.12, 0.02, 0.32, 8, LPC.woodDark, { jitter: 0.004 });
+    lp.pop();
+    lp.cyl(-0.45, 0, 0.95, 0.12, 0.12, 0.24, 8, '#6d826c', { vary: 0.07 });
+    beam(lp, [-0.35, 0.18, 0.95], [-0.15, 0.27, 0.95], 0.02, '#8a9b7b');
+  } else {
+    // 3 · il piccolo camposanto di famiglia sotto l'arco di rose, e la panchina
+    lp.push([-0.22, 0, 1.15]);
+    for (const sx of [-1, 1]) beam(lp, [sx * 0.42, 0, 0], [sx * 0.42, 1.55, 0], 0.035, LPC.woodDark);
+    if (!(v.broken)) torus(lp, 0, 1.55, 0, 0.42, 0.03, LPC.woodDark, [0, 0, 0], Math.PI, { jitter: 0 });
+    for (let i = 0; i < 12; i++) {
+      const a = (i / 11) * Math.PI, rr = 0.44;
+      if (v.broken && i > 5) continue;
+      lp.blob(Math.cos(a) * rr, 1.55 + Math.sin(a) * rr, 0, 0.07, 0.06, 0.07, i % 3 ? LPC.leaf : '#7a2f3a', { jitter: 0.01 });
+    }
+    lp.pop();
+    for (const [x, z, h] of [[0.65, 0.75, 0.55], [1.1, 0.9, 0.45], [0.85, 1.45, 0.5]] as const) {
+      lp.push([x, 0, z], -0.3, 0, v.broken && x > 1 ? 0.25 : 0).extrude(roundTopShape(0.32, h, 6), 0.08, LPC.stone, { bevel: 0.01, vary: 0.08, topTint: LPC.moss, topAmount: 0.4 }).pop();
+      lp.box(x, 0, z + 0.25, 0.3, 0.05, 0.4, LPC.soil, { bevel: 0.02, vary: 0.1 });
+      if (!v.broken) flower(lp, x, z + 0.18, '#e7a6bf', 0.18);
+    }
+    votive(c, 0.65, 0, 1.05);
+    bench(c, -1.15, 1.6, Math.PI / 2 + 0.3);
   }
-  cloth(lp, 1.34, 0.415, 1.11, 0.2, 0.2, '#b9c8b9', { laid: true, ragged: v.dirty });
-  // albero dei sonagli
-  beam(lp, [-1.38, 0.01, 0.28], [-1.38, 1.17, 0.28], 0.018, LPC.iron);
-  torus(lp, -1.38, 1.06, 0.28, 0.19, 0.014, '#9bab97', [Math.PI / 2, 0, 0]);
-  for (let i = 0; i < 3; i++) {
-    const xx = -1.52 + i * 0.14, yy = 0.67 + (i % 2) * 0.11;
-    if (v.broken && i === 2) { put(lp, new THREE.CylinderGeometry(0.022, 0.03, 0.18, 6), '#9aab94', [-1.35, 0.1, 0.5], [0, 0, Math.PI / 2]); continue; }
-    beam(lp, [xx, 1.06, 0.28], [xx, yy + 0.12, 0.28], 0.004, '#b1bda5');
-    lp.cyl(xx, yy - 0.07, 0.28, 0.026, 0.02, 0.19, 6, '#b4c4af', { jitter: 0.003 });
-  }
-  // fiori di luna
-  for (let i = 0; i < 5; i++) {
-    const xx = 1.02 + (i % 3) * 0.18, zz = 0.2 + Math.floor(i / 3) * 0.15, yy = 0.18 + (i % 2) * 0.055;
-    beam(lp, [xx, 0.02, zz], [xx, yy, zz], 0.008, v.broken ? '#847b58' : '#657d58');
-    const s = new THREE.Shape();
-    for (let j = 0; j < 10; j++) { const a = (j / 10) * Math.PI * 2, r = j % 2 ? 0.022 : 0.059; const px = Math.sin(a) * r, py = Math.cos(a) * r; if (j === 0) s.moveTo(px, py); else s.lineTo(px, py); }
-    s.closePath();
-    put(lp, new THREE.ExtrudeGeometry(s, { depth: 0.006, bevelEnabled: false }), v.broken ? '#a19b7b' : '#d6d7bf', [xx, yy, zz], [-Math.PI / 2, 0, i * 0.35], { jitter: 0, ao: 0 });
-    lp.cyl(xx, yy + 0.004, zz, 0.012, 0.012, 0.012, 5, '#baaf7e', { jitter: 0, ao: 0 });
-  }
-  for (const [xx, zz, h] of [[-1.25, 1.98, 0], [-1.43, 1.9, 0.04], [-1.1, 2.08, 0]] as const) votive(c, xx, h, zz, CP.spectral);
 }
 
 function skeletonYard(c: CryptCtx) {
@@ -369,8 +430,8 @@ function variantProps(c: CryptCtx) {
       break;
     }
     case 'ghost':
-      if (c.variant === 2) votive(c, 1.5, 0.02, 1.88, CP.spectral);
-      else { lp.cyl(-1.48, 0.02, 0.82, 0.12, 0.09, 0.29, 7, '#a7b6aa', { vary: 0.06 }); torus(lp, -1.48, 0.43, 0.82, 0.1, 0.013, '#d3d3ba', [Math.PI / 2, 0, 0]); }
+      if (c.variant === 2) votive(c, 1.5, 0.02, 1.88);
+      else for (const [x, z] of [[1.45, 0.4], [1.6, 0.6]] as const) pumpkin(lp, x, 0, z, 0.1, false, false, 0.3, 1, false);
       break;
     case 'skeleton':
       lp.cyl(1.52, 0.02, 1.86, 0.14, 0.14, 0.22, 7, c.variant === 2 ? '#756650' : '#918570', { vary: 0.07 });
@@ -392,65 +453,5 @@ export function yard(c: CryptCtx) {
   ground(c);
   YARDS[c.family](c);
   variantProps(c);
-}
-
-// ── Recinto ──────────────────────────────────────────────────────────────
-
-/** Recinto del lotto (4 × 5): palizzata, ossa o ferro secondo la famiglia; il cancello è aperto sul sentiero. */
-export function fence(c: CryptCtx) {
-  const { lp, v, family } = c;
-  const wood = family === 'zombie' || family === 'nature', bone = family === 'skeleton', sup = family === 'witch';
-  const color = wood ? (family === 'nature' ? '#79654a' : '#6f5a42') : bone ? LPC.bone : LPC.iron;
-  const segs: Array<[number, number, number, number]> = [[-1.82, -2.27, 1.82, -2.27], [-1.82, -2.27, -1.82, 2.27], [1.82, -2.27, 1.82, 2.27], [-1.82, 2.27, -0.5, 2.27], [0.5, 2.27, 1.82, 2.27]];
-  const corners: Array<[number, number]> = [[-1.82, -2.27], [1.82, -2.27], [-1.82, 2.27], [1.82, 2.27], [-0.5, 2.27], [0.5, 2.27]];
-  corners.forEach(([x, z], i) => {
-    lp.push([x, 0.02, z], 0, 0, v.broken && i === 3 ? 0.24 : 0);
-    lp.box(0, 0, 0, 0.115, 0.58, 0.115, color, { bevel: 0.008, vary: wood ? 0.12 : 0.06 });
-    if (bone) { if (i >= 2) skull(c, 0, 0.64, 0.01, 0.095); else lp.blob(0, 0.62, 0, 0.075, 0.055, 0.06, LPC.bone); }
-    else if (wood) lp.cyl(0, 0.58, 0, 0.08, 0, 0.12, 4, color, { jitter: 0.003 });
-    else {
-      if (sup) lp.box(0, -0.0, 0, 0.22, 0.23, 0.22, '#4a463f', { bevel: 0.015 });
-      lp.blob(0, 0.66, 0, sup ? 0.09 : 0.055, sup ? 0.09 : 0.055, sup ? 0.09 : 0.055, sup ? '#6f7a52' : '#a4afa0', { jitter: 0 });
-    }
-    lp.pop();
-  });
-  segs.forEach(([ax, az, bx, bz], side) => {
-    const len = Math.hypot(bx - ax, bz - az), count = Math.round(len / (wood ? 0.35 : 0.38));
-    const alongX = Math.abs(bz - az) < 0.01;
-    const midX = (ax + bx) / 2, midZ = (az + bz) / 2;
-    for (const yy of [0.21, 0.43]) {
-      if (v.broken && side === 4) { beam(lp, [ax, yy, az], [midX, yy - 0.14, midZ], 0.025, color); continue; }
-      lp.push([midX, yy, midZ], alongX ? 0 : Math.PI / 2);
-      lp.box(0, -0.015, 0, len, wood ? 0.05 : bone ? 0.06 : 0.035, wood ? 0.035 : 0.04, color, { bevel: 0.004, vary: wood ? 0.12 : 0.05 });
-      lp.pop();
-    }
-    for (let i = 1; i < count; i++) {
-      if (v.broken && ((side === 1 && i > count - 4) || (side === 4 && i % 3 !== 0))) continue;
-      const t = i / count, x = ax + (bx - ax) * t, z = az + (bz - az) * t;
-      if (family === 'zombie') {
-        const h = 0.38 + lp.rng.next() * 0.16;
-        lp.push([x, 0.02, z], alongX ? 0 : Math.PI / 2, 0, (lp.rng.next() - 0.5) * 0.13);
-        lp.box(0, 0, 0, 0.124, h - 0.07, 0.06, color, { vary: 0.12, bevel: 0.004 }).cyl(0, h - 0.07, 0, 0.088, 0, 0.07, 4, color, { jitter: 0.003 });
-        lp.pop();
-      } else if (family === 'nature') {
-        beam(lp, [x, 0.02, z], [x + 0.02, 0.54, z], 0.023, color);
-        if (i % 2 === 0) beam(lp, [x - 0.04, 0.1, z], [x + 0.05, 0.51, z + 0.025], 0.012, '#94805b');
-      } else if (bone) {
-        beam(lp, [x, 0.08, z], [x, 0.52, z], 0.025, color);
-        if (i % 2 === 0) lp.blob(x, 0.53, z, 0.045, 0.032, 0.038, LPC.bone, { jitter: 0.004 });
-      } else {
-        beam(lp, [x, 0.06, z], [x, 0.53, z], 0.014, color);
-        if (i % 2 === 0) lp.push([x, 0.53, z]).cyl(0, 0, 0, 0.03, 0, 0.1, 4, '#778274', { jitter: 0 }).pop();
-      }
-    }
-  });
-  // il cancello aperto, verso l'interno, lungo il sentiero
-  for (const z of [1.69, 2.24]) beam(lp, [-0.48, 0.07, z], [-0.48, 0.5, z], 0.023, color);
-  for (const yy of [0.17, 0.44]) beam(lp, [-0.48, yy, 1.69], [-0.48, yy, 2.24], 0.02, color);
-  beam(lp, [-0.48, 0.17, 1.7], [-0.48, 0.44, 2.23], 0.016, color);
-  if (v.broken) {
-    block(lp, 1.28, 0.03, 1.96, 0.66, 0.065, 0.09, color, [0.02, 0.35, 0.05]);
-    block(lp, 1.33, 0.03, 1.77, 0.45, 0.055, 0.08, color, [0, -0.5, 0.03]);
-  }
 }
 

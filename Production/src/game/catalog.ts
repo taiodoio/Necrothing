@@ -42,6 +42,8 @@ export interface PlaceableDef {
   unique?: boolean;
   /** Non eliminabile né vendibile (solo spostabile): la Bottega. */
   permanent?: boolean;
+  /** Ritirato dalla Bottega: non si compra più, ma chi l'ha già posato o in inventario lo tiene. */
+  retired?: boolean;
   /**
    * Senza cure prima o poi si sporca e poi si rompe (tempi casuali, vedi DECAY).
    * Non per i pezzi che si piazzano in serie (sentieri, muretti, staccionate,
@@ -128,7 +130,7 @@ const list: Array<Omit<PlaceableDef, 'access'>> = [
   { id: 'crypt_zombie', label: t('item.cryptZombie.label'), category: 'structure', footprint: [4, 5], cost: 60, minRank: 3, decays: true, light: true, randomVariants: 3, description: t('item.cryptZombie.desc') },
   { id: 'crypt_nature', label: t('item.cryptNature.label'), category: 'structure', footprint: [4, 5], cost: 65, minRank: 3, decays: true, light: true, randomVariants: 3, description: t('item.cryptNature.desc') },
   { id: 'crypt_ghost', label: t('item.cryptGhost.label'), category: 'structure', footprint: [4, 5], cost: 75, minRank: 4, decays: true, light: true, randomVariants: 3, description: t('item.cryptGhost.desc') },
-  { id: 'crypt_skeleton', label: t('item.cryptSkeleton.label'), category: 'structure', footprint: [4, 5], cost: 85, minRank: 4, decays: true, light: true, randomVariants: 3, description: t('item.cryptSkeleton.desc') },
+  { id: 'crypt_skeleton', label: t('item.cryptSkeleton.label'), category: 'structure', footprint: [4, 5], cost: 85, minRank: 4, decays: true, light: true, randomVariants: 3, retired: true, description: t('item.cryptSkeleton.desc') },
   { id: 'crypt_witch', label: t('item.cryptWitch.label'), category: 'structure', footprint: [4, 5], cost: 100, minRank: 5, decays: true, light: true, randomVariants: 3, description: t('item.cryptWitch.desc') },
   { id: 'open_grave', label: t('item.openGrave.label'), category: 'structure', footprint: [2, 2], cost: 12, minRank: 2, decays: true, description: t('item.openGrave.desc') },
   { id: 'wall_stone', label: t('item.wallStone.label'), category: 'structure', footprint: [1, 1], cost: 3, minRank: 1, rotatable: true, description: t('item.wallStone.desc') },

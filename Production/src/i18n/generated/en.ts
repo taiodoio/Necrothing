@@ -1673,5 +1673,14 @@ export default {
   "sim.zombieMud#other": "Zombies shambled through while you were away: {n} headstones are covered in muddy footprints.",
   "item.cryptWitch.label": "Witch's Crypt",
   "item.cryptWitch.desc": "The witch's house: a hat-shaped roof, a carved circle and something bubbling in the garden. There are three versions: the cauldron decides, and you don't argue with the cauldron.",
-  "rules.buy.retired": "It's no longer sold at the Shop."
+  "rules.buy.retired": "It's no longer sold at the Shop.",
+  "item.effect.village": "Livens up the cemetery: a little life never killed anyone.",
+  "item.villageFlorist.label": "Florist's Greenhouse",
+  "item.villageFlorist.desc": "The skeleton florist's house, with the greenhouse built on and flowerbeds edged with bones. He knows his flowers: he's seen them from both sides.",
+  "item.villageRectory.label": "Rectory",
+  "item.villageRectory.desc": "The priest's house, with a little bell tower on the roof and the cassock drying in the sun. The sacristy next door is always open, but only if you knock softly.",
+  "item.villageLamplighter.label": "Lamplighter's House",
+  "item.villageLamplighter.desc": "Home of the lamplighter, who lights the cemetery every evening with his long pole. Under the lean-to he mends lanterns: the broken ones, he says, just need someone to believe in them.",
+  "item.villageReaper.label": "Reaper's Cottage",
+  "item.villageReaper.desc": "The Reaper has retired: the scythe is just for the grass now, and the clock on the gable always says three. He grows tomatoes. For now."
 } satisfies Record<string, string>;

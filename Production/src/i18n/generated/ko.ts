@@ -1633,5 +1633,14 @@ export default {
   "sim.zombieMud#other": "자리를 비운 사이 좀비들이 지나갔어요. 묘비 {n}개가 진흙 발자국투성이예요.",
   "item.cryptWitch.label": "마녀 납골당",
   "item.cryptWitch.desc": "마녀의 집. 모자 모양 지붕, 새겨진 원, 그리고 정원에서 보글보글 끓는 무언가. 버전은 세 가지이고, 가마솥이 정하니 가마솥과는 다투지 마세요.",
-  "rules.buy.retired": "이제 상점에서 팔지 않아요."
+  "rules.buy.retired": "이제 상점에서 팔지 않아요.",
+  "item.effect.village": "묘지에 활기를 불어넣어요. 활기 좀 있다고 죽는 사람은 없으니까요.",
+  "item.villageFlorist.label": "꽃집 주인의 온실",
+  "item.villageFlorist.desc": "해골 꽃집 주인의 집. 온실이 붙어 있고 꽃밭 가장자리는 뼈로 둘렀어요. 꽃이라면 잘 알아요. 이쪽에서도 저쪽에서도 다 봤으니까요.",
+  "item.villageRectory.label": "사제관",
+  "item.villageRectory.desc": "사제의 집. 지붕에는 작은 종탑이 있고 사제복은 햇볕에 널려 있어요. 옆 제의실은 늘 열려 있지만, 살살 노크하는 사람에게만이에요.",
+  "item.villageLamplighter.label": "점등원의 집",
+  "item.villageLamplighter.desc": "이곳에는 매일 저녁 긴 장대로 묘지의 불을 밝히는 점등원이 살아요. 처마 밑에서 등불을 고치는데, 고장 난 등불에 필요한 건 믿어 주는 누군가뿐이래요.",
+  "item.villageReaper.label": "저승사자의 오두막",
+  "item.villageReaper.desc": "저승사자가 은퇴했어요. 이제 낫은 풀 베는 데만 쓰고, 박공의 시계는 늘 세 시를 가리켜요. 토마토를 키워요. 일단은요."
 } satisfies Record<string, string>;

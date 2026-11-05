@@ -1633,5 +1633,14 @@ export default {
   "sim.zombieMud#other": "Uns zombies passaram enquanto estiveste fora: {n} lápides ficaram cheias de pegadas de lama.",
   "item.cryptWitch.label": "Cripta da Bruxa",
   "item.cryptWitch.desc": "A casa da bruxa: um telhado em forma de chapéu, um círculo gravado e algo a borbulhar no jardim. Há três versões: decide o caldeirão, e com o caldeirão não se discute.",
-  "rules.buy.retired": "Já não se vende na Loja."
+  "rules.buy.retired": "Já não se vende na Loja.",
+  "item.effect.village": "Dá vida ao cemitério: um pouco de vida nunca matou ninguém.",
+  "item.villageFlorist.label": "Estufa do Florista",
+  "item.villageFlorist.desc": "A casa do esqueleto florista, com a estufa encostada e os canteiros orlados de ossos. De flores ele percebe: já as viu dos dois lados.",
+  "item.villageRectory.label": "Casa Paroquial",
+  "item.villageRectory.desc": "A casa do padre, com o campanário no telhado e a batina a secar ao sol. A sacristia ao lado está sempre aberta, mas só para quem bate devagarinho.",
+  "item.villageLamplighter.label": "Casa do Acendedor de Lampiões",
+  "item.villageLamplighter.desc": "Aqui vive o acendedor de lampiões, que todas as noites acende as luzes do cemitério com a vara. Debaixo do alpendre conserta lanternas: as partidas, diz ele, só precisam de alguém que acredite nelas.",
+  "item.villageReaper.label": "Casinha do Ceifeiro",
+  "item.villageReaper.desc": "O Ceifeiro reformou-se: a foice agora só serve para a relva e o relógio do frontão marca sempre as três. Cultiva tomates. Por enquanto."
 } satisfies Record<string, string>;

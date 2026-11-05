@@ -553,4 +553,4 @@ function witch(c: CryptCtx) {
   }
 }
 
-export const BUILDINGS: Record<CryptCtx['family'], (c: CryptCtx) => void> = { zombie, ghost, skeleton, nature, witch };
+export const BUILDINGS: Record<'zombie' | 'ghost' | 'skeleton' | 'nature' | 'witch', (c: CryptCtx) => void> = { zombie, ghost, skeleton, nature, witch };

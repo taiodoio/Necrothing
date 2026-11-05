@@ -19,7 +19,7 @@ const SOOT = new THREE.Color('#1f1c1a');
 const MOSS = new THREE.Color('#5a6b40');
 /** Le assi a croce solo su edifici e archi: muretti, staccionate e fosse mostrano già il loro modo di rompersi. */
 // le cripte hanno le loro assi davanti alle porte e alle finestre (quelle comuni finivano dietro le porte in rilievo)
-const NO_BOARDS = new Set(['wall_stone', 'fence_wood', 'fence_iron', 'open_grave', 'crypt_zombie', 'crypt_nature', 'crypt_ghost', 'crypt_skeleton', 'crypt_witch']);
+const NO_BOARDS = new Set(['wall_stone', 'fence_wood', 'fence_iron', 'open_grave', 'crypt_zombie', 'crypt_nature', 'crypt_ghost', 'crypt_skeleton', 'crypt_witch', 'crypt_florist', 'crypt_rectory', 'crypt_lamplighter', 'crypt_reaper']);
 
 /** Rumore a chiazze (valore interpolato su una griglia) in 0..1. */
 function blotch(x: number, y: number, z: number, scale: number, seed: number): number {

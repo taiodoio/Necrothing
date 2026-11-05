@@ -416,7 +416,7 @@ function witchYard(c: CryptCtx) {
   }
 }
 
-const YARDS: Record<CryptCtx['family'], (c: CryptCtx) => void> = { zombie: zombieYard, ghost: ghostYard, skeleton: skeletonYard, nature: natureYard, witch: witchYard };
+const YARDS: Partial<Record<CryptCtx['family'], (c: CryptCtx) => void>> = { zombie: zombieYard, ghost: ghostYard, skeleton: skeletonYard, nature: natureYard, witch: witchYard };
 
 /** Piccola aggiunta di ogni versione (2 e 3) nel cortile. */
 function variantProps(c: CryptCtx) {
@@ -469,7 +469,7 @@ function keepOut(c: CryptCtx): Keep[] {
 
 export function yard(c: CryptCtx) {
   ground(c);
-  YARDS[c.family](c);
+  YARDS[c.family]?.(c);
   variantProps(c);
   meadow(c, keepOut(c), SHRUBS[c.family] ?? []);
 }

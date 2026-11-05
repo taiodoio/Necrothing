@@ -10,8 +10,9 @@ import { LP, type LPModel } from './kit.ts';
 import { BUILDINGS } from './cryptBuildings.ts';
 import { yard } from './cryptYards.ts';
 import type { CryptCtx } from './cryptKit.ts';
+import { VILLAGE_BUILDINGS, VILLAGE_FAMILIES, VILLAGE_YARDS, type VillageFamily } from './villageHouses.ts';
 
-export const CRYPT_FAMILIES = ['zombie', 'ghost', 'skeleton', 'nature', 'witch'] as const;
+export const CRYPT_FAMILIES = ['zombie', 'ghost', 'skeleton', 'nature', 'witch', ...VILLAGE_FAMILIES] as const;
 export type CryptFamily = (typeof CRYPT_FAMILIES)[number];
 /** Quante versioni ha ogni famiglia (la numero 0 è la «principale»: quella che si vede in Bottega). */
 export const CRYPT_VARIANTS = 3;
@@ -25,7 +26,7 @@ export const isCrypt = (type: string) => CRYPT_TYPES.includes(type);
 const BODY_Z = -0.85;
 
 /** Luci: poche e fisse, una per gruppo di candele (non una per ogni fiammella). */
-const LIGHTS: Record<CryptFamily, Array<[number, number, number, string, number, number, number, number, 'body' | 'yard']>> = {
+const LIGHTS: Partial<Record<CryptFamily, Array<[number, number, number, string, number, number, number, number, 'body' | 'yard']>>> = {
   zombie: [[-0.49, 0.32, 1.04, '#a7ca77', 0.52, 3, 0.24, 0.5, 'body'], [0.48, 0.32, 1.04, '#a7ca77', 0.52, 3, 0.24, 0.5, 'body']],
   // la lanterna alla porta e quella del lampione hanno la loro luce (hangingLantern)
   ghost: [],
@@ -40,12 +41,13 @@ export function cryptLP(v: PVis): LPModel {
   const lp = new LP(`lp:${v.type}:${variant}:${v.seed}:${+v.dirty}${+v.broken}`);
   const c: CryptCtx = { lp, v, family, variant, lit: v.lit && !v.broken };
   lp.push([0, 0, BODY_Z]);
-  BUILDINGS[family](c);
+  const village = (VILLAGE_FAMILIES as readonly string[]).includes(family);
+  if (village) VILLAGE_BUILDINGS[family as VillageFamily](c); else BUILDINGS[family as keyof typeof BUILDINGS](c);
   lp.pop();
   // senza recinto: il cortile si apre sul prato, e più case vicine fanno un villaggetto
-  yard(c);
+  if (village) VILLAGE_YARDS[family as VillageFamily](c); else yard(c);
   if (c.lit) {
-    for (const [x, y, z, color, intensity, range, flicker, halo, area] of LIGHTS[family]) {
+    for (const [x, y, z, color, intensity, range, flicker, halo, area] of LIGHTS[family] ?? []) {
       lp.push([0, 0, area === 'body' ? BODY_Z : 0]).light(x, y, z, color, intensity, range, flicker, halo).pop();
     }
   }

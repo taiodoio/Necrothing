@@ -127,11 +127,16 @@ const list: Array<Omit<PlaceableDef, 'access'>> = [
   { id: 'brain_farm', label: t('item.brainFarm.label'), category: 'business', footprint: [4, 3], cost: 35, minRank: 3, unique: true, decays: true, light: true, description: t('item.brainFarm.desc') },
   { id: 'mausoleum', label: t('item.mausoleum.label'), category: 'structure', footprint: [3, 3], cost: 80, minRank: 4, unique: true, decays: true, light: true, description: t('item.mausoleum.desc') },
   // Le cripte del laboratorio: lotti 4 × 5 col loro cortile, tre versioni ciascuna (a caso alla posa)
-  { id: 'crypt_zombie', label: t('item.cryptZombie.label'), category: 'structure', footprint: [4, 5], cost: 60, minRank: 3, decays: true, light: true, randomVariants: 3, description: t('item.cryptZombie.desc') },
-  { id: 'crypt_nature', label: t('item.cryptNature.label'), category: 'structure', footprint: [4, 5], cost: 65, minRank: 3, decays: true, light: true, randomVariants: 3, description: t('item.cryptNature.desc') },
+  { id: 'crypt_zombie', label: t('item.cryptZombie.label'), category: 'structure', footprint: [4, 5], cost: 60, minRank: 3, decays: true, light: true, randomVariants: 3, retired: true, description: t('item.cryptZombie.desc') },
+  { id: 'crypt_nature', label: t('item.cryptNature.label'), category: 'structure', footprint: [4, 5], cost: 65, minRank: 3, decays: true, light: true, randomVariants: 3, retired: true, description: t('item.cryptNature.desc') },
   { id: 'crypt_ghost', label: t('item.cryptGhost.label'), category: 'structure', footprint: [4, 5], cost: 75, minRank: 4, decays: true, light: true, randomVariants: 3, description: t('item.cryptGhost.desc') },
   { id: 'crypt_skeleton', label: t('item.cryptSkeleton.label'), category: 'structure', footprint: [4, 5], cost: 85, minRank: 4, decays: true, light: true, randomVariants: 3, retired: true, description: t('item.cryptSkeleton.desc') },
-  { id: 'crypt_witch', label: t('item.cryptWitch.label'), category: 'structure', footprint: [4, 5], cost: 100, minRank: 5, decays: true, light: true, randomVariants: 3, description: t('item.cryptWitch.desc') },
+  { id: 'crypt_witch', label: t('item.cryptWitch.label'), category: 'structure', footprint: [4, 5], cost: 100, minRank: 5, decays: true, light: true, randomVariants: 3, retired: true, description: t('item.cryptWitch.desc') },
+  // Le case del villaggetto (stesso lotto 4 × 5 della Casetta infestata, una versione sola)
+  { id: 'crypt_florist', label: t('item.villageFlorist.label'), category: 'structure', footprint: [4, 5], cost: 60, minRank: 3, decays: true, light: true, description: t('item.villageFlorist.desc') },
+  { id: 'crypt_rectory', label: t('item.villageRectory.label'), category: 'structure', footprint: [4, 5], cost: 70, minRank: 3, decays: true, light: true, description: t('item.villageRectory.desc') },
+  { id: 'crypt_lamplighter', label: t('item.villageLamplighter.label'), category: 'structure', footprint: [4, 5], cost: 70, minRank: 3, decays: true, light: true, description: t('item.villageLamplighter.desc') },
+  { id: 'crypt_reaper', label: t('item.villageReaper.label'), category: 'structure', footprint: [4, 5], cost: 80, minRank: 4, decays: true, light: true, description: t('item.villageReaper.desc') },
   { id: 'open_grave', label: t('item.openGrave.label'), category: 'structure', footprint: [2, 2], cost: 12, minRank: 2, decays: true, description: t('item.openGrave.desc') },
   { id: 'wall_stone', label: t('item.wallStone.label'), category: 'structure', footprint: [1, 1], cost: 3, minRank: 1, rotatable: true, description: t('item.wallStone.desc') },
   { id: 'fence_wood', label: t('item.fenceWood.label'), category: 'structure', footprint: [1, 1], cost: 2, minRank: 1, rotatable: true, description: t('item.fenceWood.desc') },
@@ -230,7 +235,7 @@ export const ACCESS: Record<Access, readonly string[]> = {
   full: [
     'spirit_lantern', 'skull_garland', 'keeper_lamp', 'bonfire', 'candle_tree', 'fence_lights',
     'gargoyle', 'reaper_statue', 'keeper_statue', 'giant_web', 'dead_altar', 'skeleton_snowman',
-    'crypt_zombie', 'crypt_nature', 'crypt_ghost', 'crypt_skeleton', 'crypt_witch',
+    'crypt_zombie', 'crypt_nature', 'crypt_ghost', 'crypt_skeleton', 'crypt_witch', 'crypt_florist', 'crypt_rectory', 'crypt_lamplighter', 'crypt_reaper',
     'gravedigger_house', 'shrine', 'zombie_bar', 'brain_farm', 'mausoleum', 'arch_lights', 'arch_gothic', 'fountain', 'hell_hole', 'memory_tree', 'soul_bell', 'soul_gazebo',
     'pet_house_rabbit', 'pet_house_duck', 'pet_house_crow',
     'spectral_tree', 'swing_tree', 'stone_circle', 'hand_swamp', 'hell_crack', 'pumpkin_patch',

@@ -1350,7 +1350,7 @@ export default {
   "postcard.failed": "No se pudo crear la postal",
   "postcard.failedText": "Algo falló al dibujarla. Inténtalo de nuevo; si sigue fallando, cierra y abre el juego.",
   "shop.detail.available": "Disponibles para comprar",
-  "shop.detail.availableValue": "hasta {max}",
+  "shop.detail.availableValue": "{max} con los fuegos fatuos que tienes",
   "shop.detail.owned": "Ya tuyos",
   "backup.newer": "Esta copia es de una versión más nueva. Actualiza el juego y reinténtalo.",
   "save.recovered": "No se pudo leer la partida. Guardé una copia y empecé una nueva.",

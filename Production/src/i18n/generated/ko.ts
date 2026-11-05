@@ -1350,7 +1350,7 @@ export default {
   "postcard.failed": "엽서를 만들 수 없어요",
   "postcard.failedText": "그리는 중 문제가 발생했어요. 다시 시도하고 계속 실패하면 게임을 다시 실행하세요.",
   "shop.detail.available": "구매 가능",
-  "shop.detail.availableValue": "최대 {max}",
+  "shop.detail.availableValue": "가진 도깨비불로 {max}",
   "shop.detail.owned": "이미 보유",
   "backup.newer": "이 백업은 더 최신 버전에서 만든 거예요. 게임을 업데이트하고 다시 시도하세요.",
   "save.recovered": "저장 데이터를 읽지 못해 사본을 따로 보관하고 새 게임을 시작했어요.",

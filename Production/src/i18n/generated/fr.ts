@@ -1350,7 +1350,7 @@ export default {
   "postcard.failed": "Impossible de créer la carte",
   "postcard.failedText": "Une erreur s’est produite pendant le dessin. Réessaie ; si ça ne marche pas, ferme et rouvre le jeu.",
   "shop.detail.available": "Disponibles à l’achat",
-  "shop.detail.availableValue": "jusqu’à {max}",
+  "shop.detail.availableValue": "{max} avec tes feux follets",
   "shop.detail.owned": "Déjà à toi",
   "backup.newer": "Cette sauvegarde provient d’une version plus récente. Mets le jeu à jour et réessaie.",
   "save.recovered": "La sauvegarde était illisible. J’en ai mis une copie de côté et commencé une nouvelle partie.",

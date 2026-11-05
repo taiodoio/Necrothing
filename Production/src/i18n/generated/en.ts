@@ -1350,7 +1350,7 @@ export default {
   "postcard.failed": "Couldn't create the postcard",
   "postcard.failedText": "Something went wrong while drawing it. Try again; if it still fails, close and reopen the game.",
   "shop.detail.available": "Available to Buy",
-  "shop.detail.availableValue": "up to {max}",
+  "shop.detail.availableValue": "{max} with the wisps you have",
   "shop.detail.owned": "Already Yours",
   "backup.newer": "This backup is from a newer game version. Update the game and try again.",
   "save.recovered": "The save couldn't be read, so I kept a copy aside and started a new game.",

@@ -1350,7 +1350,7 @@ export default {
   "postcard.failed": "絵はがきを作成できませんでした",
   "postcard.failedText": "描画中に問題が発生しました。再試行し、だめならゲームを再起動してください。",
   "shop.detail.available": "購入可能",
-  "shop.detail.availableValue": "最大{max}",
+  "shop.detail.availableValue": "手持ちの鬼火で{max}",
   "shop.detail.owned": "購入済み",
   "backup.newer": "このバックアップは新しいバージョンのものです。ゲームを更新して再試行してください。",
   "save.recovered": "セーブデータを読めなかったため、コピーを保存して新しいゲームを始めました。",

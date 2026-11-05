@@ -67,6 +67,7 @@ export class UI {
       b.addEventListener('click', () => { this.closeBubble(); this.bubbleAction(b.dataset.act!); });
     }
     $('#player-chip').addEventListener('click', () => S.openPlayer(this));
+    $('#hud-sky').addEventListener('click', () => S.openSkySettings(this));
     document.getElementById('settings-btn')?.addEventListener('click', () => S.openSettings(this));
     $('#drawer-close').addEventListener('click', () => closeDrawer());
     $('#scrim').addEventListener('click', () => closeDrawer());
@@ -110,15 +111,18 @@ export class UI {
 
   refreshClock() {
     const now = this.game.now();
-    $('#hud-clock').textContent = now.toLocaleTimeString(currentLang(), { hour: '2-digit', minute: '2-digit' });
+    const clock = now.toLocaleTimeString(currentLang(), { hour: '2-digit', minute: '2-digit' });
+    $('#hud-clock').textContent = clock;
     const phase = this.game.getPhase();
     const w = this.game.weatherNow();
     const el = $('#hud-weather');
+    const label = t('hud.phaseWeather', { phase: DAY_PHASE_LABELS[phase], weather: WEATHER_LABELS[w] });
+    const controls = t('settings.sky.title');
+    $('#hud-sky').setAttribute('aria-label', t('hud.join', { a: t('hud.join', { a: clock, b: label }), b: controls }));
     const key = `${phase}|${w}|${window.innerWidth < 420}`;
     if (el.dataset.key === key) return;
     el.dataset.key = key;
     // interfaccia nuova: sotto l'ora un'icona sola per fase e meteo (la luna con le stelle, il sole nella nebbia…)
-    const label = t('hud.phaseWeather', { phase: DAY_PHASE_LABELS[phase], weather: WEATHER_LABELS[w] });
     el.replaceChildren(icon(`sky-${phase}-${w}`, 24));
     el.setAttribute('aria-label', label);
     el.title = label;

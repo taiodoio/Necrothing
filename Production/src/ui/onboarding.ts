@@ -415,7 +415,7 @@ export class Onboarding {
   private showIntro(i = 0) {
     const [img, n, kind] = INTRO[i];
     const last = i === INTRO.length - 1;
-    this.openLayer('ob-solid ob-intro-layer',
+    const content = this.openLayer('ob-solid ob-intro-layer',
       this.skipBtn(() => this.go('yard')),
       h('div', { class: 'dialog modal ob-card ob-intro with-hero' },
         h('div', { class: `ob-hero ${kind}`, 'aria-hidden': 'true' }, h('img', { src: img(), alt: '' })),
@@ -425,6 +425,27 @@ export class Onboarding {
         h('div', { class: 'row' },
           h('button', { class: 'big-btn ghost', onclick: () => (i === 0 ? this.go(this.introOnly ? 'done' : 'name', true) : this.showIntro(i - 1)) }, t('onboarding.back')),
           h('button', { class: 'big-btn', onclick: () => (last ? this.go('yard') : this.showIntro(i + 1)) }, last ? t('onboarding.start') : t('onboarding.next')))));
+
+    // Scorrimento orizzontale solo tra le schede: i pulsanti continuano a
+    // gestire l'ingresso e l'uscita dal percorso. Lo scorrimento verticale resta libero.
+    let start: { id: number; x: number; y: number } | null = null;
+    content.addEventListener('touchstart', (event) => {
+      const target = event.target instanceof Element ? event.target : null;
+      if (event.touches.length !== 1 || target?.closest('button, a, input, select, textarea')) { start = null; return; } // i18n-ok: selettore CSS
+      const touch = event.touches[0];
+      start = { id: touch.identifier, x: touch.clientX, y: touch.clientY };
+    }, { passive: true });
+    content.addEventListener('touchcancel', () => { start = null; }, { passive: true });
+    content.addEventListener('touchend', (event) => {
+      if (!start || event.touches.length) { start = null; return; }
+      const touch = Array.from(event.changedTouches).find((item) => item.identifier === start!.id);
+      if (!touch) { start = null; return; }
+      const dx = touch.clientX - start.x, dy = touch.clientY - start.y;
+      start = null;
+      if (Math.abs(dx) < 50 || Math.abs(dx) < Math.abs(dy) * 1.3) return;
+      if (dx < 0 && !last) this.showIntro(i + 1);
+      else if (dx > 0 && i > 0) this.showIntro(i - 1);
+    }, { passive: true });
   }
 
   // ── Il cortile del Custode (azioni vere) ─────────────────────────────
@@ -457,6 +478,7 @@ export class Onboarding {
     this.framed = false;
     this.coachBox(null, t(`onboarding.yard.${step}`),
       t('onboarding.tutorial.progress', { n: this.o.step + 1, total: YARD_STEPS.length }),
+      false,
       this.yardSkipButton());
     this.mark(this.targetsOf(step));
     const look: Partial<Record<YardStep, string>> = { clean: YARD_GRAVE, flowers: YARD_GRAVE, light: YARD_LANTERN, ghost: YARD_GRAVE, sheet: YARD_GRAVE, shop: this.shopId() ?? '' };
@@ -467,8 +489,8 @@ export class Onboarding {
    * Il consiglio: come le notifiche dei personaggi, col Custode che esce dal
    * riquadro. Sotto scendono messaggi, note e pannelli (niente si copre).
    */
-  private coachBox(title: string | null, text: string, progress: string, ...acts: Array<Node | null>) {
-    this.coach = h('div', { class: 'ob-coach', role: 'status', 'aria-live': 'polite' },
+  private coachBox(title: string | null, text: string, progress: string, goal: boolean, ...acts: Array<Node | null>) {
+    this.coach = h('div', { class: `ob-coach${goal ? ' ob-goal' : ''}`, role: 'status', 'aria-live': 'polite' },
       this.bust('small'),
       h('div', { class: 'ob-coach-body' },
         title ? h('b', { class: 'ob-coach-title' }, title) : null,
@@ -626,7 +648,7 @@ export class Onboarding {
     this.step = null;
     // la scheda si apre subito dopo il segnale: il consiglio su cosa c'è dentro c'è già, così si apre
     // al suo posto, sotto il consiglio (comparendo dopo la sposterebbe di colpo)
-    this.coachBox(null, t('onboarding.yard.sheetOpen'), t('onboarding.tutorial.progress', { n: YARD_STEPS.length, total: YARD_STEPS.length }), this.yardSkipButton());
+    this.coachBox(null, t('onboarding.yard.sheetOpen'), t('onboarding.tutorial.progress', { n: YARD_STEPS.length, total: YARD_STEPS.length }), false, this.yardSkipButton());
     this.mark(() => ['#drawer:not([hidden]) #drawer-close']);
     const since = performance.now();
     let opened = false;
@@ -711,7 +733,7 @@ export class Onboarding {
     if (g.state.onboarding.goal !== 'pending' || this.coach) return;
     if (this.busy()) { this.goalTimer = window.setTimeout(() => this.showGoal(), 1500); return; }
     this.goalShown = true;
-    this.coachBox(t('onboarding.goal.title'), t('onboarding.goal.text'), '',
+    this.coachBox(t('onboarding.goal.title'), t('onboarding.goal.text'), '', true,
       h('button', { class: 'ob-back', onclick: () => this.dropCoach() }, t('onboarding.goal.later')),
       h('button', { class: 'npc-note-cta', onclick: () => { this.dropCoach(); document.getElementById('bury-fab')?.click(); } }, t('onboarding.goal.go'), ' ›'));
     this.mark(() => ['#bury-fab']);
@@ -731,7 +753,7 @@ export class Onboarding {
     markTip(s, 'gravePlace');
     this.save();
     this.graveCoach = true;
-    this.coachBox(t('onboarding.grave.title'), t('onboarding.grave.text'), '',
+    this.coachBox(t('onboarding.grave.title'), t('onboarding.grave.text'), '', false,
       h('button', { class: 'npc-note-cta', onclick: () => this.endGravePlacement() }, t('onboarding.grave.ok')));
     this.mark(() => ['.place-ui [data-tool="confirm"]']);
   }

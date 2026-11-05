@@ -1642,5 +1642,6 @@ export default {
   "item.villageLamplighter.label": "점등원의 집",
   "item.villageLamplighter.desc": "이곳에는 매일 저녁 긴 장대로 묘지의 불을 밝히는 점등원이 살아요. 처마 밑에서 등불을 고치는데, 고장 난 등불에 필요한 건 믿어 주는 누군가뿐이래요.",
   "item.villageReaper.label": "저승사자의 오두막",
-  "item.villageReaper.desc": "저승사자가 은퇴했어요. 이제 낫은 풀 베는 데만 쓰고, 박공의 시계는 늘 세 시를 가리켜요. 토마토를 키워요. 일단은요."
+  "item.villageReaper.desc": "저승사자가 은퇴했어요. 이제 낫은 풀 베는 데만 쓰고, 박공의 시계는 늘 세 시를 가리켜요. 토마토를 키워요. 일단은요.",
+  "settings.sky.title": "시간과 날씨"
 } satisfies Record<string, string>;

@@ -379,8 +379,10 @@ export function openShop(ui: UI, cat: PlaceableCategory | 'house' = 'light', sel
   // interfaccia nuova: l'oggetto scelto si guarda e si compra in un modale al centro
   let modal: Modal | null = null;
   const show = (node: Node) => {
+    const balance = node instanceof HTMLElement ? node.querySelector<HTMLElement>(':scope > .wisp-pill') : null;
     if (modal) modal.set(node);
     else modal = openModal(node, { label: t('shop.modal.label'), onClose: () => { modal = null; selected = null; render(); } });
+    modal.setPinned(balance);
   };
   const close = () => { if (modal) modal.close(); else { selected = null; render(); } };
   const render = () => {
@@ -447,9 +449,9 @@ export function openShop(ui: UI, cat: PlaceableCategory | 'house' = 'light', sel
       (d.season || d.feat) ? h('p', { class: 'muted', style: 'margin:0;font-size:12px' }, d.season && d.feat ? t('shop.detail.seasonalFeat', { season: d.season.label, feat: d.feat.label.toLowerCase() })
         : d.season ? t('shop.detail.seasonal', { season: d.season.label }) : t('shop.detail.feat', { feat: d.feat!.label.toLowerCase() })) : null,
       !d.unique && av === 'ok' ? h('div', { class: 'qty' },
-        h('button', { onclick: () => { qty = Math.max(1, qty - 1); again(); } }, '−'),
+        h('button', { disabled: qty <= 1, onclick: () => { qty = Math.max(1, qty - 1); again(); } }, '−'),
         h('b', {}, String(qty)),
-        h('button', { onclick: () => { qty = Math.min(max, qty + 1); again(); } }, '+')) : null,
+        h('button', { disabled: qty >= max, onclick: () => { qty = Math.min(max, qty + 1); again(); } }, '+')) : null,
       av === 'ok' && d.cost ? h('p', { class: 'muted after-buy' }, t('shop.detail.afterBuy', { n: s.player.wisps - d.cost * qty, amount: (s.player.wisps - d.cost * qty).toLocaleString(currentLang()) })) : null,
       ((b: HTMLElement) => h('div', { class: 'row' }, h('button', { class: 'big-btn ghost', onclick: close }, t('shop.detail.close')), b))(h('button', {
         class: av === 'ok' && d.cost ? 'big-btn buy-btn' : 'big-btn', disabled: av !== 'ok',
@@ -1017,22 +1019,49 @@ function infoContent(ui: UI): HTMLElement[] {
   ];
 }
 
+/** Selettore condiviso: aggiorna subito lo stato visivo e quello accessibile. */
+function segmentedControl<T extends string>(value: T, options: Array<[T, string]>, on: (v: T) => void, label?: string) {
+  const box = h('div', { class: 'seg', ...(label ? { role: 'group', 'aria-label': label } : {}) });
+  for (const [v, text] of options) {
+    const btn = h('button', { class: v === value ? 'active' : '', 'aria-pressed': String(v === value), onclick: () => {
+      for (const b of Array.from(box.children)) { b.classList.toggle('active', b === btn); b.setAttribute('aria-pressed', String(b === btn)); }
+      on(v);
+    } }, text);
+    box.append(btn);
+  }
+  return box;
+}
+
+/** Le stesse preferenze sono accessibili dalle Impostazioni e dall'orologio. */
+function timeSetting(ui: UI) {
+  const game = ui.game;
+  return h('div', { class: 'setting time-setting' }, h('span', {}, t('settings.time')),
+    segmentedControl<TimeOverride>(game.state.settings.timeOverride, [['auto', t('settings.time.auto')], ['day', t('settings.time.day')], ['dusk', t('settings.time.dusk')], ['night', t('settings.time.night')]],
+      (value) => game.setTimeOverride(value), t('settings.time')));
+}
+
+function weatherSetting(ui: UI) {
+  return h('label', { class: 'setting weather-setting' }, t('settings.weather'),
+    h('input', { type: 'checkbox', checked: ui.game.state.settings.weatherEffects, onchange: (e: Event) => ui.game.setWeatherEffects((e.target as HTMLInputElement).checked) }));
+}
+
+/** Scorciatoia dalla HUD: ora e meteo con gli stessi controlli delle Impostazioni. */
+export function openSkySettings(ui: UI) {
+  const title = t('settings.sky.title');
+  let modal: Modal;
+  const content = h('div', { class: 'sky-settings' },
+    h('h3', { class: 'modal-title' }, title),
+    timeSetting(ui),
+    weatherSetting(ui),
+    h('button', { class: 'big-btn ghost', onclick: () => modal.close() }, t('dialog.close')));
+  modal = openModal(content, { label: title });
+}
+
 export function openSettings(ui: UI) {
   const game = ui.game;
   const s = game.state.settings;
-  // il pulsante scelto si evidenzia subito (prima l'evidenza restava sul vecchio finché non si riapriva il pannello)
-  const seg = <T extends string>(value: T, options: Array<[T, string]>, on: (v: T) => void) => {
-    const box = h('div', { class: 'seg' });
-    for (const [v, label] of options) {
-      const btn = h('button', { class: v === value ? 'active' : '', 'aria-pressed': String(v === value), onclick: () => {
-        for (const b of Array.from(box.children)) { b.classList.toggle('active', b === btn); b.setAttribute('aria-pressed', String(b === btn)); }
-        on(v);
-        syncEdgeBlur();
-      } }, label);
-      box.append(btn);
-    }
-    return box;
-  };
+  const seg = <T extends string>(value: T, options: Array<[T, string]>, on: (v: T) => void) =>
+    segmentedControl(value, options, (v) => { on(v); syncEdgeBlur(); });
   const edgeBlur = h('input', { type: 'checkbox', checked: s.edgeBlur, disabled: s.quality === 'low', onchange: (e: Event) => game.setEdgeBlur((e.target as HTMLInputElement).checked) }) as HTMLInputElement;
   // la sfocatura non è disponibile in qualità bassa: lo stato segue la qualità scelta
   const syncEdgeBlur = () => { edgeBlur.disabled = s.quality === 'low'; edgeBlur.checked = s.edgeBlur; };
@@ -1065,9 +1094,9 @@ export function openSettings(ui: UI) {
       s.quality === 'auto' ? h('p', { class: 'quality-now' }, monoIcon('sparkle', 16), h('span', {}, t('settings.quality.now', { level: QUALITY_LABELS[game.qualityInUse()] }))) : null,
       h('div', { class: 'setting' }, t('settings.fps'), seg<FpsSetting>(s.fps, [['auto', t('settings.fps.auto')], ['30', t('settings.fps.30')], ['60', t('settings.fps.60')]], (v) => game.setFps(v))),
       h('p', { class: 'muted', style: 'margin:-2px 0 4px;font-size:12px' }, s.fps === 'auto' ? t('settings.fps.autoHint') : s.fps === '30' ? t('settings.fps.30Hint') : t('settings.fps.60Hint')),
-      h('div', { class: 'setting' }, t('settings.time'), seg<TimeOverride>(s.timeOverride, [['auto', t('settings.time.auto')], ['day', t('settings.time.day')], ['dusk', t('settings.time.dusk')], ['night', t('settings.time.night')]], (v) => game.setTimeOverride(v))),
+      timeSetting(ui),
       h('label', { class: 'setting' }, t('settings.edgeBlur'), edgeBlur),
-      h('label', { class: 'setting' }, t('settings.weather'), h('input', { type: 'checkbox', checked: s.weatherEffects, onchange: (e: Event) => game.setWeatherEffects((e.target as HTMLInputElement).checked) })),
+      weatherSetting(ui),
       distribution().id === 'development'
         ? h('label', { class: 'setting' }, t('settings.debug'), h('input', { type: 'checkbox', checked: s.showDebug, onchange: (e: Event) => { s.showDebug = (e.target as HTMLInputElement).checked; game.afterChange(); } }))
         : null,

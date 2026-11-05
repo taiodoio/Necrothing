@@ -1642,5 +1642,6 @@ export default {
   "item.villageLamplighter.label": "Casa del farolero",
   "item.villageLamplighter.desc": "Aquí vive el farolero, que cada noche enciende las luces del cementerio con su pértiga. Bajo el cobertizo arregla faroles: los rotos, dice, solo necesitan que alguien crea en ellos.",
   "item.villageReaper.label": "Casita de la Parca",
-  "item.villageReaper.desc": "La Parca se ha jubilado: la guadaña ya solo sirve para la hierba y el reloj del frontón marca siempre las tres. Cultiva tomates. Por ahora."
+  "item.villageReaper.desc": "La Parca se ha jubilado: la guadaña ya solo sirve para la hierba y el reloj del frontón marca siempre las tres. Cultiva tomates. Por ahora.",
+  "settings.sky.title": "Hora y clima"
 } satisfies Record<string, string>;

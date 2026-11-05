@@ -1642,5 +1642,6 @@ export default {
   "item.villageLamplighter.label": "Haus des Laternenanzünders",
   "item.villageLamplighter.desc": "Hier wohnt der Laternenanzünder, der jeden Abend mit seiner Stange die Lichter des Friedhofs anzündet. Unter dem Vordach repariert er Laternen: Die kaputten, sagt er, brauchen nur jemanden, der an sie glaubt.",
   "item.villageReaper.label": "Häuschen des Sensenmanns",
-  "item.villageReaper.desc": "Der Sensenmann ist in Rente: Die Sense ist jetzt nur noch fürs Gras, und die Uhr am Giebel zeigt immer drei. Er zieht Tomaten. Vorerst."
+  "item.villageReaper.desc": "Der Sensenmann ist in Rente: Die Sense ist jetzt nur noch fürs Gras, und die Uhr am Giebel zeigt immer drei. Er zieht Tomaten. Vorerst.",
+  "settings.sky.title": "Zeit & Wetter"
 } satisfies Record<string, string>;

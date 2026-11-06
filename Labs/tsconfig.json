@@ -1,0 +1,11 @@
+{
+  "extends": "../Production/tsconfig.json",
+  "compilerOptions": {
+    "baseUrl": "..",
+    "paths": {
+      "three": ["Production/node_modules/@types/three"],
+      "three/*": ["Production/node_modules/@types/three/*"]
+    }
+  },
+  "include": ["src", "../Production/src/vite-env.d.ts", "../Production/src/build.d.ts"]
+}

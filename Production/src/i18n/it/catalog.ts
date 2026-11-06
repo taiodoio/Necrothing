@@ -102,7 +102,7 @@ export default {
   'item.effect.flowerKiosk': 'Quando porti i fiori a una tomba, ogni tanto il fioraio ci aggiunge un fuoco fatuo.',
   'item.effect.postOffice': 'Puoi spedire lettere: ogni tanto una torna alla buca della casa del Custode.',
   'item.effect.ghostHunters': 'Zombie e fantasmi si fanno vedere il {n}% più spesso: li adorano.',
-  'item.effect.village': 'Ravviva il cimitero: un po’ di vita non ha mai ucciso nessuno.',
+  'item.effect.village': 'Nessuno. È solo carina, non ti basta?',
   'item.effect.keeperLamp': 'Le luci entro {r} caselle non si rompono mai.',
   'item.effect.soulBell': 'Suonala una volta al giorno: arrivano {n} fantasmi a salutarti.',
   'item.effect.memoryTree': 'Affidagli una sepoltura: la tomba lascia il posto e il ricordo resta appeso ai rami. Attira i fantasmi dei ricordi.',

@@ -6,8 +6,8 @@ import { CATALOG, CATALOG_LIST, ACCESS } from '../src/game/catalog.ts';
 import { resolveLowpoly } from '../src/render/lowpoly/index.ts';
 import { CRYPT_FAMILIES, CRYPT_TYPES, CRYPT_VARIANTS, cryptLP } from '../src/render/lowpoly/cryptModels.ts';
 import { placeableKey, seedCount } from '../src/render/keys.ts';
-import { createNewGame } from '../src/game/state.ts';
-import { areaForLevel, buildOccupancy, nearestFreeSpot } from '../src/game/world.ts';
+import { createNewGame, normalizeSave } from '../src/game/state.ts';
+import { areaForLevel, buildOccupancy, nearestFreeSpot, cellsOf } from '../src/game/world.ts';
 import * as R from '../src/game/rules.ts';
 
 const tris = (m) => Object.values(m.geometries).reduce((a, g) => a + g.getAttribute('position').count / 3, 0);
@@ -16,16 +16,18 @@ const build = (type, variant, dirty = false, broken = false, lit = true) => reso
 /** Quante versioni ha un lotto: tre le cripte, una le case del villaggetto. */
 const VARS = (type) => CATALOG[type].randomVariants ?? 1;
 const VILLAGE = ['crypt_florist', 'crypt_rectory', 'crypt_lamplighter', 'crypt_reaper'];
+const HOUSES = ['crypt_ghost', ...VILLAGE];
 
-test('cripte e case del villaggetto: lotti 4×5 non ruotabili, nella Full; in Bottega restano la Casetta infestata e le quattro case', () => {
+test('cripte e case: le cinque case sono ruotabili e occupano 4×3, le cripte conservano 4×5', () => {
   assert.equal(CRYPT_TYPES.length, 9);
   assert.deepEqual(CRYPT_FAMILIES, ['zombie', 'ghost', 'skeleton', 'nature', 'witch', 'reaper', 'rectory', 'lamplighter', 'florist']);
   for (const type of CRYPT_TYPES) {
     const d = CATALOG[type];
     assert.ok(d, type);
     assert.equal(d.category, 'structure');
-    assert.deepEqual(d.footprint, [4, 5]);
-    assert.ok(!d.rotatable && d.decays && d.light && !d.unique, `${type}: non si gira, si sporca, ha luce, se ne possono avere più d'una`);
+    assert.deepEqual(d.footprint, HOUSES.includes(type) ? [4, 3] : [4, 5]);
+    assert.equal(!!d.rotatable, HOUSES.includes(type));
+    assert.ok(d.decays && d.light && !d.unique, `${type}: si sporca, ha luce, se ne possono avere più d'una`);
     assert.equal(d.randomVariants, VILLAGE.includes(type) ? undefined : CRYPT_VARIANTS);
     assert.ok(ACCESS.full.includes(type), 'nella Full');
     assert.ok(d.description.length > 40 && !d.description.startsWith('item.'), `${type}: descrizione scritta`);
@@ -40,6 +42,49 @@ test('cripte e case del villaggetto: lotti 4×5 non ruotabili, nella Full; in Bo
   const byRank = CRYPT_TYPES.map((t) => CATALOG[t]);
   assert.ok(Math.min(...byRank.map((d) => d.cost)) >= CATALOG.gravedigger_house.cost - 5 && Math.max(...byRank.map((d) => d.cost)) <= CATALOG.vampire_crypt.cost + 15);
   assert.ok(Math.min(...byRank.map((d) => d.minRank)) >= 3 && Math.max(...byRank.map((d) => d.minRank)) <= 5);
+});
+
+test('case: ogni stato e variante resta nelle celle anche ruotando', () => {
+  for (const type of HOUSES) for (let v = 0; v < VARS(type); v++) for (const [dirty, broken] of [[false, false], [true, false], [true, true]]) {
+    const m = build(type, v, dirty, broken);
+    const box = new THREE.Box3();
+    for (const g of Object.values(m.geometries)) { g.computeBoundingBox(); box.union(g.boundingBox); }
+    assert.ok(box.min.x >= -2.01 && box.max.x <= 2.01 && box.min.z >= -1.51 && box.max.z <= 1.51, `${type} v${v} ${dirty}/${broken}: ${JSON.stringify(box)}`);
+    for (let rot = 0; rot < 4; rot++) {
+      const b = box.clone().applyMatrix4(new THREE.Matrix4().makeRotationY(-rot * Math.PI / 2));
+      const [w, d] = rot % 2 ? [3, 4] : [4, 3];
+      assert.ok(b.min.x >= -w / 2 - 0.01 && b.max.x <= w / 2 + 0.01 && b.min.z >= -d / 2 - 0.01 && b.max.z <= d / 2 + 0.01, `${type} rot ${rot}`);
+    }
+  }
+});
+
+test('case: i vecchi lotti si restringono intorno al centro senza perdere oggetti o sovrapporsi', () => {
+  const s = createNewGame(new Date('2026-11-04T10:00:00Z'), 1);
+  s.version = 4; s.graves = []; s.placeables = HOUSES.map((type, i) => ({ id: `old-${i}`, type, x: 10 + i * 6, y: 12, rot: i % 2, variant: i === 0 ? 2 : 0, lit: true, dirty: true, broken: false, caredAt: s.createdAt, createdAt: s.createdAt }));
+  const originals = s.placeables.map((p) => ({ ...p }));
+  const migrated = normalizeSave(JSON.parse(JSON.stringify(s)));
+  for (const [i, p] of migrated.placeables.entries()) {
+    const before = originals[i], oldSize = before.rot % 2 ? [5, 4] : [4, 5], newSize = p.rot % 2 ? [3, 4] : [4, 3];
+    const oldCells = new Set(cellsOf(before.x, before.y, oldSize));
+    assert.ok(cellsOf(p.x, p.y, newSize).every((cell) => oldCells.has(cell)));
+    assert.equal(p.x + newSize[0] / 2, before.x + oldSize[0] / 2);
+    assert.equal(p.y + newSize[1] / 2, before.y + oldSize[1] / 2);
+    assert.equal(p.variant, before.variant); assert.equal(p.dirty, true); assert.equal(p.lit, true);
+  }
+  assert.deepEqual(normalizeSave(JSON.parse(JSON.stringify(migrated))).placeables, migrated.placeables, 'la migrazione avviene una volta sola');
+});
+
+test('case: la rotazione usa le celle e rispetta gli ostacoli', () => {
+  const now = new Date('2026-11-04T10:00:00Z');
+  for (const type of HOUSES) {
+    const s = createNewGame(now, 13); s.placeables = []; s.graves = []; s.inventory[type] = 1;
+    const p = R.placeFromInventory(s, type, 24, 24, 0, now);
+    R.rotateEntity(s, p.id); assert.equal(p.rot, 1);
+    assert.equal(cellsOf(p.x, p.y, [3, 4]).length, 12);
+    s.placeables.push({ ...p, id: 'blocker', type: 'wall_stone', x: p.x + 3, y: p.y });
+    assert.throws(() => R.rotateEntity(s, p.id), 'la rotazione che occupa la cella bloccata viene rifiutata');
+    assert.equal(p.rot, 1);
+  }
 });
 
 test('cripte e case: ogni versione × 3 stati si costruisce, diverse tra loro, e sta nel lotto', () => {
@@ -197,7 +242,7 @@ test('cripta degli scheletri ritirata: non si compra più, ma quella già posata
   assert.ok(p && build('crypt_skeleton', p.variant).geometries.solid, 'si disegna ancora');
 });
 
-test('case del villaggetto: si comprano quante se ne vuole, hanno la riga «Effetto» che ravviva il cimitero', async () => {
+test('case del villaggetto: acquisti multipli ed effetto decorativo al singolare', async () => {
   const { itemEffect } = await import('../src/ui/effects.ts');
   const now = new Date('2026-11-05T10:00:00Z');
   const s = createNewGame(now, 17);
@@ -205,7 +250,7 @@ test('case del villaggetto: si comprano quante se ne vuole, hanno la riga «Effe
   for (const type of ['crypt_ghost', ...VILLAGE]) {
     assert.equal(R.shopAvailability(s, type, now), 'ok', type);
     assert.ok(R.maxBuyable(s, type) > 1, `${type}: più d'una`);
-    assert.ok(itemEffect(type) && !itemEffect(type).startsWith('item.'), `${type}: effetto scritto`);
+    assert.equal(itemEffect(type), 'Nessuno. È solo carina, non ti basta?', `${type}: effetto scritto al singolare`);
   }
   R.buy(s, 'crypt_reaper', 2, now);
   assert.equal(s.inventory.crypt_reaper, 2);

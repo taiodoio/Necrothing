@@ -57,8 +57,8 @@ test('ricaricare non duplica le tombe narrative né riporta quelle riesumate', (
   assert.equal(again.graves.some((g) => g.id === 'story-cactus'), false);
 });
 
-test('salvataggio v4: la partita nuova parte dal benvenuto, i vecchi salvataggi hanno già finito', () => {
-  assert.equal(SAVE_VERSION, 4);
+test('salvataggio: la partita nuova parte dal benvenuto, i vecchi salvataggi hanno già finito', () => {
+  assert.equal(SAVE_VERSION, 5);
   assert.deepEqual(createNewGame(NOW, 1).onboarding, newOnboarding());
   for (const v of [1, 2]) {
     const s = normalizeSave(fixture(v));

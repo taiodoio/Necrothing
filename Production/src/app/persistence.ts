@@ -176,7 +176,7 @@ export const memorials = {
  * modello cambiato le rende vecchie). `id` è «build|chiave».
  */
 interface ThumbRecord { id: string; url: string }
-const THUMB_BUILD = typeof __BUILD__ !== 'undefined' ? __BUILD__.commit : 'dev';
+const THUMB_BUILD = typeof __ASSET_CACHE_REVISION__ !== 'undefined' ? __ASSET_CACHE_REVISION__ : (typeof __BUILD__ !== 'undefined' ? __BUILD__.commit : 'dev');
 
 export const thumbStore = {
   /** Le miniature di questa build (quelle di build vecchie si cancellano). */

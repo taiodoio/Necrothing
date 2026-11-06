@@ -5,7 +5,7 @@
 import * as THREE from 'three';
 import { BAT, BUSINESS, ROUNDS, FOREST_MARGIN, GRAVE_FOOTPRINT, KEEPER_LAMP, LIVE_TICK_MS, PET_SPECIES, SOUL_BELL, type PetSpecies, STAFF, ZOMBIE_MUD } from '../game/balance.ts';
 import { moveTraceDraw, startTraceDraw, traceDrawCells, type TraceDraw } from '../game/trace.ts';
-import { CATALOG, CATALOG_LIST, EDIT_ONLY, rotatedFootprint, TRACEABLE, ZOMBIE_ATTRACTORS } from '../game/catalog.ts';
+import { CATALOG, CATALOG_LIST, EDIT_ONLY, rotatedFootprint, TRACEABLE, visualOf, ZOMBIE_ATTRACTORS } from '../game/catalog.ts';
 import { watchLifecycle } from './platform.ts';
 import { askReminderPermission, clearReminders, remindersAvailable, syncReminders } from './reminders.ts';
 import type { GraveVisualState } from '../game/graves.ts';
@@ -36,6 +36,8 @@ import { npcPortrait } from '../ui/npcPortraits.ts';
 import { ROAMER_LABELS, type RoamerKind } from '../game/spawn.ts';
 import type { CharacterKind } from '../view/characters.ts';
 import { PetGifts } from '../game/petGifts.ts';
+import { RapidTaps, claimPondWisps, claimSecretWisps } from '../game/easterEggs.ts';
+import { lpIconPng } from '../ui/lpIcons.ts';
 import { signalOnboarding } from '../ui/onboarding.ts';
 import { Actors, graveSpots, type PetMode, type VisitStop } from '../view/Actors.ts';
 import { Atmosphere } from '../view/Atmosphere.ts';
@@ -473,7 +475,14 @@ export class Game {
     const now = this.now();
     const res = liveTick(this.state, now, ++this.liveSalt);
     for (const s of res.spawns) {
-      if (s.memoryId) { this.spawnMemoryGhost(s.memoryId); continue; }
+      if (s.memoryId) {
+        if (this.spawnMemoryGhost(s.memoryId)) {
+          this.state.world.memoryGhostLastAt = now.toISOString();
+          this.state.world.memoryGhostLastId = s.memoryId;
+          scheduleSave(this.state);
+        }
+        continue;
+      }
       if (s.kind === 'priest' || s.kind === 'gravedigger') { this.spawnVisitor(s.kind); continue; }
       const g = s.graveId ? this.state.graves.find((x) => x.id === s.graveId) : undefined;
       this.actors.spawnRoamer(s, g ? cellCenter(g.x, g.y + 2, [2, 1]) : undefined, s.kind === 'zombie' ? this.zombieGoal() : undefined);
@@ -714,6 +723,17 @@ export class Game {
     this.ui.refreshContext();
     this.refreshShrink();
     this.offerExpansion();
+  }
+
+  /** Il premio del menu segreto va alla partita vera anche nel cortile del tutorial. */
+  claimSecretReward(password: string): boolean {
+    const target = this.realState ?? this.state;
+    if (!claimSecretWisps(target, password)) return false;
+    if (this.realState) { this.state.player.wisps += 100; this.state.player.counters.wispsEarned += 100; }
+    this.afterChange();
+    saveNow(target);
+    this.ui.bumpWisps();
+    return true;
   }
 
   // ── Ampiezza del recinto (a scelta) ──────────────────────────────────
@@ -1236,6 +1256,8 @@ export class Game {
     return this.state.graves.some((g) => g.id === id) ? 'grave' : 'placeable';
   }
 
+  private readonly eggTaps = new RapidTaps();
+
   private onTap(x: number, y: number) {
     if (uiBlocking()) return;
     if (this.inYard && !this.ui.onboarding.allowsYardScene(this.pick(x, y), 'tap')) return;
@@ -1265,6 +1287,26 @@ export class Game {
     // mentre si posa, un tocco non sposta mai l'oggetto: lo si trascina (o lo si tiene premuto)
     if (this.placement) return;
     const hit = this.pick(x, y);
+    // Non alterare i gesti di piazzamento, modifica o del cortile tutorial.
+    if (!this.editMode && !this.inYard) {
+      const item = hit?.entityId ? this.state.placeables.find((p) => p.id === hit.entityId) : undefined;
+      const type = item ? visualOf(item.type, item.variant).type : '';
+      const eligible = item && (type === 'pond' || type === 'crypt_ghost');
+      if (this.eggTaps.tap(eligible ? item.id : null, performance.now()) && item) {
+        if (type === 'pond' && claimPondWisps(this.state, item.id)) {
+          this.afterChange();
+          saveNow(this.state);
+          this.ui.bumpWisps();
+          this.say({ kind: 'ghost', name: t('item.pond.label'), text: t('game.egg.pond'), wisps: 100, say: '', img: lpIconPng('wisp'), icon: true });
+          return;
+        }
+        if (type === 'crypt_ghost') {
+          this.world.hauntedParty(item);
+          toast(t('game.egg.party'));
+          return;
+        }
+      }
+    } else this.eggTaps.reset();
     if (hit?.roamerId) { this.tapRoamer(hit.roamerId); return; }
     if (hit?.petId && !this.editMode) { this.tapPet(hit.petId); return; }
     if (hit?.vampireId && !this.editMode) { this.tapVampire(hit.vampireId); return; }
@@ -1589,17 +1631,17 @@ export class Game {
     // becchino e prete in visita: non svaniscono, raccontano cosa stanno facendo
     if (r.visit && (r.kind === 'postman' || r.kind === 'hunterA' || r.kind === 'hunterB')) { this.tapTalker(r.kind); return; }
     if (r.visit) {
-      const v = r.visit, left = Math.max(0, v.stops.length - v.i);
+      const v = r.visit, work = v.stops.filter((s) => !s.idle), done = v.stops.slice(0, v.i).filter((s) => !s.idle).length, left = work.length - done;
       // torna a casa (o al santuario), o da dove è venuto se non c'è: frasi intere per ognuno
       const back = (kind: 'priest' | 'gravedigger') => (this.visitorHome(kind) ? 'home' : 'away');
       if (r.kind === 'gravedigger') {
         const b = back('gravedigger');
         this.sayText('gravedigger', t('say.gravedigger.name'), v.stage === 'leave' || !left
-          ? (v.stops.length ? t(`say.gravedigger.done.${b}`, { done: v.i }) : t(`say.gravedigger.nothing.${b}`))
-          : t(`say.gravedigger.round.${b}`, { done: v.i, left }));
+          ? (work.length ? t(`say.gravedigger.done.${b}`, { done }) : t(`say.gravedigger.nothing.${b}`))
+          : t(`say.gravedigger.round.${b}`, { done, left }));
       } else {
         const b = back('priest');
-        this.sayText('priest', t('say.priest.name'), v.stage === 'leave' || !left
+        this.sayText('priest', t('say.priest.name'), !work.length ? t('say.priest.nothing') : v.stage === 'leave' || !left
           ? t(`say.priest.done.${b}`)
           : t(`say.priest.round.${b}`, { n: left }));
       }
@@ -1702,6 +1744,13 @@ export class Game {
       stops.push(s);
       at = { x: s.x, y: s.y };
     }
+    // Senza lavori o tombe il visitatore passeggia, senza attribuire premi.
+    if (!stops.length) {
+      const area = areaForLevel(this.state.world.expansionLevel);
+      const g = this.state.graves[0];
+      stops.push(g ? { id: g.id, x: g.x, y: g.y, fp: GRAVE_FOOTPRINT, idle: true }
+        : { id: '', x: area.x + Math.floor(area.w / 2), y: area.y + Math.floor(area.h / 2), fp: [1, 1], idle: true });
+    }
     let cleaned = 0, blessed = false;
     this.actors.spawnVisitor(kind, door, door.clone(), stops, (id) => {
       const c = this.entityCells(id);
@@ -1716,6 +1765,7 @@ export class Game {
       }
     }, () => {
       if (kind === 'gravedigger' && cleaned) this.say({ kind: 'gravedigger', name: t('say.gravedigger.name'), text: t('say.gravedigger.finished', { n: cleaned }) });
+      else if (kind === 'gravedigger' && !ids.length) this.say({ kind: 'gravedigger', name: t('say.gravedigger.name'), text: t('say.gravedigger.nothing.home') });
     });
   }
 
@@ -1799,11 +1849,12 @@ export class Game {
   }
 
   /** Il fantasma di un ricordo esce dall'albero (uguale agli altri: la sorpresa è toccarlo). */
-  spawnMemoryGhost(memoryId: string) {
+  spawnMemoryGhost(memoryId: string): boolean {
     const t = this.treeSpot();
-    if (!t) return;
+    if (!t || !this.state.entrusted.some((m) => m.grave.id === memoryId) || [...this.actors.roamers.values()].some((r) => r.memoryId)) return false;
     const a = Math.random() * Math.PI * 2;
     this.actors.spawnRoamer({ kind: 'ghost', memoryId }, t.center.clone().add(new THREE.Vector3(Math.cos(a) * 1.2, 0, 2.4 + Math.abs(Math.sin(a)) * 0.8)));
+    return true;
   }
 
   /**

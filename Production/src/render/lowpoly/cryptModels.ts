@@ -1,8 +1,5 @@
-// Le cinque cripte (Cripte-Lab) come costruzioni del gioco. Cinque famiglie, tre versioni
-// ciascuna, lo stato integra / sporca / rotta come tutte le altre costruzioni: i pezzi
-// che mancano da rotte sono nei generatori (cryptBuildings.ts, cryptYards.ts), lo sporco
-// e le macerie comuni li aggiunge weathering.ts. Ogni lotto è 4 × 5 celle, col suo cortile,
-// l'origine al centro a terra e il fronte verso +Z.
+// Cripte e case del villaggio: le cripte storiche occupano 4 × 5 celle;
+// le cinque case usano il generatore compatto 4 × 3, con gli stessi stati del gioco.
 
 import type { PVis } from '../types.ts';
 import { decayLP } from './lights.ts';
@@ -10,13 +7,14 @@ import { LP, type LPModel } from './kit.ts';
 import { BUILDINGS } from './cryptBuildings.ts';
 import { yard } from './cryptYards.ts';
 import type { CryptCtx } from './cryptKit.ts';
-import { VILLAGE_BUILDINGS, VILLAGE_FAMILIES, VILLAGE_YARDS, type VillageFamily } from './villageHouses.ts';
+import { VILLAGE_FAMILIES } from './villageHousesNew.ts';
+import { villageLP } from './villageModels.ts';
 
 export const CRYPT_FAMILIES = ['zombie', 'ghost', 'skeleton', 'nature', 'witch', ...VILLAGE_FAMILIES] as const;
 export type CryptFamily = (typeof CRYPT_FAMILIES)[number];
 /** Quante versioni ha ogni famiglia (la numero 0 è la «principale»: quella che si vede in Bottega). */
 export const CRYPT_VARIANTS = 3;
-/** Ingombro del lotto in celle (cripta e cortile). */
+/** Ingombro delle cripte storiche; per le case fa fede il catalogo. */
 export const CRYPT_FOOTPRINT: [number, number] = [4, 5];
 /** Gli id del catalogo: `crypt_zombie`, `crypt_ghost`… */
 export const CRYPT_TYPES: readonly string[] = CRYPT_FAMILIES.map((f) => `crypt_${f}`);
@@ -37,15 +35,15 @@ const LIGHTS: Partial<Record<CryptFamily, Array<[number, number, number, string,
 
 export function cryptLP(v: PVis): LPModel {
   const family = v.type.slice('crypt_'.length) as CryptFamily;
+  if (family === 'ghost' || (VILLAGE_FAMILIES as readonly string[]).includes(family)) return villageLP(v);
   const variant = ((((Math.floor(v.variant) % CRYPT_VARIANTS) + CRYPT_VARIANTS) % CRYPT_VARIANTS) + 1) as 1 | 2 | 3;
   const lp = new LP(`lp:${v.type}:${variant}:${v.seed}:${+v.dirty}${+v.broken}`);
   const c: CryptCtx = { lp, v, family, variant, lit: v.lit && !v.broken };
   lp.push([0, 0, BODY_Z]);
-  const village = (VILLAGE_FAMILIES as readonly string[]).includes(family);
-  if (village) VILLAGE_BUILDINGS[family as VillageFamily](c); else BUILDINGS[family as keyof typeof BUILDINGS](c);
+  BUILDINGS[family as keyof typeof BUILDINGS](c);
   lp.pop();
   // senza recinto: il cortile si apre sul prato, e più case vicine fanno un villaggetto
-  if (village) VILLAGE_YARDS[family as VillageFamily](c); else yard(c);
+  yard(c);
   if (c.lit) {
     for (const [x, y, z, color, intensity, range, flicker, halo, area] of LIGHTS[family] ?? []) {
       lp.push([0, 0, area === 'body' ? BODY_Z : 0]).light(x, y, z, color, intensity, range, flicker, halo).pop();

@@ -10,10 +10,57 @@ import { CATALOG_LIST, rotatedFootprint } from '../src/game/catalog.ts';
 import { evaluateAchievements, rankForXp } from '../src/game/progression.ts';
 import { shortWisps } from '../src/ui/numbers.ts';
 import { moveTraceDraw, startTraceDraw, traceDrawCells } from '../src/game/trace.ts';
-import { DECAY, EXPANSION, PET_BOND_GOAL, WISPS, XP } from '../src/game/balance.ts';
+import { DECAY, EXPANSION, PET_BOND_GOAL, SPAWN_CHANCE, WISPS, XP } from '../src/game/balance.ts';
+import { claimSecretWisps } from '../src/game/easterEggs.ts';
 
 const NOW = new Date('2026-10-09T12:00:00Z');
 const later = (days) => new Date(NOW.getTime() + days * 86_400_000);
+
+test('menu segreto: solo la parola corretta premia, anche più volte', () => {
+  const state = createNewGame(NOW, 42);
+  const before = state.player.wisps, earned = state.player.counters.wispsEarned;
+  for (const password of ['', '   ', 'Fluffy', 'Fluffy Coniglietta']) assert.equal(claimSecretWisps(state, password), false);
+  assert.equal(state.player.wisps, before);
+  assert.equal(state.player.counters.wispsEarned, earned);
+  assert.equal(claimSecretWisps(state, 'Fluffy Coniglietto'), true);
+  assert.equal(claimSecretWisps(state, '  fluffy   coniglietto  '), true);
+  assert.equal(state.player.wisps, before + 200);
+  assert.equal(state.player.counters.wispsEarned, earned + 200);
+  const loaded = normalizeSave(JSON.parse(JSON.stringify(state)));
+  assert.equal(loaded.player.wisps, before + 200);
+});
+
+test('fantasmi dell’Albero: pausa persistente e alternanza tra i ricordi disponibili', () => {
+  const s = createNewGame(NOW, 42);
+  s.entrusted = s.graves.slice(0, 4).map((grave) => ({ grave, entrustedAt: NOW.toISOString(), ghostVisits: 0 }));
+  s.placeables.push({ id: 'tree', type: 'memory_tree', x: 30, y: 30, rot: 0, variant: 0, lit: false, dirty: false, broken: false, caredAt: NOW.toISOString(), createdAt: NOW.toISOString() });
+  const always = { next: () => 0, int: () => 0, range: (a) => a, chance: () => true, pick: (items) => items[0] };
+  const memory = (date) => computeSpawns(s, true, always, date).find((x) => x.memoryId);
+  const first = memory(NOW).memoryId;
+  s.world.memoryGhostLastId = first; s.world.memoryGhostLastAt = NOW.toISOString();
+  assert.equal(memory(new Date(NOW.getTime() + SPAWN_CHANCE.memoryGhostCooldownMs - 1)), undefined);
+  const later = new Date(NOW.getTime() + SPAWN_CHANCE.memoryGhostCooldownMs);
+  assert.notEqual(memory(later).memoryId, first, 'non torna subito lo stesso ricordo');
+  s.entrusted = s.entrusted.filter((m) => m.grave.id === first);
+  assert.equal(memory(later).memoryId, first, 'con un solo ricordo può tornare lo stesso');
+  const loaded = normalizeSave(JSON.parse(JSON.stringify(s)));
+  assert.equal(loaded.world.memoryGhostLastId, first);
+  assert.equal(loaded.world.memoryGhostLastAt, NOW.toISOString());
+});
+
+test('fantasmi dell’Albero: probabilità per ciclo moderata, più bassa di giorno', () => {
+  const s = createNewGame(NOW, 42);
+  s.entrusted = [{ grave: s.graves[0], entrustedAt: NOW.toISOString(), ghostVisits: 0 }];
+  s.placeables.push({ id: 'tree', type: 'memory_tree', x: 30, y: 30, rot: 0, variant: 0, lit: false, dirty: false, broken: false, caredAt: NOW.toISOString(), createdAt: NOW.toISOString() });
+  let day = 0, night = 0;
+  for (let i = 0; i < 6000; i++) {
+    if (computeSpawns(s, false, createRng(`day-${i}`), NOW).some((r) => r.memoryId)) day++;
+    if (computeSpawns(s, true, createRng(`night-${i}`), NOW).some((r) => r.memoryId)) night++;
+  }
+  assert.ok(day > 30 && day < 120, `giorno: ${day}/6000`);
+  assert.ok(night > 170 && night < 320, `notte: ${night}/6000`);
+  assert.ok(night > day);
+});
 /** Si gioca ogni giorno (un'apertura al giorno, fino al giorno `to` compreso): il degrado non ha il tetto dell'assenza. */
 const daily = (s, from, to) => { for (let d = from; d <= to; d++) runCatchUp(s, later(d)); };
 
@@ -1451,4 +1498,47 @@ test('zombie: le tombe appena curate (o rotte) restano al riparo anche a gioco c
   const r = runCatchUp(s, new Date(NOW.getTime() + 5 * 3_600_000));
   assert.equal(r.zombieMud, 0);
   assert.equal(s.graves[0].dirtySince, was);
+});
+
+test('il prete può passare anche in un cimitero senza tombe', () => {
+  const s = createNewGame(NOW, 717);
+  s.graves = [];
+  const rng = { next: () => 0, int: () => 0, range: (a) => a, pick: (a) => { assert.ok(a.length, 'non sceglie da una lista vuota'); return a[0]; }, chance: () => true };
+  const visitors = computeSpawns(s, false, rng);
+  assert.ok(visitors.some((v) => v.kind === 'priest' && !v.graveId));
+  assert.ok(visitors.some((v) => v.kind === 'gravedigger'));
+});
+
+test('easter egg: quattro tocchi sullo stesso oggetto entro quattro secondi', async () => {
+  const { RapidTaps } = await import('../src/game/easterEggs.ts');
+  const taps = new RapidTaps();
+  assert.equal(taps.tap('pond-a', 100), false);
+  assert.equal(taps.tap('pond-a', 1000), false);
+  assert.equal(taps.tap('pond-a', 2400), false);
+  assert.equal(taps.tap('pond-a', 4100), true, 'quarto tocco al limite');
+  assert.equal(taps.tap('pond-a', 5000), false, 'riparte da uno');
+  assert.equal(taps.tap('other', 5100), false, 'cambiare oggetto interrompe');
+  assert.equal(taps.tap('pond-a', 5200), false);
+  assert.equal(taps.tap('pond-a', 9300), false, 'quattro secondi scaduti');
+  assert.equal(taps.tap(null, 9350), false, 'un tocco altrove interrompe');
+  for (const t of [9500, 9600, 9700]) assert.equal(taps.tap('pond-a', t), false);
+  assert.equal(taps.tap('pond-a', 9800), true);
+});
+
+test('laghetto: cento fuochi una volta per salvataggio, anche dopo il ripristino', async () => {
+  const { claimPondWisps } = await import('../src/game/easterEggs.ts');
+  const s = createNewGame(NOW, 717);
+  const pond = { ...s.placeables[0], id: 'pond-test', type: 'pond' };
+  s.placeables.push(pond);
+  const initial = s.player.wisps, earned = s.player.counters.wispsEarned;
+  assert.equal(claimPondWisps(s, s.placeables[0].id), false, 'solo il laghetto');
+  assert.equal(claimPondWisps(s, pond.id), true);
+  assert.equal(s.player.wisps, initial + 100);
+  assert.equal(s.player.counters.wispsEarned, earned + 100);
+  const loaded = normalizeSave(JSON.parse(JSON.stringify(s)));
+  assert.equal(loaded.world.pondWispsFound, true);
+  assert.equal(claimPondWisps(loaded, pond.id), false);
+  assert.equal(loaded.player.wisps, initial + 100);
+  const old = JSON.parse(JSON.stringify(s)); delete old.world.pondWispsFound;
+  assert.equal(normalizeSave(old).world.pondWispsFound, false, 'i vecchi salvataggi sono compatibili');
 });

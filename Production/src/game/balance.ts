@@ -152,8 +152,10 @@ export const SPAWN_CHANCE = {
   gravedigger: 0.05,
   ratNight: 0.06,
   /** Fantasma di un ricordo affidato all'Albero dei ricordi. */
-  memoryGhostNight: 0.07,
-  memoryGhostDay: 0.025,
+  memoryGhostNight: 0.04,
+  memoryGhostDay: 0.012,
+  /** Pausa minima tra due apparizioni, anche dopo aver riaperto il gioco. */
+  memoryGhostCooldownMs: 20 * 60_000,
 } as const;
 
 export const SPAWN_MODIFIERS = {

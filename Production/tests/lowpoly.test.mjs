@@ -982,3 +982,61 @@ test('santuario: l\'arco è chiuso da un portone a due battenti; le candele si a
   assert.ok(tris(on) > 600, 'ha portone e ferramenta');
   assert.ok(Math.abs(tris(on) - tris(off)) < 150, 'le stesse forme, accesa o spenta (cambiano solo le fiammelle)');
 });
+
+test('prete e becchino attraversano il cancello esterno, raggiungono le tappe e tornano fuori', async () => {
+  const { Actors } = await import('../src/view/Actors.ts');
+  const { cellCenter } = await import('../src/view/WorldView.ts');
+  const state = createNewGame(new Date('2026-10-09T12:00:00Z'), 717);
+  const occ = buildOccupancy(state), area = areaForLevel(0);
+  const gateX = area.x + Math.floor(area.w / 2), gateY = area.y + area.h - 1;
+  const outside = cellCenter(gateX, gateY, [1, 1]).add(new THREE.Vector3(0, 0, 1.5));
+  for (const kind of ['priest', 'gravedigger']) {
+    const actors = new Actors(new THREE.Scene(), { addAnchor: () => ({}), removeAnchor() {}, moveAnchor() {} }, cellCenter(24, 42, [1, 1]));
+    actors.setWorld(area, (x, y) => occ.blocked.has(`${x},${y}`));
+    const grave = state.graves[0], stops = [{ id: grave.id, x: grave.x, y: grave.y, fp: [2, 2] }];
+    const visited = []; let left = false;
+    const visitor = actors.spawnVisitor(kind, outside, outside.clone(), stops, (id) => visited.push(id), () => { left = true; });
+    for (let t = 0; t < 200 && !left; t += 0.1) actors.update(0.1, t, [], () => 0);
+    assert.deepEqual(visited, [grave.id], `${kind} raggiunge la tomba`);
+    assert.ok(left && visitor.pos.distanceTo(outside) < 0.2, `${kind} ripassa dal cancello`);
+  }
+});
+
+test('visitatori senza lavori: passeggiano e non assegnano pulizie o benedizioni', async () => {
+  const { Actors } = await import('../src/view/Actors.ts');
+  const { cellCenter } = await import('../src/view/WorldView.ts');
+  const area = areaForLevel(0), actors = new Actors(new THREE.Scene(), { addAnchor: () => ({}), removeAnchor() {}, moveAnchor() {} }, cellCenter(24, 42, [1, 1]));
+  actors.setWorld(area, () => false);
+  const door = cellCenter(30, 40, [1, 1]);
+  for (const kind of ['gravedigger', 'priest']) {
+    let completed = false, action = false, distance = 0;
+    const visitor = actors.spawnVisitor(kind, door, door.clone(), [{ id:'idle', x:30, y:30, fp:[1,1], idle:true }], () => { action = true; }, () => { completed = true; });
+    for (let t=0; t<100 && !completed; t+=0.1) { actors.update(0.1,t,[],()=>0); distance=Math.max(distance,visitor.pos.distanceTo(door)); }
+    assert.ok(completed && distance > 5, `${kind} compie un giro visibile`);
+    assert.equal(action, false, `${kind}: nessuna azione o ricompensa per una passeggiata`);
+  }
+});
+
+test('casa infestata: la festa anima un solo modello e ripristina la scena', async () => {
+  const { HauntedParty } = await import('../src/view/hauntedParty.ts');
+  const parent = new THREE.Group(), geometry = new THREE.BoxGeometry(1, 1, 1);
+  const model = { geometries: { glow: geometry }, lights: [], height: 1 };
+  const party = new HauntedParty(parent, model, false);
+  assert.equal(parent.children.length, 1);
+  const windowMesh = party.root.children.find((o) => o.isMesh);
+  const ghost = party.root.children.find((o) => o.isGroup);
+  const startZ = ghost.position.z, color = windowMesh.material.color.getHex();
+  assert.ok(party.update(0.6));
+  assert.ok(ghost.position.z > startZ, 'il fantasma esce dalla porta');
+  assert.notEqual(windowMesh.material.color.getHex(), color, 'le finestre cambiano colore');
+  party.update(1.6);
+  assert.ok(Math.abs(ghost.rotation.z) > 1, 'il fantasma cade');
+  assert.equal(party.update(3), false);
+  assert.equal(parent.children.length, 0, 'tutti i pezzi temporanei rimossi');
+  assert.ok(geometry.getAttribute('position'), 'geometria condivisa conservata');
+  const quiet = new HauntedParty(parent, model, true), qghost = quiet.root.children.find((o) => o.isGroup);
+  const z = qghost.position.z;
+  quiet.update(0.8); assert.equal(qghost.position.z, z, 'movimento ridotto');
+  assert.equal(quiet.update(1), false); assert.equal(parent.children.length, 0);
+  geometry.dispose();
+});

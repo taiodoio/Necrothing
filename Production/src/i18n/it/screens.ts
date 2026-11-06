@@ -436,6 +436,12 @@ export default {
   // quando l'errore non ha un messaggio
   'settings.backup.error': 'Si è verificato un errore.',
   'info.beta': 'Beta',
+  'info.secret.title': 'Menù segreto',
+  'info.secret.question': 'Ok, hai trovato un menù segreto. Ma qual è la parola d’ordine?',
+  'info.secret.password': 'Parola d’ordine',
+  'info.secret.send': 'Invia',
+  'info.secret.wrong': 'Non è la parola d’ordine. Riprova!',
+  'info.secret.reward': 'Parola d’ordine corretta! Hai ricevuto 100 fuochi fatui.',
   'info.about.title': 'Un posto tranquillo per le cose che ricordiamo.',
   'info.about.text': 'Prenditi cura del cimitero, incontra chi lo visita di notte e dai un saluto gentile agli oggetti di un tempo.',
   'info.onboarding.title': 'I primi passi',

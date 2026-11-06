@@ -28,6 +28,7 @@ import type { Atmosphere, AnchorHandle } from './Atmosphere.ts';
 import { buildChunk, CHUNK, groundType, lowNoise, naturalHeight, surfaceHeight, WORLD_MAX, WORLD_MIN, type Ground, type GroundInput } from './terrain.ts';
 import { ChunkBaker, chunkOf } from './baker.ts';
 import { cacheVegetation, restoreVegetation } from './vegetationCache.ts';
+import { HauntedParty } from './hauntedParty.ts';
 
 /** Colore della luce di un fuoco fatuo. */
 const WISP_LIGHT = '#8fe0c8';
@@ -175,6 +176,8 @@ export class WorldView {
   private scenerySig = '';
   private decorSig = '';
   private selectedId: string | null = null;
+  private readonly parties = new Map<string, HauntedParty>();
+  private partyClock: number | null = null;
   private selectionFrame: THREE.LineSegments;
   private ghostFrame: THREE.Mesh;
   private readonly atmosphere: Atmosphere;
@@ -975,6 +978,8 @@ export class WorldView {
   }
 
   removeEntity(id: string) {
+    this.parties.get(id)?.dispose();
+    this.parties.delete(id);
     const e = this.entities.get(id);
     if (!e) return;
     this.markZone(e);
@@ -1275,6 +1280,16 @@ export class WorldView {
     return e.group.position.clone().setY(e.group.position.y + e.height + 0.3);
   }
 
+  /** Festa della casa infestata: l'effetto è locale e non cambia lo stato delle luci. */
+  hauntedParty(p: Placed) {
+    const e = this.entities.get(p.id);
+    if (!e || this.pvis(p).type !== 'crypt_ghost') return;
+    this.parties.get(p.id)?.dispose();
+    const vis = { ...this.pvis(p), lit: true, broken: false };
+    const reduced = typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches;
+    this.parties.set(p.id, new HauntedParty(e.group, getModel(placeableKey(vis)), reduced));
+  }
+
   // ── Animazione ───────────────────────────────────────────────────────
 
   /** Chi guardano gli oggetti che seguono con lo sguardo (lo spaventapasseri): il Custode. */
@@ -1282,6 +1297,10 @@ export class WorldView {
   watch(target: THREE.Vector3 | null) { this.watchTarget = target; }
 
   update(_dt: number, t: number) {
+    // Il tempo della festa segue l’orologio, anche se un dispositivo perde frame.
+    const partyDt = this.partyClock === null ? _dt : Math.max(0, t - this.partyClock);
+    this.partyClock = t;
+    for (const [id, party] of this.parties) if (!party.update(partyDt)) this.parties.delete(id);
     for (const w of this.wisps.values()) {
       w.group.position.y = w.base.y + Math.sin(t * 2.2 + w.phase) * 0.12;
       // compare piano (scala da 0) invece di accendersi di colpo

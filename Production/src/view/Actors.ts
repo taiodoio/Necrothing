@@ -113,7 +113,7 @@ export interface Roamer extends Walker {
 }
 
 /** Una tappa del giro: una tomba o un oggetto (cella e ingombro). */
-export interface VisitStop { id: string; x: number; y: number; fp: [number, number] }
+export interface VisitStop { id: string; x: number; y: number; fp: [number, number]; idle?: boolean }
 
 interface Visit {
   stops: VisitStop[];
@@ -921,7 +921,13 @@ export class Actors {
   /** Percorso a piedi fino a una cella (si può partire anche da una cella occupata); null se non c'è. */
   private visitPath(from: THREE.Vector3, to: Cell): THREE.Vector3[] | null {
     const a = worldToCell(from);
-    const p = findPath(a, to, (x, y) => !this.walkable(x, y) && !(x === a.x && y === a.y) && !(x === to.x && y === to.y), MAP_SIZE);
+    // L'ingresso esterno può essere a due celle dal cancello: il solo corridoio
+    // verso la sua apertura resta percorribile, anche durante il ritorno.
+    const gateX = this.area.x + Math.floor(this.area.w / 2);
+    const south = this.area.y + this.area.h - 1;
+    const outside = [a, to].find((c) => c.x === gateX && c.y > south);
+    const gatePassage = (x: number, y: number) => !!outside && x === gateX && y >= south && y <= outside.y;
+    const p = findPath(a, to, (x, y) => !this.walkable(x, y) && !gatePassage(x, y) && !(x === a.x && y === a.y) && !(x === to.x && y === to.y), MAP_SIZE);
     return p ? p.slice(1).map((c) => cellCenter(c.x, c.y, [1, 1])) : null;
   }
 
@@ -932,7 +938,7 @@ export class Actors {
     for (let i = -1; i <= s.fp[0]; i++) { ring.push({ x: s.x + i, y: s.y + s.fp[1] }); ring.push({ x: s.x + i, y: s.y - 1 }); }
     for (let j = 0; j < s.fp[1]; j++) { ring.push({ x: s.x - 1, y: s.y + j }); ring.push({ x: s.x + s.fp[0], y: s.y + j }); }
     const near = ring.filter((c) => this.walkable(c.x, c.y)).sort((a, b) => Math.hypot(a.x - at.x, a.y - at.y) - Math.hypot(b.x - at.x, b.y - at.y) + (a.y === s.y + s.fp[1] ? -1 : 0) - (b.y === s.y + s.fp[1] ? -1 : 0));
-    for (const c of near.slice(0, 4)) { const path = this.visitPath(from, c); if (path) { path.push(cellCenter(c.x, c.y, [1, 1])); return path; } }
+    for (const c of near) { const path = this.visitPath(from, c); if (path) { path.push(cellCenter(c.x, c.y, [1, 1])); return path; } }
     return null;
   }
 
@@ -975,12 +981,12 @@ export class Actors {
       const c = cellCenter(s.x, s.y, s.fp);
       r.facing = Math.atan2(c.x - r.pos.x, c.z - r.pos.z);
       v.stage = 'work';
-      v.timer = VISIT_STOP[r.kind as VisitorKind]?.secs ?? 2.8;
+      v.timer = s.idle ? 1.5 : VISIT_STOP[r.kind as VisitorKind]?.secs ?? 2.8;
     } else if (v.stage === 'work') {
-      r.pose = VISIT_STOP[r.kind as VisitorKind]?.pose ?? 'pray';
+      r.pose = v.stops[v.i].idle ? 'idle' : VISIT_STOP[r.kind as VisitorKind]?.pose ?? 'pray';
       v.timer -= dt;
       if (v.timer <= 0) {
-        v.onStop(v.stops[v.i].id);
+        if (!v.stops[v.i].idle) v.onStop(v.stops[v.i].id);
         v.i++;
         v.stage = 'go';
         v.planned = false;

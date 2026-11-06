@@ -1,6 +1,9 @@
 // Testi italiani: app.
 
 export default {
+  'game.egg.pond': 'Il lago era pieno di fuochi fatui! Lo hai ripulito per bene. Non che ai pesci importi molto..',
+  'game.egg.party': 'Facciamo una grande festa!',
+
   // ── Avvio ──
   // si legge al posto del gioco quando la scena 3D non parte
   'boot.webglFailed': 'La scena non si è aperta. (WebGL non disponibile?).',
@@ -249,8 +252,8 @@ export default {
   // toccandolo a fine giro; «.home»: torna alla sua casa, «.away»: non ha casa e torna da dove è venuto. {done}: cose ripulite
   'say.gravedigger.done.home': 'Il becchino ha finito il giro ({done} cose ripulite) e torna a casa.',
   'say.gravedigger.done.away': 'Il becchino ha finito il giro ({done} cose ripulite) e torna da dove è venuto.',
-  'say.gravedigger.nothing.home': 'Il becchino ha controllato: niente da pulire. Torna a casa.',
-  'say.gravedigger.nothing.away': 'Il becchino ha controllato: niente da pulire. Torna da dove è venuto.',
+  'say.gravedigger.nothing.home': 'Il becchino è passato. Ma era tutto in ordine!',
+  'say.gravedigger.nothing.away': 'Il becchino è passato. Ma era tutto in ordine!',
   // toccandolo durante il giro: {done} cose fatte, {left} ancora da fare
   'say.gravedigger.round.home': 'Il becchino fa il giro e ripulisce metà delle cose sporche del cimitero: {done} fatte, ancora {left}. Poi torna a casa.',
   'say.gravedigger.round.away': 'Il becchino fa il giro e ripulisce metà delle cose sporche del cimitero: {done} fatte, ancora {left}. Poi torna da dove è venuto.',
@@ -264,6 +267,7 @@ export default {
   // ── Prete in visita ──
   // breve: nome nella notifica
   'say.priest.name': 'Prete',
+  'say.priest.nothing': 'Il prete è passato a fare un giro.',
   // toccandolo a fine giro; «.home»: torna al santuario, «.away»: non c’è santuario e torna da dove è venuto
   'say.priest.done.home': 'Il prete ha benedetto il cimitero (più fuochi fatui fino a domani) e torna al santuario.',
   'say.priest.done.away': 'Il prete ha benedetto il cimitero (più fuochi fatui fino a domani) e torna da dove è venuto.',

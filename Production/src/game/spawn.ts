@@ -71,7 +71,7 @@ export function zombieAppeal(b: BuildingCounts): number {
 }
 
 export function computeSpawns(
-  state: Pick<SaveData, 'graves' | 'placeables'> & Partial<Pick<SaveData, 'entrusted' | 'house'>>,
+  state: Pick<SaveData, 'graves' | 'placeables'> & Partial<Pick<SaveData, 'entrusted' | 'house' | 'world'>>,
   isNight: boolean,
   rng: Rng,
   now?: Date,
@@ -96,10 +96,9 @@ export function computeSpawns(
   }
   if (rng.chance(SPAWN_CHANCE.cat * animals)) out.push({ kind: 'cat' });
   if (!isNight && rng.chance(SPAWN_CHANCE.crowDay * animals)) out.push({ kind: 'crow' });
-  if (graves.length > 0) {
-    const p = (SPAWN_CHANCE.priest + SPAWN_MODIFIERS.shrinePriestBonus * b.shrine) * mult;
-    if (rng.chance(p)) out.push({ kind: 'priest', graveId: rng.pick(graves).id });
-  }
+  // Anche senza tombe il prete può passare a fare un giro.
+  const priestChance = (SPAWN_CHANCE.priest + SPAWN_MODIFIERS.shrinePriestBonus * b.shrine) * mult;
+  if (rng.chance(priestChance)) out.push(graves.length ? { kind: 'priest', graveId: rng.pick(graves).id } : { kind: 'priest' });
   if (rng.chance(SPAWN_CHANCE.gravedigger + SPAWN_MODIFIERS.gravediggerHouseBonus * b.gravediggerHouse)) {
     out.push({ kind: 'gravedigger' });
   }
@@ -110,7 +109,13 @@ export function computeSpawns(
   // l'albero ogni tanto lascia uscire il fantasma di uno dei ricordi affidatigli
   const kept = state.entrusted ?? [];
   if (kept.length > 0 && state.placeables.some((p) => p.type === 'memory_tree')) {
-    if (rng.chance(isNight ? SPAWN_CHANCE.memoryGhostNight : SPAWN_CHANCE.memoryGhostDay)) out.push({ kind: 'ghost', memoryId: rng.pick(kept).grave.id });
+    const last = Date.parse(state.world?.memoryGhostLastAt ?? '');
+    const elapsed = now ? now.getTime() - last : Infinity;
+    const coolingDown = Number.isFinite(last) && elapsed >= 0 && elapsed < SPAWN_CHANCE.memoryGhostCooldownMs;
+    if (!coolingDown && rng.chance(isNight ? SPAWN_CHANCE.memoryGhostNight : SPAWN_CHANCE.memoryGhostDay)) {
+      const others = kept.filter((m) => m.grave.id !== state.world?.memoryGhostLastId);
+      out.push({ kind: 'ghost', memoryId: rng.pick(others.length ? others : kept).grave.id });
+    }
   }
   return out;
 }

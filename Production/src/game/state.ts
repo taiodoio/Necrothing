@@ -17,9 +17,9 @@ import { finishedOnboarding, newOnboarding, normalizeOnboarding, type Onboarding
 /**
  * Versione del salvataggio (vedi MIGRATIONS): v2 mappa 64×64 (prima 48×48),
  * recinto iniziale 34×34; v3 il registro delle distribuzioni (`meta`); v4 il
- * percorso del primo ingresso (`onboarding`).
+ * percorso del primo ingresso (`onboarding`); v5 i lotti compatti delle case.
  */
-export const SAVE_VERSION = 4;
+export const SAVE_VERSION = 5;
 
 const LEGACY_TEXT: Record<string, [string, string]> = {
   'story-cactus': ['state.story.cactus.name', 'state.story.cactus.epitaph'],
@@ -180,6 +180,11 @@ export interface WorldMeta {
   looseWisps: LooseWisp[];
   /** Fino a quando vale la benedizione del prete (+fuochi fatui). */
   blessingUntil: string | null;
+  /** Il tesoro del laghetto è stato trovato (una volta per salvataggio). */
+  pondWispsFound: boolean;
+  /** Ultima apparizione dell'Albero: evita ripetizioni e visite troppo ravvicinate. */
+  memoryGhostLastAt?: string | null;
+  memoryGhostLastId?: string | null;
   /** Ampiezza del recinto scelta dal giocatore (≤ livello sbloccato). */
   expansionLevel: number;
   /** Livello di espansione sbloccato col prestigio (non decresce). */
@@ -398,6 +403,7 @@ export function createNewGame(now: Date, seed = Math.floor(Math.random() * 1e9))
         { id: 'w-start-4', x: 35, y: 43 },
       ],
       blessingUntil: null,
+      pondWispsFound: false,
       expansionLevel: 0,
       unlockedLevel: 0,
       notifiedLevel: 0,
@@ -435,6 +441,14 @@ export const MIGRATIONS: ReadonlyArray<{ to: number; run: (d: Partial<SaveData>)
   // il percorso del primo ingresso: chi giocava già l'ha fatto (lo può rivedere dalle Impostazioni)
   { to: 4, run: (d) => {
     if (!d.onboarding) d.onboarding = finishedOnboarding();
+  } },
+  // I lotti delle case si riducono da 4×5 a 4×3, conservando il centro e
+  // restando interamente nelle celle già occupate (anche per salvataggi ruotati).
+  { to: 5, run: (d) => {
+    const types = new Set(['crypt_ghost', 'crypt_florist', 'crypt_rectory', 'crypt_lamplighter', 'crypt_reaper']);
+    for (const p of d.placeables ?? []) if (types.has(p.type)) {
+      if (Math.abs(p.rot % 2) === 1) p.x += 1; else p.y += 1;
+    }
   } },
 ];
 

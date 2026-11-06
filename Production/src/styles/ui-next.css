@@ -84,7 +84,7 @@
   position: relative; flex: 0 1 auto; width: auto; min-width: calc(var(--room) * 0.5); max-width: var(--room); padding: 6px 16px 6px 6px; height: var(--hud-top); min-height: 0; gap: 10px; }
 .ui-next .chip-avatar { flex: none; width: 52px; height: 100%; border-radius: var(--r-s); background: var(--thumb); box-shadow: none; overflow: hidden; }
 .ui-next .chip-avatar img { width: 100%; height: 100%; object-fit: cover; display: block; }
-.ui-next .chip-body { flex: 1 1 auto; overflow: hidden; min-width: 0; gap: 6px; }
+.ui-next .chip-body { flex: 1 1 auto; overflow: visible; min-width: 0; gap: 6px; }
 .ui-next .chip-body strong { font-size: 19px; line-height: 1; }
 .ui-next #hud-rank { display: none; }
 .ui-next .xp-row { display: flex; align-items: center; gap: 10px; min-width: 0; }
@@ -183,7 +183,8 @@
 .ui-next .language-check { color: var(--primary); font-size: 18px; }
 .ui-next .info-brand { margin: 2px 0 12px; }
 .ui-next .info-brand-mark { position: relative; width: fit-content; max-width: 100%; margin-inline: auto; }
-.ui-next .info-logo { display: block; width: min(224px, 66vw); max-width: 100%; height: auto; object-fit: contain; }
+.ui-next .info-logo-trigger { display: block; padding: 0; border: 0; background: transparent; cursor: pointer; touch-action: manipulation; user-select: none; -webkit-user-select: none; }
+.ui-next .info-logo { display: block; width: min(224px, 66vw); max-width: 100%; height: auto; object-fit: contain; -webkit-user-drag: none; }
 .ui-next .beta-badge { position: absolute; right: -9px; bottom: -9px; display: inline-flex; margin: 0; padding: 4px 10px; border: 1px solid rgba(240, 196, 110, 0.24); border-radius: 999px; background: #393143; color: var(--gold-bright); font-size: 11px; font-weight: 900; letter-spacing: .08em; text-transform: uppercase; box-shadow: 0 3px 10px rgba(0, 0, 0, 0.32); }
 .ui-next .info-about-title { margin: 0; color: var(--paper); font: 700 21px/1.2 var(--gothic); }
 .ui-next .info-actions { display: grid; gap: 8px; }

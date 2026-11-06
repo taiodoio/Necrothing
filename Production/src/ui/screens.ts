@@ -798,6 +798,9 @@ function achievementsTab(s: SaveData, got: Set<string>): HTMLElement {
 
 /** La scheda aperta nelle Impostazioni. */
 let settingsTab: 'game' | 'graphics' | 'save' | 'info' = 'game';
+let settingsTapController: AbortController | null = null;
+// Un aggiornamento delle impostazioni ricostruisce il pannello: non deve perdere i tocchi già fatti.
+let secretLogoTaps = 0;
 
 // ── Backup: a ogni passo una finestra dice cosa sta succedendo e com'è andata ──
 
@@ -976,9 +979,34 @@ function showLegal() {
   }).catch(() => { list.textContent = t('info.legal.failed'); });
 }
 
+function showSecretMenu(ui: UI) {
+  let modal: Modal;
+  let claimed = false;
+  const input = h('input', { id: 'secret-password', type: 'text', autocomplete: 'off', 'aria-describedby': 'secret-error' });
+  const error = h('p', { id: 'secret-error', class: 'err', role: 'status', hidden: true });
+  const send = h('button', { class: 'big-btn', type: 'submit', disabled: true }, t('info.secret.send'));
+  input.addEventListener('input', () => { send.disabled = !input.value.trim(); error.hidden = true; input.removeAttribute('aria-invalid'); });
+  const form = h('form', { class: 'info-modal secret-dialog', onsubmit: (e: Event) => {
+    e.preventDefault();
+    if (claimed || !input.value.trim()) return;
+    if (!ui.game.claimSecretReward(input.value)) {
+      error.textContent = t('info.secret.wrong'); error.hidden = false; input.setAttribute('aria-invalid', 'true');
+      return;
+    }
+    claimed = true;
+    modal.close();
+    toast(t('info.secret.reward'));
+  } },
+    h('h3', { class: 'modal-title' }, t('info.secret.title')),
+    h('p', {}, t('info.secret.question')),
+    h('div', { class: 'field' }, h('label', { htmlFor: 'secret-password' }, t('info.secret.password')), input, error),
+    h('div', { class: 'row' }, h('button', { class: 'big-btn ghost', type: 'button', onclick: () => modal.close() }, t('dialog.cancel')), send));
+  modal = openModal(form, { label: t('info.secret.title') });
+}
+
 function infoContent(ui: UI): HTMLElement[] {
   const beta = distribution().betaLabel ? h('span', { class: 'beta-badge' }, t('info.beta')) : null;
-  const logo = h('img', { class: 'info-logo', src: './boot/logo.webp', alt: '' });
+  const logo = h('button', { class: 'info-logo-trigger', type: 'button', 'aria-label': 'Necrothing' }, h('img', { class: 'info-logo', src: './boot/logo.webp', alt: '' }), beta);
   const email = CONTACT.email;
   const version = typeof __BUILD__ === 'undefined' ? '0.2.0' : __BUILD__.version;
   const subject = t('info.contact.subject', { version, language: currentLang() });
@@ -999,7 +1027,7 @@ function infoContent(ui: UI): HTMLElement[] {
     } }, t('info.contact.copy')),
   );
   return [
-    h('div', { class: 'info-brand' }, h('div', { class: 'info-brand-mark' }, logo, beta)),
+    h('div', { class: 'info-brand' }, h('div', { class: 'info-brand-mark' }, logo)),
     h('p', { class: 'info-about-title' }, t('info.about.title')),
     h('p', { class: 'muted' }, t('info.about.text')),
     h('div', { class: 'section-title' }, t('info.onboarding.title')),
@@ -1058,6 +1086,10 @@ export function openSkySettings(ui: UI) {
 }
 
 export function openSettings(ui: UI) {
+  if ($('#drawer').hidden || !$('#drawer').querySelector('[data-settings]')) secretLogoTaps = 0;
+  settingsTapController?.abort();
+  const tapController = new AbortController();
+  settingsTapController = tapController;
   const game = ui.game;
   const s = game.state.settings;
   const seg = <T extends string>(value: T, options: Array<[T, string]>, on: (v: T) => void) =>
@@ -1137,7 +1169,12 @@ export function openSettings(ui: UI) {
     setDrawerFooter(footers[id]);
   } }, tabGlyph(SETTINGS_MONO[id]), label)));
   const body = h('div', { 'data-settings': 'true' }, tabBar, ...Object.values(panes));
-  openDrawer(t('settings.title'), body, { full: true, footer: footers[settingsTab] ?? undefined });
+  $('#drawer').addEventListener('click', (event: Event) => {
+    if (!body.isConnected) { tapController.abort(); return; }
+    if (!(event.target instanceof Element) || !event.target.closest('.info-logo-trigger')) { secretLogoTaps = 0; return; }
+    if (++secretLogoTaps === 10) { secretLogoTaps = 0; showSecretMenu(ui); }
+  }, { capture: true, signal: tapController.signal });
+  openDrawer(t('settings.title'), body, { full: true, footer: footers[settingsTab] ?? undefined, onClose: () => { secretLogoTaps = 0; tapController.abort(); } });
 }
 
 /** "Versione abc1234 · 13/10/2026, 14:40": per controllare che il sito pubblicato sia aggiornato. */
